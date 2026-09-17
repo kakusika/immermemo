@@ -12,13 +12,30 @@ discussion recorded in `docs/design.md`.
    into a false conflict by the interval-grouping step; fixed by
    `touches()`, which only joins on a true overlap or two insertions at
    the exact same empty gap.
-2. [ ] Recurse into a both-changed region that aligns 1:1 to narrow the
-   conflict below whole-block granularity (`Block::Element` ->
-   `args`/`value`/`content`/`children`, `ElementValue::Group` entries by
-   key, `Value::Map` by key, `Value::Seq` positionally, bottoming out at
-   leaf `Value`/`Text`). **Not started.** `merge()` currently only diffs
-   `Document.blocks` as one flat sequence, so every conflict today spans
-   whole blocks.
+2. [x] Recurse into a both-changed region that aligns 1:1
+   (`merge_one`/`merge_inline_seq`/`merge_text` in `lib.rs`): a
+   `Paragraph`'s (or same-`sigil` `Element`'s) `content: Vec<Inline>`
+   gets diffed inline-by-inline, and a single-`Text`-per-side inline
+   conflict recurses once more into a character-level diff3. Two edits
+   to different words in the same sentence now merge silently; a true
+   same-word conflict embeds `@mobile.conflict` as inline markers inside
+   the paragraph instead of duplicating the whole paragraph. Tested
+   (`edits_to_different_words_in_one_sentence_merge_cleanly`,
+   `edits_to_the_same_word_produce_an_inline_conflict`,
+   `resolving_an_inline_conflict_leaves_one_plain_sentence`).
+
+   **Still not narrowed**: an `Element`'s `args`/`value`/`children` --
+   `merge_one` currently requires those three identical between `local`
+   and `remote` before it will even attempt the `content` recursion
+   (see the `mismatched_block_kinds_fall_back_to_block_level_markers`
+   fallback path), so e.g. two concurrent edits to different `{data}`
+   keys on the same element still fall back to a whole-block conflict
+   rather than dissolving. Recursing into `ElementValue::Group` by key
+   and `Value::Map`/`Value::Seq` is the next increment here, and needs
+   its own decision on how to represent a conflict inside a `{data}`
+   value (a value slot can't hold a marker block/inline the way
+   `Document.blocks`/`Paragraph.content` can -- this is the same kind of
+   representation question step 3 below already hit once).
 3. [x] Resolved, and it changed the vocabulary: `@mobile.conflict` cannot
    wrap multiple blocks as `[content]` or as element children, because
    no `.tmt` syntax outside of list items ever populates
@@ -42,7 +59,10 @@ discussion recorded in `docs/design.md`.
 
 ## Status
 
-Steps 1, 3, 4, 5 done and tested. Step 2 (recursing past whole-block
-conflicts) is the remaining work -- pick this back up before relying on
-conflicts being as narrow as the module doc's end-state description
-promises.
+Steps 1, 3, 4, 5 done and tested; step 2 done one level deep (paragraph/
+inline/character). 16/16 tests passing (`cargo test -p immermemo-merge`).
+
+Remaining: recursing into an `Element`'s `args`/`value`/`children`
+(see step 2's note above) -- needs a design decision on representing a
+conflict inside a `{data}` value slot before it can be implemented, not
+just more code in the same shape as what's here.
