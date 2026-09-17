@@ -1,0 +1,34 @@
+# -----------------------------------------------------------------------
+# Files ignored by Git.
+#
+# Keep project-specific ignore rules in subdirectories whenever possible.
+# -----------------------------------------------------------------------
+
+#[ Build file ]
+build/
+dist/
+target/
+
+#[ Dev ]
+.direnv/
+.claude/
+.idea/
+.zed/
+
+#[ Mobile ]
+apps/ios/**/Pods/
+apps/ios/**/DerivedData/
+apps/ios/**/*.xcuserstate
+apps/android/**/.gradle/
+apps/android/**/build/
+apps/android/local.properties
+
+#[ User's variable ]
+.env
+.env.*
+!.env.example
+
+#[ OS ]
+.DS_Store
+Desktop.ini
+Thumbs.db

@@ -1,0 +1,24 @@
+@kind(vocabulary)
+@vocabulary(mobile){ version: "1.0.0" }
+
+@element(conflict){
+  singleton: false
+
+  @args{
+    @param(side){ type: string, positional: true }[ "mine" か "theirs"。3-wayマージで自動統合できなかった側を示す。 ]
+  }
+  @data{ open: false }
+  @content{ allow: any }
+}[
+  3-wayマージが同じ箇所を両側から変更したと判定し、自動統合を諦めたときに
+  挿入されるマーカー。ノートを分裂させず、衝突箇所をノート自身に閉じ込めた
+  まま保存する。同じ位置に `side: mine` と `side: theirs` が対で現れる。
+
+  `display` をあえて指定していない（block/inline どちらも許す）。衝突は
+  段落中のインライン要素どうしでも、独立したブロックどうしでも起こりうる
+  ため、どちらの位置に現れても構文上壊れないようにしている。
+
+  ユーザーが解決すると、選ばれた側の `[content]` だけを残してこの要素ごと
+  剥がされ、通常のノートに戻る。両方の `@mobile.conflict` が文書から消えた
+  時点で、前文の `@use(mobile)` も落とす。
+]

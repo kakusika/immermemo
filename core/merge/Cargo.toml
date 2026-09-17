@@ -1,0 +1,12 @@
+[package]
+name = "immermemo-merge"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+tomet-ast.workspace = true
+tomet-parser.workspace = true
+tomet-tree.workspace = true
+tomet-semantics.workspace = true
+tomet-load.workspace = true
