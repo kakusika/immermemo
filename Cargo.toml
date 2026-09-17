@@ -22,6 +22,7 @@ tomet-parser = { git = "https://github.com/tomet-lang/tomet.git", version = "0.1
 tomet-tree = { git = "https://github.com/tomet-lang/tomet.git", version = "0.1.0" }
 tomet-semantics = { git = "https://github.com/tomet-lang/tomet.git", version = "0.1.0" }
 tomet-load = { git = "https://github.com/tomet-lang/tomet.git", version = "0.1.0" }
+tomet-printer = { git = "https://github.com/tomet-lang/tomet.git", version = "0.1.0" }
 
 #[ Crates.io ]
 anyhow = "1.0"

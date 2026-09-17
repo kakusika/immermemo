@@ -377,6 +377,14 @@ fn resolve_inline_seq<'a>(
     coalesce_text(out)
 }
 
+/// Whether `document` still contains an unresolved `@mobile.conflict`,
+/// at the block level or nested in a paragraph's inline content.
+/// `immermemo-sync` uses this to report which notes need the user's
+/// attention after a sync.
+pub fn has_conflicts(document: &Document) -> bool {
+    document.blocks.iter().any(document_or_block_has_conflict)
+}
+
 /// Whether this block still carries a conflict, at the block level or
 /// nested in its own inline content.
 fn document_or_block_has_conflict(block: &Block) -> bool {
