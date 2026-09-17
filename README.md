@@ -28,10 +28,9 @@ immermemo/
 │   └── merge/   # AST-level three-way merge -- see its module doc
 ├── vocab/
 │   └── mobile.vocabulary.tmt   # the @mobile.conflict vocabulary
-├── bindings/mobile/            # UniFFI: core/* -> Kotlin + Swift
+├── bindings/flutter/           # flutter_rust_bridge: core/* -> Dart
 └── apps/
-    ├── ios/
-    └── android/
+    └── flutter/                # one app, iOS + Android
 ```
 
 `tomet` itself is never modified by this project -- it's consumed as an
@@ -40,8 +39,10 @@ is independent of the `tomet` repository.
 
 ## Finding your way around
 
-What a crate is and why it exists: that crate's `//!` module doc
-(`core/sync/src/lib.rs`, `core/merge/src/lib.rs`). What the conflict
+How the whole system fits together (sync protocol, what goes into git
+and what doesn't, the conflict pipeline): `docs/design.md`. What a
+crate is and why it exists, below that level: that crate's `//!` module
+doc (`core/sync/src/lib.rs`, `core/merge/src/lib.rs`). What the conflict
 vocabulary means: `vocab/mobile.vocabulary.tmt`, written against
 `tomet`'s own `docs/spec/vocabulary.tmt`.
 
