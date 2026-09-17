@@ -5,9 +5,12 @@
 A mobile note app that writes Tomet (`.tmt`) notes and syncs them over
 git, with the git repository kept out of the folder the user's files are
 visible in. Read `README.md` first for the shape of the project, then
-each crate's own `//!` module doc for why it's built the way it is --
-that doc is the design record; do not duplicate it into a separate
-architecture file that will drift from the code.
+`docs/design.md` for how the whole system fits together (the sync
+protocol, what goes into git and what doesn't, the conflict pipeline).
+Below that level, each crate's own `//!` module doc is the design record
+for that crate's internals -- don't duplicate a crate's own design back
+into `docs/design.md`, and don't let `docs/design.md`'s system-level
+account drift out of sync with what the crates actually do.
 
 ## Relationship to `tomet`
 
@@ -24,9 +27,13 @@ accepts.
 
 ## Language
 
-Write all code comments and documentation in English. Do not use
-Japanese in code. (Design discussion in chat/PRs can be whatever
-language the thinking happened in.)
+Write all code comments in English. Do not use Japanese in code.
+
+`docs/design.md` is written in plain Japanese, deliberately -- it's the
+account of the system that gets discussed and revised in conversation
+with the app's author, in the language that conversation happens in, not
+a spec for other engineers. Crate-level module docs stay English, same
+as the code they sit beside.
 
 ## Verifying changes
 
