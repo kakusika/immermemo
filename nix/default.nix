@@ -17,7 +17,11 @@ flake-parts.lib.mkFlake { inherit inputs; } {
     {
       _module.args.pkgs = import inputs.nixpkgs {
         inherit system;
-        config.allowUnfree = true;
+        config = {
+          allowUnfree = true;
+          # The Android SDK is distributed under Google's license, which nixpkgs makes you accept.
+          android_sdk.accept_license = true;
+        };
       };
       packages = rec {
         default = immermemo;
