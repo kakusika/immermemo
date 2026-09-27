@@ -49,12 +49,12 @@ mkShell {
     tomet
     tmtbook
     twrit
+    just
     ##[ Rust ]
     rust-toolchain
     cargo-edit
     cargo-outdated
     cargo-nextest
-
     ##[ Android ]
     androidSdk.androidsdk
     jdk17
@@ -88,6 +88,17 @@ mkShell {
   shellHook = ''
     export CARGO_APK_RELEASE_KEYSTORE="$HOME/.android/debug.keystore"
     export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
+
+    # avdmanager (cmdline-tools) and the emulator binary default to
+    # different homes for AVDs on Linux: avdmanager (newer, XDG-aware)
+    # defaults to ~/.config/.android/avd, but the emulator binary's own
+    # AVD search order -- $ANDROID_AVD_HOME, then $ANDROID_SDK_HOME/avd,
+    # then $HOME/.android/avd -- never picked up that convention, so
+    # without this it looks in ~/.android/avd and fails with "Unknown
+    # AVD name". Both binaries read ANDROID_AVD_HOME as an explicit
+    # override, so setting it here makes them agree; pointed at the
+    # older ~/.android/avd rather than avdmanager's newer default.
+    export ANDROID_AVD_HOME="$HOME/.android/avd"
   '';
 
   PKG_CONFIG_PATH = lib.makeSearchPathOutput "dev" "lib/pkgconfig" [
