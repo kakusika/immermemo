@@ -11,6 +11,8 @@ target/
 
 #[ Dev ]
 .direnv/
+result
+result-*
 .claude/
 .idea/
 .zed/
