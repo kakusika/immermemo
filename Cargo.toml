@@ -33,3 +33,7 @@ loro = "1.16"
 slint = { version = "1.18", default-features = false, features = ["backend-winit", "renderer-skia", "renderer-software", "accessibility", "compat-1-2"] }
 slint-build = "1.18"
 git2 = { version = "0.19", features = ["vendored-libgit2", "vendored-openssl"] }
+# Same OpenSSL git2's vendored-openssl already builds and links; used to
+# verify TLS certificate chains ourselves where libgit2's own file-based
+# verification can't work at all (see core/sync's `tls` module doc).
+openssl = "0.10"

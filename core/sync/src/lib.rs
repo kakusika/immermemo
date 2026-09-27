@@ -69,6 +69,8 @@
 //! gitdir is independent, keyed by the vault's id. Nothing here assumes a
 //! single vault per app install.
 
+pub mod tls;
+
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -84,11 +86,22 @@ const BRANCH: &str = "main";
 const MAX_PUSH_ATTEMPTS: u32 = 5;
 
 /// Supplies credentials for a fetch or push, without this crate knowing
-/// where they actually live. Implemented once per platform in
-/// `bindings/flutter` (backed by `flutter_secure_storage`, itself wrapping
-/// iOS Keychain / Android Keystore).
+/// where they actually live. Implemented once per platform (Android:
+/// `apps/slint/src/credentials.rs`, backed by the Android Keystore).
 pub trait CredentialProvider {
     fn credentials(&self, remote_url: &str) -> anyhow::Result<git2::Cred>;
+}
+
+/// Decides whether to trust a server's TLS certificate, when libgit2's own
+/// OS-level verification isn't available to fall back on. Only needed
+/// where [`git2::init`]'s per-OS system CA bundle probing finds nothing to
+/// check against at all -- Android is the only such target so far (see the
+/// [`tls`] module doc for why `git2::opts::set_ssl_cert_file`/`_dir` can't
+/// be used there either). Desktop leaves this unset and keeps using
+/// libgit2's ordinary OS-provided verification.
+pub trait CertificateVerifier {
+    /// `cert_der`: the leaf certificate the server presented, in DER.
+    fn trust(&self, host: &str, cert_der: &[u8]) -> bool;
 }
 
 /// One linked note folder: a working tree the user sees, backed by a git
@@ -101,6 +114,7 @@ pub struct Vault {
     /// Bare -- no workdir association in libgit2 at all. Lives in this
     /// app's private storage, opaque to the user.
     repo: Repository,
+    certificate_verifier: Option<Box<dyn CertificateVerifier>>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -121,7 +135,15 @@ impl Vault {
         Ok(Self {
             working_tree: working_tree.to_owned(),
             repo,
+            certificate_verifier: None,
         })
+    }
+
+    /// Sets (or clears) the certificate verifier used to decide whether to
+    /// trust a fetch/push's TLS connection when libgit2's own OS-level
+    /// verification isn't available. See [`CertificateVerifier`].
+    pub fn set_certificate_verifier(&mut self, verifier: Option<Box<dyn CertificateVerifier>>) {
+        self.certificate_verifier = verifier;
     }
 
     /// Links this vault to a remote (GitHub, Gitea, self-hosted). Takes a
@@ -210,6 +232,27 @@ impl Vault {
         Ok(())
     }
 
+    /// Registers the certificate-check callback, if a verifier was set,
+    /// onto `callbacks`. Shared between [`fetch`](Self::fetch) and
+    /// [`push`](Self::push): both open their own TLS connection.
+    fn install_certificate_check<'a>(&'a self, callbacks: &mut RemoteCallbacks<'a>) {
+        let Some(verifier) = &self.certificate_verifier else {
+            return;
+        };
+        callbacks.certificate_check(move |cert, host| {
+            let trusted = cert
+                .as_x509()
+                .is_some_and(|x509| verifier.trust(host, x509.data()));
+            if trusted {
+                Ok(git2::CertificateCheckStatus::CertificateOk)
+            } else {
+                Err(git2::Error::from_str(&format!(
+                    "certificate for {host} is not trusted"
+                )))
+            }
+        });
+    }
+
     fn fetch(&self, credentials: &dyn CredentialProvider) -> anyhow::Result<()> {
         let mut remote = self.repo.find_remote(REMOTE_NAME)?;
         let url = remote.url().unwrap_or_default().to_string();
@@ -219,6 +262,7 @@ impl Vault {
                 .credentials(&url)
                 .map_err(|e| git2::Error::from_str(&e.to_string()))
         });
+        self.install_certificate_check(&mut callbacks);
         let mut opts = FetchOptions::new();
         opts.remote_callbacks(callbacks);
         remote.fetch(
@@ -353,6 +397,7 @@ impl Vault {
             }
             Ok(())
         });
+        self.install_certificate_check(&mut callbacks);
 
         let mut opts = PushOptions::new();
         opts.remote_callbacks(callbacks);
