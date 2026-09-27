@@ -96,10 +96,12 @@ export component App inherits Window {
             select(i) => {
                 root.select(i);
                 root.list-open = false;
+                pane.focus-editor();
             }
             new-note => {
                 root.new-note();
                 root.list-open = false;
+                pane.focus-editor();
             }
             sync => { root.sync(); }
             link => { root.link(); }
@@ -133,6 +135,23 @@ export component App inherits Window {
             undo => { root.undo(); }
             redo => { root.redo(); }
             back => { root.list-open = true; }
+        }
+    }
+
+    // Edge-swipe back to the list, same destination as the back arrow and
+    // the Android back key (editor_pane.slint's capture-key-pressed) --
+    // three ways to reach the same place, not three separate behaviors.
+    // A thin strip rather than the whole pane: a full-width swipe area
+    // would fight with selecting text in the editor body.
+    if root.narrow && !root.list-open: TouchArea {
+        x: 0px;
+        y: root.inset-top;
+        width: 24px;
+        height: root.height - root.inset-top - root.inset-bottom;
+        moved => {
+            if (self.pressed && self.mouse-x - self.pressed-x > 60px) {
+                root.list-open = true;
+            }
         }
     }
 

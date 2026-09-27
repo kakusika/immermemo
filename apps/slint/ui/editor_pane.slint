@@ -23,6 +23,12 @@ export component EditorPane inherits Rectangle {
         editor.set-selection-offsets(offset, offset);
     }
 
+    // Claims focus so the back key (see capture-key-pressed below) reaches
+    // this pane without the user having to tap into the text body first.
+    public function focus-editor() {
+        edit-scope.focus();
+    }
+
     background: Palette.background;
 
     VerticalLayout {
@@ -67,10 +73,20 @@ export component EditorPane inherits Rectangle {
         // Ctrl+Z / Ctrl+Y go to the Loro history instead of the widget's own
         // undo; capture-key-pressed runs before the focused TextEdit sees the
         // key. On a phone there is no such key: the bar below does the same.
-        FocusScope {
+        //
+        // The Android back button/gesture arrives as Key.Back here too --
+        // without this, an unhandled back key falls through to the OS
+        // default, which is to close the whole app instead of returning to
+        // the list. Only claimed on a narrow window: on a wide one there is
+        // no separate list screen to go back to.
+        edit-scope := FocusScope {
             horizontal-stretch: 1;
             vertical-stretch: 1;
             capture-key-pressed(event) => {
+                if (event.text == Key.Back && root.show-back) {
+                    root.back();
+                    return accept;
+                }
                 if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
                     root.undo();
                     return accept;
@@ -81,7 +97,16 @@ export component EditorPane inherits Rectangle {
                 }
                 return reject;
             }
-
+            // Android triggers the actual "close the app" fallback off the
+            // key *release* (ACTION_UP), not the press -- accepting only
+            // capture-key-pressed above still let the release fall through
+            // and exit. Both need to be claimed.
+            capture-key-released(event) => {
+                if (event.text == Key.Back && root.show-back) {
+                    return accept;
+                }
+                return reject;
+            }
             editor := TextEdit {
                 width: parent.width;
                 height: parent.height;
