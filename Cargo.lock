@@ -2603,6 +2603,7 @@ dependencies = [
  "anyhow",
  "git2",
  "immermemo-sync",
+ "jni 0.21.1",
  "loro",
  "slint",
  "slint-build",

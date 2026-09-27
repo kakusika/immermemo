@@ -1,13 +1,24 @@
+mod appdata;
+pub mod credentials;
 mod history;
 mod notes;
 mod sync;
+mod token_blob;
+
+#[cfg(target_os = "android")]
+mod android_cert;
+#[cfg(target_os = "android")]
+mod android_keystore;
 
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
+use appdata::AppData;
+use credentials::{TokenCredentials, TokenStore};
 use history::{History, Restored};
 
 slint::include_modules!();
@@ -15,6 +26,11 @@ slint::include_modules!();
 /// What the window is currently editing. Lives on the UI thread only.
 struct Session {
     vault_dir: PathBuf,
+    app_data: AppData,
+    token_store: Arc<dyn TokenStore>,
+    /// The remote URL, kept here once loaded so Sync doesn't re-read it from
+    /// disk on every tap. Not secret -- the token lives in `token_store`.
+    remote: Option<String>,
     notes: Vec<PathBuf>,
     conflicted: Vec<bool>,
     current: Option<usize>,
@@ -35,14 +51,40 @@ impl Session {
     }
 }
 
-/// Opens the window on `vault_dir` and runs until it is closed. `remote` is
-/// where Sync goes; without one, Sync only reports that none is set.
-pub fn run(vault_dir: PathBuf, remote: Option<String>) -> anyhow::Result<()> {
+/// Desktop's app-data base: `$XDG_DATA_HOME/immermemo`, or
+/// `$HOME/.local/share/immermemo`. `main.rs` passes this to [`run`]; Android
+/// has neither variable and computes its own base in `android_main` instead.
+pub fn desktop_app_data_dir() -> anyhow::Result<PathBuf> {
+    let base = std::env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")))
+        .ok_or_else(|| anyhow::anyhow!("neither XDG_DATA_HOME nor HOME is set"))?;
+    Ok(base.join("immermemo"))
+}
+
+/// Opens the window on `vault_dir` and runs until it is closed.
+///
+/// `app_data_base` is this platform's private storage for everything that
+/// isn't a note: the private gitdir, the remote URL, and (outside Android,
+/// which keeps its own token behind the Keystore) the access token.
+/// `token_store` is how the saved access token is read and written --
+/// platform-specific, so the caller builds it.
+pub fn run(
+    vault_dir: PathBuf,
+    app_data_base: PathBuf,
+    token_store: Arc<dyn TokenStore>,
+) -> anyhow::Result<()> {
     std::fs::create_dir_all(&vault_dir)?;
+    let app_data = AppData::new(app_data_base);
+    let remote = app_data.load_remote();
 
     let app = App::new()?;
+    app.set_remote_configured(remote.is_some());
     let session = Rc::new(RefCell::new(Session {
         vault_dir: vault_dir.clone(),
+        app_data,
+        token_store,
+        remote,
         notes: Vec::new(),
         conflicted: Vec::new(),
         current: None,
@@ -118,35 +160,114 @@ pub fn run(vault_dir: PathBuf, remote: Option<String>) -> anyhow::Result<()> {
         }
     });
 
-    app.on_sync({
+    app.on_link({
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
-            let Some(remote) = remote.clone() else {
-                weak.unwrap()
-                    .set_status("No remote: pass a remote URL as the second argument".into());
-                return;
-            };
             let app = weak.unwrap();
-            app.set_syncing(true);
-            app.set_status("Syncing...".into());
-            let dir = session.borrow().vault_dir.clone();
-            let weak = weak.clone();
-            // Vault is opened inside the thread; only plain data crosses.
-            std::thread::spawn(move || {
-                let result = sync::run(&dir, &remote).map_err(|e| format!("{e:#}"));
-                let _ = slint::invoke_from_event_loop(move || {
-                    let app = weak.unwrap();
-                    let session = SESSION
-                        .with(|s| s.borrow().clone())
-                        .expect("session set in main");
-                    finish_sync(&app, &session, result);
-                });
-            });
+            let s = session.borrow();
+            app.set_remote_url_draft(s.remote.clone().unwrap_or_default().into());
+            app.set_remote_token_draft(SharedString::new());
+            app.set_remote_has_token(s.token_store.load().unwrap_or_default().is_some());
+            app.set_remote_open(true);
         }
+    });
+    app.on_close_remote({
+        let weak = app.as_weak();
+        move || weak.unwrap().set_remote_open(false)
+    });
+
+    app.on_save_remote({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |url, token| {
+            let app = weak.unwrap();
+            let url = url.trim();
+            if url.is_empty() {
+                app.set_status("Enter a remote URL first".into());
+                return;
+            }
+            let mut s = session.borrow_mut();
+            if let Err(e) = s.app_data.save_remote(url) {
+                drop(s);
+                app.set_status(format!("Could not save the remote: {e}").into());
+                return;
+            }
+            // An empty token field keeps whatever token is already saved --
+            // the field starts blank on every open, so the user only retypes
+            // it when actually changing it.
+            if !token.is_empty()
+                && let Err(e) = s.token_store.save(&token)
+            {
+                drop(s);
+                app.set_status(format!("Could not save the access token: {e}").into());
+                return;
+            }
+            s.remote = Some(url.to_owned());
+            drop(s);
+            app.set_remote_configured(true);
+            app.set_remote_open(false);
+            start_sync(&app, &session);
+        }
+    });
+
+    app.on_sync({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || start_sync(&weak.unwrap(), &session)
     });
 
     app.run()?;
     Ok(())
+}
+
+/// Spawns a sync in the background, unless no remote is linked yet -- then
+/// it just opens the sheet to ask for one instead of failing.
+fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
+    let (vault_dir, gitdir, remote, token_store) = {
+        let s = session.borrow();
+        let Some(remote) = s.remote.clone() else {
+            app.set_status("No remote linked yet".into());
+            app.set_remote_url_draft(SharedString::new());
+            app.set_remote_token_draft(SharedString::new());
+            app.set_remote_has_token(false);
+            app.set_remote_open(true);
+            return;
+        };
+        let gitdir = match s.app_data.gitdir(&s.vault_dir) {
+            Ok(g) => g,
+            Err(e) => {
+                drop(s);
+                app.set_status(format!("Could not prepare the vault: {e}").into());
+                return;
+            }
+        };
+        (s.vault_dir.clone(), gitdir, remote, s.token_store.clone())
+    };
+
+    app.set_syncing(true);
+    app.set_status("Syncing...".into());
+    let weak = app.as_weak();
+    // Vault is opened inside the thread; only plain data and the (Send +
+    // Sync) token store cross.
+    std::thread::spawn(move || {
+        let credentials = TokenCredentials::new(token_store);
+        // Desktop's OpenSSL can still find an OS-provided CA bundle itself
+        // (see `git2::init`'s path probing); only Android needs a verifier
+        // supplied here at all.
+        #[cfg(target_os = "android")]
+        let verifier = android_cert::verifier().map(Some);
+        #[cfg(not(target_os = "android"))]
+        let verifier: anyhow::Result<Option<Box<dyn immermemo_sync::CertificateVerifier>>> =
+            Ok(None);
+        let result = verifier
+            .and_then(|verifier| sync::run(&vault_dir, &gitdir, &remote, &credentials, verifier))
+            .map_err(|e| format!("{e:#}"));
+        let _ = slint::invoke_from_event_loop(move || {
+            let app = weak.unwrap();
+            let session = SESSION
+                .with(|s| s.borrow().clone())
+                .expect("session set in run");
+            finish_sync(&app, &session, result);
+        });
+    });
 }
 
 fn refresh_list(app: &App, session: &Rc<RefCell<Session>>) {
@@ -251,14 +372,24 @@ fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<Vec<Pat
 }
 
 /// Android starts the app here (the activity loads this library), not at
-/// `main`. The notes live in the app's private storage.
+/// `main`. Everything -- notes, the private gitdir, the encrypted token --
+/// lives under the app's private storage; Android has no `HOME` or
+/// `XDG_DATA_HOME` for the desktop paths to fall back on.
 #[cfg(target_os = "android")]
 #[unsafe(no_mangle)]
 fn android_main(app: slint::android::AndroidApp) {
-    let vault_dir = app
+    let base = app
         .internal_data_path()
-        .expect("the app has private storage")
-        .join("notes");
+        .expect("the app has private storage");
+    let vault_dir = base.join("notes");
+    let token_store: Arc<dyn TokenStore> = Arc::new(
+        // Safety: `app.vm_as_ptr()` is exactly the pointer this constructor
+        // requires, valid for the process's lifetime.
+        unsafe {
+            android_keystore::AndroidKeystoreTokenStore::new(app.vm_as_ptr(), base.join("token"))
+        }
+        .expect("open the Android Keystore"),
+    );
     slint::android::init(app).expect("initialize the Android backend");
-    run(vault_dir, None).expect("run the app");
+    run(vault_dir, base, token_store).expect("run the app");
 }

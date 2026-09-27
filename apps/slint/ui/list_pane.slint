@@ -11,9 +11,12 @@ export component ListPane inherits Rectangle {
     in property <length> inset-bottom: 0px;
     // The editor sits beside the list, so the open note stays highlighted.
     in property <bool> highlight-current: false;
+    // Whether a remote is linked yet -- shown as a dot on the link icon.
+    in property <bool> remote-configured: false;
     callback select(int);
     callback new-note();
     callback sync();
+    callback link();
 
     background: Palette.background;
 
@@ -32,6 +35,12 @@ export component ListPane inherits Rectangle {
                 color: root.status != "" ? Colors.muted : Palette.foreground;
                 vertical-alignment: center;
                 overflow: elide;
+            }
+            IconButton {
+                shape: Shapes.link;
+                // Warns that nothing is linked yet.
+                tint: root.remote-configured ? Palette.foreground : Colors.warning;
+                clicked => { root.link(); }
             }
             IconButton {
                 shape: Shapes.sync;

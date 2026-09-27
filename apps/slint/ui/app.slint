@@ -2,6 +2,7 @@ import { Palette } from "std-widgets.slint";
 import { Metrics } from "components.slint";
 import { ListPane } from "list_pane.slint";
 import { EditorPane } from "editor_pane.slint";
+import { RemoteSheet } from "remote_sheet.slint";
 
 export component App inherits Window {
     title: "immermemo";
@@ -19,6 +20,11 @@ export component App inherits Window {
     in property <bool> can-undo;
     in property <bool> can-redo;
     in-out property <string> body;
+    in property <bool> remote-configured;
+    in-out property <bool> remote-open: false;
+    in-out property <string> remote-url-draft;
+    in-out property <string> remote-token-draft;
+    in property <bool> remote-has-token;
     // Extra room above/below the content, for previewing a phone's system
     // bars on a desktop window (the real ones come from `safe-area-insets`).
     in property <length> extra-inset-top: 0px;
@@ -38,6 +44,9 @@ export component App inherits Window {
     callback redo();
     callback sync();
     callback new-note();
+    callback link();
+    callback save-remote(string, string);
+    callback close-remote();
 
     public function set-cursor(offset: int) {
         pane.set-cursor(offset);
@@ -75,6 +84,7 @@ export component App inherits Window {
             // The list has no keyboard of its own; only the system bar counts.
             inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
             highlight-current: !root.narrow;
+            remote-configured: root.remote-configured;
             select(i) => {
                 root.select(i);
                 root.list-open = false;
@@ -84,6 +94,7 @@ export component App inherits Window {
                 root.list-open = false;
             }
             sync => { root.sync(); }
+            link => { root.link(); }
         }
 
         if !root.narrow: Rectangle {
@@ -113,5 +124,19 @@ export component App inherits Window {
             redo => { root.redo(); }
             back => { root.list-open = true; }
         }
+    }
+
+    if root.remote-open: RemoteSheet {
+        // Not inside the HorizontalLayout above: it must cover the window
+        // outright, not take a layout slot beside the panes.
+        width: 100%;
+        height: 100%;
+        has-token: root.remote-has-token;
+        url-draft <=> root.remote-url-draft;
+        token-draft <=> root.remote-token-draft;
+        inset-top: root.inset-top;
+        inset-bottom: root.inset-bottom;
+        save(url, token) => { root.save-remote(url, token); }
+        cancel => { root.close-remote(); }
     }
 }

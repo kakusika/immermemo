@@ -1,50 +1,26 @@
 //! Runs one `Vault::sync` for the window, off the UI thread.
+//!
+//! Deliberately knows nothing about where credentials come from -- that is
+//! `crate::credentials`' job -- or where the gitdir lives -- that is
+//! `crate::appdata`'s. This module is just the call into `immermemo_sync`.
 
 use std::path::{Path, PathBuf};
 
-use immermemo_sync::{CredentialProvider, Vault};
-
-/// Desktop credentials: the running ssh-agent for ssh remotes, git's
-/// default (no) credentials otherwise. Enough for a trial; a real
-/// credential store belongs to the platform layer.
-struct DesktopCredentials;
-
-impl CredentialProvider for DesktopCredentials {
-    fn credentials(&self, remote_url: &str) -> anyhow::Result<git2::Cred> {
-        if remote_url.starts_with("ssh://") || remote_url.contains('@') {
-            Ok(git2::Cred::ssh_key_from_agent("git")?)
-        } else {
-            Ok(git2::Cred::default()?)
-        }
-    }
-}
-
-/// Where the vault's private (bare) git directory lives: outside the notes
-/// folder, keyed by the folder's canonical path so two vaults never share one.
-fn private_gitdir(vault_dir: &Path) -> anyhow::Result<PathBuf> {
-    let base = std::env::var_os("XDG_DATA_HOME")
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")))
-        .ok_or_else(|| anyhow::anyhow!("neither XDG_DATA_HOME nor HOME is set"))?;
-    private_gitdir_under(&base, vault_dir)
-}
-
-fn private_gitdir_under(base: &Path, vault_dir: &Path) -> anyhow::Result<PathBuf> {
-    let canonical = vault_dir.canonicalize()?;
-    let key = canonical.to_string_lossy().replace(['/', '\\'], "_");
-    Ok(base.join("immermemo").join("vaults").join(key))
-}
+use immermemo_sync::{CertificateVerifier, CredentialProvider, Vault};
 
 /// Returns the notes (absolute paths) that came back with unresolved conflicts.
-pub fn run(vault_dir: &Path, remote: &str) -> anyhow::Result<Vec<PathBuf>> {
-    run_in(vault_dir, &private_gitdir(vault_dir)?, remote)
-}
-
-fn run_in(vault_dir: &Path, gitdir: &Path, remote: &str) -> anyhow::Result<Vec<PathBuf>> {
+pub fn run(
+    vault_dir: &Path,
+    gitdir: &Path,
+    remote: &str,
+    credentials: &dyn CredentialProvider,
+    certificate_verifier: Option<Box<dyn CertificateVerifier>>,
+) -> anyhow::Result<Vec<PathBuf>> {
     std::fs::create_dir_all(gitdir)?;
     let mut vault = Vault::open(vault_dir, gitdir)?;
+    vault.set_certificate_verifier(certificate_verifier);
     vault.set_remote(remote)?;
-    let report = vault.sync(&DesktopCredentials)?;
+    let report = vault.sync(credentials)?;
     Ok(report
         .notes_needing_resolution
         .into_iter()
@@ -55,7 +31,17 @@ fn run_in(vault_dir: &Path, gitdir: &Path, remote: &str) -> anyhow::Result<Vec<P
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::appdata::AppData;
     use tempfile::TempDir;
+
+    /// Local transport (a plain filesystem path) never invokes the
+    /// credentials callback, so these tests never need real credentials.
+    struct NoCredentials;
+    impl CredentialProvider for NoCredentials {
+        fn credentials(&self, _remote_url: &str) -> anyhow::Result<git2::Cred> {
+            anyhow::bail!("not expected to be called for a local transport")
+        }
+    }
 
     /// A bare repository standing in for GitHub/Gitea: a plain filesystem
     /// path never invokes the credentials callback, so no ssh is involved.
@@ -65,17 +51,20 @@ mod tests {
         dir
     }
 
-    /// One "device": a notes folder plus the private gitdir base beside it.
+    /// One "device": a notes folder plus its own app-data base beside it.
     struct Device {
         notes: TempDir,
-        gitdir: TempDir,
+        app_data: AppData,
+        _app_data_dir: TempDir,
     }
 
     impl Device {
         fn new() -> Self {
+            let app_data_dir = TempDir::new().unwrap();
             Self {
                 notes: TempDir::new().unwrap(),
-                gitdir: TempDir::new().unwrap(),
+                app_data: AppData::new(app_data_dir.path().to_owned()),
+                _app_data_dir: app_data_dir,
             }
         }
 
@@ -88,8 +77,14 @@ mod tests {
         }
 
         fn sync(&self, remote: &TempDir) -> anyhow::Result<Vec<PathBuf>> {
-            let gitdir = private_gitdir_under(self.gitdir.path(), self.notes.path())?;
-            run_in(self.notes.path(), &gitdir, remote.path().to_str().unwrap())
+            let gitdir = self.app_data.gitdir(self.notes.path())?;
+            run(
+                self.notes.path(),
+                &gitdir,
+                remote.path().to_str().unwrap(),
+                &NoCredentials,
+                None,
+            )
         }
     }
 
@@ -135,16 +130,5 @@ mod tests {
             .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
             .collect();
         assert_eq!(names, ["note.tmt"]);
-    }
-
-    #[test]
-    fn each_folder_gets_its_own_gitdir() {
-        let base = TempDir::new().unwrap();
-        let (one, two) = (TempDir::new().unwrap(), TempDir::new().unwrap());
-        let a = private_gitdir_under(base.path(), one.path()).unwrap();
-        let b = private_gitdir_under(base.path(), two.path()).unwrap();
-        assert_ne!(a, b);
-        assert_eq!(a, private_gitdir_under(base.path(), one.path()).unwrap());
-        assert!(a.starts_with(base.path()));
     }
 }

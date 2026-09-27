@@ -25,6 +25,9 @@ slint.workspace = true
 
 [target.'cfg(target_os = "android")'.dependencies]
 slint = { version = "1.18", default-features = false, features = ["backend-android-activity-06", "renderer-femtovg", "renderer-software", "compat-1-2"] }
+# For the Android Keystore token store: plain JNI calls into java.security /
+# javax.crypto, no Gradle-managed dependency needed.
+jni = "0.21"
 
 [build-dependencies]
 slint-build.workspace = true
@@ -47,4 +50,8 @@ target_sdk_version = 34
 
 [package.metadata.android.application]
 label = "immermemo"
+
+# Sync needs the network; the Keystore key itself needs no extra permission.
+[[package.metadata.android.uses_permission]]
+name = "android.permission.INTERNET"
 

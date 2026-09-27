@@ -80,4 +80,9 @@ fn main() {
     render(&window, size, &format!("{prefix}-editor.ppm"));
     app.set_current_has_conflict(true);
     render(&window, size, &format!("{prefix}-conflict.ppm"));
+
+    app.set_remote_open(true);
+    app.set_remote_has_token(true);
+    app.set_remote_url_draft("https://github.com/you/notes.git".into());
+    render(&window, size, &format!("{prefix}-remote.ppm"));
 }
