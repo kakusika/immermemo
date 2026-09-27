@@ -1,0 +1,107 @@
+import { Palette, LineEdit, Button } from "std-widgets.slint";
+import { Metrics, Colors } from "components.slint";
+
+// Same full-screen-sheet shape as RemoteSheet, for one thing: renaming a
+// note. Rust remembers which note; this only ever sees the editable name.
+export component RenameDialog inherits Rectangle {
+    in-out property <string> name-draft;
+    in property <length> inset-top: 0px;
+    in property <length> inset-bottom: 0px;
+    callback save(string);
+    callback cancel();
+
+    background: Palette.background;
+
+    VerticalLayout {
+        padding: Metrics.gutter;
+        padding-top: root.inset-top + Metrics.gutter;
+        padding-bottom: root.inset-bottom + Metrics.gutter;
+        spacing: 16px;
+        alignment: start;
+
+        Text {
+            text: "Rename note";
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        name-field := LineEdit {
+            height: Metrics.touch;
+            text <=> root.name-draft;
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+            Button {
+                text: "Cancel";
+                clicked => { root.cancel(); }
+            }
+            Button {
+                text: "Save";
+                primary: true;
+                enabled: root.name-draft != "";
+                clicked => { root.save(root.name-draft); }
+            }
+        }
+    }
+}
+
+// A generic "are you sure" sheet -- currently only deleting a note uses
+// it, but nothing here is delete-specific.
+export component ConfirmDialog inherits Rectangle {
+    in property <string> title;
+    in property <string> body;
+    in property <string> confirm-text: "Confirm";
+    in property <length> inset-top: 0px;
+    in property <length> inset-bottom: 0px;
+    callback confirm();
+    callback cancel();
+
+    background: Palette.background;
+
+    VerticalLayout {
+        padding: Metrics.gutter;
+        padding-top: root.inset-top + Metrics.gutter;
+        padding-bottom: root.inset-bottom + Metrics.gutter;
+        spacing: 16px;
+        alignment: start;
+
+        Text {
+            text: root.title;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        Text {
+            text: root.body;
+            font-size: 13px;
+            color: Colors.muted;
+            wrap: word-wrap;
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+            Button {
+                text: "Cancel";
+                clicked => { root.cancel(); }
+            }
+            Button {
+                text: root.confirm-text;
+                clicked => { root.confirm(); }
+            }
+        }
+    }
+}

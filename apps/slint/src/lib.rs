@@ -37,6 +37,10 @@ struct Session {
     /// Dropped whenever the note changes from outside (a sync) or another
     /// note is opened, so undo never crosses into different content.
     history: Option<History>,
+    /// Which note the open rename/delete-confirm dialog acts on, if any --
+    /// set when the dialog opens, read (and cleared) when it's confirmed.
+    rename_target: Option<usize>,
+    delete_target: Option<usize>,
 }
 
 thread_local! {
@@ -89,6 +93,8 @@ pub fn run(
         conflicted: Vec::new(),
         current: None,
         history: None,
+        rename_target: None,
+        delete_target: None,
     }));
 
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
@@ -174,6 +180,85 @@ pub fn run(
     app.on_close_remote({
         let weak = app.as_weak();
         move || weak.unwrap().set_remote_open(false)
+    });
+
+    app.on_rename_requested({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |index| {
+            let app = weak.unwrap();
+            let mut s = session.borrow_mut();
+            let Some(path) = s.notes.get(index as usize).cloned() else {
+                return;
+            };
+            s.rename_target = Some(index as usize);
+            drop(s);
+            let stem = path
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            app.set_rename_draft(stem.into());
+            app.set_rename_open(true);
+        }
+    });
+    app.on_confirm_rename({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |new_name| {
+            let app = weak.unwrap();
+            app.set_rename_open(false);
+            let Some(index) = session.borrow_mut().rename_target.take() else {
+                return;
+            };
+            let Some(path) = session.borrow().notes.get(index).cloned() else {
+                return;
+            };
+            let was_current = session.borrow().current_path() == Some(&path);
+            match notes::rename(&path, &new_name) {
+                Ok(new_path) => {
+                    refresh_list(&app, &session);
+                    if was_current {
+                        let index = session.borrow().notes.iter().position(|p| *p == new_path);
+                        if let Some(index) = index {
+                            open_note(&app, &session, index);
+                        }
+                    }
+                }
+                Err(e) => app.set_status(format!("Could not rename the note: {e}").into()),
+            }
+        }
+    });
+
+    app.on_delete_requested({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |index| {
+            let app = weak.unwrap();
+            session.borrow_mut().delete_target = Some(index as usize);
+            app.set_delete_confirm_open(true);
+        }
+    });
+    app.on_confirm_delete({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            app.set_delete_confirm_open(false);
+            let Some(index) = session.borrow_mut().delete_target.take() else {
+                return;
+            };
+            let Some(path) = session.borrow().notes.get(index).cloned() else {
+                return;
+            };
+            if let Err(e) = notes::delete(&path) {
+                app.set_status(format!("Could not delete the note: {e}").into());
+                return;
+            }
+            let was_current = session.borrow().current_path() == Some(&path);
+            refresh_list(&app, &session);
+            if was_current {
+                session.borrow_mut().history = None;
+                app.set_current_title(SharedString::new());
+                show_history_state(&app, &session.borrow());
+                app.set_body(SharedString::new());
+            }
+        }
     });
 
     app.on_save_remote({

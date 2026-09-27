@@ -44,6 +44,31 @@ pub fn has_conflict_marker(path: &Path) -> bool {
     std::fs::read_to_string(path).is_ok_and(|t| t.contains(CONFLICT_MARKER))
 }
 
+/// Deletes a note file outright. Not recoverable from the UI -- the
+/// caller is responsible for confirming with the user first.
+pub fn delete(path: &Path) -> std::io::Result<()> {
+    std::fs::remove_file(path)
+}
+
+/// Renames a note to `new_name` (no extension, no path separators),
+/// keeping it in the same directory -- this can't move a note to a
+/// different folder, only change its file name. Fails if a note with
+/// that name already exists there.
+pub fn rename(path: &Path, new_name: &str) -> anyhow::Result<PathBuf> {
+    anyhow::ensure!(!new_name.is_empty(), "the name can't be empty");
+    anyhow::ensure!(
+        !new_name.contains(['/', '\\']),
+        "the name can't contain a path separator"
+    );
+    let new_path = path.with_file_name(format!("{new_name}.{EXTENSION}"));
+    anyhow::ensure!(
+        !new_path.exists(),
+        "a note named \"{new_name}\" already exists here"
+    );
+    std::fs::rename(path, &new_path)?;
+    Ok(new_path)
+}
+
 /// Creates an empty `untitled-N.tmt` and returns its path.
 pub fn create(dir: &Path) -> std::io::Result<PathBuf> {
     for n in 1.. {
@@ -89,6 +114,50 @@ mod tests {
         let first = create(&dir).unwrap();
         let second = create(&dir).unwrap();
         assert_ne!(first, second);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn delete_removes_the_file() {
+        let dir = std::env::temp_dir().join(format!("immermemo-delete-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("a.tmt");
+        std::fs::write(&path, "").unwrap();
+
+        delete(&path).unwrap();
+        assert!(!path.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn rename_keeps_the_note_in_the_same_directory() {
+        let dir = std::env::temp_dir().join(format!("immermemo-rename-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("sub")).unwrap();
+        let path = dir.join("sub/a.tmt");
+        std::fs::write(&path, "content").unwrap();
+
+        let new_path = rename(&path, "b").unwrap();
+        assert_eq!(new_path, dir.join("sub/b.tmt"));
+        assert!(!path.exists());
+        assert_eq!(std::fs::read_to_string(&new_path).unwrap(), "content");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn rename_rejects_an_empty_name_a_path_separator_or_an_existing_note() {
+        let dir = std::env::temp_dir().join(format!("immermemo-rename-reject-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("a.tmt");
+        std::fs::write(&path, "").unwrap();
+        std::fs::write(dir.join("b.tmt"), "").unwrap();
+
+        assert!(rename(&path, "").is_err());
+        assert!(rename(&path, "sub/b").is_err());
+        assert!(rename(&path, "b").is_err());
+        assert!(path.exists(), "a rejected rename must not touch the file");
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

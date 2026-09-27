@@ -12,6 +12,7 @@ export global Metrics {
 
 export global Colors {
     out property <color> warning: #d9822b;
+    out property <color> danger: #d9302f;
     out property <color> separator: Palette.foreground.with-alpha(0.12);
     out property <color> muted: Palette.foreground.with-alpha(0.6);
 }
@@ -82,6 +83,30 @@ export component TopBar inherits Rectangle {
             spacing: 4px;
             @children
         }
+    }
+}
+
+// A tappable text row for an action sheet or menu -- not a list row (no
+// separator, no selection highlight of its own).
+export component ActionRow inherits Rectangle {
+    in property <string> text;
+    in property <color> tint: Palette.foreground;
+    callback clicked();
+
+    height: Metrics.touch;
+    background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+
+    Text {
+        x: Metrics.gutter;
+        text: root.text;
+        color: root.tint;
+        font-size: 17px;
+        vertical-alignment: center;
+        height: 100%;
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
     }
 }
 

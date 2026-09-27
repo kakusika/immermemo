@@ -85,4 +85,13 @@ fn main() {
     app.set_remote_has_token(true);
     app.set_remote_url_draft("https://github.com/you/notes.git".into());
     render(&window, size, &format!("{prefix}-remote.ppm"));
+    app.set_remote_open(false);
+
+    app.set_rename_open(true);
+    app.set_rename_draft("ideas".into());
+    render(&window, size, &format!("{prefix}-rename.ppm"));
+    app.set_rename_open(false);
+
+    app.set_delete_confirm_open(true);
+    render(&window, size, &format!("{prefix}-delete-confirm.ppm"));
 }

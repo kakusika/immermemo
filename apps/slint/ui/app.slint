@@ -3,6 +3,7 @@ import { Metrics } from "components.slint";
 import { ListPane } from "list_pane.slint";
 import { EditorPane } from "editor_pane.slint";
 import { RemoteSheet } from "remote_sheet.slint";
+import { RenameDialog, ConfirmDialog } from "dialogs.slint";
 
 export component App inherits Window {
     title: "immermemo";
@@ -25,6 +26,9 @@ export component App inherits Window {
     in-out property <string> remote-url-draft;
     in-out property <string> remote-token-draft;
     in property <bool> remote-has-token;
+    in-out property <bool> rename-open: false;
+    in-out property <string> rename-draft;
+    in-out property <bool> delete-confirm-open: false;
     // Extra room above/below the content, for previewing a phone's system
     // bars on a desktop window (the real ones come from `safe-area-insets`).
     in property <length> extra-inset-top: 0px;
@@ -47,6 +51,10 @@ export component App inherits Window {
     callback link();
     callback save-remote(string, string);
     callback close-remote();
+    callback rename-requested(int);
+    callback delete-requested(int);
+    callback confirm-rename(string);
+    callback confirm-delete();
 
     public function set-cursor(offset: int) {
         pane.set-cursor(offset);
@@ -95,6 +103,8 @@ export component App inherits Window {
             }
             sync => { root.sync(); }
             link => { root.link(); }
+            rename-requested(i) => { root.rename-requested(i); }
+            delete-requested(i) => { root.delete-requested(i); }
         }
 
         if !root.narrow: Rectangle {
@@ -138,5 +148,27 @@ export component App inherits Window {
         inset-bottom: root.inset-bottom;
         save(url, token) => { root.save-remote(url, token); }
         cancel => { root.close-remote(); }
+    }
+
+    if root.rename-open: RenameDialog {
+        width: 100%;
+        height: 100%;
+        name-draft <=> root.rename-draft;
+        inset-top: root.inset-top;
+        inset-bottom: root.inset-bottom;
+        save(name) => { root.confirm-rename(name); }
+        cancel => { root.rename-open = false; }
+    }
+
+    if root.delete-confirm-open: ConfirmDialog {
+        width: 100%;
+        height: 100%;
+        title: "Delete this note?";
+        body: "This can't be undone from here.";
+        confirm-text: "Delete";
+        inset-top: root.inset-top;
+        inset-bottom: root.inset-bottom;
+        confirm => { root.confirm-delete(); }
+        cancel => { root.delete-confirm-open = false; }
     }
 }
