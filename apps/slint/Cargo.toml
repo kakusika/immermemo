@@ -37,7 +37,9 @@ slint = { workspace = true, features = ["software-renderer-systemfonts"] }
 
 [package.metadata.android]
 package = "dev.immermemo.app"
-build_targets = ["aarch64-linux-android"]
+# aarch64 is what a real phone needs; x86_64 lets the same APK also install
+# on an emulator running at native speed under KVM (see nix/dev.nix).
+build_targets = ["aarch64-linux-android", "x86_64-linux-android"]
 
 [package.metadata.android.sdk]
 min_sdk_version = 26

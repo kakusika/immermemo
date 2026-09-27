@@ -18,15 +18,26 @@ let
       "rust-src"
     ])
     fenix.targets.aarch64-linux-android.stable.rust-std
+    # For the emulator only: a real phone is always arm64-v8a, but an x86_64
+    # system image runs at native speed under KVM instead of translating
+    # ARM -- close enough for anything that isn't CPU-architecture-specific
+    # (JNI class/method-signature bugs included), not a stand-in for a real
+    # device.
+    fenix.targets.x86_64-linux-android.stable.rust-std
   ];
-  # Only what building a sideloadable APK needs: no emulator, no system images.
   androidSdk = pkgs.androidenv.composeAndroidPackages {
     platformVersions = [ "34" ];
     buildToolsVersions = [ "34.0.0" ];
     includeNDK = true;
-    abiVersions = [ "arm64-v8a" ];
-    includeEmulator = false;
-    includeSystemImages = false;
+    # abiVersions only selects which system images get fetched (real-device
+    # cross-compiling goes through the NDK and the Rust targets above,
+    # neither of which reads this list) -- arm64-v8a would just be a second,
+    # unused ~1.6 GB system-image download alongside the one the emulator
+    # actually runs.
+    abiVersions = [ "x86_64" ];
+    includeEmulator = true;
+    includeSystemImages = true;
+    systemImageTypes = [ "google_apis" ];
   };
   androidHome = "${androidSdk.androidsdk}/libexec/android-sdk";
 in
