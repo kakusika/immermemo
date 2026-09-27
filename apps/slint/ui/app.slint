@@ -1,0 +1,120 @@
+import { Button, TextEdit, ListView } from "std-widgets.slint";
+
+export component App inherits Window {
+    title: "immermemo";
+    preferred-width: 960px;
+    preferred-height: 640px;
+
+    in property <[string]> notes;
+    in property <[bool]> conflicted;
+    in property <int> current: -1;
+    in property <string> status;
+    in property <bool> syncing;
+    in property <bool> current-has-conflict;
+    in-out property <string> body;
+
+    callback select(int);
+    callback edited(string);
+    callback undo();
+    callback redo();
+    callback sync();
+    callback new-note();
+
+    // Moves the caret after Rust restores text from the undo history.
+    public function set-cursor(offset: int) {
+        editor.set-selection-offsets(offset, offset);
+    }
+
+    VerticalLayout {
+        HorizontalLayout {
+            padding: 8px;
+            spacing: 8px;
+            Button {
+                horizontal-stretch: 0;
+                text: "New";
+                clicked => { root.new-note(); }
+            }
+            Button {
+                horizontal-stretch: 0;
+                text: root.syncing ? "Syncing..." : "Sync";
+                enabled: !root.syncing;
+                clicked => { root.sync(); }
+            }
+            Text {
+                horizontal-stretch: 1;
+                text: root.status;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+
+        HorizontalLayout {
+            ListView {
+                width: 240px;
+                for name[i] in root.notes: Rectangle {
+                    height: 32px;
+                    background: i == root.current ? #3a6ea544 : transparent;
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 6px;
+                        Text {
+                            text: name;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+                        Text {
+                            text: root.conflicted[i] ? "!" : "";
+                            color: #d9822b;
+                            vertical-alignment: center;
+                        }
+                    }
+                    TouchArea {
+                        clicked => { root.select(i); }
+                    }
+                }
+            }
+
+            VerticalLayout {
+                horizontal-stretch: 1;
+                if root.current-has-conflict: Rectangle {
+                    height: 28px;
+                    background: #d9822b44;
+                    Text {
+                        text: "This note has unresolved conflicts (@mobile.conflict). Edit the text to keep what you want.";
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                }
+
+                // Ctrl+Z / Ctrl+Y go to the Loro history instead of the
+                // widget's own undo; capture-key-pressed runs before the
+                // focused TextEdit sees the key.
+                FocusScope {
+                    horizontal-stretch: 1;
+                    vertical-stretch: 1;
+
+                    capture-key-pressed(event) => {
+                        if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
+                            root.undo();
+                            return accept;
+                        }
+                        if (event.modifiers.control && (event.text == "y" || event.text == "Y" || ((event.text == "z" || event.text == "Z") && event.modifiers.shift))) {
+                            root.redo();
+                            return accept;
+                        }
+                        return reject;
+                    }
+
+                    editor := TextEdit {
+                        width: parent.width;
+                        height: parent.height;
+                        enabled: root.current >= 0;
+                        text <=> root.body;
+                        edited(t) => { root.edited(t); }
+                    }
+                }
+            }
+        }
+    }
+}

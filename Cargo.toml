@@ -2,11 +2,12 @@
 resolver = "3"
 
 members = [
+  "apps/slint",
   "core/merge",
   "core/sync",
 ]
 
-default-members = ["core/sync", "core/merge"]
+default-members = ["apps/slint"]
 
 [workspace.package]
 version = "0.1.0"
@@ -26,4 +27,9 @@ tomet-printer = { git = "https://github.com/tomet-lang/tomet.git", version = "0.
 
 #[ Crates.io ]
 anyhow = "1.0"
+loro = "1.16"
+# Same feature set mumeum runs on: Skia is the only renderer compiled in by default,
+# `renderer-software` stays as a manual fallback (`SLINT_BACKEND=winit-software`).
+slint = { version = "1.18", default-features = false, features = ["backend-winit", "renderer-skia", "renderer-software", "accessibility", "compat-1-2"] }
+slint-build = "1.18"
 git2 = { version = "0.19", features = ["vendored-libgit2", "vendored-openssl"] }
