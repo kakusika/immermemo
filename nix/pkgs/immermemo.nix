@@ -35,7 +35,7 @@ let
     pname = "immermemo";
     version = "0.1.0";
 
-    # Only the Slint app binary -- core/sync and core/merge are plain libraries with
+    # Only the Slint app binary -- crates/sync and crates/merge are plain libraries with
     # no runtime deps of its own, no reason to build it as a separate
     # output.
     cargoExtraArgs = "-p immermemo-slint";
