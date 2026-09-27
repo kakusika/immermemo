@@ -1,0 +1,96 @@
+import { Palette, ListView } from "std-widgets.slint";
+import { Metrics, Colors, Shapes, IconButton, TopBar, Fab } from "components.slint";
+
+export component ListPane inherits Rectangle {
+    in property <[string]> notes;
+    in property <[bool]> conflicted;
+    in property <int> current: -1;
+    in property <string> status;
+    in property <bool> syncing;
+    in property <length> inset-top: 0px;
+    in property <length> inset-bottom: 0px;
+    // The editor sits beside the list, so the open note stays highlighted.
+    in property <bool> highlight-current: false;
+    callback select(int);
+    callback new-note();
+    callback sync();
+
+    background: Palette.background;
+
+    VerticalLayout {
+        TopBar {
+            inset-top: root.inset-top;
+            // Aligns the title with the rows below.
+            Rectangle {
+                width: Metrics.gutter - 4px;
+            }
+            Text {
+                horizontal-stretch: 1;
+                text: root.status != "" ? root.status : "Notes";
+                font-size: root.status != "" ? 14px : 22px;
+                font-weight: root.status != "" ? 400 : 600;
+                color: root.status != "" ? Colors.muted : Palette.foreground;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+            IconButton {
+                shape: Shapes.sync;
+                enabled: !root.syncing;
+                clicked => { root.sync(); }
+            }
+        }
+
+        Rectangle {
+            height: 1px;
+            background: Colors.separator;
+        }
+
+        ListView {
+            vertical-stretch: 1;
+            for name[i] in root.notes: Rectangle {
+                height: Metrics.row-height;
+                background: (root.highlight-current && i == root.current)
+                    ? Palette.accent-background.with-alpha(0.16)
+                    : (touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent);
+
+                HorizontalLayout {
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    spacing: 8px;
+                    Text {
+                        horizontal-stretch: 1;
+                        text: name;
+                        font-size: 17px;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                    if root.conflicted[i]: Rectangle {
+                        width: 10px;
+                        height: 10px;
+                        y: (parent.height - self.height) / 2;
+                        border-radius: 5px;
+                        background: Colors.warning;
+                    }
+                }
+
+                Rectangle {
+                    y: parent.height - 1px;
+                    height: 1px;
+                    x: Metrics.gutter;
+                    width: parent.width - Metrics.gutter;
+                    background: Colors.separator;
+                }
+
+                touch := TouchArea {
+                    clicked => { root.select(i); }
+                }
+            }
+        }
+    }
+
+    Fab {
+        x: parent.width - self.width - Metrics.gutter;
+        y: parent.height - self.height - Metrics.gutter - root.inset-bottom;
+        clicked => { root.new-note(); }
+    }
+}

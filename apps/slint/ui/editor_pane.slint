@@ -1,0 +1,122 @@
+import { Palette, TextEdit } from "std-widgets.slint";
+import { Metrics, Colors, Shapes, IconButton, TopBar } from "components.slint";
+
+export component EditorPane inherits Rectangle {
+    in property <string> title;
+    in property <bool> has-note: false;
+    in property <bool> has-conflict: false;
+    in property <bool> can-undo: false;
+    in property <bool> can-redo: false;
+    // Show the back arrow (a narrow window, where the list is another screen).
+    in property <bool> show-back: false;
+    in property <length> inset-top: 0px;
+    // Whatever covers the bottom edge: the system bar, or the on-screen keyboard.
+    in property <length> inset-bottom: 0px;
+    in-out property <string> body;
+    callback edited(string);
+    callback undo();
+    callback redo();
+    callback back();
+
+    // Moves the caret after Rust restores text from the undo history.
+    public function set-cursor(offset: int) {
+        editor.set-selection-offsets(offset, offset);
+    }
+
+    background: Palette.background;
+
+    VerticalLayout {
+        TopBar {
+            inset-top: root.inset-top;
+            if root.show-back: IconButton {
+                shape: Shapes.back;
+                clicked => { root.back(); }
+            }
+            // Keeps the title off the edge when there is no back arrow.
+            if !root.show-back: Rectangle {
+                width: Metrics.gutter - 4px;
+            }
+            Text {
+                horizontal-stretch: 1;
+                text: root.title;
+                font-size: 20px;
+                font-weight: 600;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+
+        Rectangle {
+            height: 1px;
+            background: Colors.separator;
+        }
+
+        if root.has-conflict: Rectangle {
+            height: 40px;
+            background: Colors.warning.with-alpha(0.22);
+            Text {
+                x: Metrics.gutter;
+                width: parent.width - 2 * Metrics.gutter;
+                text: "Conflict: edit the text to keep what you want.";
+                font-size: 13px;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+
+        // Ctrl+Z / Ctrl+Y go to the Loro history instead of the widget's own
+        // undo; capture-key-pressed runs before the focused TextEdit sees the
+        // key. On a phone there is no such key: the bar below does the same.
+        FocusScope {
+            horizontal-stretch: 1;
+            vertical-stretch: 1;
+            capture-key-pressed(event) => {
+                if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
+                    root.undo();
+                    return accept;
+                }
+                if (event.modifiers.control && (event.text == "y" || event.text == "Y" || ((event.text == "z" || event.text == "Z") && event.modifiers.shift))) {
+                    root.redo();
+                    return accept;
+                }
+                return reject;
+            }
+
+            editor := TextEdit {
+                width: parent.width;
+                height: parent.height;
+                enabled: root.has-note;
+                font-size: 17px;
+                text <=> root.body;
+                edited(t) => { root.edited(t); }
+            }
+        }
+
+        if root.has-note: Rectangle {
+            height: Metrics.touch;
+            background: Palette.alternate-background;
+            HorizontalLayout {
+                padding-left: 4px;
+                padding-right: 4px;
+                spacing: 4px;
+                alignment: start;
+                IconButton {
+                    shape: Shapes.undo;
+                    enabled: root.can-undo;
+                    clicked => { root.undo(); }
+                }
+                IconButton {
+                    shape: Shapes.redo;
+                    enabled: root.can-redo;
+                    clicked => { root.redo(); }
+                }
+            }
+        }
+
+        // Pushes the bar above the keyboard or the system navigation bar.
+        Rectangle {
+            height: root.inset-bottom;
+            background: Palette.alternate-background;
+        }
+    }
+}

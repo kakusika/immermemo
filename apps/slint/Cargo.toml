@@ -3,6 +3,11 @@ name = "immermemo-slint"
 version.workspace = true
 edition.workspace = true
 
+[lib]
+# `cdylib` is what the Android activity loads; `lib` is what the desktop
+# binary links.
+crate-type = ["lib", "cdylib"]
+
 [[bin]]
 name = "immermemo"
 path = "src/main.rs"
@@ -12,10 +17,32 @@ immermemo-sync.workspace = true
 anyhow.workspace = true
 git2.workspace = true
 loro.workspace = true
+
+# Desktop: winit + Skia (the workspace default). Android: its own backend, and
+# no Skia -- its prebuilt binaries are not fetched for that target.
+[target.'cfg(not(target_os = "android"))'.dependencies]
 slint.workspace = true
+
+[target.'cfg(target_os = "android")'.dependencies]
+slint = { version = "1.18", default-features = false, features = ["backend-android-activity-06", "renderer-femtovg", "renderer-software", "compat-1-2"] }
 
 [build-dependencies]
 slint-build.workspace = true
 
 [dev-dependencies]
 tempfile = "3"
+# Only for `examples/snap.rs`, which renders the window headlessly at a chosen
+# size: the software renderer needs this to find system (Japanese) fonts.
+slint = { workspace = true, features = ["software-renderer-systemfonts"] }
+
+[package.metadata.android]
+package = "dev.immermemo.app"
+build_targets = ["aarch64-linux-android"]
+
+[package.metadata.android.sdk]
+min_sdk_version = 26
+target_sdk_version = 34
+
+[package.metadata.android.application]
+label = "immermemo"
+

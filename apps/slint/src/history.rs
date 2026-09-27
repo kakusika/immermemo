@@ -66,6 +66,14 @@ impl History {
         self.current = new_text.to_owned();
     }
 
+    pub fn can_undo(&self) -> bool {
+        self.undo.can_undo()
+    }
+
+    pub fn can_redo(&self) -> bool {
+        self.undo.can_redo()
+    }
+
     pub fn undo(&mut self) -> Option<Restored> {
         if !self.undo.undo().ok()? {
             return None;
@@ -139,6 +147,16 @@ mod tests {
         assert_eq!(h.undo().unwrap().text, "ab");
         assert_eq!(h.undo().unwrap().text, "a");
         assert_eq!(h.redo().unwrap().text, "ab");
+    }
+
+    #[test]
+    fn can_undo_and_can_redo_follow_the_history() {
+        let mut h = History::with_merge_interval("", 0);
+        assert!(!h.can_undo() && !h.can_redo());
+        h.edit("a");
+        assert!(h.can_undo() && !h.can_redo());
+        h.undo();
+        assert!(!h.can_undo() && h.can_redo());
     }
 
     #[test]
