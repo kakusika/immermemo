@@ -147,7 +147,8 @@ mod tests {
 
     #[test]
     fn rename_rejects_an_empty_name_a_path_separator_or_an_existing_note() {
-        let dir = std::env::temp_dir().join(format!("immermemo-rename-reject-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("immermemo-rename-reject-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("a.tmt");

@@ -1,10 +1,13 @@
 import { Palette, LineEdit, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "components.slint";
 
-// Same full-screen-sheet shape as RemoteSheet, for one thing: renaming a
-// note. Rust remembers which note; this only ever sees the editable name.
-export component RenameDialog inherits Rectangle {
-    in-out property <string> name-draft;
+// Same full-screen-sheet shape as RemoteSheet -- one text field, Save or
+// Cancel. Used for renaming a note and for adding a vault; Rust decides
+// what the typed text means (a note's new name, a path, a subfolder
+// name), this only ever sees the editable string and a title to show.
+export component TextInputDialog inherits Rectangle {
+    in property <string> title;
+    in-out property <string> text-draft;
     in property <length> inset-top: 0px;
     in property <length> inset-bottom: 0px;
     callback save(string);
@@ -20,14 +23,14 @@ export component RenameDialog inherits Rectangle {
         alignment: start;
 
         Text {
-            text: "Rename note";
+            text: root.title;
             font-size: 22px;
             font-weight: 600;
         }
 
-        name-field := LineEdit {
+        text-field := LineEdit {
             height: Metrics.touch;
-            text <=> root.name-draft;
+            text <=> root.text-draft;
         }
 
         Rectangle {
@@ -46,8 +49,8 @@ export component RenameDialog inherits Rectangle {
             Button {
                 text: "Save";
                 primary: true;
-                enabled: root.name-draft != "";
-                clicked => { root.save(root.name-draft); }
+                enabled: root.text-draft != "";
+                clicked => { root.save(root.text-draft); }
             }
         }
     }

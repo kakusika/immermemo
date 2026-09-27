@@ -94,4 +94,15 @@ fn main() {
 
     app.set_delete_confirm_open(true);
     render(&window, size, &format!("{prefix}-delete-confirm.ppm"));
+    app.set_delete_confirm_open(false);
+
+    app.set_vaults(ModelRc::new(VecModel::from(
+        ["notes", "work"]
+            .iter()
+            .map(|n| (*n).into())
+            .collect::<Vec<slint::SharedString>>(),
+    )));
+    app.set_current_vault(0);
+    app.set_vault_sheet_open(true);
+    render(&window, size, &format!("{prefix}-vaults.ppm"));
 }

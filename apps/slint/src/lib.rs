@@ -11,7 +11,7 @@ mod android_cert;
 mod android_keystore;
 
 use std::cell::RefCell;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -23,11 +23,25 @@ use history::{History, Restored};
 
 slint::include_modules!();
 
+/// Builds the token store for a given vault directory -- a plain file on
+/// desktop, the Keystore on Android. Called once at startup and again
+/// every time the current vault changes, since a different vault can need
+/// a completely different store.
+pub type TokenStoreFactory = Box<dyn Fn(&Path) -> anyhow::Result<Arc<dyn TokenStore>>>;
+
 /// What the window is currently editing. Lives on the UI thread only.
 struct Session {
     vault_dir: PathBuf,
     app_data: AppData,
+    /// The current vault's token store. Rebuilt (via `token_store_for`)
+    /// whenever the vault switches -- it can't be built once at startup
+    /// the way it used to be, since a different vault can need a
+    /// completely different store (Android: a different Keystore entry).
     token_store: Arc<dyn TokenStore>,
+    token_store_for: TokenStoreFactory,
+    /// Every vault folder the user has linked, in the order they were
+    /// added. `vault_dir` is always one of these.
+    known_vaults: Vec<PathBuf>,
     /// The remote URL, kept here once loaded so Sync doesn't re-read it from
     /// disk on every tap. Not secret -- the token lives in `token_store`.
     remote: Option<String>,
@@ -55,6 +69,13 @@ impl Session {
     }
 }
 
+/// Where a vault's access token would live under `app_data_base`, without
+/// needing a running [`Session`] -- for a caller of [`run`] building its
+/// token-store factory before the app (and its `AppData`) exists yet.
+pub fn token_path_in(app_data_base: &Path, vault_dir: &Path) -> anyhow::Result<PathBuf> {
+    AppData::new(app_data_base.to_owned()).token_path(vault_dir)
+}
+
 /// Desktop's app-data base: `$XDG_DATA_HOME/immermemo`, or
 /// `$HOME/.local/share/immermemo`. `main.rs` passes this to [`run`]; Android
 /// has neither variable and computes its own base in `android_main` instead.
@@ -66,28 +87,52 @@ pub fn desktop_app_data_dir() -> anyhow::Result<PathBuf> {
     Ok(base.join("immermemo"))
 }
 
-/// Opens the window on `vault_dir` and runs until it is closed.
+/// Opens the window and runs until it is closed.
+///
+/// `default_vault_dir` only matters the very first time the app ever
+/// runs (nothing in `app_data_base` yet): it becomes the first known
+/// vault, so a fresh desktop CLI invocation or a fresh Android install
+/// still opens straight onto a vault the way a single-vault build used
+/// to. After that, which vaults exist and which one is current come
+/// entirely from `app_data_base`.
 ///
 /// `app_data_base` is this platform's private storage for everything that
-/// isn't a note: the private gitdir, the remote URL, and (outside Android,
-/// which keeps its own token behind the Keystore) the access token.
-/// `token_store` is how the saved access token is read and written --
-/// platform-specific, so the caller builds it.
+/// isn't a note: each vault's own private gitdir, remote URL and (outside
+/// Android, which keeps its own token behind the Keystore) access token,
+/// plus the list of known vaults itself. `token_store_for` builds the
+/// token store for a given vault directory -- platform-specific (a plain
+/// file on desktop, the Keystore on Android), and called again every time
+/// the current vault changes, since a different vault can need a
+/// completely different store.
 pub fn run(
-    vault_dir: PathBuf,
+    default_vault_dir: PathBuf,
     app_data_base: PathBuf,
-    token_store: Arc<dyn TokenStore>,
+    token_store_for: TokenStoreFactory,
 ) -> anyhow::Result<()> {
-    std::fs::create_dir_all(&vault_dir)?;
     let app_data = AppData::new(app_data_base);
-    let remote = app_data.load_remote();
+    let mut known_vaults = app_data.known_vaults();
+    if known_vaults.is_empty() {
+        std::fs::create_dir_all(&default_vault_dir)?;
+        app_data.add_vault(&default_vault_dir)?;
+        known_vaults.push(default_vault_dir);
+    }
+    let vault_dir = app_data
+        .load_current_vault()
+        .filter(|v| known_vaults.contains(v))
+        .unwrap_or_else(|| known_vaults[0].clone());
+    std::fs::create_dir_all(&vault_dir)?;
+
+    let token_store = token_store_for(&vault_dir)?;
+    let remote = app_data.load_remote(&vault_dir);
 
     let app = App::new()?;
     app.set_remote_configured(remote.is_some());
     let session = Rc::new(RefCell::new(Session {
-        vault_dir: vault_dir.clone(),
+        vault_dir,
         app_data,
         token_store,
+        token_store_for,
+        known_vaults,
         remote,
         notes: Vec::new(),
         conflicted: Vec::new(),
@@ -99,6 +144,7 @@ pub fn run(
 
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
     refresh_list(&app, &session);
+    refresh_vault_list(&app, &session);
 
     app.on_select({
         let (weak, session) = (app.as_weak(), session.clone());
@@ -261,6 +307,62 @@ pub fn run(
         }
     });
 
+    app.on_open_vault_sheet({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            refresh_vault_list(&app, &session);
+            app.set_vault_sheet_open(true);
+        }
+    });
+    app.on_switch_vault({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |index| {
+            let app = weak.unwrap();
+            app.set_vault_sheet_open(false);
+            let Some(vault_dir) = session.borrow().known_vaults.get(index as usize).cloned() else {
+                return;
+            };
+            switch_vault(&app, &session, vault_dir);
+        }
+    });
+    app.on_add_vault_requested({
+        let weak = app.as_weak();
+        move || {
+            let app = weak.unwrap();
+            app.set_add_vault_draft(SharedString::new());
+            app.set_add_vault_open(true);
+        }
+    });
+    app.on_confirm_add_vault({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |input| {
+            let app = weak.unwrap();
+            app.set_add_vault_open(false);
+            let base = session.borrow().app_data.base().to_owned();
+            let new_vault = match vault_path_from_input(&base, &input) {
+                Ok(p) => p,
+                Err(e) => {
+                    app.set_status(format!("Could not add the vault: {e}").into());
+                    return;
+                }
+            };
+            if let Err(e) = std::fs::create_dir_all(&new_vault) {
+                app.set_status(format!("Could not add the vault: {e}").into());
+                return;
+            }
+            let mut s = session.borrow_mut();
+            if let Err(e) = s.app_data.add_vault(&new_vault) {
+                drop(s);
+                app.set_status(format!("Could not add the vault: {e}").into());
+                return;
+            }
+            s.known_vaults = s.app_data.known_vaults();
+            drop(s);
+            switch_vault(&app, &session, new_vault);
+        }
+    });
+
     app.on_save_remote({
         let (weak, session) = (app.as_weak(), session.clone());
         move |url, token| {
@@ -271,7 +373,7 @@ pub fn run(
                 return;
             }
             let mut s = session.borrow_mut();
-            if let Err(e) = s.app_data.save_remote(url) {
+            if let Err(e) = s.app_data.save_remote(&s.vault_dir, url) {
                 drop(s);
                 app.set_status(format!("Could not save the remote: {e}").into());
                 return;
@@ -376,6 +478,89 @@ fn refresh_list(app: &App, session: &Rc<RefCell<Session>>) {
     app.set_current(s.current.map_or(-1, |i| i as i32));
 }
 
+fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
+    let s = session.borrow();
+    let names: Vec<SharedString> = s
+        .known_vaults
+        .iter()
+        .map(|p| vault_display_name(p).into())
+        .collect();
+    let current = s.known_vaults.iter().position(|v| *v == s.vault_dir);
+    drop(s);
+    app.set_vaults(ModelRc::new(VecModel::from(names)));
+    app.set_current_vault(current.map_or(-1, |i| i as i32));
+}
+
+fn vault_display_name(vault_dir: &std::path::Path) -> String {
+    vault_dir
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| vault_dir.display().to_string())
+}
+
+/// Switches to `vault_dir`, reloading everything that's per-vault: the
+/// token store, the remote URL, the note list, and the open editor
+/// (there's no note from the old vault that still makes sense to show).
+fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBuf) {
+    if let Err(e) = std::fs::create_dir_all(&vault_dir) {
+        app.set_status(format!("Could not open this vault: {e}").into());
+        return;
+    }
+    let token_store = {
+        let s = session.borrow();
+        match (s.token_store_for)(&vault_dir) {
+            Ok(t) => t,
+            Err(e) => {
+                drop(s);
+                app.set_status(format!("Could not open this vault: {e}").into());
+                return;
+            }
+        }
+    };
+
+    let mut s = session.borrow_mut();
+    let remote = s.app_data.load_remote(&vault_dir);
+    let _ = s.app_data.save_current_vault(&vault_dir);
+    s.vault_dir = vault_dir;
+    s.token_store = token_store;
+    s.remote = remote.clone();
+    s.current = None;
+    s.history = None;
+    drop(s);
+
+    app.set_remote_configured(remote.is_some());
+    app.set_current_title(SharedString::new());
+    app.set_body(SharedString::new());
+    show_history_state(app, &session.borrow());
+    app.set_list_open(true);
+    refresh_list(app, session);
+    refresh_vault_list(app, session);
+}
+
+/// Turns what the user typed in the "Add vault" dialog into an actual
+/// vault directory -- desktop takes it as a path outright; Android has no
+/// external folder access in this build, so it names a subfolder of the
+/// same private storage the app already uses.
+#[cfg(target_os = "android")]
+fn vault_path_from_input(base: &std::path::Path, input: &str) -> anyhow::Result<PathBuf> {
+    anyhow::ensure!(!input.is_empty(), "the name can't be empty");
+    anyhow::ensure!(
+        !input.contains(['/', '\\']),
+        "the name can't contain a path separator"
+    );
+    anyhow::ensure!(
+        input != "vaults" && input != "vaults.txt" && input != "current_vault.txt",
+        "that name is reserved for the app's own data"
+    );
+    Ok(base.join(input))
+}
+
+#[cfg(not(target_os = "android"))]
+fn vault_path_from_input(_base: &std::path::Path, input: &str) -> anyhow::Result<PathBuf> {
+    anyhow::ensure!(!input.is_empty(), "the path can't be empty");
+    Ok(PathBuf::from(input))
+}
+
 fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
     let mut s = session.borrow_mut();
     let Some(path) = s.notes.get(index).cloned() else {
@@ -466,15 +651,16 @@ fn android_main(app: slint::android::AndroidApp) {
     let base = app
         .internal_data_path()
         .expect("the app has private storage");
-    let vault_dir = base.join("notes");
-    let token_store: Arc<dyn TokenStore> = Arc::new(
-        // Safety: `app.vm_as_ptr()` is exactly the pointer this constructor
-        // requires, valid for the process's lifetime.
-        unsafe {
-            android_keystore::AndroidKeystoreTokenStore::new(app.vm_as_ptr(), base.join("token"))
-        }
-        .expect("open the Android Keystore"),
-    );
+    let default_vault_dir = base.join("notes");
+    let app_data = AppData::new(base.clone());
+    let vm_ptr = app.vm_as_ptr();
+    let token_store_for: TokenStoreFactory = Box::new(move |vault_dir| {
+        let path = app_data.token_path(vault_dir)?;
+        // Safety: `vm_ptr` is `app.vm_as_ptr()`, valid for the process's
+        // lifetime; this closure doesn't outlive it.
+        let store = unsafe { android_keystore::AndroidKeystoreTokenStore::new(vm_ptr, path) }?;
+        Ok(Arc::new(store) as Arc<dyn TokenStore>)
+    });
     slint::android::init(app).expect("initialize the Android backend");
-    run(vault_dir, base, token_store).expect("run the app");
+    run(default_vault_dir, base, token_store_for).expect("run the app");
 }

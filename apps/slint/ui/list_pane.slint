@@ -23,6 +23,8 @@ export component ListPane inherits Rectangle {
     // a round-trip to Rust just to show or hide the sheet itself.
     callback rename-requested(int);
     callback delete-requested(int);
+    // Tapping the title opens the vault switcher.
+    callback open-vault-sheet();
 
     // Which row's long-press action sheet is open, if any. Purely local
     // UI state -- Rust never needs to know this was ever shown.
@@ -37,14 +39,22 @@ export component ListPane inherits Rectangle {
             Rectangle {
                 width: Metrics.gutter - 4px;
             }
-            Text {
+            Rectangle {
                 horizontal-stretch: 1;
-                text: root.status != "" ? root.status : "Notes";
-                font-size: root.status != "" ? 14px : 22px;
-                font-weight: root.status != "" ? 400 : 600;
-                color: root.status != "" ? Colors.muted : Palette.foreground;
-                vertical-alignment: center;
-                overflow: elide;
+                Text {
+                    width: 100%;
+                    height: 100%;
+                    text: root.status != "" ? root.status : "Notes";
+                    font-size: root.status != "" ? 14px : 22px;
+                    font-weight: root.status != "" ? 400 : 600;
+                    color: root.status != "" ? Colors.muted : Palette.foreground;
+                    horizontal-alignment: left;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+                TouchArea {
+                    clicked => { root.open-vault-sheet(); }
+                }
             }
             IconButton {
                 shape: Shapes.link;

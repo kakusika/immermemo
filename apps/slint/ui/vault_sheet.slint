@@ -1,0 +1,62 @@
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors, Shapes, IconButton, TopBar, ActionRow } from "components.slint";
+
+// Full-screen, same shape as the other sheets: which vault is open, and a
+// way to link another one. Rust owns what "adding" a vault actually means
+// (a typed path on desktop, a subfolder name on Android) -- this only
+// ever shows names and reports which row was tapped.
+export component VaultSheet inherits Rectangle {
+    in property <[string]> vaults;
+    // Index into `vaults`, or -1 if none matches (shouldn't normally
+    // happen -- the current vault is always one of the known ones).
+    in property <int> current: -1;
+    in property <length> inset-top: 0px;
+    in property <length> inset-bottom: 0px;
+    callback select(int);
+    callback add();
+    callback close();
+
+    background: Palette.background;
+
+    VerticalLayout {
+        TopBar {
+            inset-top: root.inset-top;
+            IconButton {
+                shape: Shapes.back;
+                clicked => { root.close(); }
+            }
+            Text {
+                horizontal-stretch: 1;
+                text: "Vaults";
+                font-size: 20px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+        }
+
+        Rectangle {
+            height: 1px;
+            background: Colors.separator;
+        }
+
+        for name[i] in root.vaults: ActionRow {
+            text: name;
+            tint: i == root.current ? Palette.accent-background : Palette.foreground;
+            clicked => { root.select(i); }
+        }
+
+        ActionRow {
+            text: "+ Add vault";
+            tint: Palette.accent-background;
+            clicked => { root.add(); }
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+        }
+
+        Rectangle {
+            height: root.inset-bottom;
+        }
+    }
+}

@@ -3,7 +3,8 @@ import { Metrics } from "components.slint";
 import { ListPane } from "list_pane.slint";
 import { EditorPane } from "editor_pane.slint";
 import { RemoteSheet } from "remote_sheet.slint";
-import { RenameDialog, ConfirmDialog } from "dialogs.slint";
+import { TextInputDialog, ConfirmDialog } from "dialogs.slint";
+import { VaultSheet } from "vault_sheet.slint";
 
 export component App inherits Window {
     title: "immermemo";
@@ -29,6 +30,11 @@ export component App inherits Window {
     in-out property <bool> rename-open: false;
     in-out property <string> rename-draft;
     in-out property <bool> delete-confirm-open: false;
+    in-out property <bool> vault-sheet-open: false;
+    in property <[string]> vaults;
+    in property <int> current-vault: -1;
+    in-out property <bool> add-vault-open: false;
+    in-out property <string> add-vault-draft;
     // Extra room above/below the content, for previewing a phone's system
     // bars on a desktop window (the real ones come from `safe-area-insets`).
     in property <length> extra-inset-top: 0px;
@@ -55,6 +61,10 @@ export component App inherits Window {
     callback delete-requested(int);
     callback confirm-rename(string);
     callback confirm-delete();
+    callback open-vault-sheet();
+    callback switch-vault(int);
+    callback add-vault-requested();
+    callback confirm-add-vault(string);
 
     public function set-cursor(offset: int) {
         pane.set-cursor(offset);
@@ -107,6 +117,7 @@ export component App inherits Window {
             link => { root.link(); }
             rename-requested(i) => { root.rename-requested(i); }
             delete-requested(i) => { root.delete-requested(i); }
+            open-vault-sheet => { root.open-vault-sheet(); }
         }
 
         if !root.narrow: Rectangle {
@@ -169,10 +180,11 @@ export component App inherits Window {
         cancel => { root.close-remote(); }
     }
 
-    if root.rename-open: RenameDialog {
+    if root.rename-open: TextInputDialog {
         width: 100%;
         height: 100%;
-        name-draft <=> root.rename-draft;
+        title: "Rename note";
+        text-draft <=> root.rename-draft;
         inset-top: root.inset-top;
         inset-bottom: root.inset-bottom;
         save(name) => { root.confirm-rename(name); }
@@ -189,5 +201,28 @@ export component App inherits Window {
         inset-bottom: root.inset-bottom;
         confirm => { root.confirm-delete(); }
         cancel => { root.delete-confirm-open = false; }
+    }
+
+    if root.vault-sheet-open: VaultSheet {
+        width: 100%;
+        height: 100%;
+        vaults: root.vaults;
+        current: root.current-vault;
+        inset-top: root.inset-top;
+        inset-bottom: root.inset-bottom;
+        select(i) => { root.switch-vault(i); }
+        add => { root.add-vault-requested(); }
+        close => { root.vault-sheet-open = false; }
+    }
+
+    if root.add-vault-open: TextInputDialog {
+        width: 100%;
+        height: 100%;
+        title: "Add vault";
+        text-draft <=> root.add-vault-draft;
+        inset-top: root.inset-top;
+        inset-bottom: root.inset-bottom;
+        save(input) => { root.confirm-add-vault(input); }
+        cancel => { root.add-vault-open = false; }
     }
 }
