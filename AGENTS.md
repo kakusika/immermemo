@@ -42,7 +42,7 @@ cargo build
 cargo test --workspace
 ```
 
-There is no GUI to click through in `core/`; verify the merge and sync
+There is no GUI to click through in `crates/`; verify the merge and sync
 logic with unit tests against real `.tmt` fixtures, not by hand-tracing.
 Once `apps/ios` and `apps/android` exist, their own verification story
 belongs in their own directories, not here.

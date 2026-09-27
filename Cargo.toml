@@ -3,8 +3,8 @@ resolver = "3"
 
 members = [
   "apps/slint",
-  "core/merge",
-  "core/sync",
+  "crates/merge",
+  "crates/sync",
 ]
 
 default-members = ["apps/slint"]
@@ -14,8 +14,8 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
-immermemo-merge = { path = "core/merge" }
-immermemo-sync = { path = "core/sync" }
+immermemo-merge = { path = "crates/merge" }
+immermemo-sync = { path = "crates/sync" }
 
 #[ Tomet -- the language this reads and writes ]
 tomet-ast = { git = "https://github.com/tomet-lang/tomet.git", version = "0.1.0" }
@@ -35,5 +35,5 @@ slint-build = "1.18"
 git2 = { version = "0.19", features = ["vendored-libgit2", "vendored-openssl"] }
 # Same OpenSSL git2's vendored-openssl already builds and links; used to
 # verify TLS certificate chains ourselves where libgit2's own file-based
-# verification can't work at all (see core/sync's `tls` module doc).
+# verification can't work at all (see crates/sync's `tls` module doc).
 openssl = "0.10"

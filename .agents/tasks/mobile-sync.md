@@ -27,7 +27,7 @@ password with an empty username, so nothing here special-cases the host.
 - [x] ~~android_tls.rs~~: bundle a CA file so HTTPS verification has
   something to check against at all on Android -- turned out not to work
   at all (see "Second device bug" below); replaced by
-  `core/sync/src/tls.rs` + `apps/slint/src/android_cert.rs`
+  `crates/sync/src/tls.rs` + `apps/slint/src/android_cert.rs`
 
 ## Verified
 - Desktop build, clippy, and the full workspace test suite (includes the
@@ -95,7 +95,7 @@ flag, building clean, and a real HTTPS push to github.com succeeding),
 with the maintainer receptive to dropping the flag entirely:
 <https://github.com/alexcrichton/openssl-src-rs/issues/287>. Worth
 checking back on periodically, but the fix below doesn't depend on it
-landing -- see `core/sync/src/tls.rs`'s module doc for why it's worth
+landing -- see `crates/sync/src/tls.rs`'s module doc for why it's worth
 keeping either way.
 
 This means the whole "vendor a CA bundle file, point libgit2 at its path"
@@ -117,7 +117,7 @@ certificate, populated in libgit2's C code from
 `SSL_get_peer_certificate`, never `SSL_get_peer_cert_chain` -- so a
 normal CA-issued leaf (chains through at least one intermediate before
 reaching a trusted root) can't be verified from that alone. Fixed with
-AIA chasing: `core/sync/src/tls.rs`'s `ChainVerifier` fetches the missing
+AIA chasing: `crates/sync/src/tls.rs`'s `ChainVerifier` fetches the missing
 intermediate itself over plain HTTP from the leaf's Authority Information
 Access "CA Issuers" URL (the same thing a browser does when a server's
 handshake doesn't include its own intermediate), same as real TLS

@@ -13,22 +13,22 @@ UI no phone screen has room for.
 
 Immermemo's answer to both: the git repository lives in the app's private
 storage, entirely separate from the folder the user's notes are visible
-in (`core/sync`); and conflicts are resolved at the AST level, not the
+in (`crates/sync`); and conflicts are resolved at the AST level, not the
 text level, so most concurrent edits never conflict at all -- the ones
 that do get written back into the note itself as a `@mobile.conflict`
 element instead of a duplicated file or a merge-marker mess
-(`core/merge`, `vocab/mobile.vocabulary.tmt`).
+(`crates/merge`, `vocab/mobile.vocabulary.tmt`).
 
 ## Layout
 
 ```
 immermemo/
-├── core/
+├── crates/
 │   ├── sync/    # git2-backed vault sync -- see its module doc
 │   └── merge/   # AST-level three-way merge -- see its module doc
 ├── vocab/
 │   └── mobile.vocabulary.tmt   # the @mobile.conflict vocabulary
-├── bindings/flutter/           # flutter_rust_bridge: core/* -> Dart
+├── bindings/flutter/           # flutter_rust_bridge: crates/* -> Dart
 └── apps/
     └── flutter/                # one app, iOS + Android
 ```
@@ -42,7 +42,7 @@ is independent of the `tomet` repository.
 How the whole system fits together (sync protocol, what goes into git
 and what doesn't, the conflict pipeline): `docs/design.md`. What a
 crate is and why it exists, below that level: that crate's `//!` module
-doc (`core/sync/src/lib.rs`, `core/merge/src/lib.rs`). What the conflict
+doc (`crates/sync/src/lib.rs`, `crates/merge/src/lib.rs`). What the conflict
 vocabulary means: `vocab/mobile.vocabulary.tmt`, written against
 `tomet`'s own `docs/spec/vocabulary.tmt`.
 
@@ -53,6 +53,6 @@ cargo build
 cargo test --workspace
 ```
 
-`core/sync` and `core/merge` are currently scaffolded with their full
+`crates/sync` and `crates/merge` are currently scaffolded with their full
 public API and module-level design docs; the bodies are `todo!()` pending
 implementation.
