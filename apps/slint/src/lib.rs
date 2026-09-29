@@ -175,7 +175,7 @@ pub fn run(
                         open_note(&app, &session, index);
                     }
                 }
-                Err(e) => app.set_status(format!("Could not create a note: {e}").into()),
+                Err(e) => set_status(&app, format!("Could not create a note: {e}")),
             }
         }
     });
@@ -189,9 +189,24 @@ pub fn run(
                 history.edit(&text);
             }
             show_history_state(&app, &s);
+            let has_conflict = text.contains("@mobile.conflict");
+            if app.get_current_has_conflict() != has_conflict {
+                app.set_current_has_conflict(has_conflict);
+                if let Some(idx) = s.current
+                    && idx < s.conflicted.len()
+                {
+                    s.conflicted[idx] = has_conflict;
+                    app.set_conflicted(ModelRc::new(VecModel::from(s.conflicted.clone())));
+                }
+            }
             if let Some(path) = s.current_path() {
-                if let Err(e) = std::fs::write(path, text.as_str()) {
-                    app.set_status(format!("Save failed: {e}").into());
+                match std::fs::write(path, text.as_str()) {
+                    Ok(_) => {
+                        if app.get_status_is_error() && app.get_status().starts_with("Save failed") {
+                            set_status(&app, "");
+                        }
+                    }
+                    Err(e) => set_status(&app, format!("Save failed: {e}")),
                 }
             }
         }
@@ -276,7 +291,7 @@ pub fn run(
                         }
                     }
                 }
-                Err(e) => app.set_status(format!("Could not rename the note: {e}").into()),
+                Err(e) => set_status(&app, format!("Could not rename the note: {e}")),
             }
         }
     });
@@ -301,7 +316,7 @@ pub fn run(
                 return;
             };
             if let Err(e) = notes::delete(&path) {
-                app.set_status(format!("Could not delete the note: {e}").into());
+                set_status(&app, format!("Could not delete the note: {e}"));
                 return;
             }
             let was_current = session.borrow().current_path() == Some(&path);
@@ -362,18 +377,18 @@ pub fn run(
             let new_vault = match vault_path_from_input(&base, &input) {
                 Ok(p) => p,
                 Err(e) => {
-                    app.set_status(format!("Could not add the vault: {e}").into());
+                    set_status(&app, format!("Could not add the vault: {e}"));
                     return;
                 }
             };
             if let Err(e) = std::fs::create_dir_all(&new_vault) {
-                app.set_status(format!("Could not add the vault: {e}").into());
+                set_status(&app, format!("Could not add the vault: {e}"));
                 return;
             }
             let mut s = session.borrow_mut();
             if let Err(e) = s.app_data.add_vault(&new_vault) {
                 drop(s);
-                app.set_status(format!("Could not add the vault: {e}").into());
+                set_status(&app, format!("Could not add the vault: {e}"));
                 return;
             }
             s.known_vaults = s.app_data.known_vaults();
@@ -412,7 +427,7 @@ pub fn run(
             let is_current = s.vault_dir == vault_dir;
             if let Err(e) = s.app_data.remove_vault(&vault_dir) {
                 drop(s);
-                app.set_status(format!("Could not remove the vault: {e}").into());
+                set_status(&app, format!("Could not remove the vault: {e}"));
                 return;
             }
             s.known_vaults = s.app_data.known_vaults();
@@ -436,13 +451,13 @@ pub fn run(
             let app = weak.unwrap();
             let url = url.trim();
             if url.is_empty() {
-                app.set_status("Enter a remote URL first".into());
+                set_status(&app, "Enter a remote URL first");
                 return;
             }
             let mut s = session.borrow_mut();
             if let Err(e) = s.app_data.save_remote(&s.vault_dir, url) {
                 drop(s);
-                app.set_status(format!("Could not save the remote: {e}").into());
+                set_status(&app, format!("Could not save the remote: {e}"));
                 return;
             }
             // An empty token field keeps whatever token is already saved --
@@ -452,7 +467,7 @@ pub fn run(
                 && let Err(e) = s.token_store.save(&token)
             {
                 drop(s);
-                app.set_status(format!("Could not save the access token: {e}").into());
+                set_status(&app, format!("Could not save the access token: {e}"));
                 return;
             }
             s.remote = Some(url.to_owned());
@@ -468,6 +483,46 @@ pub fn run(
         move || start_sync(&weak.unwrap(), &session)
     });
 
+    let jump_pos = Rc::new(RefCell::new(0usize));
+    app.on_jump_conflict({
+        let (weak, session, jump_pos) = (app.as_weak(), session.clone(), jump_pos.clone());
+        move || {
+            let app = weak.unwrap();
+            let s = session.borrow();
+            let Some(path) = s.current_path() else { return; };
+            let Ok(text) = std::fs::read_to_string(path) else { return; };
+            const MARKER: &str = "@mobile.conflict";
+            let mut offset = *jump_pos.borrow();
+            if offset >= text.len() {
+                offset = 0;
+            }
+            let found = text[offset..]
+                .find(MARKER)
+                .map(|p| offset + p)
+                .or_else(|| text.find(MARKER));
+            if let Some(pos) = found {
+                app.invoke_set_cursor(pos as i32);
+                *jump_pos.borrow_mut() = pos + MARKER.len();
+            }
+        }
+    });
+
+    app.on_resolve_mine({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            resolve_active_conflict(&app, &session, immermemo_merge::ConflictResolution::Mine);
+        }
+    });
+
+    app.on_resolve_theirs({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            resolve_active_conflict(&app, &session, immermemo_merge::ConflictResolution::Theirs);
+        }
+    });
+
     app.run()?;
     Ok(())
 }
@@ -478,7 +533,7 @@ fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
     let (vault_dir, gitdir, remote, token_store) = {
         let s = session.borrow();
         let Some(remote) = s.remote.clone() else {
-            app.set_status("No remote linked yet".into());
+            set_status(app, "No remote linked yet");
             app.set_remote_url_draft(SharedString::new());
             app.set_remote_token_draft(SharedString::new());
             app.set_remote_has_token(false);
@@ -489,7 +544,7 @@ fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
             Ok(g) => g,
             Err(e) => {
                 drop(s);
-                app.set_status(format!("Could not prepare the vault: {e}").into());
+                set_status(app, format!("Could not prepare the vault: {e}"));
                 return;
             }
         };
@@ -497,7 +552,7 @@ fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
     };
 
     app.set_syncing(true);
-    app.set_status("Syncing...".into());
+    set_status(app, "Syncing...");
     let weak = app.as_weak();
     // Vault is opened inside the thread; only plain data and the (Send +
     // Sync) token store cross.
@@ -570,7 +625,7 @@ fn vault_display_name(vault_dir: &std::path::Path) -> String {
 /// (there's no note from the old vault that still makes sense to show).
 fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBuf) {
     if let Err(e) = std::fs::create_dir_all(&vault_dir) {
-        app.set_status(format!("Could not open this vault: {e}").into());
+        set_status(app, format!("Could not open this vault: {e}"));
         return;
     }
     let token_store = {
@@ -579,7 +634,7 @@ fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBuf) {
             Ok(t) => t,
             Err(e) => {
                 drop(s);
-                app.set_status(format!("Could not open this vault: {e}").into());
+                set_status(app, format!("Could not open this vault: {e}"));
                 return;
             }
         }
@@ -648,9 +703,9 @@ fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
             app.set_current_has_conflict(s.conflicted[index]);
             show_history_state(app, &s);
             app.set_body(text.into());
-            app.set_status(SharedString::new());
+            set_status(app, "");
         }
-        Err(e) => app.set_status(format!("Could not open {}: {e}", path.display()).into()),
+        Err(e) => set_status(app, format!("Could not open {}: {e}", path.display())),
     }
 }
 
@@ -670,6 +725,22 @@ fn open_initial_or_last_note(app: &App, session: &Rc<RefCell<Session>>) {
     open_note(app, session, index);
 }
 
+/// Sets the status message on the window, classifying it as an error or
+/// normal status so both ListPane and EditorPane can present it appropriately.
+fn set_status(app: &App, msg: impl Into<SharedString>) {
+    let s: SharedString = msg.into();
+    let text = s.as_str();
+    let is_error = text.starts_with("Save failed")
+        || text.starts_with("Sync failed")
+        || text.starts_with("Could not")
+        || text.starts_with("Enter a remote")
+        || text.contains("failed")
+        || text.contains("error")
+        || text.contains("Error");
+    app.set_status(s);
+    app.set_status_is_error(is_error);
+}
+
 /// Tells the window whether the undo and redo buttons have anything to do.
 fn show_history_state(app: &App, session: &Session) {
     let history = session.history.as_ref();
@@ -682,13 +753,80 @@ fn apply_restored(app: &App, session: &Rc<RefCell<Session>>, restored: Option<Re
         return;
     };
     if let Some(path) = session.borrow().current_path() {
-        if let Err(e) = std::fs::write(path, &text) {
-            app.set_status(format!("Save failed: {e}").into());
+        match std::fs::write(path, &text) {
+            Ok(_) => {
+                if app.get_status_is_error() && app.get_status().starts_with("Save failed") {
+                    set_status(app, "");
+                }
+            }
+            Err(e) => set_status(app, format!("Save failed: {e}")),
+        }
+    }
+    let has_conflict = text.contains("@mobile.conflict");
+    app.set_current_has_conflict(has_conflict);
+    if let Some(idx) = session.borrow().current {
+        let mut s = session.borrow_mut();
+        if idx < s.conflicted.len() {
+            s.conflicted[idx] = has_conflict;
+            app.set_conflicted(ModelRc::new(VecModel::from(s.conflicted.clone())));
         }
     }
     app.set_body(text.into());
     app.invoke_set_cursor(cursor as i32);
     show_history_state(app, &session.borrow());
+}
+
+fn resolve_active_conflict(
+    app: &App,
+    session: &Rc<RefCell<Session>>,
+    resolution: immermemo_merge::ConflictResolution,
+) {
+    let mut s = session.borrow_mut();
+    let Some(path) = s.current_path().cloned() else {
+        return;
+    };
+    let current_text = match std::fs::read_to_string(&path) {
+        Ok(t) => t,
+        Err(e) => {
+            set_status(app, format!("Could not read note: {e}"));
+            return;
+        }
+    };
+    let doc = match tomet_parser::parse_document(&current_text) {
+        Ok(d) => d,
+        Err(e) => {
+            set_status(app, format!("Could not parse note for conflict resolution: {e}"));
+            return;
+        }
+    };
+    let side_name = match &resolution {
+        immermemo_merge::ConflictResolution::Mine => "local",
+        immermemo_merge::ConflictResolution::Theirs => "remote",
+        _ => "custom",
+    };
+    let resolved_doc = immermemo_merge::resolve_all(&doc, resolution);
+    let resolved_text = tomet_printer::document_to_tm(&resolved_doc);
+
+    if let Err(e) = std::fs::write(&path, &resolved_text) {
+        set_status(app, format!("Save failed: {e}"));
+        return;
+    }
+    if let Some(history) = s.history.as_mut() {
+        history.edit(&resolved_text);
+    }
+    show_history_state(app, &s);
+    app.set_body(resolved_text.into());
+
+    let index = s.current.unwrap_or(0);
+    if index < s.conflicted.len() {
+        s.conflicted[index] = false;
+        app.set_conflicted(ModelRc::new(VecModel::from(s.conflicted.clone())));
+    }
+    drop(s);
+
+    app.set_current_has_conflict(false);
+    refresh_list(app, session);
+    set_status(app, format!("Resolved conflict (kept {side_name} version)"));
 }
 
 fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<Vec<PathBuf>, String>) {
@@ -727,7 +865,8 @@ fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<Vec<Pat
             } else {
                 open_initial_or_last_note(app, session);
             }
-            app.set_status(
+            set_status(
+                app,
                 if needing_resolution.is_empty() {
                     "Synced".to_owned()
                 } else {
@@ -735,11 +874,10 @@ fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<Vec<Pat
                         "Synced; {} note(s) need resolution",
                         needing_resolution.len()
                     )
-                }
-                .into(),
+                },
             );
         }
-        Err(e) => app.set_status(format!("Sync failed: {e}").into()),
+        Err(e) => set_status(app, format!("Sync failed: {e}")),
     }
 }
 
@@ -765,4 +903,73 @@ fn android_main(app: slint::android::AndroidApp) {
     });
     slint::android::init(app).expect("initialize the Android backend");
     run(default_vault_dir, base, token_store_for).expect("run the app");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ui_helpers_and_conflict_resolution() {
+        let app = App::new().unwrap();
+
+        // 1. Status classification
+        set_status(&app, "Save failed: permission denied");
+        assert!(app.get_status_is_error());
+        assert_eq!(app.get_status(), "Save failed: permission denied");
+
+        set_status(&app, "Syncing...");
+        assert!(!app.get_status_is_error());
+        assert_eq!(app.get_status(), "Syncing...");
+
+        set_status(&app, "Sync failed: network timeout");
+        assert!(app.get_status_is_error());
+
+        set_status(&app, "Synced");
+        assert!(!app.get_status_is_error());
+
+        // 2. Conflict resolution helper
+        let tmp = tempfile::tempdir().unwrap();
+        let vault_dir = tmp.path().join("vault");
+        std::fs::create_dir_all(&vault_dir).unwrap();
+        let note_path = vault_dir.join("test.tmt");
+        let base_doc = tomet_parser::parse_document("Original.\n").unwrap();
+        let local_doc = tomet_parser::parse_document("Mine.\n").unwrap();
+        let remote_doc = tomet_parser::parse_document("Theirs.\n").unwrap();
+        let merged_doc = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc).document;
+        let conflicted_text = tomet_printer::document_to_tm(&merged_doc);
+        std::fs::write(&note_path, &conflicted_text).unwrap();
+
+        let app_data = AppData::new(tmp.path().join("data"));
+        let token_store: Arc<dyn TokenStore> = Arc::new(credentials::PlainFileTokenStore::new(
+            tmp.path().join("token"),
+        ));
+        let session = Rc::new(RefCell::new(Session {
+            vault_dir: vault_dir.clone(),
+            app_data,
+            token_store: token_store.clone(),
+            token_store_for: Box::new(move |_| Ok(token_store.clone())),
+            known_vaults: vec![vault_dir],
+            remote: None,
+            notes: vec![note_path.clone()],
+            conflicted: vec![true],
+            current: Some(0),
+            history: Some(History::new(&conflicted_text)),
+            rename_target: None,
+            delete_target: None,
+            delete_vault_target: None,
+        }));
+
+        app.set_current_has_conflict(true);
+        app.set_body(conflicted_text.into());
+
+        resolve_active_conflict(&app, &session, immermemo_merge::ConflictResolution::Mine);
+
+        assert!(!app.get_current_has_conflict());
+        assert_eq!(app.get_body(), "Mine.\n");
+        let disk_text = std::fs::read_to_string(&note_path).unwrap();
+        assert_eq!(disk_text, "Mine.\n");
+        assert!(!notes::has_conflict_marker(&note_path));
+        assert!(app.get_status().contains("Resolved conflict"));
+    }
 }

@@ -4,6 +4,7 @@ import { Metrics, Colors, Shapes, IconButton, TopBar } from "components.slint";
 export component EditorPane inherits Rectangle {
     in property <string> title;
     in property <bool> has-note: false;
+    in property <int> note-count: 0;
     in property <bool> has-conflict: false;
     in property <bool> can-undo: false;
     in property <bool> can-redo: false;
@@ -12,11 +13,18 @@ export component EditorPane inherits Rectangle {
     in property <length> inset-top: 0px;
     // Whatever covers the bottom edge: the system bar, or the on-screen keyboard.
     in property <length> inset-bottom: 0px;
+    in property <string> status: "";
+    in property <bool> status-is-error: false;
     in-out property <string> body;
     callback edited(string);
     callback undo();
     callback redo();
     callback back();
+    callback new-note();
+    callback dismiss-status();
+    callback resolve-mine();
+    callback resolve-theirs();
+    callback jump-conflict();
 
     // Moves the caret after Rust restores text from the undo history.
     public function set-cursor(offset: int) {
@@ -42,13 +50,23 @@ export component EditorPane inherits Rectangle {
             if !root.show-back: Rectangle {
                 width: Metrics.gutter - 4px;
             }
-            Text {
+            VerticalLayout {
                 horizontal-stretch: 1;
-                text: root.title;
-                font-size: 20px;
-                font-weight: 600;
-                vertical-alignment: center;
-                overflow: elide;
+                alignment: center;
+                Text {
+                    text: root.has-note ? root.title : "immermemo";
+                    color: root.has-note ? Palette.foreground : Colors.muted;
+                    font-size: root.status != "" && !root.status-is-error ? 16px : 20px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+                if root.status != "" && !root.status-is-error: Text {
+                    text: root.status;
+                    font-size: 11px;
+                    color: Colors.muted;
+                    overflow: elide;
+                }
             }
         }
 
@@ -57,16 +75,174 @@ export component EditorPane inherits Rectangle {
             background: Colors.separator;
         }
 
+        if root.status != "" && root.status-is-error: Rectangle {
+            height: 38px;
+            background: Colors.danger.with-alpha(0.18);
+            HorizontalLayout {
+                padding-left: Metrics.gutter;
+                padding-right: 4px;
+                spacing: 8px;
+                Text {
+                    horizontal-stretch: 1;
+                    text: root.status;
+                    font-size: 13px;
+                    color: Colors.danger;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+                IconButton {
+                    shape: Shapes.close;
+                    tint: Colors.danger;
+                    clicked => { root.dismiss-status(); }
+                }
+            }
+        }
+
         if root.has-conflict: Rectangle {
-            height: 40px;
-            background: Colors.warning.with-alpha(0.22);
-            Text {
-                x: Metrics.gutter;
-                width: parent.width - 2 * Metrics.gutter;
-                text: "Conflict: edit the text to keep what you want.";
-                font-size: 13px;
-                vertical-alignment: center;
-                overflow: elide;
+            height: 42px;
+            background: Colors.warning.with-alpha(0.18);
+            HorizontalLayout {
+                padding-left: Metrics.gutter;
+                padding-right: Metrics.gutter;
+                spacing: 6px;
+                alignment: center;
+
+                Text {
+                    text: "Conflict";
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: Colors.warning;
+                    vertical-alignment: center;
+                }
+
+                Rectangle { horizontal-stretch: 1; }
+
+                Rectangle {
+                    height: 28px;
+                    width: next-btn-layout.preferred-width + 16px;
+                    border-radius: 14px;
+                    background: next-touch.pressed ? Palette.foreground.with-alpha(0.18) : Palette.foreground.with-alpha(0.08);
+
+                    next-btn-layout := HorizontalLayout {
+                        padding-left: 8px;
+                        padding-right: 8px;
+                        Text {
+                            text: "Next";
+                            font-size: 12px;
+                            font-weight: 600;
+                            color: Palette.foreground;
+                            vertical-alignment: center;
+                        }
+                    }
+                    next-touch := TouchArea {
+                        clicked => { root.jump-conflict(); }
+                    }
+                }
+
+                Rectangle {
+                    height: 28px;
+                    width: mine-btn-layout.preferred-width + 16px;
+                    border-radius: 14px;
+                    background: mine-touch.pressed ? Colors.warning.darker(15%) : Colors.warning;
+
+                    mine-btn-layout := HorizontalLayout {
+                        padding-left: 8px;
+                        padding-right: 8px;
+                        Text {
+                            text: "Keep Mine";
+                            font-size: 12px;
+                            font-weight: 600;
+                            color: #ffffff;
+                            vertical-alignment: center;
+                        }
+                    }
+                    mine-touch := TouchArea {
+                        clicked => { root.resolve-mine(); }
+                    }
+                }
+
+                Rectangle {
+                    height: 28px;
+                    width: theirs-btn-layout.preferred-width + 16px;
+                    border-radius: 14px;
+                    background: theirs-touch.pressed ? Palette.foreground.with-alpha(0.22) : Palette.foreground.with-alpha(0.12);
+
+                    theirs-btn-layout := HorizontalLayout {
+                        padding-left: 8px;
+                        padding-right: 8px;
+                        Text {
+                            text: "Keep Theirs";
+                            font-size: 12px;
+                            font-weight: 600;
+                            color: Palette.foreground;
+                            vertical-alignment: center;
+                        }
+                    }
+                    theirs-touch := TouchArea {
+                        clicked => { root.resolve-theirs(); }
+                    }
+                }
+            }
+        }
+
+        if !root.has-note: Rectangle {
+            vertical-stretch: 1;
+            HorizontalLayout {
+                alignment: center;
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 12px;
+                    padding-left: 24px;
+                    padding-right: 24px;
+                    max-width: 320px;
+
+                    Text {
+                        text: root.note-count == 0 ? "No notes yet" : "No note selected";
+                        font-size: 20px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                        color: Palette.foreground;
+                    }
+
+                    Text {
+                        text: root.note-count == 0
+                            ? "Create your first note to start writing."
+                            : "Choose a note from the list, or create a new one.";
+                        font-size: 14px;
+                        horizontal-alignment: center;
+                        color: Colors.muted;
+                        wrap: word-wrap;
+                    }
+
+                    Rectangle { height: 8px; }
+
+                    HorizontalLayout {
+                        alignment: center;
+                        Rectangle {
+                            width: create-btn-layout.preferred-width + 36px;
+                            height: 44px;
+                            border-radius: 22px;
+                            background: create-touch.pressed ? Palette.accent-background.darker(10%) : Palette.accent-background;
+
+                            create-btn-layout := HorizontalLayout {
+                                alignment: center;
+                                padding-left: 18px;
+                                padding-right: 18px;
+                                Text {
+                                    text: "+ New Note";
+                                    font-size: 15px;
+                                    font-weight: 600;
+                                    color: Palette.accent-foreground;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            create-touch := TouchArea {
+                                clicked => { root.new-note(); }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -74,8 +250,10 @@ export component EditorPane inherits Rectangle {
         // undo; capture-key-pressed runs before the focused TextEdit sees the
         // key. On a phone there is no such key: the bar below does the same.
         edit-scope := FocusScope {
-            horizontal-stretch: 1;
-            vertical-stretch: 1;
+            visible: root.has-note;
+            horizontal-stretch: root.has-note ? 1 : 0;
+            vertical-stretch: root.has-note ? 1 : 0;
+            height: root.has-note ? 100% : 0%;
             capture-key-pressed(event) => {
                 if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
                     root.undo();
@@ -121,7 +299,7 @@ export component EditorPane inherits Rectangle {
         // Pushes the bar above the keyboard or the system navigation bar.
         Rectangle {
             height: root.inset-bottom;
-            background: Palette.alternate-background;
+            background: root.has-note ? Palette.alternate-background : Palette.background;
         }
     }
 }

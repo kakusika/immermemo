@@ -80,6 +80,24 @@ fn main() {
     render(&window, size, &format!("{prefix}-editor.ppm"));
     app.set_current_has_conflict(true);
     render(&window, size, &format!("{prefix}-conflict.ppm"));
+    app.set_current_has_conflict(false);
+
+    app.set_status("Save failed: permission denied".into());
+    app.set_status_is_error(true);
+    render(&window, size, &format!("{prefix}-error.ppm"));
+    app.set_status("".into());
+    app.set_status_is_error(false);
+
+    app.set_current(-1);
+    app.set_notes(ModelRc::new(VecModel::default()));
+    render(&window, size, &format!("{prefix}-empty.ppm"));
+    app.set_notes(ModelRc::new(VecModel::from(
+        names
+            .iter()
+            .map(|n| (*n).into())
+            .collect::<Vec<slint::SharedString>>(),
+    )));
+    app.set_current(0);
 
     app.set_remote_open(true);
     app.set_remote_has_token(true);

@@ -513,6 +513,27 @@ pub fn resolve(document: &Document, resolutions: &[ConflictResolution]) -> Docum
     }
 }
 
+/// Removes every `@mobile.conflict` marker from `document`, resolving all conflicts
+/// to the specified side (`ConflictResolution::Mine` or `ConflictResolution::Theirs`),
+/// and drops the `@use(mobile)` preamble line once none remain.
+pub fn resolve_all(document: &Document, resolution: ConflictResolution) -> Document {
+    let mut resolutions = std::iter::repeat(&resolution);
+    let mut blocks = resolve_block_seq(&document.blocks, &mut resolutions);
+
+    let resolved = Document {
+        blocks: blocks.clone(),
+        span: document.span,
+    };
+    if !has_conflicts(&resolved) {
+        blocks.retain(|b| !is_use_mobile_block(b));
+    }
+
+    Document {
+        blocks,
+        span: document.span,
+    }
+}
+
 /// The block-sequence counterpart of [`merge_block_seq`]: strips
 /// `mine`/`theirs`/`end` marker triples, keeping the chosen side, and
 /// recurses into every other block via [`resolve_block`]. Used for
@@ -960,6 +981,20 @@ mod tests {
         let resolved = resolve(&merged, &[ConflictResolution::Theirs]);
 
         assert_eq!(resolved, doc("The lazy fox jumps.\n"));
+    }
+
+    #[test]
+    fn resolve_all_resolves_every_conflict_and_drops_use_line() {
+        let base = doc("Zzz.\n\nAnchor.\n\nQqq.\n");
+        let local = doc("Mmm.\n\nAnchor.\n\nNnn.\n");
+        let remote = doc("Ppp.\n\nAnchor.\n\nRrr.\n");
+        let merged = merge(&base, &local, &remote).document;
+
+        let resolved_mine = resolve_all(&merged, ConflictResolution::Mine);
+        assert_eq!(resolved_mine, doc("Mmm.\n\nAnchor.\n\nNnn.\n"));
+
+        let resolved_theirs = resolve_all(&merged, ConflictResolution::Theirs);
+        assert_eq!(resolved_theirs, doc("Ppp.\n\nAnchor.\n\nRrr.\n"));
     }
 
     #[test]

@@ -2602,12 +2602,15 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "git2",
+ "immermemo-merge",
  "immermemo-sync",
  "jni 0.21.1",
  "loro",
  "slint",
  "slint-build",
  "tempfile",
+ "tomet-parser",
+ "tomet-printer",
 ]
 
 [[package]]

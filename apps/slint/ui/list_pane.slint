@@ -25,12 +25,23 @@ export component ListPane inherits Rectangle {
     callback delete-requested(int);
     // Tapping the title opens the vault switcher.
     callback open-vault-sheet();
+    // Swiping left on the list or its items closes the drawer on narrow screens.
+    callback close-drawer();
 
     // Which row's long-press action sheet is open, if any. Purely local
     // UI state -- Rust never needs to know this was ever shown.
     property <int> menu-index: -1;
 
     background: Palette.background;
+
+    // Catches left swipes in empty space (e.g. below the list) to close the drawer on mobile
+    TouchArea {
+        moved => {
+            if (self.pressed && self.pressed-x - self.mouse-x > 40px) {
+                root.close-drawer();
+            }
+        }
+    }
 
     VerticalLayout {
         TopBar {
@@ -53,7 +64,20 @@ export component ListPane inherits Rectangle {
                     overflow: elide;
                 }
                 TouchArea {
-                    clicked => { root.open-vault-sheet(); }
+                    property <bool> swiped: false;
+                    moved => {
+                        if (self.pressed && self.pressed-x - self.mouse-x > 40px) {
+                            swiped = true;
+                            root.close-drawer();
+                        }
+                    }
+                    clicked => {
+                        if (swiped) {
+                            swiped = false;
+                        } else {
+                            root.open-vault-sheet();
+                        }
+                    }
                 }
             }
             IconButton {
@@ -117,8 +141,19 @@ export component ListPane inherits Rectangle {
                 }
 
                 touch := TouchArea {
+                    property <bool> swiped: false;
+                    property <length> dx: self.pressed-x - self.mouse-x;
+                    property <length> dy: self.mouse-y > self.pressed-y ? self.mouse-y - self.pressed-y : self.pressed-y - self.mouse-y;
+                    moved => {
+                        if (self.pressed && dx > 40px && dx > dy) {
+                            swiped = true;
+                            root.close-drawer();
+                        }
+                    }
                     clicked => {
-                        if (long-pressed) {
+                        if (swiped) {
+                            swiped = false;
+                        } else if (long-pressed) {
                             long-pressed = false;
                         } else {
                             root.select(i);
@@ -132,7 +167,7 @@ export component ListPane inherits Rectangle {
                 // `touch.pressed` directly.
                 Timer {
                     interval: 500ms;
-                    running: touch.pressed && !long-pressed;
+                    running: touch.pressed && !long-pressed && !touch.swiped;
                     triggered => {
                         long-pressed = true;
                         root.menu-index = i;

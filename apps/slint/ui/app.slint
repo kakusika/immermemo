@@ -16,7 +16,8 @@ export component App inherits Window {
     in property <[bool]> conflicted;
     in property <int> current: -1;
     in property <string> current-title;
-    in property <string> status;
+    in-out property <string> status;
+    in-out property <bool> status-is-error: false;
     in property <bool> syncing;
     in property <bool> current-has-conflict;
     in property <bool> can-undo;
@@ -68,6 +69,9 @@ export component App inherits Window {
     callback confirm-add-vault(string);
     callback delete-vault-requested(int);
     callback confirm-delete-vault();
+    callback resolve-mine();
+    callback resolve-theirs();
+    callback jump-conflict();
 
     public function set-cursor(offset: int) {
         pane.set-cursor(offset);
@@ -116,6 +120,7 @@ export component App inherits Window {
             rename-requested(i) => { root.rename-requested(i); }
             delete-requested(i) => { root.delete-requested(i); }
             open-vault-sheet => { root.open-vault-sheet(); }
+            close-drawer => {}
         }
 
         if !root.narrow: Rectangle {
@@ -129,17 +134,31 @@ export component App inherits Window {
             horizontal-stretch: 1;
             title: root.current-title;
             has-note: root.current >= 0;
+            note-count: root.notes.length;
             has-conflict: root.current-has-conflict;
             can-undo: root.can-undo;
             can-redo: root.can-redo;
             show-back: root.narrow;
             inset-top: root.inset-top;
             inset-bottom: root.inset-bottom;
+            status: root.status;
+            status-is-error: root.status-is-error;
             body <=> root.body;
             edited(t) => { root.edited(t); }
             undo => { root.undo(); }
             redo => { root.redo(); }
             back => { root.list-open = !root.list-open; }
+            dismiss-status => {
+                root.status = "";
+                root.status-is-error = false;
+            }
+            new-note => {
+                root.new-note();
+                pane.focus-editor();
+            }
+            resolve-mine => { root.resolve-mine(); }
+            resolve-theirs => { root.resolve-theirs(); }
+            jump-conflict => { root.jump-conflict(); }
         }
     }
 
@@ -186,6 +205,12 @@ export component App inherits Window {
             height: 100%;
             background: #00000055;
             TouchArea {
+                moved => {
+                    if (self.pressed && self.pressed-x - self.mouse-x > 40px) {
+                        root.list-open = false;
+                        pane.focus-editor();
+                    }
+                }
                 clicked => {
                     root.list-open = false;
                     pane.focus-editor();
@@ -230,6 +255,10 @@ export component App inherits Window {
                 rename-requested(i) => { root.rename-requested(i); }
                 delete-requested(i) => { root.delete-requested(i); }
                 open-vault-sheet => { root.open-vault-sheet(); }
+                close-drawer => {
+                    root.list-open = false;
+                    pane.focus-editor();
+                }
             }
         }
     }

@@ -13,7 +13,10 @@ name = "immermemo"
 path = "src/main.rs"
 
 [dependencies]
+immermemo-merge.workspace = true
 immermemo-sync.workspace = true
+tomet-parser.workspace = true
+tomet-printer.workspace = true
 anyhow.workspace = true
 git2.workspace = true
 loro.workspace = true
