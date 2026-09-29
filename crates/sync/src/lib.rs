@@ -132,6 +132,10 @@ impl Vault {
         } else {
             Repository::init_bare(private_gitdir)?
         };
+        // Associates the working tree in-memory with the repository so libgit2
+        // can evaluate `.gitignore` rules, without creating any `.git` link file.
+        repo.set_workdir(working_tree, false)?;
+        let _ = repo.add_ignore_rule(".DS_Store\nThumbs.db\n");
         Ok(Self {
             working_tree: working_tree.to_owned(),
             repo,
@@ -198,7 +202,7 @@ impl Vault {
     fn commit_working_tree(&self) -> anyhow::Result<()> {
         let mut index = self.repo.index()?;
         index.clear()?;
-        stage_dir(&mut index, &self.working_tree, &self.working_tree)?;
+        stage_dir(&self.repo, &mut index, &self.working_tree, &self.working_tree)?;
 
         let parent = self.head_commit();
         if parent.is_none() && index.len() == 0 {
@@ -432,7 +436,7 @@ impl Vault {
             TreeWalkResult::Ok
         })?;
 
-        remove_unwanted(&self.working_tree, &self.working_tree, &wanted)?;
+        remove_unwanted(&self.repo, &self.working_tree, &self.working_tree, &wanted)?;
         Ok(())
     }
 
@@ -474,15 +478,19 @@ fn merge_bytes(path: &str, base: Option<Vec<u8>>, local: Vec<u8>, remote: Vec<u8
     tomet_printer::document_to_tm(&result.document).into_bytes()
 }
 
-fn stage_dir(index: &mut git2::Index, root: &Path, dir: &Path) -> anyhow::Result<()> {
+fn stage_dir(repo: &Repository, index: &mut git2::Index, root: &Path, dir: &Path) -> anyhow::Result<()> {
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        if entry.file_name().to_string_lossy().starts_with('.') {
+        if entry.file_name().to_string_lossy() == ".git" {
+            continue;
+        }
+        let rel_path = path.strip_prefix(root)?;
+        if repo.status_should_ignore(rel_path)? {
             continue;
         }
         if path.is_dir() {
-            stage_dir(index, root, &path)?;
+            stage_dir(repo, index, root, &path)?;
         } else {
             let data = std::fs::read(&path)?;
             let rel = relative_posix_path(root, &path)?;
@@ -520,15 +528,25 @@ fn relative_posix_path(root: &Path, path: &Path) -> anyhow::Result<String> {
         .join("/"))
 }
 
-fn remove_unwanted(root: &Path, dir: &Path, wanted: &BTreeSet<String>) -> anyhow::Result<()> {
+fn remove_unwanted(
+    repo: &Repository,
+    root: &Path,
+    dir: &Path,
+    wanted: &BTreeSet<String>,
+) -> anyhow::Result<()> {
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        if entry.file_name().to_string_lossy().starts_with('.') {
+        if entry.file_name().to_string_lossy() == ".git" {
+            continue;
+        }
+        let rel_path = path.strip_prefix(root)?;
+        if repo.status_should_ignore(rel_path)? {
             continue;
         }
         if path.is_dir() {
-            remove_unwanted(root, &path, wanted)?;
+            remove_unwanted(repo, root, &path, wanted)?;
+            let _ = std::fs::remove_dir(&path);
         } else {
             let rel = relative_posix_path(root, &path)?;
             if !wanted.contains(&rel) {
@@ -543,7 +561,7 @@ fn find_tmt_files(root: &Path, dir: &Path, found: &mut Vec<PathBuf>) -> anyhow::
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        if entry.file_name().to_string_lossy().starts_with('.') {
+        if entry.file_name().to_string_lossy() == ".git" {
             continue;
         }
         if path.is_dir() {
@@ -605,6 +623,48 @@ mod tests {
             _gitdir: gitdir,
             vault,
         }
+    }
+
+    #[test]
+    fn gitignore_is_preserved_and_rules_are_respected() {
+        let remote = shared_remote();
+
+        let mut a = open_vault();
+        a.vault
+            .set_remote(remote.path().to_str().unwrap())
+            .unwrap();
+
+        // Write a .gitignore, a normal note, and an ignored file.
+        write_note(&a, ".gitignore", "*.tmp\nignored_dir/\n");
+        write_note(&a, "note.tmt", "Hello.\n");
+        write_note(&a, "scratch.tmp", "Temporary content.\n");
+        std::fs::create_dir_all(a.working_tree.path().join("ignored_dir")).unwrap();
+        write_note(&a, "ignored_dir/sub.tmt", "Ignored note.\n");
+
+        a.vault.sync(&NoCredentials).unwrap();
+
+        // Verify with another client: .gitignore and note.tmt arrive, but not scratch.tmp or ignored_dir.
+        let mut b = open_vault();
+        b.vault
+            .set_remote(remote.path().to_str().unwrap())
+            .unwrap();
+        b.vault.sync(&NoCredentials).unwrap();
+
+        assert_eq!(read_note(&b, ".gitignore"), "*.tmp\nignored_dir/\n");
+        assert_eq!(read_note(&b, "note.tmt"), "Hello.\n");
+        assert!(!b.working_tree.path().join("scratch.tmp").exists());
+        assert!(!b.working_tree.path().join("ignored_dir").exists());
+
+        // Perform another sync on client a without changes: .gitignore must NOT be deleted.
+        a.vault.sync(&NoCredentials).unwrap();
+        assert_eq!(read_note(&a, ".gitignore"), "*.tmp\nignored_dir/\n");
+        // And local ignored files on client a must NOT have been removed by remove_unwanted.
+        assert!(a.working_tree.path().join("scratch.tmp").exists());
+        assert!(a.working_tree.path().join("ignored_dir/sub.tmt").exists());
+
+        // B syncs again and verifies .gitignore is still present in the git tree.
+        b.vault.sync(&NoCredentials).unwrap();
+        assert_eq!(read_note(&b, ".gitignore"), "*.tmp\nignored_dir/\n");
     }
 
     fn write_note(vault: &TestVault, name: &str, content: &str) {

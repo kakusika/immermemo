@@ -16,6 +16,7 @@ result-*
 .claude/
 .idea/
 .zed/
+tmtroot/
 
 #[ Mobile ]
 apps/ios/**/Pods/
