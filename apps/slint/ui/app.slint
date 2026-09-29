@@ -148,6 +148,7 @@ export component App inherits Window {
             undo => { root.undo(); }
             redo => { root.redo(); }
             back => { root.list-open = !root.list-open; }
+            open-drawer => { root.list-open = true; }
             dismiss-status => {
                 root.status = "";
                 root.status-is-error = false;
@@ -162,18 +163,25 @@ export component App inherits Window {
         }
     }
 
-    // Edge-swipe to reopen the list drawer on narrow screens.
-    // A thin strip rather than the whole pane: a full-width swipe area
-    // would fight with selecting text in the editor body.
+    // Left-side swipe band to reopen the list drawer on narrow screens.
+    // Sized to ~25% of the screen width (clamped between 72px and 100px) so
+    // a one-handed thumb swipe naturally lands outside Android's system back
+    // gesture zone (0..24dp), while leaving the majority of the width free
+    // for text scrolling and editing.
     if root.narrow && !root.list-open: TouchArea {
         x: 0px;
         y: root.inset-top;
-        width: 24px;
+        width: min(100px, max(72px, root.width * 0.25));
         height: root.height - root.inset-top - root.inset-bottom;
+        property <length> dx: self.mouse-x - self.pressed-x;
+        property <length> dy: self.mouse-y > self.pressed-y ? self.mouse-y - self.pressed-y : self.pressed-y - self.mouse-y;
         moved => {
-            if (self.pressed && self.mouse-x - self.pressed-x > 60px) {
+            if (self.pressed && dx > 40px && dx > dy) {
                 root.list-open = true;
             }
+        }
+        clicked => {
+            pane.focus-editor();
         }
     }
 

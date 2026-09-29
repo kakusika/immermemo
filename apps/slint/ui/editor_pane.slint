@@ -20,6 +20,7 @@ export component EditorPane inherits Rectangle {
     callback undo();
     callback redo();
     callback back();
+    callback open-drawer();
     callback new-note();
     callback dismiss-status();
     callback resolve-mine();
@@ -50,22 +51,35 @@ export component EditorPane inherits Rectangle {
             if !root.show-back: Rectangle {
                 width: Metrics.gutter - 4px;
             }
-            VerticalLayout {
+            Rectangle {
                 horizontal-stretch: 1;
-                alignment: center;
-                Text {
-                    text: root.has-note ? root.title : "immermemo";
-                    color: root.has-note ? Palette.foreground : Colors.muted;
-                    font-size: root.status != "" && !root.status-is-error ? 16px : 20px;
-                    font-weight: 600;
-                    vertical-alignment: center;
-                    overflow: elide;
+
+                if root.show-back: TouchArea {
+                    property <length> dx: self.mouse-x - self.pressed-x;
+                    property <length> dy: self.mouse-y > self.pressed-y ? self.mouse-y - self.pressed-y : self.pressed-y - self.mouse-y;
+                    moved => {
+                        if (self.pressed && dx > 40px && dx > dy) {
+                            root.open-drawer();
+                        }
+                    }
                 }
-                if root.status != "" && !root.status-is-error: Text {
-                    text: root.status;
-                    font-size: 11px;
-                    color: Colors.muted;
-                    overflow: elide;
+
+                VerticalLayout {
+                    alignment: center;
+                    Text {
+                        text: root.has-note ? root.title : "immermemo";
+                        color: root.has-note ? Palette.foreground : Colors.muted;
+                        font-size: root.status != "" && !root.status-is-error ? 16px : 20px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                    if root.status != "" && !root.status-is-error: Text {
+                        text: root.status;
+                        font-size: 11px;
+                        color: Colors.muted;
+                        overflow: elide;
+                    }
                 }
             }
         }
@@ -187,6 +201,17 @@ export component EditorPane inherits Rectangle {
 
         if !root.has-note: Rectangle {
             vertical-stretch: 1;
+
+            if root.show-back: TouchArea {
+                property <length> dx: self.mouse-x - self.pressed-x;
+                property <length> dy: self.mouse-y > self.pressed-y ? self.mouse-y - self.pressed-y : self.pressed-y - self.mouse-y;
+                moved => {
+                    if (self.pressed && dx > 40px && dx > dy) {
+                        root.open-drawer();
+                    }
+                }
+            }
+
             HorizontalLayout {
                 alignment: center;
                 VerticalLayout {
