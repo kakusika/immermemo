@@ -35,7 +35,7 @@ export component EditorPane inherits Rectangle {
         TopBar {
             inset-top: root.inset-top;
             if root.show-back: IconButton {
-                shape: Shapes.back;
+                shape: Shapes.menu;
                 clicked => { root.back(); }
             }
             // Keeps the title off the edge when there is no back arrow.
@@ -73,36 +73,16 @@ export component EditorPane inherits Rectangle {
         // Ctrl+Z / Ctrl+Y go to the Loro history instead of the widget's own
         // undo; capture-key-pressed runs before the focused TextEdit sees the
         // key. On a phone there is no such key: the bar below does the same.
-        //
-        // The Android back button/gesture arrives as Key.Back here too --
-        // without this, an unhandled back key falls through to the OS
-        // default, which is to close the whole app instead of returning to
-        // the list. Only claimed on a narrow window: on a wide one there is
-        // no separate list screen to go back to.
         edit-scope := FocusScope {
             horizontal-stretch: 1;
             vertical-stretch: 1;
             capture-key-pressed(event) => {
-                if (event.text == Key.Back && root.show-back) {
-                    root.back();
-                    return accept;
-                }
                 if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
                     root.undo();
                     return accept;
                 }
                 if (event.modifiers.control && (event.text == "y" || event.text == "Y" || ((event.text == "z" || event.text == "Z") && event.modifiers.shift))) {
                     root.redo();
-                    return accept;
-                }
-                return reject;
-            }
-            // Android triggers the actual "close the app" fallback off the
-            // key *release* (ACTION_UP), not the press -- accepting only
-            // capture-key-pressed above still let the release fall through
-            // and exit. Both need to be claimed.
-            capture-key-released(event) => {
-                if (event.text == Key.Back && root.show-back) {
                     return accept;
                 }
                 return reject;

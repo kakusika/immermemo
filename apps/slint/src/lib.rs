@@ -55,6 +55,7 @@ struct Session {
     /// set when the dialog opens, read (and cleared) when it's confirmed.
     rename_target: Option<usize>,
     delete_target: Option<usize>,
+    delete_vault_target: Option<usize>,
 }
 
 thread_local! {
@@ -140,11 +141,18 @@ pub fn run(
         history: None,
         rename_target: None,
         delete_target: None,
+        delete_vault_target: None,
     }));
 
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
     refresh_list(&app, &session);
     refresh_vault_list(&app, &session);
+    if session.borrow().notes.is_empty() {
+        app.set_list_open(true);
+    } else {
+        app.set_list_open(false);
+        open_initial_or_last_note(&app, &session);
+    }
 
     app.on_select({
         let (weak, session) = (app.as_weak(), session.clone());
@@ -303,6 +311,17 @@ pub fn run(
                 app.set_current_title(SharedString::new());
                 show_history_state(&app, &session.borrow());
                 app.set_body(SharedString::new());
+                if session.borrow().notes.is_empty() {
+                    let s = session.borrow();
+                    s.app_data.clear_last_note(&s.vault_dir);
+                    app.set_list_open(true);
+                } else {
+                    open_initial_or_last_note(&app, &session);
+                }
+            } else if session.borrow().notes.is_empty() {
+                let s = session.borrow();
+                s.app_data.clear_last_note(&s.vault_dir);
+                app.set_list_open(true);
             }
         }
     });
@@ -360,6 +379,54 @@ pub fn run(
             s.known_vaults = s.app_data.known_vaults();
             drop(s);
             switch_vault(&app, &session, new_vault);
+        }
+    });
+    app.on_delete_vault_requested({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |index| {
+            let app = weak.unwrap();
+            let s = session.borrow();
+            if s.known_vaults.len() <= 1 {
+                return;
+            }
+            drop(s);
+            session.borrow_mut().delete_vault_target = Some(index as usize);
+            app.set_delete_vault_confirm_open(true);
+        }
+    });
+    app.on_confirm_delete_vault({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            app.set_delete_vault_confirm_open(false);
+            let Some(index) = session.borrow_mut().delete_vault_target.take() else {
+                return;
+            };
+            let Some(vault_dir) = session.borrow().known_vaults.get(index).cloned() else {
+                return;
+            };
+            let mut s = session.borrow_mut();
+            if s.known_vaults.len() <= 1 {
+                return;
+            }
+            let is_current = s.vault_dir == vault_dir;
+            if let Err(e) = s.app_data.remove_vault(&vault_dir) {
+                drop(s);
+                app.set_status(format!("Could not remove the vault: {e}").into());
+                return;
+            }
+            s.known_vaults = s.app_data.known_vaults();
+            let next_vault = if is_current {
+                s.known_vaults.first().cloned()
+            } else {
+                None
+            };
+            drop(s);
+            if let Some(next) = next_vault {
+                switch_vault(&app, &session, next);
+            } else {
+                refresh_vault_list(&app, &session);
+            }
         }
     });
 
@@ -532,9 +599,14 @@ fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBuf) {
     app.set_current_title(SharedString::new());
     app.set_body(SharedString::new());
     show_history_state(app, &session.borrow());
-    app.set_list_open(true);
     refresh_list(app, session);
     refresh_vault_list(app, session);
+    if session.borrow().notes.is_empty() {
+        app.set_list_open(true);
+    } else {
+        app.set_list_open(false);
+        open_initial_or_last_note(app, session);
+    }
 }
 
 /// Turns what the user typed in the "Add vault" dialog into an actual
@@ -570,6 +642,7 @@ fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
         Ok(text) => {
             s.current = Some(index);
             s.history = Some(History::new(&text));
+            let _ = s.app_data.save_last_note(&s.vault_dir, &path);
             app.set_current(index as i32);
             app.set_current_title(notes::display_name(&s.vault_dir, &path).into());
             app.set_current_has_conflict(s.conflicted[index]);
@@ -579,6 +652,22 @@ fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
         }
         Err(e) => app.set_status(format!("Could not open {}: {e}", path.display()).into()),
     }
+}
+
+/// Opens the note that was last open in `vault_dir`, or the first note in the
+/// list if none was recorded (or if the recorded note is gone). If the vault
+/// has no notes at all, does nothing.
+fn open_initial_or_last_note(app: &App, session: &Rc<RefCell<Session>>) {
+    let s = session.borrow();
+    if s.notes.is_empty() {
+        return;
+    }
+    let last_note = s.app_data.load_last_note(&s.vault_dir);
+    let index = last_note
+        .and_then(|p| s.notes.iter().position(|n| *n == p))
+        .unwrap_or(0);
+    drop(s);
+    open_note(app, session, index);
 }
 
 /// Tells the window whether the undo and redo buttons have anything to do.
@@ -622,8 +711,21 @@ fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<Vec<Pat
                         app.set_current_title(SharedString::new());
                         show_history_state(app, &session.borrow());
                         app.set_body(SharedString::new());
+                        if session.borrow().notes.is_empty() {
+                            let s = session.borrow();
+                            s.app_data.clear_last_note(&s.vault_dir);
+                            app.set_list_open(true);
+                        } else {
+                            open_initial_or_last_note(app, session);
+                        }
                     }
                 }
+            } else if session.borrow().notes.is_empty() {
+                let s = session.borrow();
+                s.app_data.clear_last_note(&s.vault_dir);
+                app.set_list_open(true);
+            } else {
+                open_initial_or_last_note(app, session);
             }
             app.set_status(
                 if needing_resolution.is_empty() {

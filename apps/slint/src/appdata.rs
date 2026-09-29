@@ -66,6 +66,27 @@ impl AppData {
         write(&self.remote_file(vault_dir)?, url)
     }
 
+    fn last_note_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
+        Ok(self.vault_data_dir(vault_dir)?.join("last_note.txt"))
+    }
+
+    pub fn load_last_note(&self, vault_dir: &Path) -> Option<PathBuf> {
+        self.last_note_file(vault_dir)
+            .ok()
+            .and_then(|p| read_trimmed(&p))
+            .map(PathBuf::from)
+    }
+
+    pub fn save_last_note(&self, vault_dir: &Path, note_path: &Path) -> anyhow::Result<()> {
+        write(&self.last_note_file(vault_dir)?, &note_path.display().to_string())
+    }
+
+    pub fn clear_last_note(&self, vault_dir: &Path) {
+        if let Ok(file) = self.last_note_file(vault_dir) {
+            let _ = std::fs::remove_file(file);
+        }
+    }
+
     fn vault_list_file(&self) -> PathBuf {
         self.base.join("vaults.txt")
     }
@@ -94,6 +115,44 @@ impl AppData {
             .collect::<Vec<_>>()
             .join("\n");
         write(&self.vault_list_file(), &content)
+    }
+
+    /// Removes `vault_dir` from the known list, wipes its private data
+    /// directory, and updates `current_vault.txt` if needed. Does not touch
+    /// the user's note files.
+    pub fn remove_vault(&self, vault_dir: &Path) -> anyhow::Result<()> {
+        let mut vaults = self.known_vaults();
+        let len_before = vaults.len();
+        vaults.retain(|v| v != vault_dir && v.canonicalize().ok() != vault_dir.canonicalize().ok());
+        if vaults.len() == len_before {
+            return Ok(());
+        }
+        let content = vaults
+            .iter()
+            .map(|p| p.display().to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
+        write(&self.vault_list_file(), &content)?;
+
+        // Wipe that vault's private data (git, remote.txt, token)
+        if let Ok(data_dir) = self.vault_data_dir(vault_dir) {
+            let _ = std::fs::remove_dir_all(&data_dir);
+        }
+
+        // If the removed vault was the current vault, update or clear current_vault.txt
+        if self.load_current_vault().as_deref() == Some(vault_dir)
+            || self
+                .load_current_vault()
+                .and_then(|v| v.canonicalize().ok())
+                == vault_dir.canonicalize().ok()
+        {
+            if let Some(first) = vaults.first() {
+                let _ = self.save_current_vault(first);
+            } else {
+                let _ = std::fs::remove_file(self.current_vault_file());
+            }
+        }
+        Ok(())
     }
 
     fn current_vault_file(&self) -> PathBuf {
@@ -182,6 +241,29 @@ mod tests {
     }
 
     #[test]
+    fn remove_vault_drops_from_list_and_wipes_private_data() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().to_owned());
+        let (a, b) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+        data.add_vault(a.path()).unwrap();
+        data.add_vault(b.path()).unwrap();
+        data.save_remote(a.path(), "https://example.invalid/a.git")
+            .unwrap();
+        data.save_current_vault(a.path()).unwrap();
+
+        let a_data_dir = data.vault_data_dir(a.path()).unwrap();
+        assert!(a_data_dir.exists());
+
+        data.remove_vault(a.path()).unwrap();
+        assert_eq!(data.known_vaults(), vec![b.path().to_owned()]);
+        assert!(!a_data_dir.exists());
+        // Current vault switched to b.
+        assert_eq!(data.load_current_vault(), Some(b.path().to_owned()));
+        // The notes directory itself remains untouched.
+        assert!(a.path().exists());
+    }
+
+    #[test]
     fn current_vault_round_trips_and_starts_unset() {
         let dir = tempfile::tempdir().unwrap();
         let data = AppData::new(dir.path().to_owned());
@@ -189,5 +271,30 @@ mod tests {
         let vault = tempfile::tempdir().unwrap();
         data.save_current_vault(vault.path()).unwrap();
         assert_eq!(data.load_current_vault(), Some(vault.path().to_owned()));
+    }
+
+    #[test]
+    fn last_note_round_trips_and_starts_unset() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().to_owned());
+        let vault = tempfile::tempdir().unwrap();
+        assert_eq!(data.load_last_note(vault.path()), None);
+
+        let note = vault.path().join("my-note.tmt");
+        data.save_last_note(vault.path(), &note).unwrap();
+        assert_eq!(data.load_last_note(vault.path()), Some(note));
+    }
+
+    #[test]
+    fn last_note_can_be_cleared() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().to_owned());
+        let vault = tempfile::tempdir().unwrap();
+        let note = vault.path().join("my-note.tmt");
+        data.save_last_note(vault.path(), &note).unwrap();
+        assert_eq!(data.load_last_note(vault.path()), Some(note));
+
+        data.clear_last_note(vault.path());
+        assert_eq!(data.load_last_note(vault.path()), None);
     }
 }

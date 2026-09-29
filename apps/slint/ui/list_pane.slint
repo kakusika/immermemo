@@ -132,9 +132,8 @@ export component ListPane inherits Rectangle {
                 // `touch.pressed` directly.
                 Timer {
                     interval: 500ms;
-                    running: touch.pressed;
+                    running: touch.pressed && !long-pressed;
                     triggered => {
-                        self.running = false;
                         long-pressed = true;
                         root.menu-index = i;
                     }

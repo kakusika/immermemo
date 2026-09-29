@@ -156,14 +156,24 @@ comment for the full reasoning.
   and the connection got far enough to need real GitHub credentials,
   which is exactly the expected failure for an anonymous request against
   someone else's repo.
-- [ ] The Keystore JNI calls actually work: key generation, encrypt,
-  decrypt, and that a saved token survives an app restart. A signature
-  typo here fails at runtime (an exception `check_exception` should
-  surface as a status message) or, in the worst case, could still abort
-  the process if a JNI call is malformed in a way `jni` can't catch.
-  **Still genuinely needs a real device or a real token**: the emulator
-  check above never reached the Keystore-backed credentials path at all
-  (it failed one step earlier, at "no token saved").
+- [x] **The Keystore JNI calls actually work** -- confirmed on the
+  emulator 2026-09-28: saved a URL + a test token through the Remote
+  sheet for the "work" vault; the on-disk `token` file is 60 opaque
+  bytes (12-byte GCM IV + 32-byte ciphertext, matching the token's exact
+  length + a 16-byte tag -- no plaintext visible, so `secret_key`/
+  `generate_key`/`encrypt` all ran and the AndroidKeyStore-backed key
+  actually encrypted something). Force-stopped the app (`am force-stop`)
+  and relaunched it fresh (`monkey -c android.intent.category.LAUNCHER`,
+  since this APK's only component is `android.app.NativeActivity` --
+  there's no `MainActivity` to `am start` by name); reopening the Remote
+  sheet showed "Leave blank to keep the saved token" instead of the
+  empty placeholder, proving `decrypt`/`load()` round-tripped through a
+  brand new process with a brand new `JavaVM` handle. No JNI exceptions
+  in logcat throughout, so `check_exception` never had anything to
+  catch here -- this doesn't rule out a signature typo on some other
+  path this test didn't exercise (e.g. key regeneration after the
+  Keystore itself is cleared), only the normal generate/encrypt/save/
+  restart/load/decrypt path.
 - [ ] A real sync against a real GitHub or Forgejo repo *with* valid
   credentials (the actual authenticated push/pull) -- the emulator check
   above proves the network/TLS path, not the credentials path.

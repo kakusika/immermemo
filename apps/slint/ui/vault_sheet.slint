@@ -15,6 +15,9 @@ export component VaultSheet inherits Rectangle {
     callback select(int);
     callback add();
     callback close();
+    callback delete-requested(int);
+
+    property <int> menu-index: -1;
 
     background: Palette.background;
 
@@ -39,10 +42,47 @@ export component VaultSheet inherits Rectangle {
             background: Colors.separator;
         }
 
-        for name[i] in root.vaults: ActionRow {
-            text: name;
-            tint: i == root.current ? Palette.accent-background : Palette.foreground;
-            clicked => { root.select(i); }
+        for name[i] in root.vaults: Rectangle {
+            height: Metrics.touch;
+            background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+            property <bool> long-pressed: false;
+
+            HorizontalLayout {
+                padding-left: Metrics.gutter;
+                padding-right: Metrics.gutter;
+                Text {
+                    text: name;
+                    color: i == root.current ? Palette.accent-background : Palette.foreground;
+                    font-size: 17px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                if i == root.current: Text {
+                    text: "current";
+                    font-size: 13px;
+                    color: Palette.accent-background;
+                    vertical-alignment: center;
+                }
+            }
+
+            touch := TouchArea {
+                clicked => {
+                    if (long-pressed) {
+                        long-pressed = false;
+                    } else {
+                        root.select(i);
+                    }
+                }
+            }
+
+            Timer {
+                interval: 500ms;
+                running: touch.pressed && !long-pressed;
+                triggered => {
+                    long-pressed = true;
+                    root.menu-index = i;
+                }
+            }
         }
 
         ActionRow {
@@ -57,6 +97,42 @@ export component VaultSheet inherits Rectangle {
 
         Rectangle {
             height: root.inset-bottom;
+        }
+    }
+
+    if root.menu-index >= 0: Rectangle {
+        background: #00000055;
+        TouchArea {
+            clicked => { root.menu-index = -1; }
+        }
+
+        Rectangle {
+            y: parent.height - self.height;
+            width: 100%;
+            height: sheet-layout.preferred-height;
+            background: Palette.background;
+            border-radius: 12px;
+            drop-shadow-blur: 12px;
+            drop-shadow-color: #00000044;
+
+            sheet-layout := VerticalLayout {
+                padding-bottom: root.inset-bottom;
+                if root.vaults.length > 1: ActionRow {
+                    text: "Delete";
+                    tint: Colors.danger;
+                    clicked => {
+                        root.delete-requested(root.menu-index);
+                        root.menu-index = -1;
+                    }
+                }
+                if root.vaults.length <= 1: ActionRow {
+                    text: "Cannot delete the only vault";
+                    tint: Colors.muted;
+                    clicked => {
+                        root.menu-index = -1;
+                    }
+                }
+            }
         }
     }
 }
