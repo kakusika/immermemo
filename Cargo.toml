@@ -30,14 +30,11 @@ loro = "1.16"
 # verify TLS certificate chains ourselves where libgit2's own file-based
 # verification can't work at all (see crates/sync's `tls` module doc).
 openssl = "0.10"
-# Same feature set mumeum runs on: Skia is the only renderer compiled in by default,
-# `renderer-software` stays as a manual fallback (`SLINT_BACKEND=winit-software`).
+# Desktop: Skia on Wayland (no X11, no accessibility). Android: its own backend (see apps/slint).
 slint = { version = "1.18", default-features = false, features = [
-  "accessibility",
-  "backend-winit",
+  "backend-winit-wayland",
   "compat-1-2",
   "renderer-skia",
-  "renderer-software",
 ] }
 slint-build = "1.18"
 
