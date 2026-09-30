@@ -18,11 +18,15 @@ export component PropertiesScreen inherits Rectangle {
     in property <int> word-count: 0;
     in property <int> line-count: 0;
     in property <bool> has-conflict: false;
+    in property <int> conflict-total: 0;
+    in property <string> conflict-mine-preview: "";
+    in property <string> conflict-theirs-preview: "";
 
     callback rename-requested();
     callback delete-requested();
     callback resolve-mine();
     callback resolve-theirs();
+    callback open-conflict-sheet();
 
     background: Palette.background;
 
@@ -169,35 +173,122 @@ export component PropertiesScreen inherits Rectangle {
                 if root.has-conflict: Rectangle {
                     border-radius: 14px;
                     background: Colors.warning.with-alpha(0.12);
-                    border-width: 1px;
+                    border-width: 1.5px;
                     border-color: Colors.warning.with-alpha(0.4);
 
                     VerticalLayout {
                         padding: 16px;
-                        spacing: 10px;
+                        spacing: 12px;
 
-                        Text {
-                            text: "⚠️ 競合が発生しています";
-                            font-size: 12px;
-                            font-weight: 700;
-                            color: Colors.warning;
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 8px;
+
+                            Text {
+                                text: "⚠️";
+                                font-size: 16px;
+                                vertical-alignment: center;
+                            }
+
+                            Text {
+                                horizontal-stretch: 1;
+                                text: root.conflict-total > 0
+                                    ? (root.conflict-total + " 箇所の競合があります")
+                                    : "競合が発生しています";
+                                font-size: 15px;
+                                font-weight: 700;
+                                color: Colors.warning;
+                                vertical-alignment: center;
+                            }
                         }
 
-                        Text {
-                            text: "このノートには同時に編集された変更が含まれています。";
-                            font-size: 13px;
-                            color: Palette.foreground;
-                            wrap: word-wrap;
+                        // Conflict Preview cards if preview text is available
+                        if root.conflict-mine-preview != "" || root.conflict-theirs-preview != "": VerticalLayout {
+                            spacing: 8px;
+
+                            if root.conflict-mine-preview != "": Rectangle {
+                                border-radius: 8px;
+                                background: Palette.foreground.with-alpha(0.04);
+                                border-width: 1px;
+                                border-color: Palette.accent-background.with-alpha(0.35);
+
+                                VerticalLayout {
+                                    padding: 8px;
+                                    spacing: 4px;
+                                    Text {
+                                        text: "📱 あなたの変更 (Local):";
+                                        font-size: 11px;
+                                        font-weight: 700;
+                                        color: Palette.accent-background;
+                                    }
+                                    Text {
+                                        text: root.conflict-mine-preview;
+                                        font-size: 13px;
+                                        color: Palette.foreground;
+                                        overflow: elide;
+                                    }
+                                }
+                            }
+
+                            if root.conflict-theirs-preview != "": Rectangle {
+                                border-radius: 8px;
+                                background: Palette.foreground.with-alpha(0.04);
+                                border-width: 1px;
+                                border-color: Colors.warning.with-alpha(0.35);
+
+                                VerticalLayout {
+                                    padding: 8px;
+                                    spacing: 4px;
+                                    Text {
+                                        text: "☁️ リモートの変更 (Remote):";
+                                        font-size: 11px;
+                                        font-weight: 700;
+                                        color: Colors.warning;
+                                    }
+                                    Text {
+                                        text: root.conflict-theirs-preview;
+                                        font-size: 13px;
+                                        color: Palette.foreground;
+                                        overflow: elide;
+                                    }
+                                }
+                            }
                         }
 
+                        // Open Conflict Sheet Button
+                        Rectangle {
+                            height: 38px;
+                            border-radius: 19px;
+                            background: resolve-sheet-touch.pressed ? Colors.warning.darker(15%) : Colors.warning;
+
+                            HorizontalLayout {
+                                alignment: center;
+                                spacing: 6px;
+                                Text {
+                                    text: "🔍 解決シートを開いて確認・解決";
+                                    font-size: 13px;
+                                    font-weight: 700;
+                                    color: #ffffff;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            resolve-sheet-touch := TouchArea {
+                                clicked => { root.open-conflict-sheet(); }
+                            }
+                        }
+
+                        // Quick action buttons
                         HorizontalLayout {
                             spacing: 8px;
                             Button {
-                                text: "ローカル側を残す";
+                                horizontal-stretch: 1;
+                                text: "ローカル側を採用";
                                 clicked => { root.resolve-mine(); }
                             }
                             Button {
-                                text: "リモート側を残す";
+                                horizontal-stretch: 1;
+                                text: "リモート側を採用";
                                 clicked => { root.resolve-theirs(); }
                             }
                         }

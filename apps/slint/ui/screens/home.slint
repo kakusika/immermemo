@@ -3,6 +3,7 @@ import {
     Metrics,
     Colors,
     Shapes,
+    Icon,
     BubbleButton,
     TopBar,
     ActionRow,
@@ -20,6 +21,8 @@ export component HomeScreen inherits Rectangle {
     in property <string> status: "";
     in property <bool> syncing: false;
     in property <bool> remote-configured: false;
+    in property <string> last-sync-error: "";
+    in property <bool> sync-error-copied: false;
 
     // Currently open / recent note
     in property <string> current-note-title: "";
@@ -30,6 +33,9 @@ export component HomeScreen inherits Rectangle {
     callback open-vaults();
     callback open-settings();
     callback open-current-note();
+    callback open-conflict-note();
+    callback copy-sync-error();
+    callback dismiss-sync-error();
 
     background: Palette.background;
 
@@ -166,6 +172,400 @@ export component HomeScreen inherits Rectangle {
                                 font-size: 12px;
                                 color: Colors.muted;
                                 vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // ----------------------------------------------------
+                // Section: Sync Status
+                // ----------------------------------------------------
+                VerticalLayout {
+                    spacing: 8px;
+
+                    HorizontalLayout {
+                        spacing: 8px;
+
+                        Text {
+                            horizontal-stretch: 1;
+                            text: "同期ステータス";
+                            font-size: 11px;
+                            font-weight: 700;
+                            color: Colors.muted;
+                            letter-spacing: 0.5px;
+                        }
+
+                        if root.syncing: HorizontalLayout {
+                            spacing: 4px;
+                            alignment: center;
+                            Icon {
+                                width: 14px;
+                                height: 14px;
+                                shape: Shapes.sync;
+                                tint: Palette.accent-background;
+                            }
+                            Text {
+                                text: "同期中...";
+                                font-size: 11px;
+                                font-weight: 600;
+                                color: Palette.accent-background;
+                            }
+                        }
+                    }
+
+                    // Card: Error State (When last-sync-error != "")
+                    if root.last-sync-error != "": Rectangle {
+                        border-radius: 14px;
+                        background: Colors.danger.with-alpha(0.08);
+                        border-width: 1.5px;
+                        border-color: Colors.danger.with-alpha(0.4);
+
+                        VerticalLayout {
+                            padding: 14px;
+                            spacing: 12px;
+
+                            HorizontalLayout {
+                                spacing: 8px;
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    Icon {
+                                        width: 18px;
+                                        height: 18px;
+                                        shape: Shapes.close;
+                                        tint: Colors.danger;
+                                    }
+                                }
+
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "同期に失敗しました";
+                                    font-size: 15px;
+                                    font-weight: 700;
+                                    color: Colors.danger;
+                                    vertical-alignment: center;
+                                }
+
+                                Rectangle {
+                                    width: 28px;
+                                    height: 28px;
+                                    border-radius: 14px;
+                                    background: Palette.foreground.with-alpha(0.06);
+
+                                    TouchArea {
+                                        clicked => { root.dismiss-sync-error(); }
+                                    }
+
+                                    Icon {
+                                        width: 14px;
+                                        height: 14px;
+                                        shape: Shapes.close;
+                                        tint: Colors.muted;
+                                        x: (parent.width - self.width) / 2;
+                                        y: (parent.height - self.height) / 2;
+                                    }
+                                }
+                            }
+
+                            // Error text display (selectable, word-wrapped)
+                            Rectangle {
+                                border-radius: 8px;
+                                background: Palette.background;
+                                border-width: 1px;
+                                border-color: Colors.separator;
+
+                                VerticalLayout {
+                                    padding: 10px;
+
+                                    TextInput {
+                                        text: root.last-sync-error;
+                                        read-only: true;
+                                        wrap: word-wrap;
+                                        color: Palette.foreground;
+                                        font-size: 12px;
+                                    }
+                                }
+                            }
+
+                            // Action buttons: Copy Error and Retry Sync
+                            HorizontalLayout {
+                                spacing: 10px;
+
+                                Rectangle {
+                                    horizontal-stretch: 1;
+                                    height: 38px;
+                                    border-radius: 8px;
+                                    background: root.sync-error-copied
+                                        ? #2e7d32.with-alpha(0.18)
+                                        : Palette.alternate-background;
+                                    border-width: 1px;
+                                    border-color: root.sync-error-copied
+                                        ? #2e7d32.with-alpha(0.5)
+                                        : Colors.separator;
+
+                                    TouchArea {
+                                        clicked => { root.copy-sync-error(); }
+                                    }
+
+                                    HorizontalLayout {
+                                        alignment: center;
+                                        spacing: 6px;
+
+                                        VerticalLayout {
+                                            alignment: center;
+                                            Icon {
+                                                width: 16px;
+                                                height: 16px;
+                                                shape: root.sync-error-copied ? Shapes.check : Shapes.copy;
+                                                tint: root.sync-error-copied ? #2e7d32 : Palette.foreground;
+                                            }
+                                        }
+
+                                        Text {
+                                            text: root.sync-error-copied ? "コピーしました" : "エラーをコピー";
+                                            font-size: 13px;
+                                            font-weight: 600;
+                                            color: root.sync-error-copied ? #2e7d32 : Palette.foreground;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    height: 38px;
+                                    width: 100px;
+                                    border-radius: 8px;
+                                    background: Palette.accent-background;
+                                    opacity: root.syncing ? 0.6 : 1.0;
+
+                                    TouchArea {
+                                        enabled: !root.syncing;
+                                        clicked => { root.sync(); }
+                                    }
+
+                                    HorizontalLayout {
+                                        alignment: center;
+                                        spacing: 6px;
+
+                                        VerticalLayout {
+                                            alignment: center;
+                                            Icon {
+                                                width: 15px;
+                                                height: 15px;
+                                                shape: Shapes.sync;
+                                                tint: #ffffff;
+                                            }
+                                        }
+
+                                        Text {
+                                            text: "再試行";
+                                            font-size: 13px;
+                                            font-weight: 600;
+                                            color: #ffffff;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Card: Normal / Idle / Remote Not Configured
+                    if root.last-sync-error == "": Rectangle {
+                        border-radius: 14px;
+                        background: Palette.alternate-background;
+
+                        VerticalLayout {
+                            padding: 14px;
+                            spacing: 10px;
+
+                            if !root.remote-configured: HorizontalLayout {
+                                spacing: 12px;
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    Icon {
+                                        width: 22px;
+                                        height: 22px;
+                                        shape: Shapes.link;
+                                        tint: Colors.muted;
+                                    }
+                                }
+
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    spacing: 2px;
+
+                                    Text {
+                                        text: "リモート未設定";
+                                        font-size: 14px;
+                                        font-weight: 600;
+                                        color: Palette.foreground;
+                                    }
+
+                                    Text {
+                                        text: "Git リモートを設定すると自動同期できます";
+                                        font-size: 12px;
+                                        color: Colors.muted;
+                                        wrap: word-wrap;
+                                    }
+                                }
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    Rectangle {
+                                        height: 32px;
+                                        width: 60px;
+                                        border-radius: 6px;
+                                        background: Palette.accent-background.with-alpha(0.12);
+
+                                        TouchArea {
+                                            clicked => { root.open-settings(); }
+                                        }
+
+                                        HorizontalLayout {
+                                            alignment: center;
+                                            Text {
+                                                text: "設定";
+                                                font-size: 12px;
+                                                font-weight: 600;
+                                                color: Palette.accent-background;
+                                                vertical-alignment: center;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if root.remote-configured: HorizontalLayout {
+                                spacing: 10px;
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    Icon {
+                                        width: 20px;
+                                        height: 20px;
+                                        shape: Shapes.sync;
+                                        tint: root.syncing ? Palette.accent-background : Colors.muted;
+                                    }
+                                }
+
+                                VerticalLayout {
+                                    horizontal-stretch: 1;
+                                    spacing: 2px;
+
+                                    Text {
+                                        text: root.syncing ? "同期を実行中..." : "同期完了";
+                                        font-size: 14px;
+                                        font-weight: 600;
+                                        color: root.syncing ? Palette.accent-background : Palette.foreground;
+                                    }
+
+                                    Text {
+                                        text: root.syncing
+                                            ? "リモートとの差分を確認・更新しています"
+                                            : (root.status != "" ? root.status : "ローカルとリモートは同期済みです");
+                                        font-size: 12px;
+                                        color: Colors.muted;
+                                        wrap: word-wrap;
+                                    }
+                                }
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    Rectangle {
+                                        height: 34px;
+                                        width: 80px;
+                                        border-radius: 8px;
+                                        background: Palette.foreground.with-alpha(0.06);
+
+                                        TouchArea {
+                                            enabled: !root.syncing;
+                                            clicked => { root.sync(); }
+                                        }
+
+                                        HorizontalLayout {
+                                            alignment: center;
+                                            spacing: 4px;
+
+                                            VerticalLayout {
+                                                alignment: center;
+                                                Icon {
+                                                    width: 14px;
+                                                    height: 14px;
+                                                    shape: Shapes.sync;
+                                                    tint: root.syncing ? Colors.muted : Palette.foreground;
+                                                }
+                                            }
+
+                                            Text {
+                                                text: "同期";
+                                                font-size: 12px;
+                                                font-weight: 600;
+                                                color: root.syncing ? Colors.muted : Palette.foreground;
+                                                vertical-alignment: center;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ----------------------------------------------------
+                // Section: Unresolved Conflicts
+                // ----------------------------------------------------
+                if root.conflict-count > 0: VerticalLayout {
+                    spacing: 8px;
+
+                    Text {
+                        text: "未解決のコンフリクト";
+                        font-size: 11px;
+                        font-weight: 700;
+                        color: Colors.warning;
+                        letter-spacing: 0.5px;
+                    }
+
+                    Rectangle {
+                        border-radius: 14px;
+                        background: Colors.warning.with-alpha(0.12);
+                        border-width: 1.5px;
+                        border-color: Colors.warning.with-alpha(0.4);
+
+                        TouchArea {
+                            clicked => { root.open-conflict-note(); }
+                        }
+
+                        VerticalLayout {
+                            padding: 16px;
+                            spacing: 8px;
+
+                            HorizontalLayout {
+                                spacing: 8px;
+                                alignment: center;
+
+                                Text {
+                                    text: "⚠️";
+                                    font-size: 18px;
+                                    vertical-alignment: center;
+                                }
+
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: root.conflict-count + " 件のノートに競合があります";
+                                    font-size: 15px;
+                                    font-weight: 700;
+                                    color: Colors.warning;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            Text {
+                                text: "タップして競合ノートを開く・解決する →";
+                                font-size: 13px;
+                                font-weight: 600;
+                                color: Colors.warning.darker(10%);
                             }
                         }
                     }

@@ -1,0 +1,296 @@
+import { Palette, ScrollView } from "std-widgets.slint";
+import { Metrics, Colors, Shapes, Icon, IconButton, BubbleButton } from "../components.slint";
+
+export component ConflictSheet inherits Rectangle {
+    in property <bool> open: false;
+    in property <int> conflict-index: 0;
+    in property <int> conflict-total: 0;
+    in property <string> mine-text: "";
+    in property <string> theirs-text: "";
+
+    callback close();
+    callback resolve-choice(int); // 0: Mine, 1: Theirs, 2: Both
+    callback prev-conflict();
+    callback next-conflict();
+
+    // Modal overlay
+    background: Colors.separator.with-alpha(0.45);
+
+    TouchArea {
+        clicked => { root.close(); }
+    }
+
+    sheet := Rectangle {
+        width: root.width > 540px ? 500px : root.width - 24px;
+        height: root.height > 680px ? 600px : root.height - 48px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        background: Palette.background;
+        border-radius: 16px;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #000000.with-alpha(0.25);
+        clip: true;
+
+        // Consume touches inside the sheet
+        TouchArea {}
+
+        VerticalLayout {
+            padding-left: 16px;
+            padding-right: 16px;
+            padding-top: 14px;
+            padding-bottom: 14px;
+            spacing: 12px;
+
+            // Sheet Header
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: center;
+
+                Text {
+                    text: "⚠️ コンフリクト解決";
+                    font-size: 16px;
+                    font-weight: 700;
+                    color: Colors.warning;
+                    vertical-alignment: center;
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                }
+
+                if root.conflict-total > 1: Rectangle {
+                    border-radius: 10px;
+                    background: Palette.foreground.with-alpha(0.08);
+                    height: 24px;
+
+                    HorizontalLayout {
+                        alignment: center;
+                        padding-left: 8px;
+                        padding-right: 8px;
+                        Text {
+                            text: (root.conflict-index + 1) + " / " + root.conflict-total;
+                            font-size: 12px;
+                            font-weight: 600;
+                            color: Palette.foreground;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                IconButton {
+                    shape: Shapes.close;
+                    tint: Palette.foreground.with-alpha(0.6);
+                    clicked => { root.close(); }
+                }
+            }
+
+            // Scrollable Content Cards
+            ScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    spacing: 12px;
+
+                    // Mine Card (Local)
+                    Rectangle {
+                        border-radius: 12px;
+                        background: Palette.foreground.with-alpha(0.04);
+                        border-width: 1.5px;
+                        border-color: Palette.accent-background.with-alpha(0.4);
+
+                        VerticalLayout {
+                            padding: 12px;
+                            spacing: 8px;
+
+                            HorizontalLayout {
+                                spacing: 6px;
+                                Text {
+                                    text: "📱 あなたの変更 (Local)";
+                                    font-size: 13px;
+                                    font-weight: 700;
+                                    color: Palette.accent-background;
+                                }
+                            }
+
+                            Rectangle {
+                                background: Palette.background;
+                                border-radius: 8px;
+                                border-width: 1px;
+                                border-color: Colors.separator;
+
+                                HorizontalLayout {
+                                    padding: 8px;
+                                    Text {
+                                        text: root.mine-text != "" ? root.mine-text : "(削除または空)";
+                                        font-size: 14px;
+                                        color: root.mine-text != "" ? Palette.foreground : Colors.muted;
+                                        wrap: word-wrap;
+                                    }
+                                }
+                            }
+
+                            // Keep Mine Button
+                            Rectangle {
+                                height: 36px;
+                                border-radius: 18px;
+                                background: mine-btn-touch.pressed ? Palette.accent-background.darker(15%) : Palette.accent-background;
+
+                                HorizontalLayout {
+                                    alignment: center;
+                                    Text {
+                                        text: "この変更を採用 (Keep Local)";
+                                        font-size: 13px;
+                                        font-weight: 600;
+                                        color: #ffffff;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                mine-btn-touch := TouchArea {
+                                    clicked => { root.resolve-choice(0); }
+                                }
+                            }
+                        }
+                    }
+
+                    // Theirs Card (Remote)
+                    Rectangle {
+                        border-radius: 12px;
+                        background: Palette.foreground.with-alpha(0.04);
+                        border-width: 1.5px;
+                        border-color: Colors.warning.with-alpha(0.5);
+
+                        VerticalLayout {
+                            padding: 12px;
+                            spacing: 8px;
+
+                            HorizontalLayout {
+                                spacing: 6px;
+                                Text {
+                                    text: "☁️ リモートの変更 (Remote)";
+                                    font-size: 13px;
+                                    font-weight: 700;
+                                    color: Colors.warning;
+                                }
+                            }
+
+                            Rectangle {
+                                background: Palette.background;
+                                border-radius: 8px;
+                                border-width: 1px;
+                                border-color: Colors.separator;
+
+                                HorizontalLayout {
+                                    padding: 8px;
+                                    Text {
+                                        text: root.theirs-text != "" ? root.theirs-text : "(削除または空)";
+                                        font-size: 14px;
+                                        color: root.theirs-text != "" ? Palette.foreground : Colors.muted;
+                                        wrap: word-wrap;
+                                    }
+                                }
+                            }
+
+                            // Keep Theirs Button
+                            Rectangle {
+                                height: 36px;
+                                border-radius: 18px;
+                                background: theirs-btn-touch.pressed ? Colors.warning.darker(15%) : Colors.warning;
+
+                                HorizontalLayout {
+                                    alignment: center;
+                                    Text {
+                                        text: "この変更を採用 (Keep Remote)";
+                                        font-size: 13px;
+                                        font-weight: 600;
+                                        color: #ffffff;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                theirs-btn-touch := TouchArea {
+                                    clicked => { root.resolve-choice(1); }
+                                }
+                            }
+                        }
+                    }
+
+                    // Both Action Button
+                    Rectangle {
+                        height: 38px;
+                        border-radius: 19px;
+                        background: both-btn-touch.pressed ? Palette.foreground.with-alpha(0.15) : Palette.foreground.with-alpha(0.08);
+
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 6px;
+                            Text {
+                                text: "＋ 両方を残す (Local → Remote)";
+                                font-size: 13px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        both-btn-touch := TouchArea {
+                            clicked => { root.resolve-choice(2); }
+                        }
+                    }
+
+                    // Navigation Between Conflicts
+                    if root.conflict-total > 1: HorizontalLayout {
+                        spacing: 12px;
+                        alignment: center;
+
+                        Rectangle {
+                            height: 32px;
+                            horizontal-stretch: 1;
+                            border-radius: 16px;
+                            background: prev-touch.pressed ? Palette.foreground.with-alpha(0.12) : Palette.foreground.with-alpha(0.05);
+
+                            HorizontalLayout {
+                                alignment: center;
+                                Text {
+                                    text: "◀ 前の競合";
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    color: root.conflict-index > 0 ? Palette.foreground : Colors.muted;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            prev-touch := TouchArea {
+                                enabled: root.conflict-index > 0;
+                                clicked => { root.prev-conflict(); }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 32px;
+                            horizontal-stretch: 1;
+                            border-radius: 16px;
+                            background: next-touch.pressed ? Palette.foreground.with-alpha(0.12) : Palette.foreground.with-alpha(0.05);
+
+                            HorizontalLayout {
+                                alignment: center;
+                                Text {
+                                    text: "次の競合 ▶";
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    color: root.conflict-index < root.conflict-total - 1 ? Palette.foreground : Colors.muted;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            next-touch := TouchArea {
+                                enabled: root.conflict-index < root.conflict-total - 1;
+                                clicked => { root.next-conflict(); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

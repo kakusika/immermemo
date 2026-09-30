@@ -18,9 +18,10 @@ use immermemo_vault::history::History;
 use immermemo_vault::notes;
 
 use session::{
-    apply_restored, open_initial_or_last_note, open_note, refresh_list, refresh_vault_list,
-    resolve_active_conflict, set_status, show_history_state, start_sync, switch_vault,
-    update_filtered_list, vault_display_name, vault_path_from_input, Session, SESSION,
+    apply_restored, open_first_conflicted_note, open_initial_or_last_note, open_note, refresh_list,
+    refresh_vault_list, resolve_active_conflict, resolve_conflict_step, set_status,
+    show_history_state, start_sync, switch_vault, sync_conflict_sheet_state, update_filtered_list,
+    vault_display_name, vault_path_from_input, Session, SESSION,
 };
 
 slint::include_modules!();
@@ -582,6 +583,87 @@ pub fn run(
         }
     });
 
+    app.on_open_conflict_sheet({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            sync_conflict_sheet_state(&app, &session);
+            app.set_conflict_sheet_open(true);
+        }
+    });
+
+    app.on_resolve_conflict_step({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |choice| {
+            let app = weak.unwrap();
+            resolve_conflict_step(&app, &session, choice);
+        }
+    });
+
+    app.on_prev_conflict_step({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            let idx = app.get_active_conflict_index();
+            if idx > 0 {
+                app.set_active_conflict_index(idx - 1);
+                sync_conflict_sheet_state(&app, &session);
+            }
+        }
+    });
+
+    app.on_next_conflict_step({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            let idx = app.get_active_conflict_index();
+            let total = app.get_active_conflict_total();
+            if idx + 1 < total {
+                app.set_active_conflict_index(idx + 1);
+                sync_conflict_sheet_state(&app, &session);
+            }
+        }
+    });
+
+    app.on_open_conflict_note({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            open_first_conflicted_note(&app, &session);
+        }
+    });
+
+    app.on_copy_sync_error({
+        let weak = app.as_weak();
+        move || {
+            let Some(app) = weak.upgrade() else { return };
+            let err = app.get_last_sync_error();
+            if !err.is_empty() {
+                session::copy_to_clipboard(&app, err.as_str());
+                app.set_sync_error_copied(true);
+                let weak_timer = weak.clone();
+                slint::Timer::single_shot(std::time::Duration::from_secs(2), move || {
+                    if let Some(app) = weak_timer.upgrade() {
+                        app.set_sync_error_copied(false);
+                    }
+                });
+            }
+        }
+    });
+
+    app.on_dismiss_sync_error({
+        let weak = app.as_weak();
+        move || {
+            let Some(app) = weak.upgrade() else { return };
+            app.set_last_sync_error(SharedString::new());
+            app.set_sync_error_copied(false);
+            if app.get_status_is_error() {
+                app.set_status(SharedString::new());
+                app.set_status_is_error(false);
+            }
+        }
+    });
+
     app.run()?;
     Ok(())
 }
@@ -589,6 +671,7 @@ pub fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::session::{copy_to_clipboard, finish_sync};
     use std::sync::Arc;
     use slint::Model;
 
@@ -687,5 +770,96 @@ mod tests {
         session.borrow_mut().search_query = "nonexistent".to_string();
         update_filtered_list(&app, &session);
         assert_eq!(app.get_notes().row_count(), 0);
+
+        // 4. Conflict sheet step-by-step resolution
+        let multi_note_path = vault_dir.join("multi_conflict.tmt");
+        let base_doc = tomet_parser::parse_document("Alpha base.\n\nMiddle untouched.\n\nBeta base.\n").unwrap();
+        let local_doc = tomet_parser::parse_document("Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n").unwrap();
+        let remote_doc = tomet_parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n").unwrap();
+        let merged_doc = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc).document;
+        let conflicted_text = tomet_printer::document_to_tm(&merged_doc);
+        std::fs::write(&multi_note_path, &conflicted_text).unwrap();
+
+        let new_idx = session.borrow().notes.len();
+        let mut s = session.borrow_mut();
+        s.notes.push(multi_note_path.clone());
+        s.conflicted.push(true);
+        s.current = Some(new_idx);
+        s.history = Some(History::new(&conflicted_text));
+        drop(s);
+        app.set_current_has_conflict(true);
+        app.set_body(conflicted_text.clone().into());
+
+        // Test open_first_conflicted_note from Home tab
+        app.set_active_tab(0);
+        app.set_conflict_sheet_open(false);
+        open_first_conflicted_note(&app, &session);
+        assert_eq!(app.get_active_tab(), 2);
+        assert!(app.get_conflict_sheet_open());
+        assert_eq!(app.get_active_conflict_total(), 2);
+        assert_eq!(app.get_active_conflict_mine(), "min");
+        assert_eq!(app.get_active_conflict_theirs(), "theirs");
+
+        // Initial state sync
+        sync_conflict_sheet_state(&app, &session);
+        assert_eq!(app.get_active_conflict_total(), 2);
+        assert_eq!(app.get_active_conflict_index(), 0);
+        assert_eq!(app.get_active_conflict_mine(), "min");
+        assert_eq!(app.get_active_conflict_theirs(), "theirs");
+
+        // Navigate to next conflict
+        app.set_active_conflict_index(1);
+        sync_conflict_sheet_state(&app, &session);
+        assert_eq!(app.get_active_conflict_index(), 1);
+        assert_eq!(app.get_active_conflict_mine(), "min");
+        assert_eq!(app.get_active_conflict_theirs(), "theirs");
+
+        // Resolve conflict at index 1 with Keep Both (choice 2)
+        resolve_conflict_step(&app, &session, 2);
+        assert_eq!(app.get_active_conflict_total(), 1);
+        assert!(app.get_current_has_conflict());
+        assert_eq!(app.get_active_conflict_index(), 0);
+
+        // Resolve the remaining conflict (index 0) with Keep Mine (choice 0)
+        resolve_conflict_step(&app, &session, 0);
+        assert_eq!(app.get_active_conflict_total(), 0);
+        assert!(!app.get_current_has_conflict());
+        assert!(!app.get_conflict_sheet_open());
+        assert_eq!(app.get_status(), "All conflicts resolved");
+
+        let disk_text = std::fs::read_to_string(&multi_note_path).unwrap();
+        assert!(!disk_text.contains("@mobile.conflict"));
+        assert!(disk_text.contains("Alpha min."));
+        assert!(disk_text.contains("Middle untouched."));
+        assert!(disk_text.contains("Beta mintheirs."));
+
+        // 5. Sync error tracking, copying, and dismissal
+        let err_text = "Sync failed: no merge base found; class=Merge (22)";
+        finish_sync(&app, &session, Err("no merge base found; class=Merge (22)".to_string()));
+        assert_eq!(app.get_last_sync_error(), err_text);
+        assert!(app.get_status_is_error());
+        assert_eq!(app.get_status(), err_text);
+        assert!(!app.get_sync_error_copied());
+
+        // Copy error simulation
+        copy_to_clipboard(&app, err_text);
+        app.set_sync_error_copied(true);
+        assert!(app.get_sync_error_copied());
+
+        // Dismiss error
+        app.set_last_sync_error(SharedString::new());
+        app.set_sync_error_copied(false);
+        app.set_status(SharedString::new());
+        app.set_status_is_error(false);
+        assert_eq!(app.get_last_sync_error(), "");
+        assert!(!app.get_status_is_error());
+
+        // Successful sync clears error
+        finish_sync(&app, &session, Err("some error".to_string()));
+        assert_eq!(app.get_last_sync_error(), "Sync failed: some error");
+        finish_sync(&app, &session, Ok(vec![]));
+        assert_eq!(app.get_last_sync_error(), "");
+        assert_eq!(app.get_status(), "Synced");
+        assert!(!app.get_status_is_error());
     }
 }

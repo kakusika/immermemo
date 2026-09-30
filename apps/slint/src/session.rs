@@ -88,6 +88,8 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
     };
 
     app.set_syncing(true);
+    app.set_last_sync_error(SharedString::new());
+    app.set_sync_error_copied(false);
     set_status(app, "Syncing...");
     let weak = app.as_weak();
     // Vault is opened inside the thread; only plain data and the (Send +
@@ -219,6 +221,8 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     app.set_remote_configured(remote.is_some());
     app.set_current_title(SharedString::new());
     app.set_body(SharedString::new());
+    app.set_last_sync_error(SharedString::new());
+    app.set_sync_error_copied(false);
     clear_note_stats(app);
     show_history_state(app, &session.borrow());
     refresh_list(app, session);
@@ -293,11 +297,22 @@ pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|_| path.display().to_string());
             app.set_current_note_path(note_rel_path.into());
-            app.set_current_has_conflict(s.conflicted[index]);
+            let has_conflict = s.conflicted[index];
+            app.set_current_has_conflict(has_conflict);
             show_history_state(app, &s);
             app.set_body(text.clone().into());
             update_note_stats(app, &text);
             set_status(app, "");
+            drop(s);
+            app.set_active_conflict_index(0);
+            if has_conflict {
+                sync_conflict_sheet_state(app, session);
+            } else {
+                app.set_conflict_sheet_open(false);
+                app.set_active_conflict_total(0);
+                app.set_active_conflict_mine(SharedString::new());
+                app.set_active_conflict_theirs(SharedString::new());
+            }
         }
         Err(e) => set_status(app, format!("Could not open {}: {e}", path.display())),
     }
@@ -320,7 +335,7 @@ pub fn open_initial_or_last_note(app: &App, session: &Rc<RefCell<Session>>) {
 }
 
 /// Sets the status message on the window, classifying it as an error or
-/// normal status so both ListPane and EditorPane can present it appropriately.
+/// normal status so both FilesScreen and EditorScreen can present it appropriately.
 pub fn set_status(app: &App, msg: impl Into<SharedString>) {
     let s: SharedString = msg.into();
     let text = s.as_str();
@@ -333,6 +348,14 @@ pub fn set_status(app: &App, msg: impl Into<SharedString>) {
         || text.contains("Error");
     app.set_status(s);
     app.set_status_is_error(is_error);
+}
+
+/// Copies the given text to the system clipboard using Slint's platform abstraction.
+pub fn copy_to_clipboard(app: &App, text: &str) {
+    slint::private_unstable_api::re_exports::WindowInner::from_pub(app.window())
+        .context()
+        .platform()
+        .set_clipboard_text(text, slint::platform::Clipboard::DefaultClipboard);
 }
 
 /// Tells the window whether the undo and redo buttons have anything to do.
@@ -426,14 +449,133 @@ pub fn resolve_active_conflict(
 
     app.set_conflict_count(conflict_count as i32);
     app.set_current_has_conflict(false);
+    app.set_conflict_sheet_open(false);
     refresh_list(app, session);
     set_status(app, format!("Resolved conflict (kept {side_name} version)"));
+}
+
+pub fn sync_conflict_sheet_state(app: &App, session: &Rc<RefCell<Session>>) {
+    let s = session.borrow();
+    let Some(path) = s.current_path() else {
+        app.set_active_conflict_total(0);
+        app.set_conflict_sheet_open(false);
+        return;
+    };
+    let Ok(current_text) = std::fs::read_to_string(path) else {
+        app.set_active_conflict_total(0);
+        app.set_conflict_sheet_open(false);
+        return;
+    };
+    let Ok(doc) = tomet_parser::parse_document(&current_text) else {
+        app.set_active_conflict_total(0);
+        app.set_conflict_sheet_open(false);
+        return;
+    };
+    let items = immermemo_merge::find_conflicts(&doc);
+    let total = items.len();
+    app.set_active_conflict_total(total as i32);
+
+    if total == 0 {
+        app.set_conflict_sheet_open(false);
+        app.set_current_has_conflict(false);
+        app.set_active_conflict_mine(SharedString::new());
+        app.set_active_conflict_theirs(SharedString::new());
+    } else {
+        let mut idx = app.get_active_conflict_index();
+        if idx < 0 {
+            idx = 0;
+        }
+        if idx >= total as i32 {
+            idx = (total - 1) as i32;
+        }
+        app.set_active_conflict_index(idx);
+        let item = &items[idx as usize];
+        app.set_active_conflict_mine(item.mine.clone().into());
+        app.set_active_conflict_theirs(item.theirs.clone().into());
+    }
+}
+
+pub fn resolve_conflict_step(
+    app: &App,
+    session: &Rc<RefCell<Session>>,
+    choice: i32,
+) {
+    let mut s = session.borrow_mut();
+    let Some(path) = s.current_path().cloned() else {
+        return;
+    };
+    let current_text = match std::fs::read_to_string(&path) {
+        Ok(t) => t,
+        Err(e) => {
+            set_status(app, format!("Could not read note: {e}"));
+            return;
+        }
+    };
+    let doc = match tomet_parser::parse_document(&current_text) {
+        Ok(d) => d,
+        Err(e) => {
+            set_status(
+                app,
+                format!("Could not parse note for conflict resolution: {e}"),
+            );
+            return;
+        }
+    };
+    let target_idx = app.get_active_conflict_index().max(0) as usize;
+    let resolution = match choice {
+        0 => immermemo_merge::ConflictResolution::Mine,
+        1 => immermemo_merge::ConflictResolution::Theirs,
+        _ => immermemo_merge::ConflictResolution::Both,
+    };
+    let choice_name = match choice {
+        0 => "kept local",
+        1 => "kept remote",
+        _ => "kept both",
+    };
+
+    let resolved_doc = immermemo_merge::resolve_single(&doc, target_idx, resolution);
+    let resolved_text = tomet_printer::document_to_tm(&resolved_doc);
+
+    if let Err(e) = std::fs::write(&path, &resolved_text) {
+        set_status(app, format!("Save failed: {e}"));
+        return;
+    }
+    if let Some(history) = s.history.as_mut() {
+        history.edit(&resolved_text);
+    }
+    show_history_state(app, &s);
+    app.set_body(resolved_text.clone().into());
+    update_note_stats(app, &resolved_text);
+
+    let remaining_conflicts = immermemo_merge::find_conflicts(&resolved_doc);
+    let has_conflict = !remaining_conflicts.is_empty();
+
+    let index = s.current.unwrap_or(0);
+    if index < s.conflicted.len() {
+        s.conflicted[index] = has_conflict;
+        app.set_conflicted(ModelRc::new(VecModel::from(s.conflicted.clone())));
+    }
+    let conflict_count = s.conflicted.iter().filter(|&&c| c).count();
+    app.set_conflict_count(conflict_count as i32);
+    app.set_current_has_conflict(has_conflict);
+    drop(s);
+
+    sync_conflict_sheet_state(app, session);
+    refresh_list(app, session);
+
+    if has_conflict {
+        set_status(app, format!("Resolved conflict ({choice_name})"));
+    } else {
+        set_status(app, "All conflicts resolved");
+    }
 }
 
 pub fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<Vec<PathBuf>, String>) {
     app.set_syncing(false);
     match result {
         Ok(needing_resolution) => {
+            app.set_last_sync_error(SharedString::new());
+            app.set_sync_error_copied(false);
             let reopen = {
                 let s = session.borrow();
                 s.current_path().cloned()
@@ -478,6 +620,32 @@ pub fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<Vec
                 },
             );
         }
-        Err(e) => set_status(app, format!("Sync failed: {e}")),
+        Err(e) => {
+            let error_msg = format!("Sync failed: {e}");
+            app.set_last_sync_error(SharedString::from(&error_msg));
+            app.set_sync_error_copied(false);
+            set_status(app, error_msg);
+        }
+    }
+}
+
+/// Opens the first note in the vault that has an unresolved conflict, switches to
+/// the editor tab, and opens the conflict resolution sheet.
+pub fn open_first_conflicted_note(app: &App, session: &Rc<RefCell<Session>>) {
+    let target_idx = {
+        let s = session.borrow();
+        if let Some(cur) = s.current
+            && s.conflicted.get(cur).copied().unwrap_or(false)
+        {
+            Some(cur)
+        } else {
+            s.conflicted.iter().position(|&c| c)
+        }
+    };
+    if let Some(idx) = target_idx {
+        open_note(app, session, idx);
+        app.set_active_tab(2);
+        sync_conflict_sheet_state(app, session);
+        app.set_conflict_sheet_open(true);
     }
 }

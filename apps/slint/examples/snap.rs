@@ -80,9 +80,16 @@ fn main() {
     // Tab 0: Home
     app.set_active_tab(0);
     app.set_current_vault_name("notes".into());
+    app.set_remote_configured(true);
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, "/dev/null");
     render(&window, size, &format!("{prefix}-home.ppm"));
+
+    // Home with sync error
+    app.set_last_sync_error("Sync failed: no merge base found; class=Merge (22)".into());
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-home-sync-error.ppm"));
+    app.set_last_sync_error("".into());
 
     // Tab 1: Files / List
     app.set_active_tab(1);
@@ -127,10 +134,28 @@ fn main() {
     render(&window, size, &format!("{prefix}-editor.ppm"));
     app.set_current_has_conflict(true);
     render(&window, size, &format!("{prefix}-conflict.ppm"));
+
+    // Conflict Sheet overlay
+    app.set_active_conflict_index(0);
+    app.set_active_conflict_total(2);
+    app.set_active_conflict_mine("牛乳（低脂肪）".into());
+    app.set_active_conflict_theirs("牛乳（特濃）".into());
+    app.set_conflict_sheet_open(true);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-conflict-sheet.ppm"));
+    app.set_conflict_sheet_open(false);
+
     app.set_current_has_conflict(false);
 
     // Tab 3: Details / Properties
     app.set_active_tab(3);
+    app.set_current_has_conflict(true);
+    app.set_active_conflict_total(2);
+    app.set_active_conflict_mine("牛乳（低脂肪）".into());
+    app.set_active_conflict_theirs("牛乳（特濃）".into());
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-properties-conflict.ppm"));
+    app.set_current_has_conflict(false);
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-properties.ppm"));
     app.set_active_tab(2);

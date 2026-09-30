@@ -1,14 +1,15 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, ActionRow, Colors, BottomNavBar } from "components.slint";
+import { HomeScreen } from "screens/home.slint";
 import { FilesScreen } from "screens/files.slint";
 import { EditorScreen } from "screens/editor.slint";
-import { HomeScreen } from "screens/home.slint";
 import { PropertiesScreen } from "screens/properties.slint";
 import { SearchScreen } from "screens/search.slint";
 import { RemoteSheet } from "sheets/remote.slint";
-import { TextInputDialog, ConfirmDialog, ActionSheet } from "dialogs.slint";
 import { VaultSheet } from "sheets/vault.slint";
 import { SettingsSheet } from "sheets/settings.slint";
+import { ConflictSheet } from "sheets/conflict.slint";
+import { TextInputDialog, ConfirmDialog, ActionSheet } from "dialogs.slint";
 
 export component App inherits Window {
     title: "immermemo";
@@ -32,8 +33,15 @@ export component App inherits Window {
     in property <int> conflict-count: 0;
     in-out property <string> status;
     in-out property <bool> status-is-error: false;
+    in-out property <string> last-sync-error: "";
+    in-out property <bool> sync-error-copied: false;
     in property <bool> syncing;
     in property <bool> current-has-conflict;
+    in-out property <bool> conflict-sheet-open: false;
+    in-out property <int> active-conflict-index: 0;
+    in property <int> active-conflict-total: 0;
+    in property <string> active-conflict-mine: "";
+    in property <string> active-conflict-theirs: "";
     in property <bool> can-undo;
     in property <bool> can-redo;
     in-out property <string> body;
@@ -114,8 +122,15 @@ export component App inherits Window {
     callback resolve-mine();
     callback resolve-theirs();
     callback jump-conflict();
+    callback open-conflict-sheet();
+    callback resolve-conflict-step(int);
+    callback prev-conflict-step();
+    callback next-conflict-step();
     callback trigger-haptic();
     callback search-query-changed(string);
+    callback open-conflict-note();
+    callback copy-sync-error();
+    callback dismiss-sync-error();
 
     public function set-cursor(offset: int) {
         pane.set-cursor(offset);
@@ -201,6 +216,8 @@ export component App inherits Window {
                     status: root.status;
                     syncing: root.syncing;
                     remote-configured: root.remote-configured;
+                    last-sync-error: root.last-sync-error;
+                    sync-error-copied: root.sync-error-copied;
                     current-note-title: root.current-title;
                     has-current-note: root.current >= 0;
                     new-note => {
@@ -214,6 +231,15 @@ export component App inherits Window {
                     open-current-note => {
                         root.active-tab = 2;
                         pane.focus-editor();
+                    }
+                    open-conflict-note => {
+                        root.open-conflict-note();
+                    }
+                    copy-sync-error => {
+                        root.copy-sync-error();
+                    }
+                    dismiss-sync-error => {
+                        root.dismiss-sync-error();
                     }
 
                     animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
@@ -291,6 +317,7 @@ export component App inherits Window {
                         resolve-mine => { root.resolve-mine(); }
                         resolve-theirs => { root.resolve-theirs(); }
                         jump-conflict => { root.jump-conflict(); }
+                        open-conflict-sheet => { root.open-conflict-sheet(); }
                     }
 
                     animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
@@ -311,6 +338,10 @@ export component App inherits Window {
                     word-count: root.word-count;
                     line-count: root.line-count;
                     has-conflict: root.current-has-conflict;
+                    conflict-total: root.active-conflict-total;
+                    conflict-mine-preview: root.active-conflict-mine;
+                    conflict-theirs-preview: root.active-conflict-theirs;
+                    open-conflict-sheet => { root.open-conflict-sheet(); }
                     rename-requested => {
                         if (root.current >= 0) {
                             root.rename-requested(root.current);
@@ -356,6 +387,8 @@ export component App inherits Window {
             visible: root.keyboard == 0px;
             height: root.keyboard == 0px ? (58px + root.safe-area-insets.bottom + root.extra-inset-bottom) : 0px;
             active-tab <=> root.active-tab;
+            conflict-count: root.conflict-count;
+            current-has-conflict: root.current-has-conflict;
             inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
             tab-selected(idx) => {
                 root.active-tab = idx;
@@ -501,5 +534,19 @@ export component App inherits Window {
             root.confirm-add-vault(input);
         }
         cancel => { root.add-vault-open = false; }
+    }
+
+    if root.conflict-sheet-open: ConflictSheet {
+        width: 100%;
+        height: 100%;
+        open: true;
+        conflict-index: root.active-conflict-index;
+        conflict-total: root.active-conflict-total;
+        mine-text: root.active-conflict-mine;
+        theirs-text: root.active-conflict-theirs;
+        close => { root.conflict-sheet-open = false; }
+        resolve-choice(choice) => { root.resolve-conflict-step(choice); }
+        prev-conflict => { root.prev-conflict-step(); }
+        next-conflict => { root.next-conflict-step(); }
     }
 }
