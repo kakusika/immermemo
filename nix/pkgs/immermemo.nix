@@ -4,7 +4,7 @@
   fetchurl,
   stdenv,
 
-  #[ Dependencies ]
+  #= Dependencies
   pkg-config,
   fontconfig,
   freetype,

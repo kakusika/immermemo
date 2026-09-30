@@ -84,8 +84,8 @@
 mod diff3;
 
 use tomet_ast::{
-    Block, Document, Element, ElementValue, Entry, Inline, Name, Paragraph, Placement, Sigil,
-    Text, Value,
+    Block, Document, Element, ElementValue, Entry, Inline, Name, Paragraph, Placement, Section,
+    Sigil, Text, Value,
 };
 
 /// The outcome of merging one note across two divergent versions of a
@@ -154,6 +154,32 @@ fn merge_block_seq(base: &[Block], local: &[Block], remote: &[Block]) -> (Vec<Bl
     (blocks, clean)
 }
 
+/// Lifts a three-way merge function over `Option`, returning `None` if the
+/// three options don't all agree on presence/absence (a shape mismatch the
+/// merge algorithm can't narrow).
+///
+/// - All three `Some`: calls `f(b, l, r)` and wraps the result in `Some`.
+/// - All three `None`: clean no-op, returns `Some((None, true))`.
+/// - Any mix: returns `None` so the caller can bail out early.
+fn merge_optional<T, F>(
+    base: &Option<T>,
+    local: &Option<T>,
+    remote: &Option<T>,
+    f: F,
+) -> Option<(Option<T>, bool)>
+where
+    F: FnOnce(&T, &T, &T) -> Option<(T, bool)>,
+{
+    match (base, local, remote) {
+        (Some(b), Some(l), Some(r)) => {
+            let (merged, clean) = f(b, l, r)?;
+            Some((Some(merged), clean))
+        }
+        (None, None, None) => Some((None, true)),
+        _ => None,
+    }
+}
+
 /// Attempts to narrow a conflict between one base block and the single
 /// block each side made of it, instead of giving up on the whole block.
 ///
@@ -176,40 +202,24 @@ fn merge_one(base: &Block, local: &Block, remote: &Block) -> Option<(Block, bool
                 return None;
             }
 
-            let (args, args_clean) = match (&b.args, &l.args, &r.args) {
-                (Some(ba), Some(la), Some(ra)) => {
-                    let (merged, clean) = merge_value(Some(ba), la, ra);
-                    (Some(merged), clean)
-                }
-                (None, None, None) => (None, true),
-                _ => return None,
-            };
-            let (content, content_clean) = match (&b.content, &l.content, &r.content) {
-                (Some(bc), Some(lc), Some(rc)) => {
+            let (args, args_clean) = merge_optional(&b.args, &l.args, &r.args, |ba, la, ra| {
+                let (merged, clean) = merge_value(Some(ba), la, ra);
+                Some((merged, clean))
+            })?;
+            let (content, content_clean) =
+                merge_optional(&b.content, &l.content, &r.content, |bc, lc, rc| {
                     let (merged, clean) = merge_inline_seq(bc, lc, rc);
-                    (Some(merged), clean)
-                }
-                (None, None, None) => (None, true),
-                // One side added or removed [content] outright -- not a
-                // shape recursion can narrow.
-                _ => return None,
-            };
-            let (children, children_clean) = match (&b.children, &l.children, &r.children) {
-                (Some(bc), Some(lc), Some(rc)) => {
+                    Some((merged, clean))
+                })?;
+            let (children, children_clean) =
+                merge_optional(&b.children, &l.children, &r.children, |bc, lc, rc| {
                     let (merged, clean) = merge_block_seq(bc, lc, rc);
-                    (Some(merged), clean)
-                }
-                (None, None, None) => (None, true),
-                _ => return None,
-            };
-            let (value, value_clean) = match (&b.value, &l.value, &r.value) {
-                (Some(bv), Some(lv), Some(rv)) => {
-                    let (merged, clean) = merge_element_value(bv, lv, rv)?;
-                    (Some(merged), clean)
-                }
-                (None, None, None) => (None, true),
-                _ => return None,
-            };
+                    Some((merged, clean))
+                })?;
+            let (value, value_clean) =
+                merge_optional(&b.value, &l.value, &r.value, |bv, lv, rv| {
+                    merge_element_value(bv, lv, rv)
+                })?;
 
             Some((
                 Block::Element(Element {
@@ -220,6 +230,37 @@ fn merge_one(base: &Block, local: &Block, remote: &Block) -> Option<(Block, bool
                     ..l.clone()
                 }),
                 args_clean && content_clean && children_clean && value_clean,
+            ))
+        }
+        (Block::Section(b), Block::Section(l), Block::Section(r))
+            if b.level == l.level && l.level == r.level =>
+        {
+            if l.connects != r.connects {
+                return None;
+            }
+
+            let (title, title_clean) = merge_inline_seq(&b.title, &l.title, &r.title);
+            let (args, args_clean) = merge_optional(&b.args, &l.args, &r.args, |ba, la, ra| {
+                let (merged, clean) = merge_value(Some(ba), la, ra);
+                Some((merged, clean))
+            })?;
+            let (blocks, blocks_clean) = merge_block_seq(&b.blocks, &l.blocks, &r.blocks);
+            let (value, value_clean) =
+                merge_optional(&b.value, &l.value, &r.value, |bv, lv, rv| {
+                    merge_element_value(bv, lv, rv)
+                })?;
+
+            Some((
+                Block::Section(Section {
+                    level: l.level,
+                    title,
+                    args,
+                    value,
+                    connects: l.connects.clone(),
+                    blocks,
+                    span: l.span,
+                }),
+                title_clean && args_clean && blocks_clean && value_clean,
             ))
         }
         _ => None,
@@ -261,7 +302,12 @@ fn merge_element_value(
         unreachable!("merge_value_map always returns a Value::Map")
     };
     Some((
-        ElementValue::Group(entries.into_iter().map(|(k, v)| Entry::Pair(k, v)).collect()),
+        ElementValue::Group(
+            entries
+                .into_iter()
+                .map(|(k, v)| Entry::Pair(k, v))
+                .collect(),
+        ),
         clean,
     ))
 }
@@ -384,7 +430,7 @@ fn value_conflict(mine: Value, theirs: Value) -> Value {
     // (`(mine: ..., theirs: ...)`), which parse to the same `Value::Map`
     // shape `{data}` would have used if it were available here.
     Value::Element(Box::new(Element {
-        sigil: Sigil::Named(Name::namespaced("mobile", "conflict")),
+        sigil: Sigil::Named(conflict_name()),
         args: Some(Value::Map(vec![
             ("mine".to_string(), mine),
             ("theirs".to_string(), theirs),
@@ -465,7 +511,9 @@ fn merge_text(base: &str, local: &str, remote: &str) -> (Vec<Inline>, bool) {
 
 fn push_text(out: &mut Vec<Inline>, chars: Vec<char>) {
     if !chars.is_empty() {
-        out.push(Inline::Text(Text::from(chars.into_iter().collect::<String>())));
+        out.push(Inline::Text(Text::from(
+            chars.into_iter().collect::<String>(),
+        )));
     }
 }
 
@@ -496,29 +544,24 @@ fn coalesce_text(items: Vec<Inline>) -> Vec<Inline> {
 /// `end` triple. A triple with no corresponding entry (`resolutions` ran
 /// out) is left in the document untouched.
 pub fn resolve(document: &Document, resolutions: &[ConflictResolution]) -> Document {
-    let mut resolutions = resolutions.iter();
-    let mut blocks = resolve_block_seq(&document.blocks, &mut resolutions);
-
-    let resolved = Document {
-        blocks: blocks.clone(),
-        span: document.span,
-    };
-    if !has_conflicts(&resolved) {
-        blocks.retain(|b| !is_use_mobile_block(b));
-    }
-
-    Document {
-        blocks,
-        span: document.span,
-    }
+    apply_resolutions(document, &mut resolutions.iter())
 }
 
 /// Removes every `@mobile.conflict` marker from `document`, resolving all conflicts
 /// to the specified side (`ConflictResolution::Mine` or `ConflictResolution::Theirs`),
 /// and drops the `@use(mobile)` preamble line once none remain.
 pub fn resolve_all(document: &Document, resolution: ConflictResolution) -> Document {
-    let mut resolutions = std::iter::repeat(&resolution);
-    let mut blocks = resolve_block_seq(&document.blocks, &mut resolutions);
+    apply_resolutions(document, &mut std::iter::repeat(&resolution))
+}
+
+/// Shared implementation for [`resolve`] and [`resolve_all`]: walks the
+/// document applying each resolution from `resolutions` in order, then
+/// strips `@use(mobile)` if no conflict markers remain.
+fn apply_resolutions<'a>(
+    document: &Document,
+    resolutions: &mut impl Iterator<Item = &'a ConflictResolution>,
+) -> Document {
+    let mut blocks = resolve_block_seq(&document.blocks, resolutions);
 
     let resolved = Document {
         blocks: blocks.clone(),
@@ -562,9 +605,12 @@ fn resolve_block_seq<'a>(
             match resolutions.next() {
                 Some(ConflictResolution::Mine) => out.extend(mine_blocks.iter().cloned()),
                 Some(ConflictResolution::Theirs) => out.extend(theirs_blocks.iter().cloned()),
-                Some(ConflictResolution::Rewritten(text)) => out.push(Block::Paragraph(
-                    Paragraph::new(vec![Inline::Text(Text::from(text.as_str()))], Default::default()),
-                )),
+                Some(ConflictResolution::Rewritten(text)) => {
+                    out.push(Block::Paragraph(Paragraph::new(
+                        vec![Inline::Text(Text::from(text.as_str()))],
+                        Default::default(),
+                    )))
+                }
                 None => out.extend(blocks[i..=end_at].iter().cloned()),
             }
             i = end_at + 1;
@@ -610,6 +656,18 @@ fn resolve_block<'a>(
             }
             Block::Element(e)
         }
+        Block::Section(sec) => {
+            let mut s = sec.clone();
+            s.title = resolve_inline_seq(&s.title, resolutions);
+            if let Some(args) = &s.args {
+                s.args = Some(resolve_value(args, resolutions));
+            }
+            s.blocks = resolve_block_seq(&s.blocks, resolutions);
+            if let Some(value) = &s.value {
+                s.value = Some(resolve_element_value(value, resolutions));
+            }
+            Block::Section(s)
+        }
     }
 }
 
@@ -637,9 +695,12 @@ fn resolve_value<'a>(
                 .map(|(k, v)| (k.clone(), resolve_value(v, resolutions)))
                 .collect(),
         ),
-        Value::Seq(items) => {
-            Value::Seq(items.iter().map(|v| resolve_value(v, resolutions)).collect())
-        }
+        Value::Seq(items) => Value::Seq(
+            items
+                .iter()
+                .map(|v| resolve_value(v, resolutions))
+                .collect(),
+        ),
         other => other.clone(),
     }
 }
@@ -667,6 +728,10 @@ fn resolve_element_value<'a>(
 
 /// This value's `mine`/`theirs` sides, if it is a
 /// `@mobile.conflict(mine: ..., theirs: ...)` marker.
+///
+/// Note: this is a different shape from the block/inline markers
+/// (`@mobile.conflict(mine)` with a plain string arg). Those are detected
+/// by [`element_conflict_side`]; this one carries a `Value::Map` in `args`.
 fn value_conflict_sides(value: &Value) -> Option<(&Value, &Value)> {
     let Value::Element(el) = value else {
         return None;
@@ -674,7 +739,7 @@ fn value_conflict_sides(value: &Value) -> Option<(&Value, &Value)> {
     let Sigil::Named(name) = &el.sigil else {
         return None;
     };
-    if name.namespace.as_deref() != Some("mobile") || name.name != "conflict" {
+    if name != &conflict_name() {
         return None;
     }
     let Value::Map(entries) = el.args.as_ref()? else {
@@ -739,11 +804,19 @@ fn document_or_block_has_conflict(block: &Block) -> bool {
         Block::Paragraph(p) => inline_seq_has_conflict(&p.content),
         Block::Element(e) => {
             e.args.as_ref().is_some_and(value_has_conflict)
-                || e.content.as_ref().is_some_and(|c| inline_seq_has_conflict(c))
+                || e.content
+                    .as_ref()
+                    .is_some_and(|c| inline_seq_has_conflict(c))
                 || e.children
                     .as_ref()
                     .is_some_and(|c| c.iter().any(document_or_block_has_conflict))
                 || e.value.as_ref().is_some_and(element_value_has_conflict)
+        }
+        Block::Section(s) => {
+            inline_seq_has_conflict(&s.title)
+                || s.args.as_ref().is_some_and(value_has_conflict)
+                || s.blocks.iter().any(document_or_block_has_conflict)
+                || s.value.as_ref().is_some_and(element_value_has_conflict)
         }
     }
 }
@@ -780,9 +853,31 @@ fn value_has_conflict(value: &Value) -> bool {
     }
 }
 
+/// Returns `Name` for `@mobile.conflict`, used in every place this crate
+/// creates or inspects a conflict marker element.
+fn conflict_name() -> Name {
+    Name::namespaced("mobile", "conflict")
+}
+
+/// The `side` argument of an `@mobile.conflict(side)` element, extracted
+/// from the `Element` directly. Used by both the block-level and the
+/// inline-level helpers below.
+fn element_conflict_side(el: &Element) -> Option<&str> {
+    let Sigil::Named(name) = &el.sigil else {
+        return None;
+    };
+    if name.namespace.as_deref() != Some("mobile") || name.name != "conflict" {
+        return None;
+    }
+    match &el.args {
+        Some(Value::String(side)) => Some(side.as_str()),
+        _ => None,
+    }
+}
+
 fn conflict_marker(side: &str) -> Block {
     Block::Element(Element {
-        sigil: Sigil::Named(Name::namespaced("mobile", "conflict")),
+        sigil: Sigil::Named(conflict_name()),
         placement: Placement::Block,
         args: Some(Value::String(side.to_string())),
         ..Default::default()
@@ -798,22 +893,12 @@ fn use_mobile_block() -> Block {
     })
 }
 
-/// This block's `side` argument, if it is a `@mobile.conflict(side)`
-/// marker.
+/// This block's `side` argument, if it is a `@mobile.conflict(side)` marker.
 fn conflict_side(block: &Block) -> Option<&str> {
     let Block::Element(el) = block else {
         return None;
     };
-    let Sigil::Named(name) = &el.sigil else {
-        return None;
-    };
-    if name.namespace.as_deref() != Some("mobile") || name.name != "conflict" {
-        return None;
-    }
-    match &el.args {
-        Some(Value::String(side)) => Some(side.as_str()),
-        _ => None,
-    }
+    element_conflict_side(el)
 }
 
 fn is_conflict_block(block: &Block) -> bool {
@@ -822,7 +907,7 @@ fn is_conflict_block(block: &Block) -> bool {
 
 fn inline_conflict_marker(side: &str) -> Inline {
     Inline::Element(Element {
-        sigil: Sigil::Named(Name::namespaced("mobile", "conflict")),
+        sigil: Sigil::Named(conflict_name()),
         placement: Placement::Inline,
         args: Some(Value::String(side.to_string())),
         ..Default::default()
@@ -835,16 +920,7 @@ fn inline_conflict_side(inline: &Inline) -> Option<&str> {
     let Inline::Element(el) = inline else {
         return None;
     };
-    let Sigil::Named(name) = &el.sigil else {
-        return None;
-    };
-    if name.namespace.as_deref() != Some("mobile") || name.name != "conflict" {
-        return None;
-    }
-    match &el.args {
-        Some(Value::String(side)) => Some(side.as_str()),
-        _ => None,
-    }
+    element_conflict_side(el)
 }
 
 fn is_use_mobile_block(block: &Block) -> bool {
@@ -882,10 +958,7 @@ mod tests {
         let result = merge(&base, &local, &remote);
 
         assert!(result.clean);
-        assert_eq!(
-            result.document,
-            doc("Alpha changed.\n\nBeta changed.\n")
-        );
+        assert_eq!(result.document, doc("Alpha changed.\n\nBeta changed.\n"));
     }
 
     #[test]
@@ -967,7 +1040,11 @@ mod tests {
         let result = merge(&base, &local, &remote);
 
         assert!(!result.clean);
-        assert_eq!(result.document.blocks.len(), 2, "@use(mobile) + one paragraph");
+        assert_eq!(
+            result.document.blocks.len(),
+            2,
+            "@use(mobile) + one paragraph"
+        );
         assert!(matches!(result.document.blocks[1], Block::Paragraph(_)));
     }
 

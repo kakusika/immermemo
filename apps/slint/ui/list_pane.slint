@@ -1,5 +1,13 @@
 import { Palette, ListView } from "std-widgets.slint";
-import { Metrics, Colors, Shapes, IconButton, TopBar, Fab, ActionRow } from "components.slint";
+import {
+    Metrics,
+    Colors,
+    Shapes,
+    IconButton,
+    TopBar,
+    Fab,
+    ActionRow,
+} from "components.slint";
 
 export component ListPane inherits Rectangle {
     in property <[string]> notes;
@@ -50,6 +58,7 @@ export component ListPane inherits Rectangle {
             Rectangle {
                 width: Metrics.gutter - 4px;
             }
+
             Rectangle {
                 horizontal-stretch: 1;
                 Text {
@@ -63,6 +72,7 @@ export component ListPane inherits Rectangle {
                     vertical-alignment: center;
                     overflow: elide;
                 }
+
                 TouchArea {
                     property <bool> swiped: false;
                     moved => {
@@ -80,12 +90,14 @@ export component ListPane inherits Rectangle {
                     }
                 }
             }
+
             IconButton {
                 shape: Shapes.link;
                 // Warns that nothing is linked yet.
                 tint: root.remote-configured ? Palette.foreground : Colors.warning;
                 clicked => { root.link(); }
             }
+
             IconButton {
                 shape: Shapes.sync;
                 enabled: !root.syncing;
@@ -123,6 +135,7 @@ export component ListPane inherits Rectangle {
                         vertical-alignment: center;
                         overflow: elide;
                     }
+
                     if root.conflicted[i]: Rectangle {
                         width: 10px;
                         height: 10px;
@@ -208,6 +221,7 @@ export component ListPane inherits Rectangle {
                         root.menu-index = -1;
                     }
                 }
+
                 ActionRow {
                     text: "Delete";
                     tint: Colors.danger;

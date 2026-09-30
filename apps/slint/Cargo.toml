@@ -13,33 +13,42 @@ name = "immermemo"
 path = "src/main.rs"
 
 [dependencies]
-immermemo-merge.workspace = true
-immermemo-sync.workspace = true
-tomet-parser.workspace = true
-tomet-printer.workspace = true
-anyhow.workspace = true
-git2.workspace = true
-loro.workspace = true
+immermemo-merge = { workspace = true }
+immermemo-sync = { workspace = true }
+
+#= Tomet
+tomet-parser = { workspace = true }
+tomet-printer = { workspace = true }
+
+#= Crates.io
+anyhow = { workspace = true }
+git2 = { workspace = true }
+loro = { workspace = true }
 
 # Desktop: winit + Skia (the workspace default). Android: its own backend, and
 # no Skia -- its prebuilt binaries are not fetched for that target.
 [target.'cfg(not(target_os = "android"))'.dependencies]
-slint.workspace = true
+slint = { workspace = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
-slint = { version = "1.18", default-features = false, features = ["backend-android-activity-06", "renderer-femtovg", "renderer-software", "compat-1-2"] }
 # For the Android Keystore token store: plain JNI calls into java.security /
 # javax.crypto, no Gradle-managed dependency needed.
 jni = "0.21"
+slint = { version = "1.18", default-features = false, features = [
+  "backend-android-activity-06",
+  "compat-1-2",
+  "renderer-femtovg",
+  "renderer-software",
+] }
 
 [build-dependencies]
-slint-build.workspace = true
+slint-build = { workspace = true }
 
 [dev-dependencies]
-tempfile = "3"
 # Only for `examples/snap.rs`, which renders the window headlessly at a chosen
 # size: the software renderer needs this to find system (Japanese) fonts.
 slint = { workspace = true, features = ["software-renderer-systemfonts"] }
+tempfile = "3"
 
 [package.metadata.android]
 package = "dev.immermemo.app"
@@ -57,4 +66,3 @@ label = "immermemo"
 # Sync needs the network; the Keystore key itself needs no extra permission.
 [[package.metadata.android.uses_permission]]
 name = "android.permission.INTERNET"
-

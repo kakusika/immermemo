@@ -251,15 +251,17 @@ struct MatchBlock {
 /// note-sized documents; this is not meant for diffing megabyte files.
 fn lcs_matches<T: PartialEq>(base: &[T], derived: &[T]) -> Vec<MatchBlock> {
     let (n, m) = (base.len(), derived.len());
-    let mut dp = vec![0u32; (n + 1) * (m + 1)];
-    let at = |i: usize, j: usize| i * (m + 1) + j;
+    // Flat row-major DP table: `dp[i * stride + j]` == LCS length of
+    // `base[..i]` and `derived[..j]`.
+    let stride = m + 1;
+    let mut dp = vec![0u32; (n + 1) * stride];
 
     for i in 1..=n {
         for j in 1..=m {
-            dp[at(i, j)] = if base[i - 1] == derived[j - 1] {
-                dp[at(i - 1, j - 1)] + 1
+            dp[i * stride + j] = if base[i - 1] == derived[j - 1] {
+                dp[(i - 1) * stride + (j - 1)] + 1
             } else {
-                dp[at(i - 1, j)].max(dp[at(i, j - 1)])
+                dp[(i - 1) * stride + j].max(dp[i * stride + (j - 1)])
             };
         }
     }
@@ -273,7 +275,7 @@ fn lcs_matches<T: PartialEq>(base: &[T], derived: &[T]) -> Vec<MatchBlock> {
             pairs.push((i - 1, j - 1));
             i -= 1;
             j -= 1;
-        } else if dp[at(i - 1, j)] >= dp[at(i, j - 1)] {
+        } else if dp[(i - 1) * stride + j] >= dp[i * stride + (j - 1)] {
             i -= 1;
         } else {
             j -= 1;

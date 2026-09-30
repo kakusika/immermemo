@@ -175,7 +175,11 @@ fn fetch_der_over_http(url: &str) -> Result<Vec<u8>> {
         std::str::from_utf8(header_bytes).context("HTTP response headers were not UTF-8")?;
 
     let status_line = headers.lines().next().context("empty HTTP response")?;
-    if !status_line.split_whitespace().nth(1).is_some_and(|c| c == "200") {
+    if !status_line
+        .split_whitespace()
+        .nth(1)
+        .is_some_and(|c| c == "200")
+    {
         bail!("AIA fetch failed: {status_line}");
     }
     if headers
@@ -230,9 +234,16 @@ mod tests {
         // exactly the CA this whole module exists for.
         let leaf = fetch_leaf_der("tailscale.com");
         let roots = ChainVerifier::new(&root_bundle()).unwrap().roots;
-        assert!(chain_is_trusted(&roots, &X509::from_der(&leaf).unwrap(), &Stack::new().unwrap())
+        assert!(
+            chain_is_trusted(
+                &roots,
+                &X509::from_der(&leaf).unwrap(),
+                &Stack::new().unwrap()
+            )
             .map(|trusted_without_chasing| !trusted_without_chasing)
-            .unwrap_or(true), "test is meaningless if the leaf alone already verifies");
+            .unwrap_or(true),
+            "test is meaningless if the leaf alone already verifies"
+        );
         assert!(verify(&roots, &leaf).is_ok());
     }
 
@@ -246,7 +257,8 @@ mod tests {
 
         let key = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
         let mut name = X509Name::builder().unwrap();
-        name.append_entry_by_text("CN", "not-a-real-ca.example").unwrap();
+        name.append_entry_by_text("CN", "not-a-real-ca.example")
+            .unwrap();
         let name = name.build();
         let mut builder = openssl::x509::X509Builder::new().unwrap();
         builder.set_version(2).unwrap();

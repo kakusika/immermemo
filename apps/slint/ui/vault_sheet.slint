@@ -1,5 +1,12 @@
 import { Palette } from "std-widgets.slint";
-import { Metrics, Colors, Shapes, IconButton, TopBar, ActionRow } from "components.slint";
+import {
+    Metrics,
+    Colors,
+    Shapes,
+    IconButton,
+    TopBar,
+    ActionRow,
+} from "components.slint";
 
 // Full-screen, same shape as the other sheets: which vault is open, and a
 // way to link another one. Rust owns what "adding" a vault actually means
@@ -28,6 +35,7 @@ export component VaultSheet inherits Rectangle {
                 shape: Shapes.back;
                 clicked => { root.close(); }
             }
+
             Text {
                 horizontal-stretch: 1;
                 text: "Vaults";
@@ -57,6 +65,7 @@ export component VaultSheet inherits Rectangle {
                     vertical-alignment: center;
                     horizontal-stretch: 1;
                 }
+
                 if i == root.current: Text {
                     text: "current";
                     font-size: 13px;

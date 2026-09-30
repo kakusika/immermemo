@@ -3,14 +3,14 @@
   pkgs,
   mkShell,
   fenix,
-
   tmtbook,
   tomet,
+  tomet-lsp,
   twrit,
   ...
 }:
 let
-  rust-toolchain = fenix.combine [
+  rustToolchain = fenix.combine [
     (fenix.stable.withComponents [
       "cargo"
       "clippy"
@@ -43,63 +43,49 @@ let
 in
 mkShell {
   buildInputs = with pkgs; [
-    pkg-config
-
-    #[ Develop ]
+    #= Develop
     tomet
+    tomet-lsp
     tmtbook
     twrit
+    slint-lsp
+    slint-viewer
     just
-    ##[ Rust ]
-    rust-toolchain
+    #== Build
+    pkg-config
+    llvmPackages.libclang
+    python3
+    perl # vendored-openssl (git2) builds OpenSSL from source
+    #== Rust
+    rustToolchain
     cargo-edit
     cargo-outdated
     cargo-nextest
-    ##[ Android ]
+    #== Android
     androidSdk.androidsdk
     jdk17
-    cargo-apk
     wasm-bindgen-cli
+    cargo-apk
 
-    #[ Runtime ]
+    #= Runtime
+    #== Wayland
     wayland
     libxkbcommon
     fontconfig
     freetype
+    stdenv.cc.cc.lib # Skia's prebuilt binary links against libstdc++
+    #== Graphics
     libGL
     mesa
     vulkan-loader
-    stdenv.cc.cc.lib # Skia's prebuilt binary links against libstdc++
-
-    #[ Build-time only: skia-bindings' bindgen step (see nix/pkgs/immermemo.nix's
-    #  own comment on Slint's renderer-skia feature) ]
-    llvmPackages.libclang
-    python3
-    perl # vendored-openssl (git2) builds OpenSSL from source
+    vulkan-validation-layers
+    vulkan-tools
   ];
 
   ANDROID_HOME = androidHome;
   ANDROID_SDK_ROOT = androidHome;
   ANDROID_NDK_ROOT = "${androidHome}/ndk-bundle";
   JAVA_HOME = pkgs.jdk17.home;
-
-  # Sideloaded release APKs are signed with the local debug key: enough to
-  # install on one's own phone, not for distribution.
-  shellHook = ''
-    export CARGO_APK_RELEASE_KEYSTORE="$HOME/.android/debug.keystore"
-    export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
-
-    # avdmanager (cmdline-tools) and the emulator binary default to
-    # different homes for AVDs on Linux: avdmanager (newer, XDG-aware)
-    # defaults to ~/.config/.android/avd, but the emulator binary's own
-    # AVD search order -- $ANDROID_AVD_HOME, then $ANDROID_SDK_HOME/avd,
-    # then $HOME/.android/avd -- never picked up that convention, so
-    # without this it looks in ~/.android/avd and fails with "Unknown
-    # AVD name". Both binaries read ANDROID_AVD_HOME as an explicit
-    # override, so setting it here makes them agree; pointed at the
-    # older ~/.android/avd rather than avdmanager's newer default.
-    export ANDROID_AVD_HOME="$HOME/.android/avd"
-  '';
 
   PKG_CONFIG_PATH = lib.makeSearchPathOutput "dev" "lib/pkgconfig" [
     pkgs.fontconfig
@@ -120,4 +106,15 @@ mkShell {
       pkgs.stdenv.cc.cc.lib
     ]
     + ":/run/opengl-driver/lib";
+
+  # Sideloaded release APKs are signed with the local debug key: enough to
+  # install on one's own phone, not for distribution.
+  shellHook = ''
+    export CARGO_APK_RELEASE_KEYSTORE="$HOME/.android/debug.keystore"
+    export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
+
+    export ANDROID_AVD_HOME="$HOME/.android/avd"
+
+    echo "🧪 Rust Android Tomet"
+  '';
 }

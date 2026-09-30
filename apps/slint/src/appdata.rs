@@ -78,7 +78,10 @@ impl AppData {
     }
 
     pub fn save_last_note(&self, vault_dir: &Path, note_path: &Path) -> anyhow::Result<()> {
-        write(&self.last_note_file(vault_dir)?, &note_path.display().to_string())
+        write(
+            &self.last_note_file(vault_dir)?,
+            &note_path.display().to_string(),
+        )
     }
 
     pub fn clear_last_note(&self, vault_dir: &Path) {

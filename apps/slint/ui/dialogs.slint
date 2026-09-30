@@ -42,10 +42,12 @@ export component TextInputDialog inherits Rectangle {
             Rectangle {
                 horizontal-stretch: 1;
             }
+
             Button {
                 text: "Cancel";
                 clicked => { root.cancel(); }
             }
+
             Button {
                 text: "Save";
                 primary: true;
@@ -81,6 +83,7 @@ export component ConfirmDialog inherits Rectangle {
             font-size: 22px;
             font-weight: 600;
         }
+
         Text {
             text: root.body;
             font-size: 13px;
@@ -97,10 +100,12 @@ export component ConfirmDialog inherits Rectangle {
             Rectangle {
                 horizontal-stretch: 1;
             }
+
             Button {
                 text: "Cancel";
                 clicked => { root.cancel(); }
             }
+
             Button {
                 text: root.confirm-text;
                 clicked => { root.confirm(); }

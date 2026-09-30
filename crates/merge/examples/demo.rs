@@ -4,9 +4,9 @@
 //!
 //! Run with: `cargo run -p immermemo-merge --example demo`
 
-use immermemo_merge::{merge, resolve, ConflictResolution};
-use tomet_printer::document_to_tm;
+use immermemo_merge::{ConflictResolution, merge, resolve};
 use tomet_parser::parse_document;
+use tomet_printer::document_to_tm;
 
 fn doc(src: &str) -> tomet_ast::Document {
     parse_document(src).unwrap()
@@ -23,13 +23,19 @@ fn main() {
     let phone_a = doc("会議は11時から。\n\n持ち物：ノートPC。\n");
     let phone_b = doc("会議は10時から。\n\n持ち物：ノートPCと資料。\n");
 
-    println!("--- base (last synced version) ---\n{}", document_to_tm(&base));
+    println!(
+        "--- base (last synced version) ---\n{}",
+        document_to_tm(&base)
+    );
     println!("--- phone A wrote ---\n{}", document_to_tm(&phone_a));
     println!("--- phone B wrote ---\n{}", document_to_tm(&phone_b));
 
     let result = merge(&base, &phone_a, &phone_b);
     println!("clean = {}", result.clean);
-    println!("--- merged automatically, no user action needed ---\n{}", document_to_tm(&result.document));
+    println!(
+        "--- merged automatically, no user action needed ---\n{}",
+        document_to_tm(&result.document)
+    );
 
     section("Scenario 2: both phones edit the same sentence");
 

@@ -1,4 +1,7 @@
-{ flake-parts, ... }@inputs:
+{
+  flake-parts,
+  ...
+}@inputs:
 flake-parts.lib.mkFlake { inherit inputs; } {
   systems = [
     "x86_64-linux"
@@ -19,10 +22,10 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         inherit system;
         config = {
           allowUnfree = true;
-          # The Android SDK is distributed under Google's license, which nixpkgs makes you accept.
           android_sdk.accept_license = true;
         };
       };
+
       packages = rec {
         default = immermemo;
         immermemo = pkgs.callPackage ./pkgs/immermemo.nix { inherit craneLib; };
@@ -33,11 +36,13 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         fenix = inputs.fenix.packages.${pkgs.stdenv.hostPlatform.system};
 
         tomet = inputs.tomet.packages.${pkgs.stdenv.hostPlatform.system}.tomet;
+        tomet-lsp = inputs.tomet.packages.${pkgs.stdenv.hostPlatform.system}.tomet-lsp;
         tmtbook = inputs.tomet-book.packages.${pkgs.stdenv.hostPlatform.system}.tmtbook;
         twrit = inputs.twrit.packages.${pkgs.stdenv.hostPlatform.system}.twrit;
       };
 
       treefmt = import ./formatter.nix {
+        inherit pkgs;
         tomet = inputs.tomet.packages.${pkgs.stdenv.hostPlatform.system}.tomet;
       };
     };

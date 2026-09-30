@@ -1,0 +1,11 @@
+nix develop   # or just `cd` すれば direnv が自動で入る
+just avd-create      # 初回だけ: AVD作成 (Pixel 6, API34, x86_64)
+just emulator         # エミュレータ起動(既に起動してたらスキップ)、ブート待ち
+just run              # ビルド → インストール → 起動
+
+その他:
+- just logs — 実行中アプリのlogcatを追う
+- just screenshot [path] — スクショ
+- just stop — アプリを強制終了
+- just emulator-stop — エミュレータ終了
+- just だけで一覧表示

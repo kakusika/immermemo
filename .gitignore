@@ -1,37 +1,40 @@
 # -----------------------------------------------------------------------
 # Files ignored by Git.
 #
-# Keep project-specific ignore rules in subdirectories whenever possible.
+# Keep project-specific ignore rules in the top section.
 # -----------------------------------------------------------------------
 
-#[ Build file ]
+#= Project-specific
+
+
+# -----------------------------------------------------------------------
+# Shared ignore rules
+# -----------------------------------------------------------------------
+
+#= Build
 build/
 dist/
-target/
-
-#[ Dev ]
-.direnv/
+package/
 result
 result-*
+target/
+
+#= Develop
+.direnv/
 .claude/
+.cargo/config.toml
 .idea/
 .zed/
-tmtroot/
+.vscode/
+*.swp
+*~
 
-#[ Mobile ]
-apps/ios/**/Pods/
-apps/ios/**/DerivedData/
-apps/ios/**/*.xcuserstate
-apps/android/**/.gradle/
-apps/android/**/build/
-apps/android/local.properties
-
-#[ User's variable ]
+#= Environment
 .env
 .env.*
 !.env.example
 
-#[ OS ]
+#= OS
 .DS_Store
 Desktop.ini
 Thumbs.db

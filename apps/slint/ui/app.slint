@@ -91,97 +91,87 @@ export component App inherits Window {
     changed height => { root.update-keyboard(); }
     property <length> inset-bottom: max(root.safe-area-insets.bottom + root.extra-inset-bottom, root.keyboard);
 
-    HorizontalLayout {
-        padding-left: root.safe-area-insets.left;
-        padding-right: root.safe-area-insets.right;
-
-        // Wide mode: side-by-side list pane
-        if !root.narrow: ListPane {
-            width: 300px;
-            notes: root.notes;
-            conflicted: root.conflicted;
-            current: root.current;
-            status: root.status;
-            syncing: root.syncing;
-            inset-top: root.inset-top;
-            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
-            highlight-current: true;
-            remote-configured: root.remote-configured;
-            select(i) => {
-                root.select(i);
-                pane.focus-editor();
-            }
-            new-note => {
-                root.new-note();
-                pane.focus-editor();
-            }
-            sync => { root.sync(); }
-            link => { root.link(); }
-            rename-requested(i) => { root.rename-requested(i); }
-            delete-requested(i) => { root.delete-requested(i); }
-            open-vault-sheet => { root.open-vault-sheet(); }
-            close-drawer => {}
+    SwipeGestureHandler {
+        enabled: root.narrow && !root.list-open;
+        handle-swipe-right: true;
+        swiped => {
+            root.list-open = true;
         }
-
-        if !root.narrow: Rectangle {
-            width: 1px;
-            background: Palette.foreground.with-alpha(0.12);
-        }
-
-        // Not an `if`: `set-cursor` needs `pane` to stay reachable by id.
-        // Editor is always the base screen on both wide and narrow.
-        pane := EditorPane {
-            horizontal-stretch: 1;
-            title: root.current-title;
-            has-note: root.current >= 0;
-            note-count: root.notes.length;
-            has-conflict: root.current-has-conflict;
-            can-undo: root.can-undo;
-            can-redo: root.can-redo;
-            show-back: root.narrow;
-            inset-top: root.inset-top;
-            inset-bottom: root.inset-bottom;
-            status: root.status;
-            status-is-error: root.status-is-error;
-            body <=> root.body;
-            edited(t) => { root.edited(t); }
-            undo => { root.undo(); }
-            redo => { root.redo(); }
-            back => { root.list-open = !root.list-open; }
-            open-drawer => { root.list-open = true; }
-            dismiss-status => {
-                root.status = "";
-                root.status-is-error = false;
-            }
-            new-note => {
-                root.new-note();
-                pane.focus-editor();
-            }
-            resolve-mine => { root.resolve-mine(); }
-            resolve-theirs => { root.resolve-theirs(); }
-            jump-conflict => { root.jump-conflict(); }
-        }
-    }
-
-    // Left-side swipe band to reopen the list drawer on narrow screens.
-    // Sized to ~25% of the screen width (clamped between 72px and 100px) so
-    // a one-handed thumb swipe naturally lands outside Android's system back
-    // gesture zone (0..24dp), while leaving the majority of the width free
-    // for text scrolling and editing.
-    if root.narrow && !root.list-open: TouchArea {
-        x: 0px;
-        y: root.inset-top;
-        width: min(100px, max(72px, root.width * 0.25));
-        height: root.height - root.inset-top - root.inset-bottom;
-        property <length> dx: self.mouse-x - self.pressed-x;
-        property <length> dy: self.mouse-y > self.pressed-y ? self.mouse-y - self.pressed-y : self.pressed-y - self.mouse-y;
         moved => {
-            if (self.pressed && dx > 40px && dx > dy) {
+            if (self.swiping && self.current-position.x - self.pressed-position.x > 50px) {
                 root.list-open = true;
             }
         }
-        clicked => {
-            pane.focus-editor();
+
+        HorizontalLayout {
+            padding-left: root.safe-area-insets.left;
+            padding-right: root.safe-area-insets.right;
+
+            // Wide mode: side-by-side list pane
+            if !root.narrow: ListPane {
+                width: 300px;
+                notes: root.notes;
+                conflicted: root.conflicted;
+                current: root.current;
+                status: root.status;
+                syncing: root.syncing;
+                inset-top: root.inset-top;
+                inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+                highlight-current: true;
+                remote-configured: root.remote-configured;
+                select(i) => {
+                    root.select(i);
+                    pane.focus-editor();
+                }
+                new-note => {
+                    root.new-note();
+                    pane.focus-editor();
+                }
+                sync => { root.sync(); }
+                link => { root.link(); }
+                rename-requested(i) => { root.rename-requested(i); }
+                delete-requested(i) => { root.delete-requested(i); }
+                open-vault-sheet => { root.open-vault-sheet(); }
+                close-drawer => {}
+            }
+
+            if !root.narrow: Rectangle {
+                width: 1px;
+                background: Palette.foreground.with-alpha(0.12);
+            }
+
+            // Not an `if`: `set-cursor` needs `pane` to stay reachable by id.
+            // Editor is always the base screen on both wide and narrow.
+            pane := EditorPane {
+                horizontal-stretch: 1;
+                title: root.current-title;
+                has-note: root.current >= 0;
+                note-count: root.notes.length;
+                has-conflict: root.current-has-conflict;
+                can-undo: root.can-undo;
+                can-redo: root.can-redo;
+                show-back: root.narrow;
+                inset-top: root.inset-top;
+                inset-bottom: root.inset-bottom;
+                status: root.status;
+                status-is-error: root.status-is-error;
+                body <=> root.body;
+                edited(t) => { root.edited(t); }
+                undo => { root.undo(); }
+                redo => { root.redo(); }
+                back => { root.list-open = !root.list-open; }
+                dismiss-status => {
+                    root.status = "";
+                    root.status-is-error = false;
+                }
+                new-note => {
+                    root.new-note();
+                    pane.focus-editor();
+                }
+                resolve-mine => { root.resolve-mine(); }
+                resolve-theirs => { root.resolve-theirs(); }
+                jump-conflict => { root.jump-conflict(); }
+            }
         }
     }
 

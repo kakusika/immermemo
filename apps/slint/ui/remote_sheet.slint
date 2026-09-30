@@ -26,6 +26,7 @@ export component RemoteSheet inherits Rectangle {
             font-size: 22px;
             font-weight: 600;
         }
+
         Text {
             text: "A GitHub, Gitea or Forgejo repository URL, and a personal access token with permission to push to it.";
             font-size: 13px;
@@ -40,6 +41,7 @@ export component RemoteSheet inherits Rectangle {
                 font-size: 13px;
                 color: Colors.muted;
             }
+
             LineEdit {
                 height: Metrics.touch;
                 placeholder-text: "https://github.com/you/notes.git";
@@ -54,6 +56,7 @@ export component RemoteSheet inherits Rectangle {
                 font-size: 13px;
                 color: Colors.muted;
             }
+
             LineEdit {
                 height: Metrics.touch;
                 placeholder-text: root.has-token ? "Leave blank to keep the saved token" : "Personal access token";
@@ -71,10 +74,12 @@ export component RemoteSheet inherits Rectangle {
             Rectangle {
                 horizontal-stretch: 1;
             }
+
             Button {
                 text: "Cancel";
                 clicked => { root.cancel(); }
             }
+
             Button {
                 text: "Save";
                 primary: true;

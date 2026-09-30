@@ -202,7 +202,8 @@ pub fn run(
             if let Some(path) = s.current_path() {
                 match std::fs::write(path, text.as_str()) {
                     Ok(_) => {
-                        if app.get_status_is_error() && app.get_status().starts_with("Save failed") {
+                        if app.get_status_is_error() && app.get_status().starts_with("Save failed")
+                        {
                             set_status(&app, "");
                         }
                     }
@@ -489,8 +490,12 @@ pub fn run(
         move || {
             let app = weak.unwrap();
             let s = session.borrow();
-            let Some(path) = s.current_path() else { return; };
-            let Ok(text) = std::fs::read_to_string(path) else { return; };
+            let Some(path) = s.current_path() else {
+                return;
+            };
+            let Ok(text) = std::fs::read_to_string(path) else {
+                return;
+            };
             const MARKER: &str = "@mobile.conflict";
             let mut offset = *jump_pos.borrow();
             if offset >= text.len() {
@@ -795,7 +800,10 @@ fn resolve_active_conflict(
     let doc = match tomet_parser::parse_document(&current_text) {
         Ok(d) => d,
         Err(e) => {
-            set_status(app, format!("Could not parse note for conflict resolution: {e}"));
+            set_status(
+                app,
+                format!("Could not parse note for conflict resolution: {e}"),
+            );
             return;
         }
     };

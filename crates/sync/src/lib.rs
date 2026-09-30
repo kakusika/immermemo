@@ -77,8 +77,8 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use git2::{
-    FetchOptions, IndexEntry, IndexTime, ObjectType, Oid, PushOptions, RemoteCallbacks,
-    Repository, Signature, Tree, TreeWalkMode, TreeWalkResult,
+    FetchOptions, IndexEntry, IndexTime, ObjectType, Oid, PushOptions, RemoteCallbacks, Repository,
+    Signature, Tree, TreeWalkMode, TreeWalkResult,
 };
 
 const REMOTE_NAME: &str = "origin";
@@ -202,7 +202,12 @@ impl Vault {
     fn commit_working_tree(&self) -> anyhow::Result<()> {
         let mut index = self.repo.index()?;
         index.clear()?;
-        stage_dir(&self.repo, &mut index, &self.working_tree, &self.working_tree)?;
+        stage_dir(
+            &self.repo,
+            &mut index,
+            &self.working_tree,
+            &self.working_tree,
+        )?;
 
         let parent = self.head_commit();
         if parent.is_none() && index.len() == 0 {
@@ -223,17 +228,8 @@ impl Vault {
         }
 
         let tree = self.repo.find_tree(tree_oid)?;
-        let sig = Signature::now("immermemo", "immermemo@local")?;
         let parents: Vec<&git2::Commit> = parent.iter().collect();
-        self.repo.commit(
-            Some(&format!("refs/heads/{BRANCH}")),
-            &sig,
-            &sig,
-            "sync",
-            &tree,
-            &parents,
-        )?;
-        Ok(())
+        self.commit_tree("sync", &tree, &parents)
     }
 
     /// Registers the certificate-check callback, if a verifier was set,
@@ -296,24 +292,12 @@ impl Vault {
         };
 
         match self.head_commit() {
-            None => {
-                self.repo.reference(
-                    &format!("refs/heads/{BRANCH}"),
-                    remote_oid,
-                    true,
-                    "adopt remote history",
-                )?;
-            }
+            None => self.set_branch_tip(remote_oid, "adopt remote history")?,
             Some(local) if local.id() == remote_oid => {}
             Some(local) => {
                 let base_oid = self.repo.merge_base(local.id(), remote_oid)?;
                 if base_oid == local.id() {
-                    self.repo.reference(
-                        &format!("refs/heads/{BRANCH}"),
-                        remote_oid,
-                        true,
-                        "fast-forward",
-                    )?;
+                    self.set_branch_tip(remote_oid, "fast-forward")?;
                 } else if base_oid == remote_oid {
                     // Local is already ahead; nothing to reconcile.
                 } else {
@@ -324,7 +308,22 @@ impl Vault {
         Ok(())
     }
 
-    fn merge_histories(&self, base_oid: Oid, local_oid: Oid, remote_oid: Oid) -> anyhow::Result<()> {
+    /// Force-sets `refs/heads/{BRANCH}` to `oid`. Used for both the
+    /// "adopt remote history" and "fast-forward" cases in
+    /// [`reconcile_with_remote`], which both do exactly this with only the
+    /// log message differing.
+    fn set_branch_tip(&self, oid: Oid, reason: &str) -> anyhow::Result<()> {
+        self.repo
+            .reference(&format!("refs/heads/{BRANCH}"), oid, true, reason)?;
+        Ok(())
+    }
+
+    fn merge_histories(
+        &self,
+        base_oid: Oid,
+        local_oid: Oid,
+        remote_oid: Oid,
+    ) -> anyhow::Result<()> {
         let base_tree = self.repo.find_commit(base_oid)?.tree()?;
         let local_commit = self.repo.find_commit(local_oid)?;
         let remote_commit = self.repo.find_commit(remote_oid)?;
@@ -368,14 +367,27 @@ impl Vault {
 
         let tree_oid = index.write_tree_to(&self.repo)?;
         let tree = self.repo.find_tree(tree_oid)?;
+        self.commit_tree("merge", &tree, &[&local_commit, &remote_commit])
+    }
+
+    /// Creates a commit on `refs/heads/{BRANCH}` pointing at `tree`, with the
+    /// given `message` and `parents`. Deduplicates the `Signature::now` +
+    /// `repo.commit` boilerplate that would otherwise appear in every place a
+    /// commit is written.
+    fn commit_tree(
+        &self,
+        message: &str,
+        tree: &Tree,
+        parents: &[&git2::Commit],
+    ) -> anyhow::Result<()> {
         let sig = Signature::now("immermemo", "immermemo@local")?;
         self.repo.commit(
             Some(&format!("refs/heads/{BRANCH}")),
             &sig,
             &sig,
-            "merge",
-            &tree,
-            &[&local_commit, &remote_commit],
+            message,
+            tree,
+            parents,
         )?;
         Ok(())
     }
@@ -478,7 +490,22 @@ fn merge_bytes(path: &str, base: Option<Vec<u8>>, local: Vec<u8>, remote: Vec<u8
     tomet_printer::document_to_tm(&result.document).into_bytes()
 }
 
-fn stage_dir(repo: &Repository, index: &mut git2::Index, root: &Path, dir: &Path) -> anyhow::Result<()> {
+/// Walks every non-ignored file under `dir` (relative to `root`), calling
+/// `on_file(abs_path, posix_rel)` for each. Skips `.git` entries and
+/// anything the repository's `.gitignore` rules would ignore. Used by
+/// [`stage_dir`] to avoid repeating the `read_dir` + gitignore-filter
+/// skeleton; `remove_unwanted` and `find_tmt_files` keep their own loops
+/// because they need to handle directory-level operations or lack a
+/// `Repository` reference.
+fn walk_working_tree<F>(
+    repo: &Repository,
+    root: &Path,
+    dir: &Path,
+    on_file: &mut F,
+) -> anyhow::Result<()>
+where
+    F: FnMut(&Path, &str) -> anyhow::Result<()>,
+{
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -490,14 +517,25 @@ fn stage_dir(repo: &Repository, index: &mut git2::Index, root: &Path, dir: &Path
             continue;
         }
         if path.is_dir() {
-            stage_dir(repo, index, root, &path)?;
+            walk_working_tree(repo, root, &path, on_file)?;
         } else {
-            let data = std::fs::read(&path)?;
             let rel = relative_posix_path(root, &path)?;
-            stage_bytes(index, &rel, &data)?;
+            on_file(&path, &rel)?;
         }
     }
     Ok(())
+}
+
+fn stage_dir(
+    repo: &Repository,
+    index: &mut git2::Index,
+    root: &Path,
+    dir: &Path,
+) -> anyhow::Result<()> {
+    walk_working_tree(repo, root, dir, &mut |path, rel| {
+        let data = std::fs::read(path)?;
+        stage_bytes(index, rel, &data)
+    })
 }
 
 fn stage_bytes(index: &mut git2::Index, path: &str, data: &[u8]) -> anyhow::Result<()> {
@@ -534,6 +572,8 @@ fn remove_unwanted(
     dir: &Path,
     wanted: &BTreeSet<String>,
 ) -> anyhow::Result<()> {
+    // Directories that become empty after their children are removed should
+    // also be cleaned up. Walk first, then try to remove the dir itself.
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -558,6 +598,11 @@ fn remove_unwanted(
 }
 
 fn find_tmt_files(root: &Path, dir: &Path, found: &mut Vec<PathBuf>) -> anyhow::Result<()> {
+    // Plain recursive scan without gitignore filtering: this function is
+    // called after checkout, so the vault only contains user files. No
+    // Repository reference is available here, and the vault layout has no
+    // nested .git dirs that would need to be skipped beyond the top-level
+    // check below.
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -630,9 +675,7 @@ mod tests {
         let remote = shared_remote();
 
         let mut a = open_vault();
-        a.vault
-            .set_remote(remote.path().to_str().unwrap())
-            .unwrap();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
 
         // Write a .gitignore, a normal note, and an ignored file.
         write_note(&a, ".gitignore", "*.tmp\nignored_dir/\n");
@@ -645,9 +688,7 @@ mod tests {
 
         // Verify with another client: .gitignore and note.tmt arrive, but not scratch.tmp or ignored_dir.
         let mut b = open_vault();
-        b.vault
-            .set_remote(remote.path().to_str().unwrap())
-            .unwrap();
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
         b.vault.sync(&NoCredentials).unwrap();
 
         assert_eq!(read_note(&b, ".gitignore"), "*.tmp\nignored_dir/\n");
@@ -689,16 +730,12 @@ mod tests {
         let remote = shared_remote();
 
         let mut a = open_vault();
-        a.vault
-            .set_remote(remote.path().to_str().unwrap())
-            .unwrap();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
         write_note(&a, "note.tmt", "Hello.\n");
         a.vault.sync(&NoCredentials).unwrap();
 
         let mut b = open_vault();
-        b.vault
-            .set_remote(remote.path().to_str().unwrap())
-            .unwrap();
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
         b.vault.sync(&NoCredentials).unwrap();
 
         assert_eq!(read_note(&b, "note.tmt"), "Hello.\n");
@@ -709,17 +746,13 @@ mod tests {
         let remote = shared_remote();
 
         let mut a = open_vault();
-        a.vault
-            .set_remote(remote.path().to_str().unwrap())
-            .unwrap();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
         write_note(&a, "one.tmt", "One.\n");
         write_note(&a, "two.tmt", "Two.\n");
         a.vault.sync(&NoCredentials).unwrap();
 
         let mut b = open_vault();
-        b.vault
-            .set_remote(remote.path().to_str().unwrap())
-            .unwrap();
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
         b.vault.sync(&NoCredentials).unwrap();
 
         write_note(&a, "one.tmt", "One changed by A.\n");
@@ -743,16 +776,12 @@ mod tests {
         let remote = shared_remote();
 
         let mut a = open_vault();
-        a.vault
-            .set_remote(remote.path().to_str().unwrap())
-            .unwrap();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
         write_note(&a, "note.tmt", "Bring a laptop.\n");
         a.vault.sync(&NoCredentials).unwrap();
 
         let mut b = open_vault();
-        b.vault
-            .set_remote(remote.path().to_str().unwrap())
-            .unwrap();
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
         b.vault.sync(&NoCredentials).unwrap();
 
         write_note(&a, "note.tmt", "Bring a charger.\n");
