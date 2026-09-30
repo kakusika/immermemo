@@ -75,17 +75,24 @@ pub mod tls;
 
 use std::cell::RefCell;
 use std::collections::BTreeSet;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use git2::{
-    Delta, FetchOptions, IndexEntry, IndexTime, ObjectType, Oid, PushOptions, RemoteCallbacks,
-    Repository, Signature, Tree, TreeWalkMode, TreeWalkResult,
+    Buf, Delta, FetchOptions, IndexEntry, IndexTime, Indexer, ObjectType, Oid, PushOptions,
+    RemoteCallbacks, Repository, Signature, Tree, TreeWalkMode, TreeWalkResult,
 };
 
 const REMOTE_NAME: &str = "origin";
 const BRANCH: &str = "main";
 const MAX_PUSH_ATTEMPTS: u32 = 5;
+
+/// Shard directory inside `.git/objects/` sampled to decide whether auto-GC is needed.
+const AUTO_GC_SAMPLE_SHARD: &str = "17";
+/// If the sampled shard has at least this many files (~4 * 256 ≈ 1,000 loose objects total),
+/// `should_auto_gc` returns true.
+const AUTO_GC_SHARD_THRESHOLD: usize = 4;
 
 /// Supplies credentials for a fetch or push, without this crate knowing
 /// where they actually live. Implemented once per platform (Android:
@@ -127,6 +134,14 @@ pub struct SyncReport {
     pub updated_notes: Vec<PathBuf>,
     /// Relative paths of notes removed from the working tree during this sync.
     pub deleted_notes: Vec<PathBuf>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct GcReport {
+    /// Number of objects packed into the new packfile.
+    pub packed_objects: usize,
+    /// Number of loose object files pruned from disk.
+    pub pruned_objects: usize,
 }
 
 impl Vault {
@@ -190,6 +205,9 @@ impl Vault {
             self.reconcile_with_remote()?;
             if self.push(credentials)? {
                 let checkout = self.checkout_differential(initial_head_tree_oid)?;
+                if self.should_auto_gc() {
+                    let _ = self.gc();
+                }
                 return Ok(SyncReport {
                     notes_needing_resolution: self.conflicted_notes()?,
                     updated_notes: checkout.updated,
@@ -202,6 +220,57 @@ impl Vault {
         }
 
         anyhow::bail!("sync did not converge after {MAX_PUSH_ATTEMPTS} push attempts")
+    }
+
+    /// Checks whether loose objects in the repository have accumulated beyond
+    /// the threshold where packing is recommended.
+    ///
+    /// Uses Git's standard heuristic of sampling a single 2-hex shard directory
+    /// (`objects/17/`) rather than scanning all 256 shards, keeping this check
+    /// sub-millisecond during regular sync cycles.
+    pub fn should_auto_gc(&self) -> bool {
+        let sample_dir = self.repo.path().join("objects").join(AUTO_GC_SAMPLE_SHARD);
+        match std::fs::read_dir(sample_dir) {
+            Ok(entries) => {
+                let count = entries.flatten().filter(|e| e.path().is_file()).count();
+                count >= AUTO_GC_SHARD_THRESHOLD
+            }
+            Err(_) => false,
+        }
+    }
+
+    /// Packs all reachable objects into a single packfile in `objects/pack/`
+    /// and prunes loose object files from disk.
+    ///
+    /// Safe to call at any time; if the repository has no objects or refs,
+    /// returns an empty [`GcReport`] without writing files.
+    pub fn gc(&self) -> anyhow::Result<GcReport> {
+        let mut pb = self.repo.packbuilder()?;
+        let mut revwalk = self.repo.revwalk()?;
+        let _ = revwalk.push_glob("refs/*");
+        pb.insert_walk(&mut revwalk)?;
+
+        let object_count = pb.object_count();
+        if object_count == 0 {
+            return Ok(GcReport::default());
+        }
+
+        let mut buf = Buf::new();
+        pb.write_buf(&mut buf)?;
+
+        let odb = self.repo.odb()?;
+        let pack_dir = self.repo.path().join("objects").join("pack");
+        std::fs::create_dir_all(&pack_dir)?;
+        let mut indexer = Indexer::new(Some(&odb), &pack_dir, 0o644, true)?;
+        indexer.write_all(&buf)?;
+        let _pack_name = indexer.commit()?;
+
+        let pruned_objects = prune_loose_objects(&self.repo.path().join("objects"))?;
+
+        Ok(GcReport {
+            packed_objects: object_count,
+            pruned_objects,
+        })
     }
 
     fn head_commit(&self) -> Option<git2::Commit<'_>> {
@@ -716,6 +785,36 @@ fn remove_empty_parent_dirs(root: &Path, file_path: &Path) {
     }
 }
 
+fn prune_loose_objects(objects_dir: &Path) -> anyhow::Result<usize> {
+    let mut pruned = 0;
+    if !objects_dir.exists() {
+        return Ok(0);
+    }
+    for entry in std::fs::read_dir(objects_dir)? {
+        let entry = entry?;
+        let name = entry.file_name();
+        let name_str = name.to_string_lossy();
+        if name_str.len() == 2
+            && name_str.chars().all(|c| c.is_ascii_hexdigit())
+            && entry.path().is_dir()
+        {
+            let shard_dir = entry.path();
+            if let Ok(shard_entries) = std::fs::read_dir(&shard_dir) {
+                for file_entry in shard_entries.flatten() {
+                    let file_path = file_entry.path();
+                    if file_path.is_file() {
+                        if std::fs::remove_file(&file_path).is_ok() {
+                            pruned += 1;
+                        }
+                    }
+                }
+            }
+            let _ = std::fs::remove_dir(&shard_dir);
+        }
+    }
+    Ok(pruned)
+}
+
 fn relative_posix_path(root: &Path, path: &Path) -> anyhow::Result<String> {
     Ok(path
         .strip_prefix(root)?
@@ -1078,5 +1177,113 @@ mod tests {
         assert_eq!(report.deleted_notes, vec![PathBuf::from("folder/nested.tmt")]);
         assert!(!b.working_tree.path().join("folder/nested.tmt").exists());
         assert!(!b.working_tree.path().join("folder").exists(), "Empty directory should be removed");
+    }
+
+    #[test]
+    fn gc_packs_loose_objects_and_preserves_repository_integrity() {
+        let remote = shared_remote();
+        let mut a = open_vault();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+
+        // Write a note and sync to create loose objects
+        write_note(&a, "test.tmt", "Pack test content\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        let objects_dir = a.vault.repo.path().join("objects");
+        // Count loose object files before GC
+        let mut loose_count_before = 0;
+        for entry in std::fs::read_dir(&objects_dir).unwrap().flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.len() == 2 && name.chars().all(|c| c.is_ascii_hexdigit()) {
+                if let Ok(shard_entries) = std::fs::read_dir(entry.path()) {
+                    loose_count_before += shard_entries.flatten().count();
+                }
+            }
+        }
+        assert!(loose_count_before > 0, "Should have loose objects before GC");
+
+        // Run GC explicitly
+        let gc_report = a.vault.gc().unwrap();
+        assert!(gc_report.packed_objects > 0);
+        assert_eq!(gc_report.pruned_objects, loose_count_before);
+
+        // Pack directory should have .pack and .idx
+        let pack_dir = objects_dir.join("pack");
+        assert!(pack_dir.exists());
+        let pack_files: Vec<_> = std::fs::read_dir(&pack_dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().to_string())
+            .collect();
+        assert!(pack_files.iter().any(|f| f.ends_with(".pack")));
+        assert!(pack_files.iter().any(|f| f.ends_with(".idx")));
+
+        // All loose shards should be gone
+        let mut loose_count_after = 0;
+        for entry in std::fs::read_dir(&objects_dir).unwrap().flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.len() == 2 && name.chars().all(|c| c.is_ascii_hexdigit()) {
+                if let Ok(shard_entries) = std::fs::read_dir(entry.path()) {
+                    loose_count_after += shard_entries.flatten().count();
+                }
+            }
+        }
+        assert_eq!(loose_count_after, 0, "All loose objects should be pruned");
+
+        // Existing notes should be read cleanly from the packfile
+        assert_eq!(read_note(&a, "test.tmt"), "Pack test content\n");
+
+        // Subsequent commits and syncs continue to work seamlessly
+        write_note(&a, "another.tmt", "Another note after GC\n");
+        let report = a.vault.sync(&NoCredentials).unwrap();
+        assert!(report.notes_needing_resolution.is_empty());
+        assert_eq!(read_note(&a, "another.tmt"), "Another note after GC\n");
+    }
+
+    #[test]
+    fn should_auto_gc_detects_shard_threshold() {
+        let a = open_vault();
+        let sample_shard = a.vault.repo.path().join("objects").join(AUTO_GC_SAMPLE_SHARD);
+        std::fs::create_dir_all(&sample_shard).unwrap();
+
+        // Below threshold
+        assert!(!a.vault.should_auto_gc());
+
+        // Create dummy loose object files in the sample shard to reach threshold
+        for i in 0..AUTO_GC_SHARD_THRESHOLD {
+            std::fs::write(sample_shard.join(format!("dummy_{i}")), b"dummy").unwrap();
+        }
+        assert!(a.vault.should_auto_gc(), "Should trigger auto-GC when threshold is met");
+
+        // Clean up dummy files
+        for i in 0..AUTO_GC_SHARD_THRESHOLD {
+            let _ = std::fs::remove_file(sample_shard.join(format!("dummy_{i}")));
+        }
+        assert!(!a.vault.should_auto_gc(), "Should not trigger after cleanup");
+    }
+
+    #[test]
+    fn auto_gc_runs_automatically_during_sync_when_threshold_met() {
+        let remote = shared_remote();
+        let mut a = open_vault();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        write_note(&a, "note.tmt", "Initial content\n");
+
+        // Populate sample shard to force auto-GC trigger on next sync
+        let sample_shard = a.vault.repo.path().join("objects").join(AUTO_GC_SAMPLE_SHARD);
+        std::fs::create_dir_all(&sample_shard).unwrap();
+        for i in 0..AUTO_GC_SHARD_THRESHOLD {
+            std::fs::write(sample_shard.join(format!("dummy_{i}")), b"dummy").unwrap();
+        }
+        assert!(a.vault.should_auto_gc());
+
+        // Sync triggers auto-GC automatically
+        let report = a.vault.sync(&NoCredentials).unwrap();
+        assert!(report.notes_needing_resolution.is_empty());
+
+        // Auto-GC should have run, creating pack and clearing loose objects
+        let pack_dir = a.vault.repo.path().join("objects").join("pack");
+        assert!(pack_dir.exists());
+        assert!(!a.vault.should_auto_gc(), "Auto-GC should reset loose object condition");
     }
 }
