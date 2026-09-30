@@ -54,6 +54,7 @@ tempfile = "3"
 package = "dev.immermemo.app"
 # aarch64 is what a real phone needs; x86_64 lets the same APK also install
 # on an emulator running at native speed under KVM (see nix/dev.nix).
+# Target-specific APKs can be built via `just apk-arm` or `just apk-x86`.
 build_targets = ["aarch64-linux-android", "x86_64-linux-android"]
 
 [package.metadata.android.sdk]
@@ -62,7 +63,10 @@ target_sdk_version = 34
 
 [package.metadata.android.application]
 label = "immermemo"
+# TODO: Re-enable `extract_native_libs = false` once cargo-apk supports storing
+# uncompressed (Stored) and 4KB/16KB page-aligned libraries. Currently, cargo-apk
+# writes android:extractNativeLibs="false" to the manifest but still Deflates
+# the .so, causing Android 11+ to reject installation with INSTALL_FAILED_INVALID_APK.
 
-# Sync needs the network; the Keystore key itself needs no extra permission.
 [[package.metadata.android.uses_permission]]
 name = "android.permission.INTERNET"

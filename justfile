@@ -53,6 +53,14 @@ emulator-stop:
 apk:
     cd apps/slint && cargo apk build --release --lib
 
+# Build a slim release APK for real devices only (aarch64, ~11 MB)
+apk-arm:
+    cd apps/slint && cargo apk build --release --lib --target aarch64-linux-android
+
+# Build a slim release APK for the emulator only (x86_64, ~12 MB)
+apk-x86:
+    cd apps/slint && cargo apk build --release --lib --target x86_64-linux-android
+
 # Install the built APK on whatever device/emulator adb currently sees
 install: apk
     adb install -r {{apk}}
