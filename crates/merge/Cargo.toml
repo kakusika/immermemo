@@ -5,7 +5,7 @@ edition.workspace = true
 
 [dependencies]
 tomet-ast.workspace = true
+tomet-printer.workspace = true
 
 [dev-dependencies]
 tomet-parser.workspace = true
-tomet-printer.workspace = true

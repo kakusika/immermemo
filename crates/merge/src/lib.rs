@@ -544,22 +544,44 @@ fn coalesce_text(items: Vec<Inline>) -> Vec<Inline> {
 /// `end` triple. A triple with no corresponding entry (`resolutions` ran
 /// out) is left in the document untouched.
 pub fn resolve(document: &Document, resolutions: &[ConflictResolution]) -> Document {
-    apply_resolutions(document, &mut resolutions.iter())
+    apply_resolutions(document, &mut resolutions.iter().map(Some))
 }
 
 /// Removes every `@mobile.conflict` marker from `document`, resolving all conflicts
 /// to the specified side (`ConflictResolution::Mine` or `ConflictResolution::Theirs`),
 /// and drops the `@use(mobile)` preamble line once none remain.
 pub fn resolve_all(document: &Document, resolution: ConflictResolution) -> Document {
-    apply_resolutions(document, &mut std::iter::repeat(&resolution))
+    apply_resolutions(document, &mut std::iter::repeat(Some(&resolution)))
 }
 
-/// Shared implementation for [`resolve`] and [`resolve_all`]: walks the
-/// document applying each resolution from `resolutions` in order, then
+/// Resolves a single conflict at `target_index` to the given `resolution`,
+/// leaving all other conflicts untouched.
+pub fn resolve_single(
+    document: &Document,
+    target_index: usize,
+    resolution: ConflictResolution,
+) -> Document {
+    let mut idx = 0;
+    apply_resolutions(
+        document,
+        &mut std::iter::from_fn(|| {
+            let res = if idx == target_index {
+                Some(&resolution)
+            } else {
+                None
+            };
+            idx += 1;
+            Some(res)
+        }),
+    )
+}
+
+/// Shared implementation for [`resolve`], [`resolve_all`] and [`resolve_single`]:
+/// walks the document applying each resolution from `resolutions` in order, then
 /// strips `@use(mobile)` if no conflict markers remain.
 fn apply_resolutions<'a>(
     document: &Document,
-    resolutions: &mut impl Iterator<Item = &'a ConflictResolution>,
+    resolutions: &mut impl Iterator<Item = Option<&'a ConflictResolution>>,
 ) -> Document {
     let mut blocks = resolve_block_seq(&document.blocks, resolutions);
 
@@ -586,7 +608,7 @@ fn apply_resolutions<'a>(
 /// the wrong conflict.
 fn resolve_block_seq<'a>(
     blocks: &[Block],
-    resolutions: &mut impl Iterator<Item = &'a ConflictResolution>,
+    resolutions: &mut impl Iterator<Item = Option<&'a ConflictResolution>>,
 ) -> Vec<Block> {
     let mut out = Vec::new();
     let mut i = 0;
@@ -603,15 +625,19 @@ fn resolve_block_seq<'a>(
             let theirs_blocks = &blocks[theirs_at + 1..end_at];
 
             match resolutions.next() {
-                Some(ConflictResolution::Mine) => out.extend(mine_blocks.iter().cloned()),
-                Some(ConflictResolution::Theirs) => out.extend(theirs_blocks.iter().cloned()),
-                Some(ConflictResolution::Rewritten(text)) => {
+                Some(Some(ConflictResolution::Mine)) => out.extend(mine_blocks.iter().cloned()),
+                Some(Some(ConflictResolution::Theirs)) => out.extend(theirs_blocks.iter().cloned()),
+                Some(Some(ConflictResolution::Both)) => {
+                    out.extend(mine_blocks.iter().cloned());
+                    out.extend(theirs_blocks.iter().cloned());
+                }
+                Some(Some(ConflictResolution::Rewritten(text))) => {
                     out.push(Block::Paragraph(Paragraph::new(
                         vec![Inline::Text(Text::from(text.as_str()))],
                         Default::default(),
                     )))
                 }
-                None => out.extend(blocks[i..=end_at].iter().cloned()),
+                Some(None) | None => out.extend(blocks[i..=end_at].iter().cloned()),
             }
             i = end_at + 1;
             continue;
@@ -633,7 +659,7 @@ fn resolve_block_seq<'a>(
 /// `merge` produced.
 fn resolve_block<'a>(
     block: &Block,
-    resolutions: &mut impl Iterator<Item = &'a ConflictResolution>,
+    resolutions: &mut impl Iterator<Item = Option<&'a ConflictResolution>>,
 ) -> Block {
     match block {
         Block::Paragraph(p) => Block::Paragraph(Paragraph::new(
@@ -678,14 +704,18 @@ fn resolve_block<'a>(
 /// document's own entries in the order they already sit in.
 fn resolve_value<'a>(
     value: &Value,
-    resolutions: &mut impl Iterator<Item = &'a ConflictResolution>,
+    resolutions: &mut impl Iterator<Item = Option<&'a ConflictResolution>>,
 ) -> Value {
     if let Some((mine, theirs)) = value_conflict_sides(value) {
         return match resolutions.next() {
-            Some(ConflictResolution::Mine) => mine.clone(),
-            Some(ConflictResolution::Theirs) => theirs.clone(),
-            Some(ConflictResolution::Rewritten(text)) => Value::String(text.clone()),
-            None => value.clone(),
+            Some(Some(ConflictResolution::Mine)) => mine.clone(),
+            Some(Some(ConflictResolution::Theirs)) => theirs.clone(),
+            Some(Some(ConflictResolution::Both)) => match (mine, theirs) {
+                (Value::String(m), Value::String(t)) => Value::String(format!("{m} / {t}")),
+                _ => mine.clone(),
+            },
+            Some(Some(ConflictResolution::Rewritten(text))) => Value::String(text.clone()),
+            Some(None) | None => value.clone(),
         };
     }
     match value {
@@ -707,7 +737,7 @@ fn resolve_value<'a>(
 
 fn resolve_element_value<'a>(
     value: &ElementValue,
-    resolutions: &mut impl Iterator<Item = &'a ConflictResolution>,
+    resolutions: &mut impl Iterator<Item = Option<&'a ConflictResolution>>,
 ) -> ElementValue {
     let ElementValue::Group(entries) = value else {
         return value.clone();
@@ -752,7 +782,7 @@ fn value_conflict_sides(value: &Value) -> Option<(&Value, &Value)> {
 /// The inline-level counterpart of `resolve`'s main loop.
 fn resolve_inline_seq<'a>(
     content: &[Inline],
-    resolutions: &mut impl Iterator<Item = &'a ConflictResolution>,
+    resolutions: &mut impl Iterator<Item = Option<&'a ConflictResolution>>,
 ) -> Vec<Inline> {
     let mut out = Vec::new();
     let mut i = 0;
@@ -774,16 +804,187 @@ fn resolve_inline_seq<'a>(
         let theirs_run = &content[theirs_at + 1..end_at];
 
         match resolutions.next() {
-            Some(ConflictResolution::Mine) => out.extend(mine_run.iter().cloned()),
-            Some(ConflictResolution::Theirs) => out.extend(theirs_run.iter().cloned()),
-            Some(ConflictResolution::Rewritten(text)) => {
+            Some(Some(ConflictResolution::Mine)) => out.extend(mine_run.iter().cloned()),
+            Some(Some(ConflictResolution::Theirs)) => out.extend(theirs_run.iter().cloned()),
+            Some(Some(ConflictResolution::Both)) => {
+                out.extend(mine_run.iter().cloned());
+                out.extend(theirs_run.iter().cloned());
+            }
+            Some(Some(ConflictResolution::Rewritten(text))) => {
                 out.push(Inline::Text(Text::from(text.as_str())))
             }
-            None => out.extend(content[i..=end_at].iter().cloned()),
+            Some(None) | None => out.extend(content[i..=end_at].iter().cloned()),
         }
         i = end_at + 1;
     }
     coalesce_text(out)
+}
+
+/// Finds and extracts all conflict regions present in `document`.
+pub fn find_conflicts(document: &Document) -> Vec<ConflictItem> {
+    let mut items = Vec::new();
+    find_conflicts_block_seq(&document.blocks, &mut items);
+    items
+}
+
+fn find_conflicts_block_seq(blocks: &[Block], items: &mut Vec<ConflictItem>) {
+    let mut i = 0;
+    while i < blocks.len() {
+        if conflict_side(&blocks[i]) == Some("mine") {
+            let theirs_at = (i + 1..blocks.len())
+                .find(|&j| conflict_side(&blocks[j]) == Some("theirs"))
+                .expect("a mine marker is always followed by a theirs marker");
+            let end_at = (theirs_at + 1..blocks.len())
+                .find(|&j| conflict_side(&blocks[j]) == Some("end"))
+                .expect("a theirs marker is always followed by an end marker");
+
+            let mine_blocks = &blocks[i + 1..theirs_at];
+            let theirs_blocks = &blocks[theirs_at + 1..end_at];
+
+            let mine_doc = Document {
+                blocks: mine_blocks.to_vec(),
+                span: Default::default(),
+            };
+            let theirs_doc = Document {
+                blocks: theirs_blocks.to_vec(),
+                span: Default::default(),
+            };
+
+            items.push(ConflictItem {
+                index: items.len(),
+                mine: tomet_printer::document_to_tm(&mine_doc).trim().to_string(),
+                theirs: tomet_printer::document_to_tm(&theirs_doc).trim().to_string(),
+            });
+
+            i = end_at + 1;
+            continue;
+        }
+
+        find_conflicts_block(&blocks[i], items);
+        i += 1;
+    }
+}
+
+fn find_conflicts_block(block: &Block, items: &mut Vec<ConflictItem>) {
+    match block {
+        Block::Paragraph(p) => find_conflicts_inline_seq(&p.content, items),
+        Block::Element(e) => {
+            if let Some(args) = &e.args {
+                find_conflicts_value(args, items);
+            }
+            if let Some(content) = &e.content {
+                find_conflicts_inline_seq(content, items);
+            }
+            if let Some(children) = &e.children {
+                find_conflicts_block_seq(children, items);
+            }
+            if let Some(value) = &e.value {
+                find_conflicts_element_value(value, items);
+            }
+        }
+        Block::Section(s) => {
+            find_conflicts_inline_seq(&s.title, items);
+            if let Some(args) = &s.args {
+                find_conflicts_value(args, items);
+            }
+            find_conflicts_block_seq(&s.blocks, items);
+            if let Some(value) = &s.value {
+                find_conflicts_element_value(value, items);
+            }
+        }
+    }
+}
+
+fn find_conflicts_inline_seq(content: &[Inline], items: &mut Vec<ConflictItem>) {
+    let mut i = 0;
+    while i < content.len() {
+        if inline_conflict_side(&content[i]) == Some("mine") {
+            let theirs_at = (i + 1..content.len())
+                .find(|&j| inline_conflict_side(&content[j]) == Some("theirs"))
+                .expect("a mine marker is always followed by a theirs marker");
+            let end_at = (theirs_at + 1..content.len())
+                .find(|&j| inline_conflict_side(&content[j]) == Some("end"))
+                .expect("a theirs marker is always followed by an end marker");
+
+            let mine_run = &content[i + 1..theirs_at];
+            let theirs_run = &content[theirs_at + 1..end_at];
+
+            items.push(ConflictItem {
+                index: items.len(),
+                mine: inlines_to_text(mine_run),
+                theirs: inlines_to_text(theirs_run),
+            });
+
+            i = end_at + 1;
+            continue;
+        }
+        i += 1;
+    }
+}
+
+fn inlines_to_text(inlines: &[Inline]) -> String {
+    let mut s = String::new();
+    for inline in inlines {
+        match inline {
+            Inline::Text(t) => s.push_str(&t.value),
+            Inline::Raw(r) => s.push_str(&r.value),
+            Inline::SoftBreak(_) => s.push(' '),
+            Inline::LineBreak(_) => s.push('\n'),
+            Inline::Element(el) => {
+                let doc = Document {
+                    blocks: vec![Block::Element(el.clone())],
+                    span: Default::default(),
+                };
+                s.push_str(tomet_printer::document_to_tm(&doc).trim());
+            }
+        }
+    }
+    s
+}
+
+fn find_conflicts_value(value: &Value, items: &mut Vec<ConflictItem>) {
+    if let Some((mine, theirs)) = value_conflict_sides(value) {
+        items.push(ConflictItem {
+            index: items.len(),
+            mine: value_to_text(mine),
+            theirs: value_to_text(theirs),
+        });
+        return;
+    }
+    match value {
+        Value::Map(entries) => {
+            for (_, v) in entries {
+                find_conflicts_value(v, items);
+            }
+        }
+        Value::Seq(seq) => {
+            for v in seq {
+                find_conflicts_value(v, items);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn value_to_text(val: &Value) -> String {
+    match val {
+        Value::String(s) => s.clone(),
+        Value::Bool(b) => b.to_string(),
+        Value::Int(i) => i.to_string(),
+        Value::Float(f) => f.to_string(),
+        Value::Null => "null".to_string(),
+        _ => format!("{val:?}"),
+    }
+}
+
+fn find_conflicts_element_value(value: &ElementValue, items: &mut Vec<ConflictItem>) {
+    if let ElementValue::Group(entries) = value {
+        for entry in entries {
+            if let Entry::Pair(_, v) = entry {
+                find_conflicts_value(v, items);
+            }
+        }
+    }
 }
 
 /// Whether `document` still contains an unresolved `@mobile.conflict`,
@@ -931,13 +1132,22 @@ fn is_use_mobile_block(block: &Block) -> bool {
 }
 
 /// Which side of one `@mobile.conflict` triple a user picked, or that
-/// they edited a fresh replacement by hand.
+/// they edited a fresh replacement by hand, or kept both versions.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConflictResolution {
     Mine,
     Theirs,
+    Both,
     /// The user wrote something new that is neither side verbatim.
     Rewritten(String),
+}
+
+/// An individual conflict region discovered within a document.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConflictItem {
+    pub index: usize,
+    pub mine: String,
+    pub theirs: String,
 }
 
 #[cfg(test)]
@@ -1158,5 +1368,38 @@ mod tests {
 
         assert!(result.clean);
         assert_eq!(result.document, doc("@meta{ x: 9 }\n"));
+    }
+
+    #[test]
+    fn find_conflicts_and_resolve_single_and_both() {
+        let base = doc("Alpha.\n\nKeep.\n\nBeta.\n");
+        let local = doc("Alpha local.\n\nKeep.\n\nBeta local.\n");
+        let remote = doc("Alpha remote.\n\nKeep.\n\nBeta remote.\n");
+
+        let merged = merge(&base, &local, &remote);
+        assert!(!merged.clean);
+
+        let conflicts = find_conflicts(&merged.document);
+        assert_eq!(conflicts.len(), 2);
+        assert_eq!(conflicts[0].mine, "l");
+        assert_eq!(conflicts[0].theirs, " remote");
+        assert_eq!(conflicts[1].mine, "l");
+        assert_eq!(conflicts[1].theirs, " remote");
+
+        // Resolve only first conflict with Mine
+        let resolved_first = resolve_single(&merged.document, 0, ConflictResolution::Mine);
+        let remaining = find_conflicts(&resolved_first);
+        assert_eq!(remaining.len(), 1);
+        let text_after_first = tomet_printer::document_to_tm(&resolved_first);
+        assert!(text_after_first.contains("Alpha local."));
+        assert!(!text_after_first.contains("Alpha remote."));
+
+        // Resolve remaining conflict with Both
+        let resolved_all = resolve_single(&resolved_first, 0, ConflictResolution::Both);
+        assert!(find_conflicts(&resolved_all).is_empty());
+        let final_text = tomet_printer::document_to_tm(&resolved_all);
+        assert!(final_text.contains("Alpha local."));
+        assert!(final_text.contains("Keep."));
+        assert!(final_text.contains("Beta local remote."));
     }
 }
