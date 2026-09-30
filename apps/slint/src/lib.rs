@@ -1,9 +1,5 @@
-mod appdata;
 pub mod credentials;
-mod history;
-mod notes;
 mod sync;
-mod token_blob;
 mod haptic;
 
 #[cfg(target_os = "android")]
@@ -18,17 +14,13 @@ use std::sync::Arc;
 
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
-use appdata::AppData;
-use credentials::{TokenCredentials, TokenStore};
-use history::{History, Restored};
+use credentials::TokenCredentials;
+use immermemo_vault::appdata::AppData;
+pub use immermemo_vault::credentials::{TokenStore, TokenStoreFactory};
+use immermemo_vault::history::{History, Restored};
+use immermemo_vault::notes;
 
 slint::include_modules!();
-
-/// Builds the token store for a given vault directory -- a plain file on
-/// desktop, the Keystore on Android. Called once at startup and again
-/// every time the current vault changes, since a different vault can need
-/// a completely different store.
-pub type TokenStoreFactory = Box<dyn Fn(&Path) -> anyhow::Result<Arc<dyn TokenStore>>>;
 
 /// What the window is currently editing. Lives on the UI thread only.
 struct Session {

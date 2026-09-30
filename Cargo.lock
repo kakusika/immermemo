@@ -2423,8 +2423,8 @@ dependencies = [
  "git2",
  "immermemo-merge",
  "immermemo-sync",
+ "immermemo-vault",
  "jni 0.21.1",
- "loro",
  "slint",
  "slint-build",
  "tempfile",
@@ -2444,6 +2444,15 @@ dependencies = [
  "tomet-ast",
  "tomet-parser",
  "tomet-printer",
+]
+
+[[package]]
+name = "immermemo-vault"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "loro",
+ "tempfile",
 ]
 
 [[package]]

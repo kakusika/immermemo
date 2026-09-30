@@ -15,6 +15,7 @@ path = "src/main.rs"
 [dependencies]
 immermemo-merge = { workspace = true }
 immermemo-sync = { workspace = true }
+immermemo-vault = { workspace = true }
 
 #= Tomet
 tomet-parser = { workspace = true }
@@ -23,7 +24,6 @@ tomet-printer = { workspace = true }
 #= Crates.io
 anyhow = { workspace = true }
 git2 = { workspace = true }
-loro = { workspace = true }
 
 # Desktop: winit + Skia (the workspace default). Android: its own backend, and
 # no Skia -- its prebuilt binaries are not fetched for that target.

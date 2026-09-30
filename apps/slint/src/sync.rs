@@ -31,7 +31,7 @@ pub fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::appdata::AppData;
+    use immermemo_vault::appdata::AppData;
     use tempfile::TempDir;
 
     /// Local transport (a plain filesystem path) never invokes the
