@@ -13,6 +13,7 @@ export component EditorPane inherits Rectangle {
     in property <length> inset-top: 0px;
     // Whatever covers the bottom edge: the system bar, or the on-screen keyboard.
     in property <length> inset-bottom: 0px;
+    in property <length> font-size: 17px;
     in property <string> status: "";
     in property <bool> status-is-error: false;
     in-out property <string> body;
@@ -278,7 +279,7 @@ export component EditorPane inherits Rectangle {
                 width: parent.width;
                 height: parent.height;
                 enabled: root.has-note;
-                font-size: 17px;
+                font-size: root.font-size;
                 text <=> root.body;
                 edited(t) => { root.edited(t); }
             }

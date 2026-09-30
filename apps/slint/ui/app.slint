@@ -1,10 +1,11 @@
 import { Palette } from "std-widgets.slint";
-import { Metrics } from "components.slint";
+import { Metrics, ActionRow, Colors } from "components.slint";
 import { ListPane } from "list_pane.slint";
 import { EditorPane } from "editor_pane.slint";
 import { RemoteSheet } from "remote_sheet.slint";
-import { TextInputDialog, ConfirmDialog } from "dialogs.slint";
+import { TextInputDialog, ConfirmDialog, ActionSheet } from "dialogs.slint";
 import { VaultSheet } from "vault_sheet.slint";
+import { SettingsSheet } from "settings_sheet.slint";
 
 export component App inherits Window {
     title: "immermemo";
@@ -13,8 +14,10 @@ export component App inherits Window {
     background: Palette.background;
 
     in property <[string]> notes;
+    in property <[string]> snippets: [];
     in property <[bool]> conflicted;
     in property <int> current: -1;
+    in-out property <string> search-query: "";
     in property <string> current-title;
     in-out property <string> status;
     in-out property <bool> status-is-error: false;
@@ -28,6 +31,7 @@ export component App inherits Window {
     in-out property <string> remote-url-draft;
     in-out property <string> remote-token-draft;
     in property <bool> remote-has-token;
+    in-out property <int> note-menu-index: -1;
     in-out property <bool> rename-open: false;
     in-out property <string> rename-draft;
     in-out property <bool> delete-confirm-open: false;
@@ -35,6 +39,22 @@ export component App inherits Window {
     in-out property <bool> vault-sheet-open: false;
     in property <[string]> vaults;
     in property <int> current-vault: -1;
+    in property <string> current-vault-name: "";
+    in property <string> current-vault-path: "";
+    in-out property <bool> settings-open: false;
+    in-out property <int> font-size-choice: 1;
+    in-out property <length> editor-font-size: 17px;
+    in-out property <int> theme-choice: 0;
+    function apply-theme-choice() {
+        if (root.theme-choice == 1) {
+            Palette.color-scheme = ColorScheme.light;
+        } else if (root.theme-choice == 2) {
+            Palette.color-scheme = ColorScheme.dark;
+        } else {
+            Palette.color-scheme = ColorScheme.unknown;
+        }
+    }
+    changed theme-choice => { root.apply-theme-choice(); }
     in-out property <bool> add-vault-open: false;
     in-out property <string> add-vault-draft;
     // Extra room above/below the content, for previewing a phone's system
@@ -47,8 +67,28 @@ export component App inherits Window {
     // Set from `changed width`, not bound to `root.width`: the window's size
     // depends on its content, so a binding here would be a binding loop.
     in-out property <bool> narrow: false;
-    init => { root.narrow = root.width < 600px; }
+    init => {
+        root.narrow = root.width < 600px;
+        root.apply-theme-choice();
+    }
     changed width => { root.narrow = root.width < 600px; }
+
+    // Drawer geometry and smooth touch tracking
+    property <length> drawer-width: min(380px, root.width * 0.86);
+    property <bool> drawer-dragging: false;
+    property <length> drawer-drag-dx: 0px;
+    property <length> drawer-pos: root.drawer-dragging
+        ? (root.list-open
+            ? max(-root.drawer-width, min(0px, root.drawer-drag-dx))
+            : max(-root.drawer-width, min(0px, -root.drawer-width + root.drawer-drag-dx)))
+        : (root.list-open ? 0px : -root.drawer-width);
+
+    animate drawer-pos {
+        duration: root.drawer-dragging ? 0ms : 150ms;
+        easing: ease-out;
+    }
+
+    property <float> drawer-progress: max(0.0, min(1.0, (root.drawer-pos + root.drawer-width) / root.drawer-width));
 
     callback select(int);
     callback edited(string);
@@ -57,6 +97,10 @@ export component App inherits Window {
     callback sync();
     callback new-note();
     callback link();
+    callback open-settings();
+    callback close-settings();
+    callback font-size-changed(int);
+    callback theme-changed(int);
     callback save-remote(string, string);
     callback close-remote();
     callback rename-requested(int);
@@ -72,6 +116,8 @@ export component App inherits Window {
     callback resolve-mine();
     callback resolve-theirs();
     callback jump-conflict();
+    callback trigger-haptic();
+    callback search-query-changed(string);
 
     public function set-cursor(offset: int) {
         pane.set-cursor(offset);
@@ -94,13 +140,23 @@ export component App inherits Window {
     SwipeGestureHandler {
         enabled: root.narrow && !root.list-open;
         handle-swipe-right: true;
-        swiped => {
-            root.list-open = true;
-        }
         moved => {
-            if (self.swiping && self.current-position.x - self.pressed-position.x > 50px) {
-                root.list-open = true;
+            if (self.swiping) {
+                root.drawer-dragging = true;
+                root.drawer-drag-dx = max(0px, self.current-position.x - self.pressed-position.x);
             }
+        }
+        swiped => {
+            root.drawer-dragging = false;
+            if (root.drawer-progress > 0.20) {
+                root.list-open = true;
+            } else {
+                root.list-open = false;
+            }
+        }
+        cancelled => {
+            root.drawer-dragging = false;
+            root.list-open = false;
         }
 
         HorizontalLayout {
@@ -109,8 +165,9 @@ export component App inherits Window {
 
             // Wide mode: side-by-side list pane
             if !root.narrow: ListPane {
-                width: 300px;
+                width: 320px;
                 notes: root.notes;
+                snippets: root.snippets;
                 conflicted: root.conflicted;
                 current: root.current;
                 status: root.status;
@@ -119,6 +176,8 @@ export component App inherits Window {
                 inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
                 highlight-current: true;
                 remote-configured: root.remote-configured;
+                search-query <=> root.search-query;
+                search-query-changed(q) => { root.search-query-changed(q); }
                 select(i) => {
                     root.select(i);
                     pane.focus-editor();
@@ -128,9 +187,9 @@ export component App inherits Window {
                     pane.focus-editor();
                 }
                 sync => { root.sync(); }
-                link => { root.link(); }
-                rename-requested(i) => { root.rename-requested(i); }
-                delete-requested(i) => { root.delete-requested(i); }
+                open-settings => { root.open-settings(); }
+                note-menu-requested(i) => { root.note-menu-index = i; }
+                trigger-haptic => { root.trigger-haptic(); }
                 open-vault-sheet => { root.open-vault-sheet(); }
                 close-drawer => {}
             }
@@ -153,6 +212,7 @@ export component App inherits Window {
                 show-back: root.narrow;
                 inset-top: root.inset-top;
                 inset-bottom: root.inset-bottom;
+                font-size: root.editor-font-size;
                 status: root.status;
                 status-is-error: root.status-is-error;
                 body <=> root.body;
@@ -177,7 +237,7 @@ export component App inherits Window {
 
     // Drawer overlay for narrow screens
     drawer-scope := FocusScope {
-        property <bool> shown: root.narrow && root.list-open;
+        property <bool> shown: root.narrow && (root.list-open || root.drawer-dragging || root.drawer-pos > -root.drawer-width + 0.5px);
         visible: shown;
         width: shown ? 100% : 0%;
         height: shown ? 100% : 0%;
@@ -197,65 +257,86 @@ export component App inherits Window {
             return reject;
         }
 
-        // Backdrop covering the editor
-        Rectangle {
-            width: 100%;
-            height: 100%;
-            background: #00000055;
-            TouchArea {
-                moved => {
-                    if (self.pressed && self.pressed-x - self.mouse-x > 40px) {
+        drawer-swipe := SwipeGestureHandler {
+            enabled: root.narrow && root.list-open;
+            handle-swipe-left: true;
+            moved => {
+                if (self.swiping) {
+                    root.drawer-dragging = true;
+                    root.drawer-drag-dx = min(0px, self.current-position.x - self.pressed-position.x);
+                }
+            }
+            swiped => {
+                root.drawer-dragging = false;
+                if (root.drawer-progress < 0.80) {
+                    root.list-open = false;
+                    pane.focus-editor();
+                } else {
+                    root.list-open = true;
+                }
+            }
+            cancelled => {
+                root.drawer-dragging = false;
+                root.list-open = true;
+            }
+
+            // Backdrop covering the editor
+            Rectangle {
+                width: 100%;
+                height: 100%;
+                background: #000000.with-alpha(0.35 * root.drawer-progress);
+                TouchArea {
+                    clicked => {
                         root.list-open = false;
                         pane.focus-editor();
                     }
                 }
-                clicked => {
-                    root.list-open = false;
-                    pane.focus-editor();
-                }
             }
-        }
 
-        // Drawer pane sliding in from left
-        Rectangle {
-            x: 0px;
-            y: 0px;
-            width: min(320px, root.width * 0.82);
-            height: 100%;
-            background: Palette.background;
-            drop-shadow-blur: 16px;
-            drop-shadow-color: #00000066;
-
-            ListPane {
-                width: 100%;
+            // Drawer pane sliding in from left
+            Rectangle {
+                x: root.drawer-pos;
+                y: 0px;
+                width: root.drawer-width;
                 height: 100%;
-                notes: root.notes;
-                conflicted: root.conflicted;
-                current: root.current;
-                status: root.status;
-                syncing: root.syncing;
-                inset-top: root.inset-top;
-                inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
-                highlight-current: true;
-                remote-configured: root.remote-configured;
-                select(i) => {
-                    root.select(i);
-                    root.list-open = false;
-                    pane.focus-editor();
-                }
-                new-note => {
-                    root.new-note();
-                    root.list-open = false;
-                    pane.focus-editor();
-                }
-                sync => { root.sync(); }
-                link => { root.link(); }
-                rename-requested(i) => { root.rename-requested(i); }
-                delete-requested(i) => { root.delete-requested(i); }
-                open-vault-sheet => { root.open-vault-sheet(); }
-                close-drawer => {
-                    root.list-open = false;
-                    pane.focus-editor();
+                background: Palette.background;
+                drop-shadow-blur: 16px;
+                drop-shadow-color: #000000.with-alpha(0.4 * root.drawer-progress);
+
+                ListPane {
+                    width: 100%;
+                    height: 100%;
+                    notes: root.notes;
+                    snippets: root.snippets;
+                    conflicted: root.conflicted;
+                    current: root.current;
+                    status: root.status;
+                    syncing: root.syncing;
+                    inset-top: root.inset-top;
+                    inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+                    highlight-current: true;
+                    remote-configured: root.remote-configured;
+                    search-query <=> root.search-query;
+                    search-query-changed(q) => { root.search-query-changed(q); }
+                    select(i) => {
+                        root.select(i);
+                        root.list-open = false;
+                        pane.focus-editor();
+                    }
+                    new-note => {
+                        root.new-note();
+                        root.list-open = false;
+                        pane.focus-editor();
+                    }
+                    sync => { root.sync(); }
+                    open-settings => { root.open-settings(); }
+                    note-menu-requested(i) => { root.note-menu-index = i; }
+                    trigger-haptic => { root.trigger-haptic(); }
+                    open-vault-sheet => { root.open-vault-sheet(); }
+                    close-drawer => {
+                        root.list-open = false;
+                        pane.focus-editor();
+                    }
                 }
             }
         }
@@ -265,6 +346,31 @@ export component App inherits Window {
         if (root.narrow && root.list-open) {
             drawer-scope.focus();
         }
+    }
+
+    if root.settings-open: SettingsSheet {
+        width: 100%;
+        height: 100%;
+        has-token: root.remote-has-token;
+        url-draft <=> root.remote-url-draft;
+        token-draft <=> root.remote-token-draft;
+        syncing: root.syncing;
+        sync-status: root.status;
+        current-vault-name: root.current-vault-name;
+        current-vault-path: root.current-vault-path;
+        font-size-choice <=> root.font-size-choice;
+        theme-choice <=> root.theme-choice;
+        inset-top: root.inset-top;
+        inset-bottom: root.inset-bottom;
+        save-remote(url, token) => { root.save-remote(url, token); }
+        sync => { root.sync(); }
+        open-vaults => {
+            root.settings-open = false;
+            root.open-vault-sheet();
+        }
+        font-size-changed(c) => { root.font-size-changed(c); }
+        theme-changed(c) => { root.theme-changed(c); }
+        close => { root.close-settings(); }
     }
 
     if root.remote-open: RemoteSheet {
@@ -281,26 +387,57 @@ export component App inherits Window {
         cancel => { root.close-remote(); }
     }
 
-    if root.rename-open: TextInputDialog {
-        width: 100%;
-        height: 100%;
+    ActionSheet {
+        open: root.note-menu-index >= 0;
+        narrow: root.narrow;
+        title: root.note-menu-index >= 0 ? root.notes[root.note-menu-index] : "";
+        inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+        cancel => { root.note-menu-index = -1; }
+
+        ActionRow {
+            text: "Rename";
+            clicked => {
+                let idx = root.note-menu-index;
+                root.note-menu-index = -1;
+                root.rename-requested(idx);
+            }
+        }
+
+        ActionRow {
+            text: "Delete";
+            tint: Colors.danger;
+            clicked => {
+                let idx = root.note-menu-index;
+                root.note-menu-index = -1;
+                root.delete-requested(idx);
+            }
+        }
+    }
+
+    TextInputDialog {
+        open: root.rename-open;
+        narrow: root.narrow;
         title: "Rename note";
         text-draft <=> root.rename-draft;
-        inset-top: root.inset-top;
-        inset-bottom: root.inset-bottom;
-        save(name) => { root.confirm-rename(name); }
+        inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+        save(name) => {
+            root.rename-open = false;
+            root.confirm-rename(name);
+        }
         cancel => { root.rename-open = false; }
     }
 
-    if root.delete-confirm-open: ConfirmDialog {
-        width: 100%;
-        height: 100%;
+    ConfirmDialog {
+        open: root.delete-confirm-open;
+        narrow: root.narrow;
         title: "Delete this note?";
         body: "This can't be undone from here.";
         confirm-text: "Delete";
-        inset-top: root.inset-top;
-        inset-bottom: root.inset-bottom;
-        confirm => { root.confirm-delete(); }
+        inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+        confirm => {
+            root.delete-confirm-open = false;
+            root.confirm-delete();
+        }
         cancel => { root.delete-confirm-open = false; }
     }
 
@@ -315,28 +452,33 @@ export component App inherits Window {
         add => { root.add-vault-requested(); }
         close => { root.vault-sheet-open = false; }
         delete-requested(i) => { root.delete-vault-requested(i); }
+        trigger-haptic => { root.trigger-haptic(); }
     }
 
-    if root.delete-vault-confirm-open: ConfirmDialog {
-        width: 100%;
-        height: 100%;
+    ConfirmDialog {
+        open: root.delete-vault-confirm-open;
+        narrow: root.narrow;
         title: "Remove this vault?";
         body: "Its notes will stay on disk, but its sync settings and git history will be forgotten.";
         confirm-text: "Remove";
-        inset-top: root.inset-top;
-        inset-bottom: root.inset-bottom;
-        confirm => { root.confirm-delete-vault(); }
+        inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+        confirm => {
+            root.delete-vault-confirm-open = false;
+            root.confirm-delete-vault();
+        }
         cancel => { root.delete-vault-confirm-open = false; }
     }
 
-    if root.add-vault-open: TextInputDialog {
-        width: 100%;
-        height: 100%;
+    TextInputDialog {
+        open: root.add-vault-open;
+        narrow: root.narrow;
         title: "Add vault";
         text-draft <=> root.add-vault-draft;
-        inset-top: root.inset-top;
-        inset-bottom: root.inset-bottom;
-        save(input) => { root.confirm-add-vault(input); }
+        inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+        save(input) => {
+            root.add-vault-open = false;
+            root.confirm-add-vault(input);
+        }
         cancel => { root.add-vault-open = false; }
     }
 }

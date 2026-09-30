@@ -8,6 +8,8 @@ import {
     ActionRow,
 } from "components.slint";
 
+import { ActionSheet } from "dialogs.slint";
+
 // Full-screen, same shape as the other sheets: which vault is open, and a
 // way to link another one. Rust owns what "adding" a vault actually means
 // (a typed path on desktop, a subfolder name on Android) -- this only
@@ -23,6 +25,7 @@ export component VaultSheet inherits Rectangle {
     callback add();
     callback close();
     callback delete-requested(int);
+    callback trigger-haptic();
 
     property <int> menu-index: -1;
 
@@ -89,6 +92,7 @@ export component VaultSheet inherits Rectangle {
                 running: touch.pressed && !long-pressed;
                 triggered => {
                     long-pressed = true;
+                    root.trigger-haptic();
                     root.menu-index = i;
                 }
             }
@@ -109,38 +113,27 @@ export component VaultSheet inherits Rectangle {
         }
     }
 
-    if root.menu-index >= 0: Rectangle {
-        background: #00000055;
-        TouchArea {
-            clicked => { root.menu-index = -1; }
+    ActionSheet {
+        open: root.menu-index >= 0;
+        narrow: root.width < 600px;
+        title: root.menu-index >= 0 ? root.vaults[root.menu-index] : "";
+        inset-bottom: root.inset-bottom;
+        cancel => { root.menu-index = -1; }
+
+        if root.vaults.length > 1: ActionRow {
+            text: "Delete";
+            tint: Colors.danger;
+            clicked => {
+                let idx = root.menu-index;
+                root.menu-index = -1;
+                root.delete-requested(idx);
+            }
         }
-
-        Rectangle {
-            y: parent.height - self.height;
-            width: 100%;
-            height: sheet-layout.preferred-height;
-            background: Palette.background;
-            border-radius: 12px;
-            drop-shadow-blur: 12px;
-            drop-shadow-color: #00000044;
-
-            sheet-layout := VerticalLayout {
-                padding-bottom: root.inset-bottom;
-                if root.vaults.length > 1: ActionRow {
-                    text: "Delete";
-                    tint: Colors.danger;
-                    clicked => {
-                        root.delete-requested(root.menu-index);
-                        root.menu-index = -1;
-                    }
-                }
-                if root.vaults.length <= 1: ActionRow {
-                    text: "Cannot delete the only vault";
-                    tint: Colors.muted;
-                    clicked => {
-                        root.menu-index = -1;
-                    }
-                }
+        if root.vaults.length <= 1: ActionRow {
+            text: "Cannot delete the only vault";
+            tint: Colors.muted;
+            clicked => {
+                root.menu-index = -1;
             }
         }
     }

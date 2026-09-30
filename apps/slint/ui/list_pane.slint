@@ -3,6 +3,7 @@ import {
     Metrics,
     Colors,
     Shapes,
+    Icon,
     IconButton,
     TopBar,
     Fab,
@@ -11,6 +12,7 @@ import {
 
 export component ListPane inherits Rectangle {
     in property <[string]> notes;
+    in property <[string]> snippets: [];
     in property <[bool]> conflicted;
     in property <int> current: -1;
     in property <string> status;
@@ -21,31 +23,25 @@ export component ListPane inherits Rectangle {
     in property <bool> highlight-current: false;
     // Whether a remote is linked yet -- shown as a dot on the link icon.
     in property <bool> remote-configured: false;
+    in-out property <string> search-query: "";
     callback select(int);
     callback new-note();
     callback sync();
-    callback link();
-    // Fired once the user picks an action from the long-press sheet;
-    // Rust owns the actual confirmation/rename dialogs (see app.slint),
-    // so this is just "which note, which action" -- nothing here needs
-    // a round-trip to Rust just to show or hide the sheet itself.
-    callback rename-requested(int);
-    callback delete-requested(int);
+    callback open-settings();
+    callback note-menu-requested(int);
+    callback trigger-haptic();
     // Tapping the title opens the vault switcher.
     callback open-vault-sheet();
     // Swiping left on the list or its items closes the drawer on narrow screens.
     callback close-drawer();
-
-    // Which row's long-press action sheet is open, if any. Purely local
-    // UI state -- Rust never needs to know this was ever shown.
-    property <int> menu-index: -1;
+    callback search-query-changed(string);
 
     background: Palette.background;
 
     // Catches left swipes in empty space (e.g. below the list) to close the drawer on mobile
     TouchArea {
         moved => {
-            if (self.pressed && self.pressed-x - self.mouse-x > 40px) {
+            if (self.pressed && self.pressed-x - self.mouse-x > 24px) {
                 root.close-drawer();
             }
         }
@@ -76,7 +72,7 @@ export component ListPane inherits Rectangle {
                 TouchArea {
                     property <bool> swiped: false;
                     moved => {
-                        if (self.pressed && self.pressed-x - self.mouse-x > 40px) {
+                        if (self.pressed && self.pressed-x - self.mouse-x > 24px) {
                             swiped = true;
                             root.close-drawer();
                         }
@@ -92,10 +88,10 @@ export component ListPane inherits Rectangle {
             }
 
             IconButton {
-                shape: Shapes.link;
+                shape: Shapes.settings;
                 // Warns that nothing is linked yet.
                 tint: root.remote-configured ? Palette.foreground : Colors.warning;
-                clicked => { root.link(); }
+                clicked => { root.open-settings(); }
             }
 
             IconButton {
@@ -110,13 +106,183 @@ export component ListPane inherits Rectangle {
             background: Colors.separator;
         }
 
-        ListView {
+        // Permanent Search Bar
+        Rectangle {
+            height: 50px;
+            search-box := Rectangle {
+                x: 10px;
+                y: 5px;
+                width: parent.width - 20px;
+                height: 40px;
+                border-radius: 20px;
+                background: Palette.foreground.with-alpha(0.06);
+
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 8px;
+                    spacing: 8px;
+
+                    Rectangle {
+                        width: 18px;
+                        horizontal-stretch: 0;
+                        Icon {
+                            shape: Shapes.search;
+                            tint: Colors.muted;
+                            width: 18px;
+                            height: 18px;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        clip: true;
+
+                        if search-input.text == "": Text {
+                            width: 100%;
+                            height: 100%;
+                            vertical-alignment: center;
+                            horizontal-alignment: left;
+                            text: "Search notes...";
+                            font-size: 14px;
+                            color: Colors.muted;
+                            overflow: elide;
+                        }
+
+                        search-input := TextInput {
+                            width: 100%;
+                            height: 100%;
+                            vertical-alignment: center;
+                            horizontal-alignment: left;
+                            single-line: true;
+                            text <=> root.search-query;
+                            font-size: 14px;
+                            color: Palette.foreground;
+                            edited => {
+                                root.search-query-changed(self.text);
+                            }
+                        }
+                    }
+
+                    if root.search-query != "": Rectangle {
+                        width: 28px;
+                        height: 28px;
+                        horizontal-stretch: 0;
+                        y: (parent.height - self.height) / 2;
+                        border-radius: 14px;
+                        background: clear-btn.pressed ? Palette.foreground.with-alpha(0.12) : transparent;
+
+                        Icon {
+                            shape: Shapes.close;
+                            tint: Colors.muted;
+                            width: 14px;
+                            height: 14px;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        clear-btn := TouchArea {
+                            clicked => {
+                                root.search-query = "";
+                                root.search-query-changed("");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            height: 1px;
+            background: Colors.separator;
+        }
+
+        // Top spacing before first list card
+        Rectangle {
+            height: 4px;
+        }
+
+        if root.notes.length == 0 && root.search-query != "": Rectangle {
+            vertical-stretch: 1;
+            VerticalLayout {
+                alignment: center;
+                spacing: 10px;
+                Icon {
+                    shape: Shapes.search;
+                    tint: Colors.muted;
+                    width: 32px;
+                    height: 32px;
+                    x: (parent.width - self.width) / 2;
+                }
+                Text {
+                    text: "No notes matching \"" + root.search-query + "\"";
+                    font-size: 14px;
+                    color: Colors.muted;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        if root.notes.length > 0 || root.search-query == "": ListView {
             vertical-stretch: 1;
             for name[i] in root.notes: Rectangle {
-                height: Metrics.row-height;
-                background: (root.highlight-current && i == root.current)
-                    ? Palette.accent-background.with-alpha(0.16)
-                    : (touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent);
+                property <bool> has-snippet: root.snippets.length > i && root.snippets[i] != "";
+                height: has-snippet ? 66px : 54px;
+
+                // Pill / rounded container with side insets and vertical gaps
+                item-container := Rectangle {
+                    x: 8px;
+                    y: 3px;
+                    width: parent.width - 16px;
+                    height: parent.height - 6px;
+                    border-radius: 20px;
+                    background: (root.highlight-current && i == root.current)
+                        ? Palette.accent-background.with-alpha(0.20)
+                        : (touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent);
+
+                    animate background {
+                        duration: 150ms;
+                        easing: ease-out;
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        spacing: 10px;
+
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            alignment: center;
+                            spacing: 2px;
+
+                            Text {
+                                text: name;
+                                font-size: 15px;
+                                font-weight: (root.highlight-current && i == root.current) ? 600 : 400;
+                                color: (root.highlight-current && i == root.current)
+                                    ? Palette.accent-background
+                                    : Palette.foreground;
+                                vertical-alignment: center;
+                                overflow: elide;
+                            }
+
+                            if has-snippet: Text {
+                                text: root.snippets[i];
+                                font-size: 12px;
+                                color: Colors.muted;
+                                overflow: elide;
+                            }
+                        }
+
+                        if root.conflicted[i]: Rectangle {
+                            width: 8px;
+                            height: 8px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 4px;
+                            background: Colors.warning;
+                        }
+                    }
+                }
 
                 // A `clicked` still fires on release even after a long
                 // hold (TouchArea doesn't time-limit it) -- this is what
@@ -124,41 +290,12 @@ export component ListPane inherits Rectangle {
                 // note, once the long-press timer already acted on it.
                 property <bool> long-pressed: false;
 
-                HorizontalLayout {
-                    padding-left: Metrics.gutter;
-                    padding-right: Metrics.gutter;
-                    spacing: 8px;
-                    Text {
-                        horizontal-stretch: 1;
-                        text: name;
-                        font-size: 17px;
-                        vertical-alignment: center;
-                        overflow: elide;
-                    }
-
-                    if root.conflicted[i]: Rectangle {
-                        width: 10px;
-                        height: 10px;
-                        y: (parent.height - self.height) / 2;
-                        border-radius: 5px;
-                        background: Colors.warning;
-                    }
-                }
-
-                Rectangle {
-                    y: parent.height - 1px;
-                    height: 1px;
-                    x: Metrics.gutter;
-                    width: parent.width - Metrics.gutter;
-                    background: Colors.separator;
-                }
-
                 touch := TouchArea {
                     property <bool> swiped: false;
                     property <length> dx: self.pressed-x - self.mouse-x;
                     property <length> dy: self.mouse-y > self.pressed-y ? self.mouse-y - self.pressed-y : self.pressed-y - self.mouse-y;
                     moved => {
-                        if (self.pressed && dx > 40px && dx > dy) {
+                        if (self.pressed && dx > 24px && dx > dy) {
                             swiped = true;
                             root.close-drawer();
                         }
@@ -183,7 +320,8 @@ export component ListPane inherits Rectangle {
                     running: touch.pressed && !long-pressed && !touch.swiped;
                     triggered => {
                         long-pressed = true;
-                        root.menu-index = i;
+                        root.trigger-haptic();
+                        root.note-menu-requested(i);
                     }
                 }
             }
@@ -194,43 +332,5 @@ export component ListPane inherits Rectangle {
         x: parent.width - self.width - Metrics.gutter;
         y: parent.height - self.height - Metrics.gutter - root.inset-bottom;
         clicked => { root.new-note(); }
-    }
-
-    if root.menu-index >= 0: Rectangle {
-        // Covers the whole pane so a tap outside the sheet dismisses it.
-        background: #00000055;
-        TouchArea {
-            clicked => { root.menu-index = -1; }
-        }
-
-        Rectangle {
-            y: parent.height - self.height;
-            width: 100%;
-            height: sheet-layout.preferred-height;
-            background: Palette.background;
-            border-radius: 12px;
-            drop-shadow-blur: 12px;
-            drop-shadow-color: #00000044;
-
-            sheet-layout := VerticalLayout {
-                padding-bottom: root.inset-bottom;
-                ActionRow {
-                    text: "Rename";
-                    clicked => {
-                        root.rename-requested(root.menu-index);
-                        root.menu-index = -1;
-                    }
-                }
-
-                ActionRow {
-                    text: "Delete";
-                    tint: Colors.danger;
-                    clicked => {
-                        root.delete-requested(root.menu-index);
-                        root.menu-index = -1;
-                    }
-                }
-            }
-        }
     }
 }

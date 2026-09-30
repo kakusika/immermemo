@@ -4,6 +4,7 @@ mod history;
 mod notes;
 mod sync;
 mod token_blob;
+mod haptic;
 
 #[cfg(target_os = "android")]
 mod android_cert;
@@ -47,6 +48,8 @@ struct Session {
     remote: Option<String>,
     notes: Vec<PathBuf>,
     conflicted: Vec<bool>,
+    search_query: String,
+    filtered_results: Vec<notes::SearchResult>,
     current: Option<usize>,
     /// Dropped whenever the note changes from outside (a sync) or another
     /// note is opened, so undo never crosses into different content.
@@ -127,6 +130,17 @@ pub fn run(
     let remote = app_data.load_remote(&vault_dir);
 
     let app = App::new()?;
+    let font_size_choice = app_data.load_font_size().unwrap_or(1);
+    let theme_choice = app_data.load_theme().unwrap_or(0);
+    app.set_font_size_choice(font_size_choice);
+    app.set_editor_font_size(match font_size_choice {
+        0 => 14.0,
+        2 => 20.0,
+        _ => 17.0,
+    });
+    app.set_theme_choice(theme_choice);
+    app.set_current_vault_name(vault_display_name(&vault_dir).into());
+    app.set_current_vault_path(vault_dir.display().to_string().into());
     app.set_remote_configured(remote.is_some());
     let session = Rc::new(RefCell::new(Session {
         vault_dir,
@@ -137,6 +151,8 @@ pub fn run(
         remote,
         notes: Vec::new(),
         conflicted: Vec::new(),
+        search_query: String::new(),
+        filtered_results: Vec::new(),
         current: None,
         history: None,
         rename_target: None,
@@ -156,9 +172,16 @@ pub fn run(
 
     app.on_select({
         let (weak, session) = (app.as_weak(), session.clone());
-        move |index| {
+        move |ui_index| {
             let app = weak.unwrap();
-            open_note(&app, &session, index as usize);
+            let note_index = session
+                .borrow()
+                .filtered_results
+                .get(ui_index as usize)
+                .map(|r| r.note_index);
+            if let Some(index) = note_index {
+                open_note(&app, &session, index);
+            }
         }
     });
 
@@ -169,6 +192,8 @@ pub fn run(
             let dir = session.borrow().vault_dir.clone();
             match notes::create(&dir) {
                 Ok(path) => {
+                    session.borrow_mut().search_query.clear();
+                    app.set_search_query(SharedString::new());
                     refresh_list(&app, &session);
                     let index = session.borrow().notes.iter().position(|p| *p == path);
                     if let Some(index) = index {
@@ -196,7 +221,12 @@ pub fn run(
                     && idx < s.conflicted.len()
                 {
                     s.conflicted[idx] = has_conflict;
-                    app.set_conflicted(ModelRc::new(VecModel::from(s.conflicted.clone())));
+                    let conflicted: Vec<bool> = s
+                        .filtered_results
+                        .iter()
+                        .map(|r| s.conflicted[r.note_index])
+                        .collect();
+                    app.set_conflicted(ModelRc::new(VecModel::from(conflicted)));
                 }
             }
             if let Some(path) = s.current_path() {
@@ -236,6 +266,44 @@ pub fn run(
         }
     });
 
+    app.on_open_settings({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            let s = session.borrow();
+            app.set_remote_url_draft(s.remote.clone().unwrap_or_default().into());
+            app.set_remote_token_draft(SharedString::new());
+            app.set_remote_has_token(s.token_store.load().unwrap_or_default().is_some());
+            app.set_current_vault_name(vault_display_name(&s.vault_dir).into());
+            app.set_current_vault_path(s.vault_dir.display().to_string().into());
+            app.set_settings_open(true);
+        }
+    });
+    app.on_close_settings({
+        let weak = app.as_weak();
+        move || weak.unwrap().set_settings_open(false)
+    });
+
+    app.on_font_size_changed({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |choice| {
+            let app = weak.unwrap();
+            let px = match choice {
+                0 => 14.0,
+                2 => 20.0,
+                _ => 17.0,
+            };
+            app.set_editor_font_size(px);
+            let _ = session.borrow().app_data.save_font_size(choice);
+        }
+    });
+    app.on_theme_changed({
+        let session = session.clone();
+        move |choice| {
+            let _ = session.borrow().app_data.save_theme(choice);
+        }
+    });
+
     app.on_link({
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
@@ -244,23 +312,41 @@ pub fn run(
             app.set_remote_url_draft(s.remote.clone().unwrap_or_default().into());
             app.set_remote_token_draft(SharedString::new());
             app.set_remote_has_token(s.token_store.load().unwrap_or_default().is_some());
-            app.set_remote_open(true);
+            app.set_current_vault_name(vault_display_name(&s.vault_dir).into());
+            app.set_current_vault_path(s.vault_dir.display().to_string().into());
+            app.set_settings_open(true);
         }
     });
     app.on_close_remote({
         let weak = app.as_weak();
         move || weak.unwrap().set_remote_open(false)
     });
+    app.on_trigger_haptic(|| {
+        haptic::perform_haptic();
+    });
+
+    app.on_search_query_changed({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |query| {
+            let app = weak.unwrap();
+            session.borrow_mut().search_query = query.to_string();
+            update_filtered_list(&app, &session);
+        }
+    });
 
     app.on_rename_requested({
         let (weak, session) = (app.as_weak(), session.clone());
-        move |index| {
+        move |ui_index| {
             let app = weak.unwrap();
             let mut s = session.borrow_mut();
-            let Some(path) = s.notes.get(index as usize).cloned() else {
+            let Some(res) = s.filtered_results.get(ui_index as usize) else {
                 return;
             };
-            s.rename_target = Some(index as usize);
+            let note_index = res.note_index;
+            let Some(path) = s.notes.get(note_index).cloned() else {
+                return;
+            };
+            s.rename_target = Some(note_index);
             drop(s);
             let stem = path
                 .file_stem()
@@ -299,9 +385,17 @@ pub fn run(
 
     app.on_delete_requested({
         let (weak, session) = (app.as_weak(), session.clone());
-        move |index| {
+        move |ui_index| {
             let app = weak.unwrap();
-            session.borrow_mut().delete_target = Some(index as usize);
+            let note_index = session
+                .borrow()
+                .filtered_results
+                .get(ui_index as usize)
+                .map(|r| r.note_index);
+            let Some(index) = note_index else {
+                return;
+            };
+            session.borrow_mut().delete_target = Some(index);
             app.set_delete_confirm_open(true);
         }
     });
@@ -475,6 +569,7 @@ pub fn run(
             drop(s);
             app.set_remote_configured(true);
             app.set_remote_open(false);
+            app.set_settings_open(false);
             start_sync(&app, &session);
         }
     });
@@ -542,7 +637,9 @@ fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
             app.set_remote_url_draft(SharedString::new());
             app.set_remote_token_draft(SharedString::new());
             app.set_remote_has_token(false);
-            app.set_remote_open(true);
+            app.set_current_vault_name(vault_display_name(&s.vault_dir).into());
+            app.set_current_vault_path(s.vault_dir.display().to_string().into());
+            app.set_settings_open(true);
             return;
         };
         let gitdir = match s.app_data.gitdir(&s.vault_dir) {
@@ -594,15 +691,39 @@ fn refresh_list(app: &App, session: &Rc<RefCell<Session>>) {
         .map(|p| notes::has_conflict_marker(p))
         .collect();
     s.current = previous.and_then(|p| s.notes.iter().position(|n| *n == p));
+    drop(s);
+    update_filtered_list(app, session);
+}
+
+fn update_filtered_list(app: &App, session: &Rc<RefCell<Session>>) {
+    let mut s = session.borrow_mut();
+    s.filtered_results = notes::search(&s.vault_dir, &s.notes, &s.search_query);
 
     let names: Vec<SharedString> = s
-        .notes
+        .filtered_results
         .iter()
-        .map(|p| notes::display_name(&s.vault_dir, p).into())
+        .map(|r| notes::display_name(&s.vault_dir, &s.notes[r.note_index]).into())
         .collect();
+    let conflicted: Vec<bool> = s
+        .filtered_results
+        .iter()
+        .map(|r| s.conflicted[r.note_index])
+        .collect();
+    let snippets: Vec<SharedString> = s
+        .filtered_results
+        .iter()
+        .map(|r| r.snippet.clone().unwrap_or_default().into())
+        .collect();
+
+    let ui_current = s
+        .current
+        .and_then(|cur| s.filtered_results.iter().position(|r| r.note_index == cur));
+
+    drop(s);
     app.set_notes(ModelRc::new(VecModel::from(names)));
-    app.set_conflicted(ModelRc::new(VecModel::from(s.conflicted.clone())));
-    app.set_current(s.current.map_or(-1, |i| i as i32));
+    app.set_conflicted(ModelRc::new(VecModel::from(conflicted)));
+    app.set_snippets(ModelRc::new(VecModel::from(snippets)));
+    app.set_current(ui_current.map_or(-1, |i| i as i32));
 }
 
 fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
@@ -647,14 +768,18 @@ fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBuf) {
 
     let mut s = session.borrow_mut();
     let remote = s.app_data.load_remote(&vault_dir);
+    app.set_current_vault_name(vault_display_name(&vault_dir).into());
+    app.set_current_vault_path(vault_dir.display().to_string().into());
     let _ = s.app_data.save_current_vault(&vault_dir);
     s.vault_dir = vault_dir;
     s.token_store = token_store;
     s.remote = remote.clone();
+    s.search_query.clear();
     s.current = None;
     s.history = None;
     drop(s);
 
+    app.set_search_query(SharedString::new());
     app.set_remote_configured(remote.is_some());
     app.set_current_title(SharedString::new());
     app.set_body(SharedString::new());
@@ -703,7 +828,8 @@ fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
             s.current = Some(index);
             s.history = Some(History::new(&text));
             let _ = s.app_data.save_last_note(&s.vault_dir, &path);
-            app.set_current(index as i32);
+            let ui_current = s.filtered_results.iter().position(|r| r.note_index == index);
+            app.set_current(ui_current.map_or(-1, |i| i as i32));
             app.set_current_title(notes::display_name(&s.vault_dir, &path).into());
             app.set_current_has_conflict(s.conflicted[index]);
             show_history_state(app, &s);
@@ -902,6 +1028,7 @@ fn android_main(app: slint::android::AndroidApp) {
     let default_vault_dir = base.join("notes");
     let app_data = AppData::new(base.clone());
     let vm_ptr = app.vm_as_ptr();
+    let activity_ptr = app.activity_as_ptr();
     let token_store_for: TokenStoreFactory = Box::new(move |vault_dir| {
         let path = app_data.token_path(vault_dir)?;
         // Safety: `vm_ptr` is `app.vm_as_ptr()`, valid for the process's
@@ -910,12 +1037,16 @@ fn android_main(app: slint::android::AndroidApp) {
         Ok(Arc::new(store) as Arc<dyn TokenStore>)
     });
     slint::android::init(app).expect("initialize the Android backend");
+    unsafe {
+        haptic::init_android_haptics(vm_ptr, activity_ptr);
+    }
     run(default_vault_dir, base, token_store_for).expect("run the app");
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use slint::Model;
 
     #[test]
     fn ui_helpers_and_conflict_resolution() {
@@ -957,10 +1088,15 @@ mod tests {
             app_data,
             token_store: token_store.clone(),
             token_store_for: Box::new(move |_| Ok(token_store.clone())),
-            known_vaults: vec![vault_dir],
+            known_vaults: vec![vault_dir.clone()],
             remote: None,
             notes: vec![note_path.clone()],
             conflicted: vec![true],
+            search_query: String::new(),
+            filtered_results: vec![notes::SearchResult {
+                note_index: 0,
+                snippet: None,
+            }],
             current: Some(0),
             history: Some(History::new(&conflicted_text)),
             rename_target: None,
@@ -979,5 +1115,33 @@ mod tests {
         assert_eq!(disk_text, "Mine.\n");
         assert!(!notes::has_conflict_marker(&note_path));
         assert!(app.get_status().contains("Resolved conflict"));
+
+        // 3. Search filtering and UI model update
+        let n1 = vault_dir.join("roadmap.tmt");
+        std::fs::write(&n1, "Project roadmap and milk supply\n").unwrap();
+        session.borrow_mut().notes.push(n1);
+        session.borrow_mut().conflicted.push(false);
+
+        // Search query empty -> all notes
+        refresh_list(&app, &session);
+        assert_eq!(app.get_notes().row_count(), 2);
+
+        // Filter for "milk" (present in roadmap content)
+        session.borrow_mut().search_query = "milk".to_string();
+        update_filtered_list(&app, &session);
+        assert_eq!(app.get_notes().row_count(), 1);
+        assert_eq!(app.get_snippets().row_count(), 1);
+        assert_eq!(app.get_notes().row_data(0).unwrap(), "roadmap");
+
+        // Filter for "test" (matches test.tmt title)
+        session.borrow_mut().search_query = "test".to_string();
+        update_filtered_list(&app, &session);
+        assert_eq!(app.get_notes().row_count(), 1);
+        assert_eq!(app.get_notes().row_data(0).unwrap(), "test");
+
+        // Filter for nonexistent query
+        session.borrow_mut().search_query = "nonexistent".to_string();
+        update_filtered_list(&app, &session);
+        assert_eq!(app.get_notes().row_count(), 0);
     }
 }

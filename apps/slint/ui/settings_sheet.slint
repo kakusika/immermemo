@@ -1,0 +1,470 @@
+import { Palette, LineEdit, Button, ScrollView } from "std-widgets.slint";
+import {
+    Metrics,
+    Colors,
+    Shapes,
+    IconButton,
+    TopBar,
+    ActionRow,
+} from "components.slint";
+
+// A full-screen sheet for application settings: Sync & Remote, Vault management,
+// Editor font size and theme preferences, and application info.
+export component SettingsSheet inherits Rectangle {
+    in property <length> inset-top: 0px;
+    in property <length> inset-bottom: 0px;
+
+    // Remote sync properties
+    in property <bool> has-token;
+    in-out property <string> url-draft;
+    in-out property <string> token-draft;
+    in property <bool> syncing: false;
+    in property <string> sync-status: "";
+
+    // Vault properties
+    in property <string> current-vault-name: "";
+    in property <string> current-vault-path: "";
+
+    // Appearance properties
+    // 0: Small (14px), 1: Medium (17px), 2: Large (20px)
+    in-out property <int> font-size-choice: 1;
+    // 0: System, 1: Light, 2: Dark
+    in-out property <int> theme-choice: 0;
+
+    // App info
+    in property <string> app-version: "0.1.0";
+
+    callback close();
+    callback save-remote(string, string);
+    callback sync();
+    callback open-vaults();
+    callback font-size-changed(int);
+    callback theme-changed(int);
+
+    background: Palette.background;
+
+    VerticalLayout {
+        TopBar {
+            inset-top: root.inset-top;
+            IconButton {
+                shape: Shapes.back;
+                clicked => { root.close(); }
+            }
+
+            Text {
+                horizontal-stretch: 1;
+                text: "Settings";
+                font-size: 20px;
+                font-weight: 600;
+                vertical-alignment: center;
+                color: Palette.foreground;
+            }
+        }
+
+        Rectangle {
+            height: 1px;
+            background: Colors.separator;
+        }
+
+        ScrollView {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding-left: Metrics.gutter;
+                padding-right: Metrics.gutter;
+                padding-top: 16px;
+                padding-bottom: root.inset-bottom + 24px;
+                spacing: 24px;
+
+                // ----------------------------------------------------
+                // Section: Sync & Remote
+                // ----------------------------------------------------
+                VerticalLayout {
+                    spacing: 10px;
+
+                    Text {
+                        text: "SYNC & REMOTE";
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: Colors.muted;
+                        letter-spacing: 0.5px;
+                    }
+
+                    Rectangle {
+                        border-radius: 8px;
+                        background: Palette.alternate-background;
+
+                        VerticalLayout {
+                            padding: 12px;
+                            spacing: 12px;
+
+                            VerticalLayout {
+                                spacing: 4px;
+                                Text {
+                                    text: "Remote repository URL";
+                                    font-size: 13px;
+                                    color: Colors.muted;
+                                }
+
+                                LineEdit {
+                                    height: Metrics.touch;
+                                    placeholder-text: "https://github.com/you/notes.git";
+                                    text <=> root.url-draft;
+                                }
+                            }
+
+                            VerticalLayout {
+                                spacing: 4px;
+                                Text {
+                                    text: "Access token";
+                                    font-size: 13px;
+                                    color: Colors.muted;
+                                }
+
+                                LineEdit {
+                                    height: Metrics.touch;
+                                    placeholder-text: root.has-token ? "Leave blank to keep the saved token" : "Personal access token";
+                                    input-type: password;
+                                    text <=> root.token-draft;
+                                }
+                            }
+
+                            if root.sync-status != "": Text {
+                                text: root.sync-status;
+                                font-size: 13px;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+
+                            HorizontalLayout {
+                                spacing: 8px;
+                                alignment: end;
+
+                                Button {
+                                    text: root.syncing ? "Syncing..." : "Sync Now";
+                                    enabled: !root.syncing;
+                                    clicked => { root.sync(); }
+                                }
+
+                                Button {
+                                    text: "Save Remote";
+                                    primary: true;
+                                    clicked => { root.save-remote(root.url-draft, root.token-draft); }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ----------------------------------------------------
+                // Section: Vaults
+                // ----------------------------------------------------
+                VerticalLayout {
+                    spacing: 10px;
+
+                    Text {
+                        text: "VAULTS";
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: Colors.muted;
+                        letter-spacing: 0.5px;
+                    }
+
+                    Rectangle {
+                        border-radius: 8px;
+                        background: Palette.alternate-background;
+
+                        VerticalLayout {
+                            padding: 12px;
+                            spacing: 8px;
+
+                            HorizontalLayout {
+                                Text {
+                                    text: "Active Vault";
+                                    font-size: 15px;
+                                    font-weight: 600;
+                                    color: Palette.foreground;
+                                    vertical-alignment: center;
+                                    horizontal-stretch: 1;
+                                }
+
+                                Text {
+                                    text: root.current-vault-name != "" ? root.current-vault-name : "Default";
+                                    font-size: 15px;
+                                    color: Palette.accent-background;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            if root.current-vault-path != "": Text {
+                                text: root.current-vault-path;
+                                font-size: 12px;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+
+                            Rectangle {
+                                height: 1px;
+                                background: Colors.separator;
+                            }
+
+                            ActionRow {
+                                text: "Manage & Switch Vaults →";
+                                tint: Palette.accent-background;
+                                clicked => { root.open-vaults(); }
+                            }
+                        }
+                    }
+                }
+
+                // ----------------------------------------------------
+                // Section: Appearance & Editor
+                // ----------------------------------------------------
+                VerticalLayout {
+                    spacing: 10px;
+
+                    Text {
+                        text: "APPEARANCE & EDITOR";
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: Colors.muted;
+                        letter-spacing: 0.5px;
+                    }
+
+                    Rectangle {
+                        border-radius: 8px;
+                        background: Palette.alternate-background;
+
+                        VerticalLayout {
+                            padding: 12px;
+                            spacing: 16px;
+
+                            // Theme Selector
+                            VerticalLayout {
+                                spacing: 8px;
+
+                                Text {
+                                    text: "Theme";
+                                    font-size: 13px;
+                                    color: Colors.muted;
+                                }
+
+                                HorizontalLayout {
+                                    spacing: 8px;
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: 36px;
+                                        border-radius: 18px;
+                                        background: root.theme-choice == 0 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+                                        Text {
+                                            text: "System";
+                                            font-size: 13px;
+                                            font-weight: root.theme-choice == 0 ? 600 : 400;
+                                            color: root.theme-choice == 0 ? Palette.accent-foreground : Palette.foreground;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            clicked => {
+                                                root.theme-choice = 0;
+                                                root.theme-changed(0);
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: 36px;
+                                        border-radius: 18px;
+                                        background: root.theme-choice == 1 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+                                        Text {
+                                            text: "Light";
+                                            font-size: 13px;
+                                            font-weight: root.theme-choice == 1 ? 600 : 400;
+                                            color: root.theme-choice == 1 ? Palette.accent-foreground : Palette.foreground;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            clicked => {
+                                                root.theme-choice = 1;
+                                                root.theme-changed(1);
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: 36px;
+                                        border-radius: 18px;
+                                        background: root.theme-choice == 2 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+                                        Text {
+                                            text: "Dark";
+                                            font-size: 13px;
+                                            font-weight: root.theme-choice == 2 ? 600 : 400;
+                                            color: root.theme-choice == 2 ? Palette.accent-foreground : Palette.foreground;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            clicked => {
+                                                root.theme-choice = 2;
+                                                root.theme-changed(2);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                height: 1px;
+                                background: Colors.separator;
+                            }
+
+                            // Font Size Selector
+                            VerticalLayout {
+                                spacing: 8px;
+
+                                Text {
+                                    text: "Editor Font Size";
+                                    font-size: 13px;
+                                    color: Colors.muted;
+                                }
+
+                                HorizontalLayout {
+                                    spacing: 8px;
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: 36px;
+                                        border-radius: 18px;
+                                        background: root.font-size-choice == 0 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+                                        Text {
+                                            text: "Small (14)";
+                                            font-size: 13px;
+                                            font-weight: root.font-size-choice == 0 ? 600 : 400;
+                                            color: root.font-size-choice == 0 ? Palette.accent-foreground : Palette.foreground;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            clicked => {
+                                                root.font-size-choice = 0;
+                                                root.font-size-changed(0);
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: 36px;
+                                        border-radius: 18px;
+                                        background: root.font-size-choice == 1 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+                                        Text {
+                                            text: "Medium (17)";
+                                            font-size: 13px;
+                                            font-weight: root.font-size-choice == 1 ? 600 : 400;
+                                            color: root.font-size-choice == 1 ? Palette.accent-foreground : Palette.foreground;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            clicked => {
+                                                root.font-size-choice = 1;
+                                                root.font-size-changed(1);
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: 36px;
+                                        border-radius: 18px;
+                                        background: root.font-size-choice == 2 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+                                        Text {
+                                            text: "Large (20)";
+                                            font-size: 13px;
+                                            font-weight: root.font-size-choice == 2 ? 600 : 400;
+                                            color: root.font-size-choice == 2 ? Palette.accent-foreground : Palette.foreground;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            clicked => {
+                                                root.font-size-choice = 2;
+                                                root.font-size-changed(2);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ----------------------------------------------------
+                // Section: About
+                // ----------------------------------------------------
+                VerticalLayout {
+                    spacing: 10px;
+
+                    Text {
+                        text: "ABOUT";
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: Colors.muted;
+                        letter-spacing: 0.5px;
+                    }
+
+                    Rectangle {
+                        border-radius: 8px;
+                        background: Palette.alternate-background;
+
+                        VerticalLayout {
+                            padding: 16px;
+                            spacing: 8px;
+
+                            Text {
+                                text: "Immermemo v" + root.app-version;
+                                font-size: 16px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                            }
+
+                            Text {
+                                text: "A mobile note app for writing Tomet (.tmt) notes, synced over git without git touching user files.";
+                                font-size: 13px;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+
+                            Rectangle {
+                                height: 4px;
+                            }
+
+                            Text {
+                                text: "AST-level three-way merge with conflict tracking (@mobile.conflict).";
+                                font-size: 12px;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
