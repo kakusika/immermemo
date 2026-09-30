@@ -123,18 +123,22 @@ pub struct SyncReport {
 }
 
 impl Vault {
-    /// Opens an existing vault, or initializes one if `private_gitdir` is
+    /// Opens an existing vault, or initializes one if `gitdir` is
     /// empty -- the first sync of a folder and every later one go through
-    /// the same call.
-    pub fn open(working_tree: &Path, private_gitdir: &Path) -> anyhow::Result<Self> {
-        let repo = if private_gitdir.join("HEAD").exists() {
-            Repository::open_bare(private_gitdir)?
+    /// the same call. Supports both private bare repositories (outside the
+    /// working tree) and standard in-tree repositories (`.git` inside the working tree).
+    pub fn open(working_tree: &Path, gitdir: &Path) -> anyhow::Result<Self> {
+        let repo = if gitdir.join("HEAD").exists() || (gitdir.is_file() && gitdir.exists()) {
+            Repository::open(gitdir).or_else(|_| Repository::open_bare(gitdir))?
+        } else if gitdir == working_tree.join(".git") {
+            Repository::init(working_tree)?
         } else {
-            Repository::init_bare(private_gitdir)?
+            Repository::init_bare(gitdir)?
         };
         // Associates the working tree in-memory with the repository so libgit2
         // can evaluate `.gitignore` rules, without creating any `.git` link file.
         repo.set_workdir(working_tree, false)?;
+        let _ = repo.set_head(&format!("refs/heads/{BRANCH}"));
         let _ = repo.add_ignore_rule(".DS_Store\nThumbs.db\n");
         Ok(Self {
             working_tree: working_tree.to_owned(),
@@ -229,7 +233,9 @@ impl Vault {
 
         let tree = self.repo.find_tree(tree_oid)?;
         let parents: Vec<&git2::Commit> = parent.iter().collect();
-        self.commit_tree("sync", &tree, &parents)
+        self.commit_tree("sync", &tree, &parents)?;
+        let _ = index.write();
+        Ok(())
     }
 
     /// Registers the certificate-check callback, if a verifier was set,
@@ -279,7 +285,8 @@ impl Vault {
     /// adopts the remote's history if there was none locally, fast-forwards
     /// if the remote is a strict descendant, does nothing if local is
     /// already ahead (the next push will carry it), and otherwise performs
-    /// a real three-way merge.
+    /// a real three-way merge (treating unrelated histories with no merge base
+    /// as having an empty base tree).
     fn reconcile_with_remote(&self) -> anyhow::Result<()> {
         let Ok(remote_ref) = self
             .repo
@@ -295,10 +302,14 @@ impl Vault {
             None => self.set_branch_tip(remote_oid, "adopt remote history")?,
             Some(local) if local.id() == remote_oid => {}
             Some(local) => {
-                let base_oid = self.repo.merge_base(local.id(), remote_oid)?;
-                if base_oid == local.id() {
+                let base_oid = match self.repo.merge_base(local.id(), remote_oid) {
+                    Ok(oid) => Some(oid),
+                    Err(e) if e.class() == git2::ErrorClass::Merge => None,
+                    Err(e) => return Err(e.into()),
+                };
+                if base_oid == Some(local.id()) {
                     self.set_branch_tip(remote_oid, "fast-forward")?;
-                } else if base_oid == remote_oid {
+                } else if base_oid == Some(remote_oid) {
                     // Local is already ahead; nothing to reconcile.
                 } else {
                     self.merge_histories(base_oid, local.id(), remote_oid)?;
@@ -318,24 +329,33 @@ impl Vault {
         Ok(())
     }
 
+    /// Merges `local_oid` and `remote_oid` into a new merge commit.
+    /// If `base_oid` is `None` (unrelated histories), an empty base tree is used.
     fn merge_histories(
         &self,
-        base_oid: Oid,
+        base_oid: Option<Oid>,
         local_oid: Oid,
         remote_oid: Oid,
     ) -> anyhow::Result<()> {
-        let base_tree = self.repo.find_commit(base_oid)?.tree()?;
+        let base_tree = match base_oid {
+            Some(oid) => Some(self.repo.find_commit(oid)?.tree()?),
+            None => None,
+        };
         let local_commit = self.repo.find_commit(local_oid)?;
         let remote_commit = self.repo.find_commit(remote_oid)?;
         let local_tree = local_commit.tree()?;
         let remote_tree = remote_commit.tree()?;
 
-        let paths = union_of_paths(&[&base_tree, &local_tree, &remote_tree]);
+        let mut trees: Vec<&Tree<'_>> = vec![&local_tree, &remote_tree];
+        if let Some(ref bt) = base_tree {
+            trees.push(bt);
+        }
+        let paths = union_of_paths(&trees);
 
         let mut index = self.repo.index()?;
         index.clear()?;
         for path in paths {
-            let base_blob = blob_at(&self.repo, &base_tree, &path);
+            let base_blob = base_tree.as_ref().and_then(|t| blob_at(&self.repo, t, &path));
             let local_blob = blob_at(&self.repo, &local_tree, &path);
             let remote_blob = blob_at(&self.repo, &remote_tree, &path);
 
@@ -449,6 +469,10 @@ impl Vault {
         })?;
 
         remove_unwanted(&self.repo, &self.working_tree, &self.working_tree, &wanted)?;
+        if let Ok(mut index) = self.repo.index() {
+            let _ = index.read_tree(&tree);
+            let _ = index.write();
+        }
         Ok(())
     }
 
@@ -800,5 +824,83 @@ mod tests {
         assert!(merged.contains("charger"));
         assert!(merged.contains("@mobile.conflict(theirs)"));
         assert!(merged.contains("notebook"));
+    }
+
+    #[test]
+    fn unrelated_histories_merge_cleanly() {
+        let remote = shared_remote();
+
+        // Client A initializes vault, writes note_a.tmt, syncs to remote (creates root commit on remote).
+        let mut a = open_vault();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        write_note(&a, "note_a.tmt", "Note A from Client A.\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        // Client B initializes vault independently, writes note_b.tmt (creates local root commit before syncing).
+        let mut b = open_vault();
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        write_note(&b, "note_b.tmt", "Note B from Client B.\n");
+
+        // Client B syncs with remote. Local and remote have unrelated histories (no merge base).
+        // This should not fail with "no merge base found", but produce a merge commit.
+        let report = b.vault.sync(&NoCredentials).unwrap();
+        assert!(report.notes_needing_resolution.is_empty());
+        assert_eq!(read_note(&b, "note_a.tmt"), "Note A from Client A.\n");
+        assert_eq!(read_note(&b, "note_b.tmt"), "Note B from Client B.\n");
+
+        // Client A syncs again and receives note_b.tmt via fast-forward.
+        let report = a.vault.sync(&NoCredentials).unwrap();
+        assert!(report.notes_needing_resolution.is_empty());
+        assert_eq!(read_note(&a, "note_a.tmt"), "Note A from Client A.\n");
+        assert_eq!(read_note(&a, "note_b.tmt"), "Note B from Client B.\n");
+    }
+
+    #[test]
+    fn in_tree_git_repository_syncs_and_interoperates_with_external_git() {
+        let remote = shared_remote();
+
+        // Device A: PC setup with an in-tree git repository (e.g. git clone or git init).
+        let notes_dir = tempfile::tempdir().unwrap();
+        let in_tree_repo = Repository::init(notes_dir.path()).unwrap();
+        let in_tree_gitdir = notes_dir.path().join(".git");
+
+        let mut a = Vault::open(notes_dir.path(), &in_tree_gitdir).unwrap();
+        a.set_remote(remote.path().to_str().unwrap()).unwrap();
+
+        // Write a note from PC
+        std::fs::write(notes_dir.path().join("pc_note.tmt"), "Written on PC\n").unwrap();
+        let report = a.sync(&NoCredentials).unwrap();
+        assert!(report.notes_needing_resolution.is_empty());
+
+        // Verify git commit is visible to the in-tree repo and external git commands
+        let head = in_tree_repo.head().unwrap().peel_to_commit().unwrap();
+        assert_eq!(head.summary(), Some("sync"));
+
+        // Verify working tree is clean for external git tools
+        let statuses = in_tree_repo.statuses(None).unwrap();
+        assert!(statuses.is_empty(), "Working tree should be clean in in-tree repo");
+
+        // Device B: Mobile / cloud setup using private bare repo
+        let mut b = open_vault();
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        let report = b.vault.sync(&NoCredentials).unwrap();
+        assert!(report.notes_needing_resolution.is_empty());
+        assert_eq!(read_note(&b, "pc_note.tmt"), "Written on PC\n");
+
+        // Device B writes mobile_note.tmt and syncs
+        write_note(&b, "mobile_note.tmt", "Written on Mobile\n");
+        b.vault.sync(&NoCredentials).unwrap();
+
+        // Device A syncs and receives mobile_note.tmt
+        let report = a.sync(&NoCredentials).unwrap();
+        assert!(report.notes_needing_resolution.is_empty());
+        assert_eq!(
+            std::fs::read_to_string(notes_dir.path().join("mobile_note.tmt")).unwrap(),
+            "Written on Mobile\n"
+        );
+
+        // In-tree repo continues to see working tree as clean
+        let statuses = in_tree_repo.statuses(None).unwrap();
+        assert!(statuses.is_empty(), "Working tree should remain clean after receiving remote changes");
     }
 }

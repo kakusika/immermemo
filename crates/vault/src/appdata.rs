@@ -37,8 +37,17 @@ impl AppData {
         Ok(self.base.join("vaults").join(Self::vault_key(vault_dir)?))
     }
 
-    /// The private (bare) git directory for the vault at `vault_dir`.
+    /// The git directory for the vault at `vault_dir`.
+    ///
+    /// If `vault_dir` contains an in-tree `.git` (e.g. from an external `git clone`
+    /// or `git init`), that directory is used directly so external tools (VS Code,
+    /// git CLI, Obsidian) see changes. Otherwise, falls back to this app's private
+    /// bare git directory outside the notes folder.
     pub fn gitdir(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
+        let in_tree = vault_dir.join(".git");
+        if in_tree.exists() {
+            return Ok(in_tree);
+        }
         Ok(self.vault_data_dir(vault_dir)?.join("git"))
     }
 
@@ -56,14 +65,39 @@ impl AppData {
 
     /// The remote URL isn't secret -- it's kept as plain text, separately
     /// from wherever the access token lives.
+    ///
+    /// If no URL has been saved in appdata yet, but `vault_dir` has an in-tree
+    /// git repository with an `origin` remote, returns that URL.
     pub fn load_remote(&self, vault_dir: &Path) -> Option<String> {
-        self.remote_file(vault_dir)
-            .ok()
-            .and_then(|p| read_trimmed(&p))
+        if let Some(url) = self.remote_file(vault_dir).ok().and_then(|p| read_trimmed(&p)) {
+            return Some(url);
+        }
+        let in_tree = vault_dir.join(".git");
+        if in_tree.exists() {
+            if let Ok(repo) = git2::Repository::open(vault_dir) {
+                if let Ok(remote) = repo.find_remote("origin") {
+                    if let Some(url) = remote.url().map(str::trim).filter(|s| !s.is_empty()) {
+                        return Some(url.to_string());
+                    }
+                }
+            }
+        }
+        None
     }
 
     pub fn save_remote(&self, vault_dir: &Path, url: &str) -> anyhow::Result<()> {
-        write(&self.remote_file(vault_dir)?, url)
+        write(&self.remote_file(vault_dir)?, url)?;
+        let in_tree = vault_dir.join(".git");
+        if in_tree.exists() {
+            if let Ok(repo) = git2::Repository::open(vault_dir) {
+                if repo.find_remote("origin").is_ok() {
+                    let _ = repo.remote_set_url("origin", url);
+                } else {
+                    let _ = repo.remote("origin", url);
+                }
+            }
+        }
+        Ok(())
     }
 
     fn last_note_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
@@ -336,5 +370,50 @@ mod tests {
         data.save_theme(1).unwrap();
         assert_eq!(data.load_font_size(), Some(2));
         assert_eq!(data.load_theme(), Some(1));
+    }
+
+    #[test]
+    fn in_tree_gitdir_is_used_when_present() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().join("appdata"));
+        let vault = tempfile::tempdir().unwrap();
+
+        // Without .git, gitdir points inside appdata.
+        let default_gitdir = data.gitdir(vault.path()).unwrap();
+        assert!(default_gitdir.starts_with(dir.path().join("appdata")));
+
+        // With in-tree .git, gitdir points to vault's .git.
+        let in_tree_git = vault.path().join(".git");
+        std::fs::create_dir(&in_tree_git).unwrap();
+        assert_eq!(data.gitdir(vault.path()).unwrap(), in_tree_git);
+    }
+
+    #[test]
+    fn in_tree_remote_is_detected_and_updated() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().join("appdata"));
+        let vault = tempfile::tempdir().unwrap();
+
+        // Initialize a standard git repo inside vault
+        let repo = git2::Repository::init(vault.path()).unwrap();
+        repo.remote("origin", "https://github.com/example/notes.git")
+            .unwrap();
+
+        // Automatically detected without remote.txt
+        assert_eq!(
+            data.load_remote(vault.path()),
+            Some("https://github.com/example/notes.git".to_string())
+        );
+
+        // Updating via save_remote updates both remote.txt and .git config
+        data.save_remote(vault.path(), "https://github.com/example/updated.git")
+            .unwrap();
+        assert_eq!(
+            data.load_remote(vault.path()),
+            Some("https://github.com/example/updated.git".to_string())
+        );
+        let updated_repo = git2::Repository::open(vault.path()).unwrap();
+        let remote = updated_repo.find_remote("origin").unwrap();
+        assert_eq!(remote.url(), Some("https://github.com/example/updated.git"));
     }
 }

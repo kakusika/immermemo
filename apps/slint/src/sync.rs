@@ -16,7 +16,9 @@ pub fn run(
     credentials: &dyn CredentialProvider,
     certificate_verifier: Option<Box<dyn CertificateVerifier>>,
 ) -> anyhow::Result<Vec<PathBuf>> {
-    std::fs::create_dir_all(gitdir)?;
+    if !gitdir.exists() {
+        std::fs::create_dir_all(gitdir)?;
+    }
     let mut vault = Vault::open(vault_dir, gitdir)?;
     vault.set_certificate_verifier(certificate_verifier);
     vault.set_remote(remote)?;
@@ -130,5 +132,35 @@ mod tests {
             .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
             .collect();
         assert_eq!(names, ["note.tmt"]);
+    }
+
+    #[test]
+    fn in_tree_git_repository_is_used_when_already_present() {
+        let remote = bare_remote();
+        let a = Device::new();
+        // User clones or inits repo in the notes directory
+        git2::Repository::init(a.notes.path()).unwrap();
+
+        a.write("note.tmt", "In-tree repo\n");
+        assert!(a.sync(&remote).unwrap().is_empty());
+
+        // .git is inside notes folder
+        assert!(a.notes.path().join(".git").exists());
+
+        // Private app-data git directory was NOT created
+        let private_vault_git = a.app_data.base().join("vaults");
+        let private_has_git = if private_vault_git.exists() {
+            std::fs::read_dir(&private_vault_git)
+                .unwrap()
+                .any(|e| e.unwrap().path().join("git").exists())
+        } else {
+            false
+        };
+        assert!(!private_has_git, "Private git directory should not be created when in-tree .git exists");
+
+        // The commit exists in the in-tree .git repo
+        let repo = git2::Repository::open(a.notes.path()).unwrap();
+        let head = repo.head().unwrap().peel_to_commit().unwrap();
+        assert_eq!(head.summary(), Some("sync"));
     }
 }
