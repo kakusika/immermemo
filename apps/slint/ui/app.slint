@@ -1,14 +1,14 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, ActionRow, Colors, BottomNavBar } from "components.slint";
-import { ListPane } from "panes/files.slint";
-import { EditorPane } from "panes/editor.slint";
-import { HomePane } from "panes/home.slint";
-import { PropertiesPane } from "panes/properties.slint";
-import { SearchPane } from "panes/search.slint";
-import { RemoteSheet } from "remote_sheet.slint";
+import { FilesScreen } from "screens/files.slint";
+import { EditorScreen } from "screens/editor.slint";
+import { HomeScreen } from "screens/home.slint";
+import { PropertiesScreen } from "screens/properties.slint";
+import { SearchScreen } from "screens/search.slint";
+import { RemoteSheet } from "sheets/remote.slint";
 import { TextInputDialog, ConfirmDialog, ActionSheet } from "dialogs.slint";
-import { VaultSheet } from "vault_sheet.slint";
-import { SettingsSheet } from "settings_sheet.slint";
+import { VaultSheet } from "sheets/vault.slint";
+import { SettingsSheet } from "sheets/settings.slint";
 
 export component App inherits Window {
     title: "immermemo";
@@ -187,7 +187,7 @@ export component App inherits Window {
                 }
 
                 // Screen 0: Home
-                home-screen := HomePane {
+                home-screen := HomeScreen {
                     x: (0 - root.active-tab) * parent.width + root.swipe-dx;
                     y: 0px;
                     width: parent.width;
@@ -220,7 +220,7 @@ export component App inherits Window {
                 }
 
                 // Screen 1: Files / Notes list
-                files-screen := ListPane {
+                files-screen := FilesScreen {
                     x: (1 - root.active-tab) * parent.width + root.swipe-dx;
                     y: 0px;
                     width: parent.width;
@@ -261,7 +261,7 @@ export component App inherits Window {
                     width: parent.width;
                     height: parent.height;
 
-                    pane := EditorPane {
+                    pane := EditorScreen {
                         width: 100%;
                         height: 100%;
                         title: root.current-title;
@@ -297,7 +297,7 @@ export component App inherits Window {
                 }
 
                 // Screen 3: Details / Properties
-                details-screen := PropertiesPane {
+                details-screen := PropertiesScreen {
                     x: (3 - root.active-tab) * parent.width + root.swipe-dx;
                     y: 0px;
                     width: parent.width;
@@ -328,7 +328,7 @@ export component App inherits Window {
                 }
 
                 // Screen 4: Search
-                search-screen := SearchPane {
+                search-screen := SearchScreen {
                     x: (4 - root.active-tab) * parent.width + root.swipe-dx;
                     y: 0px;
                     width: parent.width;

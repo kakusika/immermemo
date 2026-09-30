@@ -1,7 +1,7 @@
 import { Palette, TextEdit } from "std-widgets.slint";
 import { Metrics, Colors, Shapes, IconButton, BubbleButton, UndoRedoBubble, TopBar } from "../components.slint";
 
-export component EditorPane inherits Rectangle {
+export component EditorScreen inherits Rectangle {
     in property <string> title;
     in property <bool> has-note: false;
     in property <int> note-count: 0;
@@ -26,6 +26,7 @@ export component EditorPane inherits Rectangle {
     callback resolve-mine();
     callback resolve-theirs();
     callback jump-conflict();
+    callback open-conflict-sheet();
 
     // Moves the caret after Rust restores text from the undo history.
     public function set-cursor(offset: int) {
@@ -118,6 +119,29 @@ export component EditorPane inherits Rectangle {
 
                 Rectangle {
                     horizontal-stretch: 1;
+                }
+
+                Rectangle {
+                    height: 28px;
+                    width: resolve-btn-layout.preferred-width + 16px;
+                    border-radius: 14px;
+                    background: resolve-touch.pressed ? Colors.warning.darker(15%) : Colors.warning;
+
+                    resolve-btn-layout := HorizontalLayout {
+                        padding-left: 8px;
+                        padding-right: 8px;
+                        Text {
+                            text: "解決シートを開く";
+                            font-size: 12px;
+                            font-weight: 700;
+                            color: #ffffff;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    resolve-touch := TouchArea {
+                        clicked => { root.open-conflict-sheet(); }
+                    }
                 }
 
                 Rectangle {
