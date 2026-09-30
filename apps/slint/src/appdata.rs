@@ -169,6 +169,30 @@ impl AppData {
     pub fn save_current_vault(&self, vault_dir: &Path) -> anyhow::Result<()> {
         write(&self.current_vault_file(), &vault_dir.display().to_string())
     }
+
+    fn font_size_file(&self) -> PathBuf {
+        self.base.join("font_size.txt")
+    }
+
+    pub fn load_font_size(&self) -> Option<i32> {
+        read_trimmed(&self.font_size_file()).and_then(|s| s.parse().ok())
+    }
+
+    pub fn save_font_size(&self, choice: i32) -> anyhow::Result<()> {
+        write(&self.font_size_file(), &choice.to_string())
+    }
+
+    fn theme_file(&self) -> PathBuf {
+        self.base.join("theme.txt")
+    }
+
+    pub fn load_theme(&self) -> Option<i32> {
+        read_trimmed(&self.theme_file()).and_then(|s| s.parse().ok())
+    }
+
+    pub fn save_theme(&self, choice: i32) -> anyhow::Result<()> {
+        write(&self.theme_file(), &choice.to_string())
+    }
 }
 
 fn read_trimmed(path: &Path) -> Option<String> {
@@ -299,5 +323,18 @@ mod tests {
 
         data.clear_last_note(vault.path());
         assert_eq!(data.load_last_note(vault.path()), None);
+    }
+
+    #[test]
+    fn font_size_and_theme_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().to_owned());
+        assert_eq!(data.load_font_size(), None);
+        assert_eq!(data.load_theme(), None);
+
+        data.save_font_size(2).unwrap();
+        data.save_theme(1).unwrap();
+        assert_eq!(data.load_font_size(), Some(2));
+        assert_eq!(data.load_theme(), Some(1));
     }
 }
