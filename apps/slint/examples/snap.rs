@@ -73,10 +73,42 @@ fn main() {
     app.show().unwrap();
 
     // `changed` handlers (which decide `narrow`) run before a frame, so the layout
-    // settles on the second one.
+    app.set_list_open(true);
+    std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, "/dev/null");
     render(&window, size, &format!("{prefix}-list.ppm"));
+
+    // Search query with snippet preview
+    app.set_search_query("計画".into());
+    app.set_notes(ModelRc::new(VecModel::from(vec![
+        "旅行の計画".into(),
+    ])));
+    app.set_conflicted(ModelRc::new(VecModel::from(vec![false])));
+    app.set_snippets(ModelRc::new(VecModel::from(vec![
+        "...来月の旅行の計画について話し合う...".into(),
+    ])));
+    render(&window, size, &format!("{prefix}-search.ppm"));
+
+    // Search query with no matching notes (empty state)
+    app.set_search_query("宇宙旅行".into());
+    app.set_notes(ModelRc::new(VecModel::default()));
+    app.set_snippets(ModelRc::new(VecModel::default()));
+    render(&window, size, &format!("{prefix}-search-empty.ppm"));
+
+    // Restore note list
+    app.set_search_query("".into());
+    app.set_notes(ModelRc::new(VecModel::from(
+        names
+            .iter()
+            .map(|n| (*n).into())
+            .collect::<Vec<slint::SharedString>>(),
+    )));
+    app.set_conflicted(ModelRc::new(VecModel::from(vec![
+        false, false, true, false, false,
+    ])));
+
     app.set_list_open(false);
+    std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor.ppm"));
     app.set_current_has_conflict(true);
     render(&window, size, &format!("{prefix}-conflict.ppm"));
@@ -105,12 +137,25 @@ fn main() {
     render(&window, size, &format!("{prefix}-remote.ppm"));
     app.set_remote_open(false);
 
+    app.set_settings_open(true);
+    app.set_current_vault_name("notes".into());
+    app.set_current_vault_path("/home/user/notes".into());
+    render(&window, size, &format!("{prefix}-settings.ppm"));
+    app.set_settings_open(false);
+
+    app.set_note_menu_index(2);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-note-menu.ppm"));
+    app.set_note_menu_index(-1);
+
     app.set_rename_open(true);
     app.set_rename_draft("ideas".into());
+    std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-rename.ppm"));
     app.set_rename_open(false);
 
     app.set_delete_confirm_open(true);
+    std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-delete-confirm.ppm"));
     app.set_delete_confirm_open(false);
 
