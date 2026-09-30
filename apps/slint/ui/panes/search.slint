@@ -1,0 +1,205 @@
+import { Palette, ListView, LineEdit } from "std-widgets.slint";
+import {
+    Metrics,
+    Colors,
+    Shapes,
+    TopBar,
+    Icon,
+} from "../components.slint";
+
+export component SearchPane inherits Rectangle {
+    in property <length> inset-top: 0px;
+    in property <length> inset-bottom: 0px;
+
+    in-out property <string> query: "";
+    in property <[string]> notes: [];
+    in property <[string]> snippets: [];
+    in property <[bool]> conflicted: [];
+
+    callback query-changed(string);
+    callback select(int);
+
+    background: Palette.background;
+
+    VerticalLayout {
+        TopBar {
+            inset-top: root.inset-top;
+
+            // Search bar taking full width of top bar
+            Rectangle {
+                horizontal-stretch: 1;
+                height: 38px;
+                border-radius: 19px;
+                background: Palette.alternate-background;
+
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 8px;
+                    spacing: 8px;
+
+                    Icon {
+                        shape: Shapes.search;
+                        tint: Colors.muted;
+                        width: 18px;
+                        height: 18px;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    search_input := LineEdit {
+                        horizontal-stretch: 1;
+                        font-size: 14px;
+                        placeholder-text: "ノートのタイトルや本文を検索...";
+                        text <=> root.query;
+                        edited(text) => {
+                            root.query-changed(text);
+                        }
+                    }
+
+                    if root.query != "": Rectangle {
+                        width: 28px;
+                        height: 28px;
+                        horizontal-stretch: 0;
+                        y: (parent.height - self.height) / 2;
+                        border-radius: 14px;
+                        background: clear_btn.pressed ? Palette.foreground.with-alpha(0.12) : transparent;
+
+                        Icon {
+                            shape: Shapes.close;
+                            tint: Colors.muted;
+                            width: 14px;
+                            height: 14px;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        clear_btn := TouchArea {
+                            clicked => {
+                                root.query = "";
+                                root.query-changed("");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            height: 1px;
+            background: Colors.separator;
+        }
+
+        // Top spacing
+        Rectangle {
+            height: 6px;
+        }
+
+        // Empty state when search query produced no results
+        if root.notes.length == 0 && root.query != "": Rectangle {
+            vertical-stretch: 1;
+            VerticalLayout {
+                alignment: center;
+                spacing: 12px;
+
+                Icon {
+                    shape: Shapes.search;
+                    tint: Colors.muted;
+                    width: 36px;
+                    height: 36px;
+                    x: (parent.width - self.width) / 2;
+                }
+
+                Text {
+                    text: "\"" + root.query + "\" に一致するノートはありません";
+                    font-size: 14px;
+                    color: Colors.muted;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        // Initial empty state when no query typed
+        if root.query == "": Rectangle {
+            vertical-stretch: 1;
+            VerticalLayout {
+                alignment: center;
+                spacing: 8px;
+
+                Icon {
+                    shape: Shapes.search;
+                    tint: Colors.muted.with-alpha(0.4);
+                    width: 40px;
+                    height: 40px;
+                    x: (parent.width - self.width) / 2;
+                }
+
+                Text {
+                    text: "タイトルや本文でノートを検索できます";
+                    font-size: 14px;
+                    color: Colors.muted;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        // Search Results List
+        if root.notes.length > 0 && root.query != "": ListView {
+            vertical-stretch: 1;
+
+            for name[i] in root.notes: Rectangle {
+                property <bool> has-snippet: root.snippets.length > i && root.snippets[i] != "";
+                height: has-snippet ? 66px : 52px;
+
+                item_container := Rectangle {
+                    x: 8px;
+                    y: 3px;
+                    width: parent.width - 16px;
+                    height: parent.height - 6px;
+                    border-radius: 16px;
+                    background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+                    animate background { duration: 120ms; easing: ease-out; }
+
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        spacing: 10px;
+
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            alignment: center;
+                            spacing: 2px;
+
+                            Text {
+                                text: name;
+                                font-size: 15px;
+                                font-weight: 500;
+                                color: Palette.foreground;
+                                overflow: elide;
+                            }
+
+                            if has-snippet: Text {
+                                text: root.snippets[i];
+                                font-size: 12px;
+                                color: Colors.muted;
+                                overflow: elide;
+                            }
+                        }
+
+                        if root.conflicted.length > i && root.conflicted[i]: Rectangle {
+                            width: 8px;
+                            height: 8px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 4px;
+                            background: Colors.warning;
+                        }
+                    }
+
+                    touch := TouchArea {
+                        clicked => {
+                            root.select(i);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

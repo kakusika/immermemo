@@ -1,5 +1,5 @@
 import { Palette, TextEdit } from "std-widgets.slint";
-import { Metrics, Colors, Shapes, IconButton, TopBar } from "components.slint";
+import { Metrics, Colors, Shapes, IconButton, BubbleButton, UndoRedoBubble, TopBar } from "../components.slint";
 
 export component EditorPane inherits Rectangle {
     in property <string> title;
@@ -43,32 +43,30 @@ export component EditorPane inherits Rectangle {
     VerticalLayout {
         TopBar {
             inset-top: root.inset-top;
-            if root.show-back: IconButton {
-                shape: Shapes.menu;
+
+            if root.show-back: BubbleButton {
+                shape: Shapes.back;
                 clicked => { root.back(); }
             }
-            // Keeps the title off the edge when there is no back arrow.
-            if !root.show-back: Rectangle {
-                width: Metrics.gutter - 4px;
-            }
-            VerticalLayout {
+            Rectangle {
                 horizontal-stretch: 1;
-                alignment: center;
-                Text {
-                    text: root.has-note ? root.title : "immermemo";
-                    color: root.has-note ? Palette.foreground : Colors.muted;
-                    font-size: root.status != "" && !root.status-is-error ? 16px : 20px;
-                    font-weight: 600;
-                    vertical-alignment: center;
-                    overflow: elide;
-                }
 
                 if root.status != "" && !root.status-is-error: Text {
                     text: root.status;
-                    font-size: 11px;
+                    font-size: 12px;
                     color: Colors.muted;
+                    vertical-alignment: center;
                     overflow: elide;
+                    x: 4px;
+                    y: (parent.height - self.height) / 2;
                 }
+            }
+
+            if root.has-note: UndoRedoBubble {
+                can-undo: root.can-undo;
+                can-redo: root.can-redo;
+                undo => { root.undo(); }
+                redo => { root.redo(); }
             }
         }
 
@@ -256,61 +254,66 @@ export component EditorPane inherits Rectangle {
             }
         }
 
-        // Ctrl+Z / Ctrl+Y go to the Loro history instead of the widget's own
-        // undo; capture-key-pressed runs before the focused TextEdit sees the
-        // key. On a phone there is no such key: the bar below does the same.
-        edit-scope := FocusScope {
+        // Body area with in-body title and text editor
+        body-container := VerticalLayout {
             visible: root.has-note;
             horizontal-stretch: root.has-note ? 1 : 0;
             vertical-stretch: root.has-note ? 1 : 0;
             height: root.has-note ? 100% : 0%;
-            capture-key-pressed(event) => {
-                if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
-                    root.undo();
-                    return accept;
-                }
-                if (event.modifiers.control && (event.text == "y" || event.text == "Y" || ((event.text == "z" || event.text == "Z") && event.modifiers.shift))) {
-                    root.redo();
-                    return accept;
-                }
-                return reject;
-            }
-            editor := TextEdit {
-                width: parent.width;
-                height: parent.height;
-                enabled: root.has-note;
-                font-size: root.font-size;
-                text <=> root.body;
-                edited(t) => { root.edited(t); }
-            }
-        }
+            padding-left: 0px;
+            padding-right: 0px;
+            padding-top: 8px;
+            padding-bottom: 0px;
+            spacing: 2px;
 
-        if root.has-note: Rectangle {
-            height: Metrics.touch;
-            background: Palette.alternate-background;
+            // In-body note title (Notion / Apple Notes style)
             HorizontalLayout {
-                padding-left: 4px;
-                padding-right: 4px;
-                spacing: 4px;
-                alignment: start;
-                IconButton {
-                    shape: Shapes.undo;
-                    enabled: root.can-undo;
-                    clicked => { root.undo(); }
-                }
+                padding-left: Metrics.gutter;
+                padding-right: Metrics.gutter;
+                padding-top: 8px;
+                padding-bottom: 4px;
 
-                IconButton {
-                    shape: Shapes.redo;
-                    enabled: root.can-redo;
-                    clicked => { root.redo(); }
+                Text {
+                    horizontal-stretch: 1;
+                    text: root.title != "" ? root.title : "Untitled";
+                    font-size: 26px;
+                    font-weight: 700;
+                    color: Palette.foreground;
+                    wrap: word-wrap;
+                }
+            }
+
+            // Ctrl+Z / Ctrl+Y go to the Loro history instead of the widget's own
+            // undo; capture-key-pressed runs before the focused TextEdit sees the
+            // key.
+            edit-scope := FocusScope {
+                vertical-stretch: 1;
+                capture-key-pressed(event) => {
+                    if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
+                        root.undo();
+                        return accept;
+                    }
+                    if (event.modifiers.control && (event.text == "y" || event.text == "Y" || ((event.text == "z" || event.text == "Z") && event.modifiers.shift))) {
+                        root.redo();
+                        return accept;
+                    }
+                    return reject;
+                }
+                editor := TextEdit {
+                    width: parent.width;
+                    height: parent.height;
+                    enabled: root.has-note;
+                    font-size: root.font-size;
+                    text <=> root.body;
+                    edited(t) => { root.edited(t); }
                 }
             }
         }
 
-        // Pushes the bar above the keyboard or the system navigation bar.
-        Rectangle {
+        // Pushes content above the keyboard or system bar when present.
+        if root.inset-bottom > 0px: Rectangle {
             height: root.inset-bottom;
-            background: root.has-note ? Palette.alternate-background : Palette.background;
+            background: Palette.background;
         }
     }
 }

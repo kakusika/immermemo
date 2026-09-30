@@ -1,0 +1,245 @@
+import { Palette, Button, ScrollView } from "std-widgets.slint";
+import {
+    Metrics,
+    Colors,
+    Shapes,
+    TopBar,
+    ActionRow,
+} from "../components.slint";
+
+export component PropertiesPane inherits Rectangle {
+    in property <length> inset-top: 0px;
+    in property <length> inset-bottom: 0px;
+
+    in property <bool> has-note: false;
+    in property <string> note-title: "";
+    in property <string> note-path: "";
+    in property <int> char-count: 0;
+    in property <int> word-count: 0;
+    in property <int> line-count: 0;
+    in property <bool> has-conflict: false;
+
+    callback rename-requested();
+    callback delete-requested();
+    callback resolve-mine();
+    callback resolve-theirs();
+
+    background: Palette.background;
+
+    VerticalLayout {
+        TopBar {
+            inset-top: root.inset-top;
+
+            Text {
+                horizontal-stretch: 1;
+                text: "プロパティ";
+                font-size: 22px;
+                font-weight: 700;
+                vertical-alignment: center;
+                color: Palette.foreground;
+            }
+        }
+
+        Rectangle {
+            height: 1px;
+            background: Colors.separator;
+        }
+
+        if !root.has-note: Rectangle {
+            vertical-stretch: 1;
+            VerticalLayout {
+                alignment: center;
+                spacing: 12px;
+                Text {
+                    text: "現在開いているノートはありません。";
+                    font-size: 15px;
+                    color: Colors.muted;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        if root.has-note: ScrollView {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding-left: Metrics.gutter;
+                padding-right: Metrics.gutter;
+                padding-top: 16px;
+                padding-bottom: root.inset-bottom + 24px;
+                spacing: 20px;
+
+                // ----------------------------------------------------
+                // Section: Document Info
+                // ----------------------------------------------------
+                Rectangle {
+                    border-radius: 14px;
+                    background: Palette.alternate-background;
+
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 12px;
+
+                        VerticalLayout {
+                            spacing: 4px;
+                            Text {
+                                text: "ノート情報";
+                                font-size: 11px;
+                                font-weight: 700;
+                                color: Colors.muted;
+                                letter-spacing: 0.5px;
+                            }
+                            Text {
+                                text: root.note-title;
+                                font-size: 18px;
+                                font-weight: 700;
+                                color: Palette.foreground;
+                            }
+                            if root.note-path != "": Text {
+                                text: root.note-path;
+                                font-size: 12px;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+
+                        Rectangle {
+                            height: 1px;
+                            background: Colors.separator;
+                        }
+
+                        // Statistics
+                        HorizontalLayout {
+                            spacing: 16px;
+
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                spacing: 2px;
+                                Text {
+                                    text: "文字数";
+                                    font-size: 12px;
+                                    color: Colors.muted;
+                                }
+                                Text {
+                                    text: root.char-count;
+                                    font-size: 17px;
+                                    font-weight: 600;
+                                    color: Palette.foreground;
+                                }
+                            }
+
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                spacing: 2px;
+                                Text {
+                                    text: "単語数";
+                                    font-size: 12px;
+                                    color: Colors.muted;
+                                }
+                                Text {
+                                    text: root.word-count;
+                                    font-size: 17px;
+                                    font-weight: 600;
+                                    color: Palette.foreground;
+                                }
+                            }
+
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                spacing: 2px;
+                                Text {
+                                    text: "行数";
+                                    font-size: 12px;
+                                    color: Colors.muted;
+                                }
+                                Text {
+                                    text: root.line-count;
+                                    font-size: 17px;
+                                    font-weight: 600;
+                                    color: Palette.foreground;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ----------------------------------------------------
+                // Section: Conflict Status
+                // ----------------------------------------------------
+                if root.has-conflict: Rectangle {
+                    border-radius: 14px;
+                    background: Colors.warning.with-alpha(0.12);
+                    border-width: 1px;
+                    border-color: Colors.warning.with-alpha(0.4);
+
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 10px;
+
+                        Text {
+                            text: "⚠️ 競合が発生しています";
+                            font-size: 12px;
+                            font-weight: 700;
+                            color: Colors.warning;
+                        }
+
+                        Text {
+                            text: "このノートには同時に編集された変更が含まれています。";
+                            font-size: 13px;
+                            color: Palette.foreground;
+                            wrap: word-wrap;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Button {
+                                text: "ローカル側を残す";
+                                clicked => { root.resolve-mine(); }
+                            }
+                            Button {
+                                text: "リモート側を残す";
+                                clicked => { root.resolve-theirs(); }
+                            }
+                        }
+                    }
+                }
+
+                // ----------------------------------------------------
+                // Section: Note Actions
+                // ----------------------------------------------------
+                VerticalLayout {
+                    spacing: 8px;
+
+                    Text {
+                        text: "操作";
+                        font-size: 11px;
+                        font-weight: 700;
+                        color: Colors.muted;
+                        letter-spacing: 0.5px;
+                    }
+
+                    Rectangle {
+                        border-radius: 14px;
+                        background: Palette.alternate-background;
+
+                        VerticalLayout {
+                            padding: 8px;
+                            spacing: 4px;
+
+                            ActionRow {
+                                text: "名前を変更...";
+                                clicked => { root.rename-requested(); }
+                            }
+
+                            ActionRow {
+                                text: "ノートを削除...";
+                                tint: Colors.danger;
+                                clicked => { root.delete-requested(); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

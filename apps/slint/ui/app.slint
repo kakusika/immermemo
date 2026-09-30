@@ -1,7 +1,10 @@
 import { Palette } from "std-widgets.slint";
-import { Metrics, ActionRow, Colors } from "components.slint";
-import { ListPane } from "list_pane.slint";
-import { EditorPane } from "editor_pane.slint";
+import { Metrics, ActionRow, Colors, BottomNavBar } from "components.slint";
+import { ListPane } from "panes/files.slint";
+import { EditorPane } from "panes/editor.slint";
+import { HomePane } from "panes/home.slint";
+import { PropertiesPane } from "panes/properties.slint";
+import { SearchPane } from "panes/search.slint";
 import { RemoteSheet } from "remote_sheet.slint";
 import { TextInputDialog, ConfirmDialog, ActionSheet } from "dialogs.slint";
 import { VaultSheet } from "vault_sheet.slint";
@@ -13,12 +16,20 @@ export component App inherits Window {
     preferred-height: 640px;
     background: Palette.background;
 
+    // Navigation: 0: Home, 1: Files, 2: Note, 3: Details, 4: Search
+    in-out property <int> active-tab: 2;
+
     in property <[string]> notes;
     in property <[string]> snippets: [];
     in property <[bool]> conflicted;
     in property <int> current: -1;
     in-out property <string> search-query: "";
     in property <string> current-title;
+    in property <string> current-note-path: "";
+    in property <int> char-count: 0;
+    in property <int> word-count: 0;
+    in property <int> line-count: 0;
+    in property <int> conflict-count: 0;
     in-out property <string> status;
     in-out property <bool> status-is-error: false;
     in property <bool> syncing;
@@ -45,6 +56,7 @@ export component App inherits Window {
     in-out property <int> font-size-choice: 1;
     in-out property <length> editor-font-size: 17px;
     in-out property <int> theme-choice: 0;
+
     function apply-theme-choice() {
         if (root.theme-choice == 1) {
             Palette.color-scheme = ColorScheme.light;
@@ -55,40 +67,26 @@ export component App inherits Window {
         }
     }
     changed theme-choice => { root.apply-theme-choice(); }
+
     in-out property <bool> add-vault-open: false;
     in-out property <string> add-vault-draft;
-    // Extra room above/below the content, for previewing a phone's system
-    // bars on a desktop window (the real ones come from `safe-area-insets`).
     in property <length> extra-inset-top: 0px;
     in property <length> extra-inset-bottom: 0px;
 
-    // On a narrow window (a phone), the list is a slide-out drawer sidebar over the editor.
+    // Kept for backward compatibility with snap tests
     in-out property <bool> list-open: false;
-    // Set from `changed width`, not bound to `root.width`: the window's size
-    // depends on its content, so a binding here would be a binding loop.
+    changed list-open => {
+        if (root.list-open && root.active-tab != 1) {
+            root.active-tab = 1;
+        }
+    }
+
     in-out property <bool> narrow: false;
     init => {
         root.narrow = root.width < 600px;
         root.apply-theme-choice();
     }
     changed width => { root.narrow = root.width < 600px; }
-
-    // Drawer geometry and smooth touch tracking
-    property <length> drawer-width: min(380px, root.width * 0.86);
-    property <bool> drawer-dragging: false;
-    property <length> drawer-drag-dx: 0px;
-    property <length> drawer-pos: root.drawer-dragging
-        ? (root.list-open
-            ? max(-root.drawer-width, min(0px, root.drawer-drag-dx))
-            : max(-root.drawer-width, min(0px, -root.drawer-width + root.drawer-drag-dx)))
-        : (root.list-open ? 0px : -root.drawer-width);
-
-    animate drawer-pos {
-        duration: root.drawer-dragging ? 0ms : 150ms;
-        easing: ease-out;
-    }
-
-    property <float> drawer-progress: max(0.0, min(1.0, (root.drawer-pos + root.drawer-width) / root.drawer-width));
 
     callback select(int);
     callback edited(string);
@@ -124,8 +122,6 @@ export component App inherits Window {
     }
 
     property <length> inset-top: root.safe-area-insets.top + root.extra-inset-top;
-    // The on-screen keyboard overlays the app; the part it covers. Updated from
-    // `changed`, for the same reason as `narrow`: it reads the window height.
     in-out property <length> keyboard: 0px;
     function update-keyboard() {
         root.keyboard = root.virtual-keyboard-size.height > 0
@@ -137,195 +133,116 @@ export component App inherits Window {
     changed height => { root.update-keyboard(); }
     property <length> inset-bottom: max(root.safe-area-insets.bottom + root.extra-inset-bottom, root.keyboard);
 
-    SwipeGestureHandler {
-        enabled: root.narrow && !root.list-open;
-        handle-swipe-right: true;
-        moved => {
-            if (self.swiping) {
-                root.drawer-dragging = true;
-                root.drawer-drag-dx = max(0px, self.current-position.x - self.pressed-position.x);
-            }
-        }
-        swiped => {
-            root.drawer-dragging = false;
-            if (root.drawer-progress > 0.20) {
-                root.list-open = true;
-            } else {
-                root.list-open = false;
-            }
-        }
-        cancelled => {
-            root.drawer-dragging = false;
-            root.list-open = false;
-        }
+    // Horizontal swipe gesture tracking for tab navigation
+    property <bool> is-swiping: false;
+    property <length> swipe-dx: 0px;
 
-        HorizontalLayout {
-            padding-left: root.safe-area-insets.left;
-            padding-right: root.safe-area-insets.right;
+    // Main App Layout
+    VerticalLayout {
+        padding: 0px;
+        spacing: 0px;
 
-            // Wide mode: side-by-side list pane
-            if !root.narrow: ListPane {
-                width: 320px;
-                notes: root.notes;
-                snippets: root.snippets;
-                conflicted: root.conflicted;
-                current: root.current;
-                status: root.status;
-                syncing: root.syncing;
-                inset-top: root.inset-top;
-                inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
-                highlight-current: true;
-                remote-configured: root.remote-configured;
-                search-query <=> root.search-query;
-                search-query-changed(q) => { root.search-query-changed(q); }
-                select(i) => {
-                    root.select(i);
-                    pane.focus-editor();
-                }
-                new-note => {
-                    root.new-note();
-                    pane.focus-editor();
-                }
-                sync => { root.sync(); }
-                open-settings => { root.open-settings(); }
-                note-menu-requested(i) => { root.note-menu-index = i; }
-                trigger-haptic => { root.trigger-haptic(); }
-                open-vault-sheet => { root.open-vault-sheet(); }
-                close-drawer => {}
-            }
+        // Content Area with 5 swipeable screens
+        content-box := Rectangle {
+            vertical-stretch: 1;
+            clip: true;
 
-            if !root.narrow: Rectangle {
-                width: 1px;
-                background: Palette.foreground.with-alpha(0.12);
-            }
-
-            // Not an `if`: `set-cursor` needs `pane` to stay reachable by id.
-            // Editor is always the base screen on both wide and narrow.
-            pane := EditorPane {
-                horizontal-stretch: 1;
-                title: root.current-title;
-                has-note: root.current >= 0;
-                note-count: root.notes.length;
-                has-conflict: root.current-has-conflict;
-                can-undo: root.can-undo;
-                can-redo: root.can-redo;
-                show-back: root.narrow;
-                inset-top: root.inset-top;
-                inset-bottom: root.inset-bottom;
-                font-size: root.editor-font-size;
-                status: root.status;
-                status-is-error: root.status-is-error;
-                body <=> root.body;
-                edited(t) => { root.edited(t); }
-                undo => { root.undo(); }
-                redo => { root.redo(); }
-                back => { root.list-open = !root.list-open; }
-                dismiss-status => {
-                    root.status = "";
-                    root.status-is-error = false;
-                }
-                new-note => {
-                    root.new-note();
-                    pane.focus-editor();
-                }
-                resolve-mine => { root.resolve-mine(); }
-                resolve-theirs => { root.resolve-theirs(); }
-                jump-conflict => { root.jump-conflict(); }
-            }
-        }
-    }
-
-    // Drawer overlay for narrow screens
-    drawer-scope := FocusScope {
-        property <bool> shown: root.narrow && (root.list-open || root.drawer-dragging || root.drawer-pos > -root.drawer-width + 0.5px);
-        visible: shown;
-        width: shown ? 100% : 0%;
-        height: shown ? 100% : 0%;
-
-        capture-key-pressed(event) => {
-            if (event.text == Key.Back) {
-                root.list-open = false;
-                pane.focus-editor();
-                return accept;
-            }
-            return reject;
-        }
-        capture-key-released(event) => {
-            if (event.text == Key.Back) {
-                return accept;
-            }
-            return reject;
-        }
-
-        drawer-swipe := SwipeGestureHandler {
-            enabled: root.narrow && root.list-open;
-            handle-swipe-left: true;
-            moved => {
-                if (self.swiping) {
-                    root.drawer-dragging = true;
-                    root.drawer-drag-dx = min(0px, self.current-position.x - self.pressed-position.x);
-                }
-            }
-            swiped => {
-                root.drawer-dragging = false;
-                if (root.drawer-progress < 0.80) {
-                    root.list-open = false;
-                    pane.focus-editor();
-                } else {
-                    root.list-open = true;
-                }
-            }
-            cancelled => {
-                root.drawer-dragging = false;
-                root.list-open = true;
-            }
-
-            // Backdrop covering the editor
-            Rectangle {
+            SwipeGestureHandler {
                 width: 100%;
                 height: 100%;
-                background: #000000.with-alpha(0.35 * root.drawer-progress);
-                TouchArea {
-                    clicked => {
-                        root.list-open = false;
-                        pane.focus-editor();
+                enabled: root.narrow && root.keyboard == 0px && root.active-tab != 2;
+                handle-swipe-left: root.active-tab < 4;
+                handle-swipe-right: root.active-tab > 0;
+
+                moved => {
+                    if (self.swiping) {
+                        root.is-swiping = true;
+                        let dx = self.current-position.x - self.pressed-position.x;
+                        root.swipe-dx = dx;
                     }
                 }
-            }
 
-            // Drawer pane sliding in from left
-            Rectangle {
-                x: root.drawer-pos;
-                y: 0px;
-                width: root.drawer-width;
-                height: 100%;
-                background: Palette.background;
-                drop-shadow-blur: 16px;
-                drop-shadow-color: #000000.with-alpha(0.4 * root.drawer-progress);
+                swiped => {
+                    root.is-swiping = false;
+                    let dx = self.current-position.x - self.pressed-position.x;
+                    if (dx < -40px && root.active-tab < 4) {
+                        root.active-tab += 1;
+                        root.trigger-haptic();
+                        if (root.active-tab == 2) {
+                            pane.focus-editor();
+                        }
+                    } else if (dx > 40px && root.active-tab > 0) {
+                        root.active-tab -= 1;
+                        root.trigger-haptic();
+                        if (root.active-tab == 2) {
+                            pane.focus-editor();
+                        }
+                    }
+                    root.swipe-dx = 0px;
+                }
 
-                ListPane {
-                    width: 100%;
-                    height: 100%;
+                cancelled => {
+                    root.is-swiping = false;
+                    root.swipe-dx = 0px;
+                }
+
+                // Screen 0: Home
+                home-screen := HomePane {
+                    x: (0 - root.active-tab) * parent.width + root.swipe-dx;
+                    y: 0px;
+                    width: parent.width;
+                    height: parent.height;
+                    inset-top: root.inset-top;
+                    inset-bottom: root.inset-bottom;
+                    vault-name: root.current-vault-name;
+                    vault-path: root.current-vault-path;
+                    note-count: root.notes.length;
+                    conflict-count: root.conflict-count;
+                    status: root.status;
+                    syncing: root.syncing;
+                    remote-configured: root.remote-configured;
+                    current-note-title: root.current-title;
+                    has-current-note: root.current >= 0;
+                    new-note => {
+                        root.new-note();
+                        root.active-tab = 2;
+                        pane.focus-editor();
+                    }
+                    sync => { root.sync(); }
+                    open-vaults => { root.open-vault-sheet(); }
+                    open-settings => { root.open-settings(); }
+                    open-current-note => {
+                        root.active-tab = 2;
+                        pane.focus-editor();
+                    }
+
+                    animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
+                }
+
+                // Screen 1: Files / Notes list
+                files-screen := ListPane {
+                    x: (1 - root.active-tab) * parent.width + root.swipe-dx;
+                    y: 0px;
+                    width: parent.width;
+                    height: parent.height;
                     notes: root.notes;
-                    snippets: root.snippets;
                     conflicted: root.conflicted;
                     current: root.current;
                     status: root.status;
                     syncing: root.syncing;
                     inset-top: root.inset-top;
-                    inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+                    inset-bottom: root.inset-bottom;
                     highlight-current: true;
                     remote-configured: root.remote-configured;
-                    search-query <=> root.search-query;
-                    search-query-changed(q) => { root.search-query-changed(q); }
+                    vault-name: root.current-vault-name;
                     select(i) => {
                         root.select(i);
-                        root.list-open = false;
+                        root.active-tab = 2; // Jump to Note editor
                         pane.focus-editor();
                     }
                     new-note => {
                         root.new-note();
-                        root.list-open = false;
+                        root.active-tab = 2; // Jump to Note editor
                         pane.focus-editor();
                     }
                     sync => { root.sync(); }
@@ -333,21 +250,124 @@ export component App inherits Window {
                     note-menu-requested(i) => { root.note-menu-index = i; }
                     trigger-haptic => { root.trigger-haptic(); }
                     open-vault-sheet => { root.open-vault-sheet(); }
-                    close-drawer => {
-                        root.list-open = false;
+
+                    animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
+                }
+
+                // Screen 2: Note Editor
+                editor-wrapper := Rectangle {
+                    x: (2 - root.active-tab) * parent.width + root.swipe-dx;
+                    y: 0px;
+                    width: parent.width;
+                    height: parent.height;
+
+                    pane := EditorPane {
+                        width: 100%;
+                        height: 100%;
+                        title: root.current-title;
+                        has-note: root.current >= 0;
+                        note-count: root.notes.length;
+                        has-conflict: root.current-has-conflict;
+                        can-undo: root.can-undo;
+                        can-redo: root.can-redo;
+                        show-back: false;
+                        inset-top: root.inset-top;
+                        inset-bottom: root.keyboard > 0px ? root.keyboard : root.inset-bottom;
+                        font-size: root.editor-font-size;
+                        status: root.status;
+                        status-is-error: root.status-is-error;
+                        body <=> root.body;
+                        edited(t) => { root.edited(t); }
+                        undo => { root.undo(); }
+                        redo => { root.redo(); }
+                        dismiss-status => {
+                            root.status = "";
+                            root.status-is-error = false;
+                        }
+                        new-note => {
+                            root.new-note();
+                            pane.focus-editor();
+                        }
+                        resolve-mine => { root.resolve-mine(); }
+                        resolve-theirs => { root.resolve-theirs(); }
+                        jump-conflict => { root.jump-conflict(); }
+                    }
+
+                    animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
+                }
+
+                // Screen 3: Details / Properties
+                details-screen := PropertiesPane {
+                    x: (3 - root.active-tab) * parent.width + root.swipe-dx;
+                    y: 0px;
+                    width: parent.width;
+                    height: parent.height;
+                    inset-top: root.inset-top;
+                    inset-bottom: root.inset-bottom;
+                    has-note: root.current >= 0;
+                    note-title: root.current-title;
+                    note-path: root.current-note-path;
+                    char-count: root.char-count;
+                    word-count: root.word-count;
+                    line-count: root.line-count;
+                    has-conflict: root.current-has-conflict;
+                    rename-requested => {
+                        if (root.current >= 0) {
+                            root.rename-requested(root.current);
+                        }
+                    }
+                    delete-requested => {
+                        if (root.current >= 0) {
+                            root.delete-requested(root.current);
+                        }
+                    }
+                    resolve-mine => { root.resolve-mine(); }
+                    resolve-theirs => { root.resolve-theirs(); }
+
+                    animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
+                }
+
+                // Screen 4: Search
+                search-screen := SearchPane {
+                    x: (4 - root.active-tab) * parent.width + root.swipe-dx;
+                    y: 0px;
+                    width: parent.width;
+                    height: parent.height;
+                    inset-top: root.inset-top;
+                    inset-bottom: root.inset-bottom;
+                    query <=> root.search-query;
+                    notes: root.notes;
+                    snippets: root.snippets;
+                    conflicted: root.conflicted;
+                    query-changed(q) => { root.search-query-changed(q); }
+                    select(i) => {
+                        root.select(i);
+                        root.active-tab = 2; // Jump to Note editor
                         pane.focus-editor();
                     }
+
+                    animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
+                }
+            }
+        }
+
+        // Bottom Navigation Bar
+        BottomNavBar {
+            visible: root.keyboard == 0px;
+            height: root.keyboard == 0px ? (58px + root.safe-area-insets.bottom + root.extra-inset-bottom) : 0px;
+            active-tab <=> root.active-tab;
+            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+            tab-selected(idx) => {
+                root.active-tab = idx;
+                root.trigger-haptic();
+                if (idx == 2) {
+                    pane.focus-editor();
                 }
             }
         }
     }
 
-    changed list-open => {
-        if (root.narrow && root.list-open) {
-            drawer-scope.focus();
-        }
-    }
-
+    // Overlays & Sheets
     if root.settings-open: SettingsSheet {
         width: 100%;
         height: 100%;
@@ -374,8 +394,6 @@ export component App inherits Window {
     }
 
     if root.remote-open: RemoteSheet {
-        // Not inside the HorizontalLayout above: it must cover the window
-        // outright, not take a layout slot beside the panes.
         width: 100%;
         height: 100%;
         has-token: root.remote-has-token;
@@ -387,8 +405,8 @@ export component App inherits Window {
         cancel => { root.close-remote(); }
     }
 
-    ActionSheet {
-        open: root.note-menu-index >= 0;
+    if root.note-menu-index >= 0: ActionSheet {
+        open: true;
         narrow: root.narrow;
         title: root.note-menu-index >= 0 ? root.notes[root.note-menu-index] : "";
         inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
@@ -414,8 +432,8 @@ export component App inherits Window {
         }
     }
 
-    TextInputDialog {
-        open: root.rename-open;
+    if root.rename-open: TextInputDialog {
+        open: true;
         narrow: root.narrow;
         title: "Rename note";
         text-draft <=> root.rename-draft;
@@ -427,8 +445,8 @@ export component App inherits Window {
         cancel => { root.rename-open = false; }
     }
 
-    ConfirmDialog {
-        open: root.delete-confirm-open;
+    if root.delete-confirm-open: ConfirmDialog {
+        open: true;
         narrow: root.narrow;
         title: "Delete this note?";
         body: "This can't be undone from here.";
@@ -448,15 +466,18 @@ export component App inherits Window {
         current: root.current-vault;
         inset-top: root.inset-top;
         inset-bottom: root.inset-bottom;
-        select(i) => { root.switch-vault(i); }
+        select(i) => {
+            root.vault-sheet-open = false;
+            root.switch-vault(i);
+        }
         add => { root.add-vault-requested(); }
         close => { root.vault-sheet-open = false; }
         delete-requested(i) => { root.delete-vault-requested(i); }
         trigger-haptic => { root.trigger-haptic(); }
     }
 
-    ConfirmDialog {
-        open: root.delete-vault-confirm-open;
+    if root.delete-vault-confirm-open: ConfirmDialog {
+        open: true;
         narrow: root.narrow;
         title: "Remove this vault?";
         body: "Its notes will stay on disk, but its sync settings and git history will be forgotten.";
@@ -469,8 +490,8 @@ export component App inherits Window {
         cancel => { root.delete-vault-confirm-open = false; }
     }
 
-    TextInputDialog {
-        open: root.add-vault-open;
+    if root.add-vault-open: TextInputDialog {
+        open: true;
         narrow: root.narrow;
         title: "Add vault";
         text-draft <=> root.add-vault-draft;

@@ -161,6 +161,7 @@ pub fn run(
         let (weak, session) = (app.as_weak(), session.clone());
         move |text| {
             let app = weak.unwrap();
+            session::update_note_stats(&app, text.as_str());
             let mut s = session.borrow_mut();
             if let Some(history) = s.history.as_mut() {
                 history.edit(&text);
@@ -179,6 +180,8 @@ pub fn run(
                         .map(|r| s.conflicted[r.note_index])
                         .collect();
                     app.set_conflicted(ModelRc::new(VecModel::from(conflicted)));
+                    let conflict_count = s.conflicted.iter().filter(|&&c| c).count();
+                    app.set_conflict_count(conflict_count as i32);
                 }
             }
             if let Some(path) = s.current_path() {
@@ -376,6 +379,8 @@ pub fn run(
                 if session.borrow().notes.is_empty() {
                     let s = session.borrow();
                     s.app_data.clear_last_note(&s.vault_dir);
+                    session::clear_note_stats(&app);
+                    app.set_active_tab(1);
                     app.set_list_open(true);
                 } else {
                     open_initial_or_last_note(&app, &session);
@@ -383,6 +388,8 @@ pub fn run(
             } else if session.borrow().notes.is_empty() {
                 let s = session.borrow();
                 s.app_data.clear_last_note(&s.vault_dir);
+                session::clear_note_stats(&app);
+                app.set_active_tab(1);
                 app.set_list_open(true);
             }
         }

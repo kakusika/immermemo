@@ -124,8 +124,10 @@ pub fn refresh_list(app: &App, session: &Rc<RefCell<Session>>) {
         .iter()
         .map(|p| notes::has_conflict_marker(p))
         .collect();
+    let conflict_count = s.conflicted.iter().filter(|&&c| c).count();
     s.current = previous.and_then(|p| s.notes.iter().position(|n| *n == p));
     drop(s);
+    app.set_conflict_count(conflict_count as i32);
     update_filtered_list(app, session);
 }
 
@@ -217,6 +219,7 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     app.set_remote_configured(remote.is_some());
     app.set_current_title(SharedString::new());
     app.set_body(SharedString::new());
+    clear_note_stats(app);
     show_history_state(app, &session.borrow());
     refresh_list(app, session);
     refresh_vault_list(app, session);
@@ -226,6 +229,26 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
         app.set_list_open(false);
         open_initial_or_last_note(app, session);
     }
+}
+
+pub fn update_note_stats(app: &App, text: &str) {
+    let char_count = text.chars().count() as i32;
+    let word_count = text.split_whitespace().count() as i32;
+    let line_count = if text.is_empty() {
+        0
+    } else {
+        text.lines().count() as i32
+    };
+    app.set_char_count(char_count);
+    app.set_word_count(word_count);
+    app.set_line_count(line_count);
+}
+
+pub fn clear_note_stats(app: &App) {
+    app.set_current_note_path(SharedString::new());
+    app.set_char_count(0);
+    app.set_word_count(0);
+    app.set_line_count(0);
 }
 
 /// Turns what the user typed in the "Add vault" dialog into an actual
@@ -265,9 +288,15 @@ pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
             let ui_current = s.filtered_results.iter().position(|r| r.note_index == index);
             app.set_current(ui_current.map_or(-1, |i| i as i32));
             app.set_current_title(notes::display_name(&s.vault_dir, &path).into());
+            let note_rel_path = path
+                .strip_prefix(&s.vault_dir)
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|_| path.display().to_string());
+            app.set_current_note_path(note_rel_path.into());
             app.set_current_has_conflict(s.conflicted[index]);
             show_history_state(app, &s);
-            app.set_body(text.into());
+            app.set_body(text.clone().into());
+            update_note_stats(app, &text);
             set_status(app, "");
         }
         Err(e) => set_status(app, format!("Could not open {}: {e}", path.display())),
@@ -336,7 +365,8 @@ pub fn apply_restored(app: &App, session: &Rc<RefCell<Session>>, restored: Optio
             app.set_conflicted(ModelRc::new(VecModel::from(s.conflicted.clone())));
         }
     }
-    app.set_body(text.into());
+    app.set_body(text.clone().into());
+    update_note_stats(app, &text);
     app.invoke_set_cursor(cursor as i32);
     show_history_state(app, &session.borrow());
 }
@@ -383,15 +413,18 @@ pub fn resolve_active_conflict(
         history.edit(&resolved_text);
     }
     show_history_state(app, &s);
-    app.set_body(resolved_text.into());
+    app.set_body(resolved_text.clone().into());
+    update_note_stats(app, &resolved_text);
 
     let index = s.current.unwrap_or(0);
     if index < s.conflicted.len() {
         s.conflicted[index] = false;
         app.set_conflicted(ModelRc::new(VecModel::from(s.conflicted.clone())));
     }
+    let conflict_count = s.conflicted.iter().filter(|&&c| c).count();
     drop(s);
 
+    app.set_conflict_count(conflict_count as i32);
     app.set_current_has_conflict(false);
     refresh_list(app, session);
     set_status(app, format!("Resolved conflict (kept {side_name} version)"));

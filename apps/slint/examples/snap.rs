@@ -68,17 +68,29 @@ fn main() {
     ])));
     app.set_current(0);
     app.set_current_title("買い物リスト".into());
+    app.set_current_note_path("買い物リスト.tmt".into());
+    app.set_char_count(19);
+    app.set_word_count(4);
+    app.set_line_count(5);
+    app.set_conflict_count(1);
     app.set_body("牛乳\nパン\n卵\n\nあとで郵便局へ。".into());
     app.set_can_undo(true);
     app.show().unwrap();
 
-    // `changed` handlers (which decide `narrow`) run before a frame, so the layout
-    app.set_list_open(true);
+    // Tab 0: Home
+    app.set_active_tab(0);
+    app.set_current_vault_name("notes".into());
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, "/dev/null");
+    render(&window, size, &format!("{prefix}-home.ppm"));
+
+    // Tab 1: Files / List
+    app.set_active_tab(1);
+    std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-list.ppm"));
 
-    // Search query with snippet preview
+    // Tab 4: Search query with snippet preview
+    app.set_active_tab(4);
     app.set_search_query("計画".into());
     app.set_notes(ModelRc::new(VecModel::from(vec![
         "旅行の計画".into(),
@@ -87,6 +99,7 @@ fn main() {
     app.set_snippets(ModelRc::new(VecModel::from(vec![
         "...来月の旅行の計画について話し合う...".into(),
     ])));
+    std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-search.ppm"));
 
     // Search query with no matching notes (empty state)
@@ -107,12 +120,21 @@ fn main() {
         false, false, true, false, false,
     ])));
 
+    // Tab 2: Note Editor
+    app.set_active_tab(2);
     app.set_list_open(false);
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor.ppm"));
     app.set_current_has_conflict(true);
     render(&window, size, &format!("{prefix}-conflict.ppm"));
     app.set_current_has_conflict(false);
+
+    // Tab 3: Details / Properties
+    app.set_active_tab(3);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-properties.ppm"));
+    app.set_active_tab(2);
+    std::thread::sleep(std::time::Duration::from_millis(300));
 
     app.set_status("Save failed: permission denied".into());
     app.set_status_is_error(true);

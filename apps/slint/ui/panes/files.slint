@@ -1,0 +1,202 @@
+import { Palette, ListView } from "std-widgets.slint";
+import {
+    Metrics,
+    Colors,
+    Shapes,
+    Icon,
+    BubbleButton,
+    TopBar,
+    Fab,
+} from "../components.slint";
+
+export component ListPane inherits Rectangle {
+    in property <[string]> notes;
+    in property <[bool]> conflicted;
+    in property <int> current: -1;
+    in property <string> status;
+    in property <bool> syncing;
+    in property <length> inset-top: 0px;
+    in property <length> inset-bottom: 0px;
+    in property <bool> highlight-current: false;
+    in property <bool> remote-configured: false;
+    in property <string> vault-name: "Notes";
+
+    callback select(int);
+    callback new-note();
+    callback sync();
+    callback open-settings();
+    callback note-menu-requested(int);
+    callback trigger-haptic();
+    callback open-vault-sheet();
+
+    background: Palette.background;
+
+    VerticalLayout {
+        TopBar {
+            inset-top: root.inset-top;
+
+
+            Rectangle {
+                horizontal-stretch: 1;
+                HorizontalLayout {
+                    spacing: 6px;
+                    alignment: start;
+
+                    Text {
+                        text: root.vault-name != "" ? root.vault-name : "Notes";
+                        font-size: 22px;
+                        font-weight: 700;
+                        color: Palette.foreground;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+
+                    Text {
+                        text: "▾";
+                        font-size: 16px;
+                        color: Colors.muted;
+                        vertical-alignment: center;
+                    }
+                }
+
+                TouchArea {
+                    clicked => {
+                        root.open-vault-sheet();
+                    }
+                }
+            }
+
+            BubbleButton {
+                shape: Shapes.sync;
+                enabled: !root.syncing;
+                tint: root.syncing ? Palette.accent-background : Palette.foreground;
+                clicked => { root.sync(); }
+            }
+
+            BubbleButton {
+                shape: Shapes.settings;
+                tint: root.remote-configured ? Palette.foreground : Colors.warning;
+                clicked => { root.open-settings(); }
+            }
+        }
+
+        Rectangle {
+            height: 1px;
+            background: Colors.separator;
+        }
+
+        // Top spacing
+        Rectangle {
+            height: 6px;
+        }
+
+        if root.notes.length == 0: Rectangle {
+            vertical-stretch: 1;
+            VerticalLayout {
+                alignment: center;
+                spacing: 12px;
+                Icon {
+                    shape: Shapes.files;
+                    tint: Colors.muted.with-alpha(0.5);
+                    width: 40px;
+                    height: 40px;
+                    x: (parent.width - self.width) / 2;
+                }
+                Text {
+                    text: "No notes yet";
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: Colors.muted;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: "Tap + below to create your first note";
+                    font-size: 13px;
+                    color: Colors.muted;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        if root.notes.length > 0: ListView {
+            vertical-stretch: 1;
+            for name[i] in root.notes: Rectangle {
+                height: 54px;
+
+                item-container := Rectangle {
+                    x: 8px;
+                    y: 3px;
+                    width: parent.width - 16px;
+                    height: parent.height - 6px;
+                    border-radius: 16px;
+                    background: (root.highlight-current && i == root.current)
+                        ? Palette.accent-background.with-alpha(0.20)
+                        : (touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent);
+
+                    animate background {
+                        duration: 150ms;
+                        easing: ease-out;
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                        spacing: 10px;
+
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            alignment: center;
+
+                            Text {
+                                text: name;
+                                font-size: 15px;
+                                font-weight: (root.highlight-current && i == root.current) ? 600 : 400;
+                                color: (root.highlight-current && i == root.current)
+                                    ? Palette.accent-background
+                                    : Palette.foreground;
+                                vertical-alignment: center;
+                                overflow: elide;
+                            }
+                        }
+
+                        if root.conflicted[i]: Rectangle {
+                            width: 8px;
+                            height: 8px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 4px;
+                            background: Colors.warning;
+                        }
+                    }
+                }
+
+                property <bool> long-pressed: false;
+
+                touch := TouchArea {
+                    clicked => {
+                        if (long-pressed) {
+                            long-pressed = false;
+                        } else {
+                            root.select(i);
+                        }
+                    }
+                }
+
+                Timer {
+                    interval: 400ms;
+                    running: touch.pressed && !long-pressed;
+                    triggered => {
+                        long-pressed = true;
+                        root.trigger-haptic();
+                        root.note-menu-requested(i);
+                    }
+                }
+            }
+        }
+    }
+
+    Fab {
+        x: parent.width - self.width - Metrics.gutter;
+        y: parent.height - self.height - Metrics.gutter - root.inset-bottom;
+        clicked => { root.new-note(); }
+    }
+}
