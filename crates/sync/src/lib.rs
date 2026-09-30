@@ -20,11 +20,13 @@
 //! `git` inside the vault folder, so there is nothing to discover. Instead,
 //! the repository here is opened **bare** (no workdir concept in libgit2 at
 //! all), and "the working tree" is just an ordinary directory this crate
-//! reads and writes with `std::fs` -- committing means staging file
-//! contents directly into the index via `Index::add_frombuffer` (no file
-//! has to exist relative to any libgit2-known workdir for that), and
-//! checking out means walking a tree and writing blobs out by hand. The
-//! vault folder never contains anything but the user's own files.
+//! reads and writes with `std::fs` -- committing stages file contents directly
+//! into the index via `Index::add_frombuffer` while comparing metadata (mtime
+//! and size) against existing entries to skip disk reads for untouched files,
+//! and checking out computes a tree diff (`diff_tree_to_tree`) to write and
+//! delete only changed files without rewriting unmodified files or disturbing
+//! their timestamps. The vault folder never contains anything but the user's
+//! own files.
 //!
 //! # Sync cycle
 //!
@@ -77,8 +79,8 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use git2::{
-    FetchOptions, IndexEntry, IndexTime, ObjectType, Oid, PushOptions, RemoteCallbacks, Repository,
-    Signature, Tree, TreeWalkMode, TreeWalkResult,
+    Delta, FetchOptions, IndexEntry, IndexTime, ObjectType, Oid, PushOptions, RemoteCallbacks,
+    Repository, Signature, Tree, TreeWalkMode, TreeWalkResult,
 };
 
 const REMOTE_NAME: &str = "origin";
@@ -119,7 +121,12 @@ pub struct Vault {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SyncReport {
+    /// Relative paths of notes that contain unresolved `@mobile.conflict` markers.
     pub notes_needing_resolution: Vec<PathBuf>,
+    /// Relative paths of notes written or updated in the working tree during this sync.
+    pub updated_notes: Vec<PathBuf>,
+    /// Relative paths of notes removed from the working tree during this sync.
+    pub deleted_notes: Vec<PathBuf>,
 }
 
 impl Vault {
@@ -176,14 +183,17 @@ impl Vault {
     /// `@mobile.conflict` markers, so the caller can surface them.
     pub fn sync(&mut self, credentials: &dyn CredentialProvider) -> anyhow::Result<SyncReport> {
         self.commit_working_tree()?;
+        let initial_head_tree_oid = self.head_commit().map(|c| c.tree_id());
 
         for _ in 0..MAX_PUSH_ATTEMPTS {
             self.fetch(credentials)?;
             self.reconcile_with_remote()?;
             if self.push(credentials)? {
-                self.checkout_head()?;
+                let checkout = self.checkout_differential(initial_head_tree_oid)?;
                 return Ok(SyncReport {
                     notes_needing_resolution: self.conflicted_notes()?,
+                    updated_notes: checkout.updated,
+                    deleted_notes: checkout.deleted,
                 });
             }
             // Rejected: another push landed between our fetch and this
@@ -205,7 +215,6 @@ impl Vault {
     /// the vault's local history. A no-op if nothing changed since HEAD.
     fn commit_working_tree(&self) -> anyhow::Result<()> {
         let mut index = self.repo.index()?;
-        index.clear()?;
         stage_dir(
             &self.repo,
             &mut index,
@@ -381,7 +390,7 @@ impl Vault {
             };
 
             if let Some(bytes) = merged {
-                stage_bytes(&mut index, &path, &bytes)?;
+                stage_bytes(&mut index, &path, &bytes, (0, 0))?;
             }
         }
 
@@ -444,36 +453,87 @@ impl Vault {
         Ok(!*rejected.borrow())
     }
 
-    /// Writes HEAD's tree into the working tree, and removes working-tree
-    /// files the new tree no longer has.
-    fn checkout_head(&self) -> anyhow::Result<()> {
+    /// Checks out changes between `old_tree_oid` and HEAD into the working tree.
+    ///
+    /// Computes a tree-to-tree diff and applies only added, modified, and deleted files,
+    /// leaving unmodified files and their timestamps untouched on disk. If `old_tree_oid`
+    /// is None, writes all files in HEAD (initial checkout).
+    fn checkout_differential(&self, old_tree_oid: Option<Oid>) -> anyhow::Result<CheckoutReport> {
         let Some(commit) = self.head_commit() else {
-            return Ok(());
+            return Ok(CheckoutReport::default());
         };
-        let tree = commit.tree()?;
+        let new_tree = commit.tree()?;
 
-        let mut wanted = BTreeSet::new();
-        tree.walk(TreeWalkMode::PreOrder, |root, entry| {
-            if entry.kind() == Some(ObjectType::Blob) {
-                let rel = format!("{root}{}", entry.name().unwrap_or_default());
-                if let Ok(blob) = self.repo.find_blob(entry.id()) {
-                    let path = self.working_tree.join(&rel);
-                    if let Some(parent) = path.parent() {
-                        let _ = std::fs::create_dir_all(parent);
+        if Some(new_tree.id()) == old_tree_oid {
+            return Ok(CheckoutReport::default());
+        }
+
+        let old_tree = match old_tree_oid {
+            Some(oid) => self.repo.find_tree(oid).ok(),
+            None => None,
+        };
+
+        let diff = self
+            .repo
+            .diff_tree_to_tree(old_tree.as_ref(), Some(&new_tree), None)?;
+
+        let mut updated = Vec::new();
+        let mut deleted = Vec::new();
+
+        for delta in diff.deltas() {
+            match delta.status() {
+                Delta::Deleted => {
+                    if let Some(old_file) = delta.old_file().path() {
+                        let path = self.working_tree.join(old_file);
+                        if path.exists() {
+                            let _ = std::fs::remove_file(&path);
+                            remove_empty_parent_dirs(&self.working_tree, &path);
+                        }
+                        deleted.push(old_file.to_owned());
                     }
-                    let _ = std::fs::write(&path, blob.content());
                 }
-                wanted.insert(rel);
+                Delta::Added | Delta::Modified | Delta::Copied | Delta::Typechange => {
+                    if let Some(new_file) = delta.new_file().path() {
+                        if let Ok(blob) = self.repo.find_blob(delta.new_file().id()) {
+                            let path = self.working_tree.join(new_file);
+                            if let Some(parent) = path.parent() {
+                                let _ = std::fs::create_dir_all(parent);
+                            }
+                            std::fs::write(&path, blob.content())?;
+                            updated.push(new_file.to_owned());
+                        }
+                    }
+                }
+                Delta::Renamed => {
+                    if let Some(old_file) = delta.old_file().path() {
+                        let path = self.working_tree.join(old_file);
+                        if path.exists() {
+                            let _ = std::fs::remove_file(&path);
+                            remove_empty_parent_dirs(&self.working_tree, &path);
+                        }
+                        deleted.push(old_file.to_owned());
+                    }
+                    if let Some(new_file) = delta.new_file().path() {
+                        if let Ok(blob) = self.repo.find_blob(delta.new_file().id()) {
+                            let path = self.working_tree.join(new_file);
+                            if let Some(parent) = path.parent() {
+                                let _ = std::fs::create_dir_all(parent);
+                            }
+                            std::fs::write(&path, blob.content())?;
+                            updated.push(new_file.to_owned());
+                        }
+                    }
+                }
+                _ => {}
             }
-            TreeWalkResult::Ok
-        })?;
+        }
 
-        remove_unwanted(&self.repo, &self.working_tree, &self.working_tree, &wanted)?;
         if let Ok(mut index) = self.repo.index() {
-            let _ = index.read_tree(&tree);
+            let _ = index.read_tree(&new_tree);
             let _ = index.write();
         }
-        Ok(())
+
+        Ok(CheckoutReport { updated, deleted })
     }
 
     /// Which `.tmt` notes in the working tree still contain an unresolved
@@ -491,6 +551,12 @@ impl Vault {
             })
             .collect())
     }
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+struct CheckoutReport {
+    updated: Vec<PathBuf>,
+    deleted: Vec<PathBuf>,
 }
 
 /// Merges one file's three versions. `.tmt` files go through
@@ -556,22 +622,70 @@ fn stage_dir(
     root: &Path,
     dir: &Path,
 ) -> anyhow::Result<()> {
+    let mut seen_paths = BTreeSet::new();
+
     walk_working_tree(repo, root, dir, &mut |path, rel| {
+        seen_paths.insert(rel.to_string());
+
+        let meta = match std::fs::symlink_metadata(path) {
+            Ok(m) => m,
+            Err(_) => return Ok(()),
+        };
+        let file_size = meta.len() as u32;
+        let mtime = meta
+            .modified()
+            .map(system_time_to_index_time)
+            .unwrap_or((0, 0));
+
+        // Check if existing index entry matches mtime and size
+        if let Some(entry) = index.get_path(Path::new(rel), 0) {
+            if entry.file_size == file_size
+                && entry.mtime.seconds() == mtime.0
+                && entry.mtime.nanoseconds() == mtime.1
+                && entry.id != Oid::zero()
+            {
+                // Unchanged: stat cache matches, no need to read file contents or re-hash
+                return Ok(());
+            }
+        }
+
         let data = std::fs::read(path)?;
-        stage_bytes(index, rel, &data)
-    })
+        stage_bytes(index, rel, &data, mtime)
+    })?;
+
+    // Remove any entries from index that no longer exist in working tree
+    let mut paths_to_remove = Vec::new();
+    for i in 0..index.len() {
+        if let Some(entry) = index.get(i) {
+            if let Ok(path_str) = std::str::from_utf8(&entry.path) {
+                if !seen_paths.contains(path_str) {
+                    paths_to_remove.push(PathBuf::from(path_str));
+                }
+            }
+        }
+    }
+    for p in paths_to_remove {
+        let _ = index.remove_path(&p);
+    }
+
+    Ok(())
 }
 
-fn stage_bytes(index: &mut git2::Index, path: &str, data: &[u8]) -> anyhow::Result<()> {
+fn stage_bytes(
+    index: &mut git2::Index,
+    path: &str,
+    data: &[u8],
+    mtime: (i32, u32),
+) -> anyhow::Result<()> {
     let entry = IndexEntry {
-        ctime: IndexTime::new(0, 0),
-        mtime: IndexTime::new(0, 0),
+        ctime: IndexTime::new(mtime.0, mtime.1),
+        mtime: IndexTime::new(mtime.0, mtime.1),
         dev: 0,
         ino: 0,
         mode: 0o100644,
         uid: 0,
         gid: 0,
-        file_size: 0,
+        file_size: data.len() as u32,
         id: Oid::zero(),
         flags: 0,
         flags_extended: 0,
@@ -581,6 +695,27 @@ fn stage_bytes(index: &mut git2::Index, path: &str, data: &[u8]) -> anyhow::Resu
     Ok(())
 }
 
+fn system_time_to_index_time(t: std::time::SystemTime) -> (i32, u32) {
+    match t.duration_since(std::time::UNIX_EPOCH) {
+        Ok(d) => (d.as_secs() as i32, d.subsec_nanos()),
+        Err(e) => (-(e.duration().as_secs() as i32), e.duration().subsec_nanos()),
+    }
+}
+
+fn remove_empty_parent_dirs(root: &Path, file_path: &Path) {
+    let mut cur = file_path.parent();
+    while let Some(parent) = cur {
+        if parent == root || !parent.starts_with(root) {
+            break;
+        }
+        // std::fs::remove_dir succeeds only when the directory is empty.
+        if std::fs::remove_dir(parent).is_err() {
+            break;
+        }
+        cur = parent.parent();
+    }
+}
+
 fn relative_posix_path(root: &Path, path: &Path) -> anyhow::Result<String> {
     Ok(path
         .strip_prefix(root)?
@@ -588,37 +723,6 @@ fn relative_posix_path(root: &Path, path: &Path) -> anyhow::Result<String> {
         .map(|c| c.as_os_str().to_string_lossy().into_owned())
         .collect::<Vec<_>>()
         .join("/"))
-}
-
-fn remove_unwanted(
-    repo: &Repository,
-    root: &Path,
-    dir: &Path,
-    wanted: &BTreeSet<String>,
-) -> anyhow::Result<()> {
-    // Directories that become empty after their children are removed should
-    // also be cleaned up. Walk first, then try to remove the dir itself.
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if entry.file_name().to_string_lossy() == ".git" {
-            continue;
-        }
-        let rel_path = path.strip_prefix(root)?;
-        if repo.status_should_ignore(rel_path)? {
-            continue;
-        }
-        if path.is_dir() {
-            remove_unwanted(repo, root, &path, wanted)?;
-            let _ = std::fs::remove_dir(&path);
-        } else {
-            let rel = relative_posix_path(root, &path)?;
-            if !wanted.contains(&rel) {
-                std::fs::remove_file(&path)?;
-            }
-        }
-    }
-    Ok(())
 }
 
 fn find_tmt_files(root: &Path, dir: &Path, found: &mut Vec<PathBuf>) -> anyhow::Result<()> {
@@ -733,7 +837,11 @@ mod tests {
     }
 
     fn write_note(vault: &TestVault, name: &str, content: &str) {
-        std::fs::write(vault.working_tree.path().join(name), content).unwrap();
+        let path = vault.working_tree.path().join(name);
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        std::fs::write(&path, content).unwrap();
     }
 
     fn read_note(vault: &TestVault, name: &str) -> String {
@@ -902,5 +1010,73 @@ mod tests {
         // In-tree repo continues to see working tree as clean
         let statuses = in_tree_repo.statuses(None).unwrap();
         assert!(statuses.is_empty(), "Working tree should remain clean after receiving remote changes");
+    }
+
+    #[test]
+    fn unchanged_notes_preserve_mtime_across_sync() {
+        let remote = shared_remote();
+
+        let mut a = open_vault();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        write_note(&a, "note_a.tmt", "Note A initial.\n");
+        let report = a.vault.sync(&NoCredentials).unwrap();
+        // Client A already has note_a.tmt on disk; local push requires no checkout disk writes.
+        assert!(report.updated_notes.is_empty());
+
+        let note_a_path = a.working_tree.path().join("note_a.tmt");
+        let initial_mtime = std::fs::metadata(&note_a_path).unwrap().modified().unwrap();
+
+        // Client B syncs and receives note_a.tmt as an incoming update
+        let mut b = open_vault();
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        let report_b = b.vault.sync(&NoCredentials).unwrap();
+        assert_eq!(report_b.updated_notes, vec![PathBuf::from("note_a.tmt")]);
+
+        // Sleep briefly to ensure filesystem timestamp ticks
+        std::thread::sleep(std::time::Duration::from_millis(50));
+
+        // Client B adds note_b.tmt and syncs
+        write_note(&b, "note_b.tmt", "Note B from B.\n");
+        b.vault.sync(&NoCredentials).unwrap();
+
+        // Client A syncs: receives note_b.tmt, note_a.tmt is unmodified
+        let report = a.vault.sync(&NoCredentials).unwrap();
+        assert_eq!(report.updated_notes, vec![PathBuf::from("note_b.tmt")]);
+        assert!(report.deleted_notes.is_empty());
+
+        // Note A must preserve its initial mtime (differential checkout did not touch it)
+        let current_mtime = std::fs::metadata(&note_a_path).unwrap().modified().unwrap();
+        assert_eq!(initial_mtime, current_mtime, "Untouched note mtime should be preserved");
+
+        // Sync again with no changes on either side
+        let report = a.vault.sync(&NoCredentials).unwrap();
+        assert!(report.updated_notes.is_empty());
+        assert!(report.deleted_notes.is_empty());
+    }
+
+    #[test]
+    fn deleted_remote_notes_are_removed_and_reported() {
+        let remote = shared_remote();
+
+        let mut a = open_vault();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        write_note(&a, "folder/nested.tmt", "Nested note content.\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        let mut b = open_vault();
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        let report = b.vault.sync(&NoCredentials).unwrap();
+        assert_eq!(report.updated_notes, vec![PathBuf::from("folder/nested.tmt")]);
+        assert!(b.working_tree.path().join("folder/nested.tmt").exists());
+
+        // Client A deletes nested.tmt and syncs
+        std::fs::remove_file(a.working_tree.path().join("folder/nested.tmt")).unwrap();
+        a.vault.sync(&NoCredentials).unwrap();
+
+        // Client B syncs and receives the deletion
+        let report = b.vault.sync(&NoCredentials).unwrap();
+        assert_eq!(report.deleted_notes, vec![PathBuf::from("folder/nested.tmt")]);
+        assert!(!b.working_tree.path().join("folder/nested.tmt").exists());
+        assert!(!b.working_tree.path().join("folder").exists(), "Empty directory should be removed");
     }
 }
