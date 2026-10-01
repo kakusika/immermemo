@@ -16,6 +16,9 @@ export component EditorScreen inherits Rectangle {
     in property <length> font-size: 17px;
     in property <string> status: "";
     in property <bool> status-is-error: false;
+    in property <bool> syncing: false;
+    in property <bool> remote-configured: false;
+    in property <string> last-synced-at: "";
     in-out property <string> body;
     callback edited(string);
     callback undo();
@@ -27,6 +30,8 @@ export component EditorScreen inherits Rectangle {
     callback resolve-theirs();
     callback jump-conflict();
     callback open-conflict-sheet();
+    callback manual-sync();
+    callback open-history();
 
     // Moves the caret after Rust restores text from the undo history.
     public function set-cursor(offset: int) {
@@ -51,16 +56,32 @@ export component EditorScreen inherits Rectangle {
             }
             Rectangle {
                 horizontal-stretch: 1;
+                clip: true;
 
-                if root.status != "" && !root.status-is-error: Text {
-                    text: root.status;
-                    font-size: 12px;
-                    color: Colors.muted;
+                Text {
+                    width: parent.width;
+                    text: root.status != "" && !root.status-is-error ? root.status : root.title;
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: root.status != "" && !root.status-is-error ? Colors.muted : Palette.foreground;
                     vertical-alignment: center;
                     overflow: elide;
                     x: 4px;
                     y: (parent.height - self.height) / 2;
                 }
+            }
+
+            // Sync status button
+            if root.remote-configured: BubbleButton {
+                shape: root.syncing ? Shapes.sync : (root.status-is-error ? Shapes.alert : Shapes.cloud);
+                tint: root.syncing ? Palette.accent-background : (root.status-is-error ? Colors.danger : Colors.muted);
+                clicked => { root.manual-sync(); }
+            }
+
+            // Version history button
+            if root.has-note: BubbleButton {
+                shape: Shapes.history;
+                clicked => { root.open-history(); }
             }
 
             if root.has-note: UndoRedoBubble {

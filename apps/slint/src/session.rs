@@ -11,6 +11,7 @@ use crate::credentials::TokenCredentials;
 use crate::sync;
 use crate::{App, TokenStoreFactory};
 use immermemo_index::NoteIndex;
+use immermemo_sync::{FileRevision, Vault};
 use immermemo_vault::appdata::AppData;
 use immermemo_vault::credentials::TokenStore;
 use immermemo_vault::history::{History, Restored};
@@ -49,12 +50,16 @@ pub struct Session {
     pub rename_target: Option<usize>,
     pub delete_target: Option<usize>,
     pub delete_vault_target: Option<usize>,
+    pub pending_auto_sync: bool,
+    pub last_synced_at: Option<std::time::SystemTime>,
+    pub note_history_revisions: Vec<FileRevision>,
 }
 
 thread_local! {
     // `invoke_from_event_loop` needs a `Send` closure, so a finished sync
     // finds the session again here rather than carrying an `Rc` across.
     pub static SESSION: RefCell<Option<Rc<RefCell<Session>>>> = const { RefCell::new(None) };
+    static AUTO_SYNC_TIMER: RefCell<slint::Timer> = RefCell::new(slint::Timer::default());
 }
 
 impl Session {
@@ -228,6 +233,9 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     s.search_query.clear();
     s.current = None;
     s.history = None;
+    s.pending_auto_sync = false;
+    s.last_synced_at = None;
+    s.note_history_revisions.clear();
     drop(s);
 
     app.set_search_query(SharedString::new());
@@ -236,6 +244,7 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     app.set_body(SharedString::new());
     app.set_last_sync_error(SharedString::new());
     app.set_sync_error_copied(false);
+    app.set_last_synced_at(SharedString::new());
     clear_note_stats(app);
     show_history_state(app, &session.borrow());
     refresh_list(app, session);
@@ -245,6 +254,9 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     } else {
         app.set_list_open(false);
         open_initial_or_last_note(app, session);
+    }
+    if remote.is_some() {
+        schedule_auto_sync(app, std::time::Duration::from_millis(500));
     }
 }
 
@@ -595,12 +607,23 @@ pub fn resolve_conflict_step(
 
 pub fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<immermemo_sync::SyncReport, String>) {
     app.set_syncing(false);
+    let mut should_sync_again = false;
     match result {
         Ok(report) => {
             app.set_last_sync_error(SharedString::new());
             app.set_sync_error_copied(false);
+            let now_secs = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
+            app.set_last_synced_at(format_time_only(now_secs).into());
             {
                 let mut s = session.borrow_mut();
+                s.last_synced_at = Some(std::time::SystemTime::now());
+                if s.pending_auto_sync {
+                    s.pending_auto_sync = false;
+                    should_sync_again = true;
+                }
                 let vault_dir = s.vault_dir.clone();
                 let _ = s.index.apply_sync_report(
                     &vault_dir,
@@ -660,6 +683,193 @@ pub fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<imm
             set_status(app, error_msg);
         }
     }
+    if should_sync_again {
+        trigger_auto_sync(app, session);
+    }
+}
+
+fn days_to_ymd(days: i64) -> (i64, i64, i64) {
+    let z = days + 719468;
+    let era = if z >= 0 { z } else { z - 146096 } / 146097;
+    let doe = (z - era * 146097) as u64;
+    let yoe = (doe - doe / 1029 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = (mp as i64) + if mp < 10 { 3 } else { -9 };
+    let y = y + if m <= 2 { 1 } else { 0 };
+    (y, m, d as i64)
+}
+
+pub fn format_timestamp(epoch_secs: i64) -> String {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    let diff = now.saturating_sub(epoch_secs);
+    let rel = if diff < 60 {
+        "たった今".to_string()
+    } else if diff < 3600 {
+        format!("{}分前", diff / 60)
+    } else if diff < 86400 {
+        format!("{}時間前", diff / 3600)
+    } else {
+        format!("{}日前", diff / 86400)
+    };
+
+    let secs_per_day = 86400;
+    let days = epoch_secs.div_euclid(secs_per_day);
+    let time_of_day = epoch_secs.rem_euclid(secs_per_day);
+    let hours = time_of_day / 3600;
+    let minutes = (time_of_day % 3600) / 60;
+    let (year, month, day) = days_to_ymd(days);
+
+    format!("{year:04}-{month:02}-{day:02} {hours:02}:{minutes:02} ({rel})")
+}
+
+pub fn format_time_only(epoch_secs: i64) -> String {
+    let secs_per_day = 86400;
+    let days = epoch_secs.div_euclid(secs_per_day);
+    let time_of_day = epoch_secs.rem_euclid(secs_per_day);
+    let hours = time_of_day / 3600;
+    let minutes = (time_of_day % 3600) / 60;
+    let (_year, month, day) = days_to_ymd(days);
+    format!("{month:02}/{day:02} {hours:02}:{minutes:02}")
+}
+
+/// Triggers an automatic sync in the background if a remote is configured and no sync is running.
+/// If a sync is already running, sets `pending_auto_sync` so another sync will run after it completes.
+pub fn trigger_auto_sync(app: &App, session: &Rc<RefCell<Session>>) {
+    let has_remote = {
+        let Ok(s) = session.try_borrow() else {
+            // Contested borrow: retry in 200ms
+            schedule_auto_sync(app, std::time::Duration::from_millis(200));
+            return;
+        };
+        s.remote.is_some()
+    };
+    if !has_remote {
+        return;
+    }
+
+    if app.get_syncing() {
+        if let Ok(mut s) = session.try_borrow_mut() {
+            s.pending_auto_sync = true;
+        } else {
+            schedule_auto_sync(app, std::time::Duration::from_millis(200));
+        }
+        return;
+    }
+
+    if let Ok(mut s) = session.try_borrow_mut() {
+        s.pending_auto_sync = false;
+    }
+    start_sync(app, session);
+}
+
+/// Schedules an auto-sync after `duration`. Any subsequent call before the timer fires
+/// resets the countdown (debounce). Completely independent of `Session` borrows.
+pub fn schedule_auto_sync(app: &App, duration: std::time::Duration) {
+    let weak = app.as_weak();
+    AUTO_SYNC_TIMER.with(|timer| {
+        timer.borrow_mut().start(
+            slint::TimerMode::SingleShot,
+            duration,
+            move || {
+                let Some(app) = weak.upgrade() else { return };
+                let session = SESSION.with(|cell| cell.borrow().clone());
+                let Some(session) = session else { return };
+                trigger_auto_sync(&app, &session);
+            },
+        );
+    });
+}
+
+pub fn open_note_history(app: &App, session: &Rc<RefCell<Session>>) {
+    let s = session.borrow();
+    let Some(current_path) = s.current_path().cloned() else { return };
+    let vault_dir = s.vault_dir.clone();
+    let Ok(rel_path) = current_path.strip_prefix(&vault_dir) else { return };
+    let Ok(gitdir) = s.app_data.gitdir(&vault_dir) else { return };
+    drop(s);
+
+    let revisions = match Vault::open(&vault_dir, &gitdir) {
+        Ok(vault) => vault.file_history(rel_path, 50).unwrap_or_default(),
+        Err(_) => Vec::new(),
+    };
+
+    let mut commit_ids = Vec::with_capacity(revisions.len());
+    let mut dates = Vec::with_capacity(revisions.len());
+    let mut previews = Vec::with_capacity(revisions.len());
+
+    for rev in &revisions {
+        commit_ids.push(SharedString::from(format!("{} - {}", rev.short_id, rev.summary)));
+        dates.push(SharedString::from(format_timestamp(rev.timestamp_secs)));
+        previews.push(SharedString::from(&rev.content));
+    }
+
+    session.borrow_mut().note_history_revisions = revisions;
+
+    app.set_history_commits(ModelRc::new(VecModel::from(commit_ids)));
+    app.set_history_dates(ModelRc::new(VecModel::from(dates)));
+    app.set_history_previews(ModelRc::new(VecModel::from(previews)));
+    app.set_history_selected_index(0);
+    app.set_history_sheet_open(true);
+}
+
+pub fn restore_note_version(app: &App, session: &Rc<RefCell<Session>>, rev_idx: usize) {
+    let (vault_dir, current_path, content) = {
+        let s = session.borrow();
+        let Some(path) = s.current_path().cloned() else { return };
+        let Some(rev) = s.note_history_revisions.get(rev_idx) else { return };
+        (s.vault_dir.clone(), path, rev.content.clone())
+    };
+
+    if let Err(e) = std::fs::write(&current_path, &content) {
+        set_status(app, format!("Failed to restore: {e}"));
+        return;
+    }
+
+    let Ok(rel_path) = current_path.strip_prefix(&vault_dir) else { return };
+    let mut s = session.borrow_mut();
+    let _ = s.index.record_write(&vault_dir, rel_path, &content);
+    if let Some(h) = s.history.as_mut() {
+        h.edit(&content);
+    }
+    drop(s);
+
+    app.set_body(SharedString::from(&content));
+    show_history_state(app, &session.borrow());
+    update_note_stats(app, &content);
+    app.set_history_sheet_open(false);
+    set_status(app, "Restored note to selected revision");
+
+    schedule_auto_sync(app, std::time::Duration::from_secs(5));
+}
+
+pub fn open_vault_history(app: &App, session: &Rc<RefCell<Session>>) {
+    let s = session.borrow();
+    let vault_dir = s.vault_dir.clone();
+    let Ok(gitdir) = s.app_data.gitdir(&vault_dir) else { return };
+    drop(s);
+
+    let commits = match Vault::open(&vault_dir, &gitdir) {
+        Ok(vault) => vault.vault_history(50).unwrap_or_default(),
+        Err(_) => Vec::new(),
+    };
+
+    let mut commit_summaries = Vec::with_capacity(commits.len());
+    let mut dates = Vec::with_capacity(commits.len());
+
+    for c in commits {
+        commit_summaries.push(SharedString::from(format!("{} - {}", c.short_id, c.summary)));
+        dates.push(SharedString::from(format_timestamp(c.timestamp_secs)));
+    }
+
+    app.set_vault_history_commits(ModelRc::new(VecModel::from(commit_summaries)));
+    app.set_vault_history_dates(ModelRc::new(VecModel::from(dates)));
+    app.set_vault_history_open(true);
 }
 
 /// Opens the first note in the vault that has an unresolved conflict, switches to

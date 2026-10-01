@@ -117,6 +117,9 @@ pub fn run(
         rename_target: None,
         delete_target: None,
         delete_vault_target: None,
+        pending_auto_sync: false,
+        last_synced_at: None,
+        note_history_revisions: Vec::new(),
     }));
 
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
@@ -127,6 +130,9 @@ pub fn run(
     } else {
         app.set_list_open(false);
         open_initial_or_last_note(&app, &session);
+    }
+    if session.borrow().remote.is_some() {
+        session::schedule_auto_sync(&app, std::time::Duration::from_millis(500));
     }
 
     app.on_select({
@@ -172,43 +178,46 @@ pub fn run(
         move |text| {
             let app = weak.unwrap();
             session::update_note_stats(&app, text.as_str());
-            let mut s = session.borrow_mut();
-            if let Some(history) = s.history.as_mut() {
-                history.edit(&text);
-            }
-            show_history_state(&app, &s);
-            let has_conflict = text.contains("@mobile.conflict");
-            if app.get_current_has_conflict() != has_conflict {
-                app.set_current_has_conflict(has_conflict);
-                if let Some(idx) = s.current
-                    && idx < s.conflicted.len()
-                {
-                    s.conflicted[idx] = has_conflict;
-                    let conflicted: Vec<bool> = s
-                        .filtered_results
-                        .iter()
-                        .map(|r| s.conflicted[r.note_index])
-                        .collect();
-                    app.set_conflicted(ModelRc::new(VecModel::from(conflicted)));
-                    let conflict_count = s.conflicted.iter().filter(|&&c| c).count();
-                    app.set_conflict_count(conflict_count as i32);
+            {
+                let mut s = session.borrow_mut();
+                if let Some(history) = s.history.as_mut() {
+                    history.edit(&text);
                 }
-            }
-            if let Some(path) = s.current_path().cloned() {
-                match std::fs::write(&path, text.as_str()) {
-                    Ok(_) => {
-                        let vault_dir = s.vault_dir.clone();
-                        if let Ok(rel) = path.strip_prefix(&vault_dir) {
-                            let _ = s.index.record_write(&vault_dir, rel, text.as_str());
-                        }
-                        if app.get_status_is_error() && app.get_status().starts_with("Save failed")
-                        {
-                            set_status(&app, "");
-                        }
+                show_history_state(&app, &s);
+                let has_conflict = text.contains("@mobile.conflict");
+                if app.get_current_has_conflict() != has_conflict {
+                    app.set_current_has_conflict(has_conflict);
+                    if let Some(idx) = s.current
+                        && idx < s.conflicted.len()
+                    {
+                        s.conflicted[idx] = has_conflict;
+                        let conflicted: Vec<bool> = s
+                            .filtered_results
+                            .iter()
+                            .map(|r| s.conflicted[r.note_index])
+                            .collect();
+                        app.set_conflicted(ModelRc::new(VecModel::from(conflicted)));
+                        let conflict_count = s.conflicted.iter().filter(|&&c| c).count();
+                        app.set_conflict_count(conflict_count as i32);
                     }
-                    Err(e) => set_status(&app, format!("Save failed: {e}")),
+                }
+                if let Some(path) = s.current_path().cloned() {
+                    match std::fs::write(&path, text.as_str()) {
+                        Ok(_) => {
+                            let vault_dir = s.vault_dir.clone();
+                            if let Ok(rel) = path.strip_prefix(&vault_dir) {
+                                let _ = s.index.record_write(&vault_dir, rel, text.as_str());
+                            }
+                            if app.get_status_is_error() && app.get_status().starts_with("Save failed")
+                            {
+                                set_status(&app, "");
+                            }
+                        }
+                        Err(e) => set_status(&app, format!("Save failed: {e}")),
+                    }
                 }
             }
+            session::schedule_auto_sync(&app, std::time::Duration::from_secs(5));
         }
     });
 
@@ -688,6 +697,30 @@ pub fn run(
         }
     });
 
+    app.on_open_history({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            session::open_note_history(&app, &session);
+        }
+    });
+
+    app.on_restore_history_version({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |idx| {
+            let app = weak.unwrap();
+            session::restore_note_version(&app, &session, idx as usize);
+        }
+    });
+
+    app.on_open_vault_history({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            session::open_vault_history(&app, &session);
+        }
+    });
+
     app.run()?;
     Ok(())
 }
@@ -754,6 +787,9 @@ mod tests {
             rename_target: None,
             delete_target: None,
             delete_vault_target: None,
+            pending_auto_sync: false,
+            last_synced_at: None,
+            note_history_revisions: Vec::new(),
         }));
 
         app.set_current_has_conflict(true);
@@ -879,12 +915,56 @@ mod tests {
         assert_eq!(app.get_last_sync_error(), "");
         assert!(!app.get_status_is_error());
 
-        // Successful sync clears error
+        // Successful sync clears error and updates last_synced_at
         finish_sync(&app, &session, Err("some error".to_string()));
         assert_eq!(app.get_last_sync_error(), "Sync failed: some error");
         finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
         assert_eq!(app.get_last_sync_error(), "");
         assert_eq!(app.get_status(), "Synced");
         assert!(!app.get_status_is_error());
+        assert!(!app.get_last_synced_at().is_empty());
+
+        // 6. Version history and auto-sync queue
+        let ts = session::format_timestamp(1700000000);
+        assert!(ts.contains("2023-11-14"));
+
+        let rev1 = immermemo_sync::FileRevision {
+            commit_id: "1111111111111111111111111111111111111111".to_string(),
+            short_id: "1111111".to_string(),
+            timestamp_secs: 1700000000,
+            summary: "Initial commit".to_string(),
+            content: "Historical content v1.\n".to_string(),
+        };
+        session.borrow_mut().note_history_revisions = vec![rev1];
+
+        session::restore_note_version(&app, &session, 0);
+        assert_eq!(app.get_body(), "Historical content v1.\n");
+        let disk_text = std::fs::read_to_string(&multi_note_path).unwrap();
+        assert_eq!(disk_text, "Historical content v1.\n");
+        assert!(!app.get_history_sheet_open());
+        assert!(app.get_status().contains("Restored note"));
+
+        // Auto-sync pending queue when already syncing
+        app.set_syncing(true);
+        session.borrow_mut().remote = Some("https://example.com/repo.git".to_string());
+        session::trigger_auto_sync(&app, &session);
+        assert!(session.borrow().pending_auto_sync);
+
+        // When sync finishes, pending_auto_sync is cleared and next sync is scheduled
+        finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
+        assert!(app.get_syncing());
+        finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
+        assert!(!app.get_syncing());
+
+        // 7. Editing note while sync is running: verify no RefCell borrow panic
+        SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
+        app.set_syncing(true);
+        session::schedule_auto_sync(&app, std::time::Duration::from_millis(50));
+        session::trigger_auto_sync(&app, &session);
+        assert!(session.borrow().pending_auto_sync);
+        finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
+        assert!(app.get_syncing());
+        finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
+        assert!(!app.get_syncing());
     }
 }

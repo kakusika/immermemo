@@ -9,6 +9,8 @@ import { RemoteSheet } from "sheets/remote.slint";
 import { VaultSheet } from "sheets/vault.slint";
 import { SettingsSheet } from "sheets/settings.slint";
 import { ConflictSheet } from "sheets/conflict.slint";
+import { HistorySheet } from "sheets/history.slint";
+import { VaultHistorySheet } from "sheets/vault_history.slint";
 import { TextInputDialog, ConfirmDialog, ActionSheet } from "dialogs.slint";
 
 export component App inherits Window {
@@ -35,9 +37,18 @@ export component App inherits Window {
     in-out property <bool> status-is-error: false;
     in-out property <string> last-sync-error: "";
     in-out property <bool> sync-error-copied: false;
+    in property <string> last-synced-at: "";
     in property <bool> syncing;
     in property <bool> current-has-conflict;
     in-out property <bool> conflict-sheet-open: false;
+    in-out property <bool> history-sheet-open: false;
+    in property <[string]> history-commits: [];
+    in property <[string]> history-dates: [];
+    in property <[string]> history-previews: [];
+    in-out property <int> history-selected-index: 0;
+    in-out property <bool> vault-history-open: false;
+    in property <[string]> vault-history-commits: [];
+    in property <[string]> vault-history-dates: [];
     in-out property <int> active-conflict-index: 0;
     in property <int> active-conflict-total: 0;
     in property <string> active-conflict-mine: "";
@@ -131,6 +142,9 @@ export component App inherits Window {
     callback open-conflict-note();
     callback copy-sync-error();
     callback dismiss-sync-error();
+    callback open-history();
+    callback restore-history-version(int);
+    callback open-vault-history();
 
     public function set-cursor(offset: int) {
         pane.set-cursor(offset);
@@ -218,6 +232,7 @@ export component App inherits Window {
                     remote-configured: root.remote-configured;
                     last-sync-error: root.last-sync-error;
                     sync-error-copied: root.sync-error-copied;
+                    last-synced-at: root.last-synced-at;
                     current-note-title: root.current-title;
                     has-current-note: root.current >= 0;
                     new-note => {
@@ -228,6 +243,7 @@ export component App inherits Window {
                     sync => { root.sync(); }
                     open-vaults => { root.open-vault-sheet(); }
                     open-settings => { root.open-settings(); }
+                    open-vault-history => { root.open-vault-history(); }
                     open-current-note => {
                         root.active-tab = 2;
                         pane.focus-editor();
@@ -318,6 +334,11 @@ export component App inherits Window {
                         resolve-theirs => { root.resolve-theirs(); }
                         jump-conflict => { root.jump-conflict(); }
                         open-conflict-sheet => { root.open-conflict-sheet(); }
+                        syncing: root.syncing;
+                        remote-configured: root.remote-configured;
+                        last-synced-at: root.last-synced-at;
+                        manual-sync => { root.sync(); }
+                        open-history => { root.open-history(); }
                     }
 
                     animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
@@ -548,5 +569,32 @@ export component App inherits Window {
         resolve-choice(choice) => { root.resolve-conflict-step(choice); }
         prev-conflict => { root.prev-conflict-step(); }
         next-conflict => { root.next-conflict-step(); }
+    }
+
+    if root.history-sheet-open: HistorySheet {
+        width: 100%;
+        height: 100%;
+        open: true;
+        note-title: root.current-title;
+        commits: root.history-commits;
+        dates: root.history-dates;
+        previews: root.history-previews;
+        selected-index <=> root.history-selected-index;
+        inset-top: root.inset-top;
+        inset-bottom: root.inset-bottom;
+        close => { root.history-sheet-open = false; }
+        restore(idx) => { root.restore-history-version(idx); }
+    }
+
+    if root.vault-history-open: VaultHistorySheet {
+        width: 100%;
+        height: 100%;
+        open: true;
+        vault-name: root.current-vault-name;
+        commits: root.vault-history-commits;
+        dates: root.vault-history-dates;
+        inset-top: root.inset-top;
+        inset-bottom: root.inset-bottom;
+        close => { root.vault-history-open = false; }
     }
 }

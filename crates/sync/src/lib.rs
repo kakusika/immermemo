@@ -144,6 +144,34 @@ pub struct GcReport {
     pub pruned_objects: usize,
 }
 
+/// A single revision of a file from Git history.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileRevision {
+    /// Full 40-character commit hex hash.
+    pub commit_id: String,
+    /// 7-character short commit hash.
+    pub short_id: String,
+    /// Unix timestamp in seconds.
+    pub timestamp_secs: i64,
+    /// Commit message summary (first line).
+    pub summary: String,
+    /// Full text content of the file at this revision.
+    pub content: String,
+}
+
+/// A commit summary from the repository's history.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommitSummary {
+    /// Full 40-character commit hex hash.
+    pub commit_id: String,
+    /// 7-character short commit hash.
+    pub short_id: String,
+    /// Unix timestamp in seconds.
+    pub timestamp_secs: i64,
+    /// Commit message summary (first line).
+    pub summary: String,
+}
+
 impl Vault {
     /// Opens an existing vault, or initializes one if `gitdir` is
     /// empty -- the first sync of a folder and every later one go through
@@ -271,6 +299,110 @@ impl Vault {
             packed_objects: object_count,
             pruned_objects,
         })
+    }
+
+    /// Returns the commit history that modified `rel_path`, newest first.
+    pub fn file_history(&self, rel_path: &Path, max_count: usize) -> anyhow::Result<Vec<FileRevision>> {
+        let mut revwalk = match self.repo.revwalk() {
+            Ok(rw) => rw,
+            Err(_) => return Ok(Vec::new()),
+        };
+        if self.repo.head().is_err() {
+            return Ok(Vec::new());
+        }
+        revwalk.push_head()?;
+        revwalk.set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::TIME)?;
+
+        let mut revisions = Vec::new();
+        let path_str = rel_path.to_str().unwrap_or_default();
+
+        for oid in revwalk {
+            let oid = oid?;
+            let commit = self.repo.find_commit(oid)?;
+            let tree = commit.tree()?;
+
+            let entry = tree.get_path(Path::new(path_str)).ok();
+            let entry_id = entry.as_ref().map(|e| e.id());
+
+            // Check if any parent had the exact same tree entry ID
+            let changed = if commit.parent_count() == 0 {
+                entry_id.is_some()
+            } else {
+                let mut parent_matches = false;
+                for parent in commit.parents() {
+                    let parent_tree = parent.tree()?;
+                    let parent_entry = parent_tree.get_path(Path::new(path_str)).ok();
+                    let parent_id = parent_entry.as_ref().map(|e| e.id());
+                    if parent_id == entry_id {
+                        parent_matches = true;
+                        break;
+                    }
+                }
+                !parent_matches && entry_id.is_some()
+            };
+
+            if changed {
+                if let Some(entry) = entry {
+                    let obj = entry.to_object(&self.repo)?;
+                    if let Some(blob) = obj.as_blob() {
+                        let content = String::from_utf8_lossy(blob.content()).into_owned();
+                        let commit_id = oid.to_string();
+                        let short_id = commit_id[..7.min(commit_id.len())].to_string();
+                        let timestamp_secs = commit.time().seconds();
+                        let summary = commit.summary().unwrap_or("").to_string();
+
+                        revisions.push(FileRevision {
+                            commit_id,
+                            short_id,
+                            timestamp_secs,
+                            summary,
+                            content,
+                        });
+
+                        if revisions.len() >= max_count {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(revisions)
+    }
+
+    /// Returns the recent commit summaries across the entire vault, newest first.
+    pub fn vault_history(&self, max_count: usize) -> anyhow::Result<Vec<CommitSummary>> {
+        let mut revwalk = match self.repo.revwalk() {
+            Ok(rw) => rw,
+            Err(_) => return Ok(Vec::new()),
+        };
+        if self.repo.head().is_err() {
+            return Ok(Vec::new());
+        }
+        revwalk.push_head()?;
+        revwalk.set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::TIME)?;
+
+        let mut commits = Vec::new();
+        for oid in revwalk {
+            let oid = oid?;
+            let commit = self.repo.find_commit(oid)?;
+            let commit_id = oid.to_string();
+            let short_id = commit_id[..7.min(commit_id.len())].to_string();
+            let timestamp_secs = commit.time().seconds();
+            let summary = commit.summary().unwrap_or("").to_string();
+
+            commits.push(CommitSummary {
+                commit_id,
+                short_id,
+                timestamp_secs,
+                summary,
+            });
+
+            if commits.len() >= max_count {
+                break;
+            }
+        }
+        Ok(commits)
     }
 
     fn head_commit(&self) -> Option<git2::Commit<'_>> {
@@ -1285,5 +1417,42 @@ mod tests {
         let pack_dir = a.vault.repo.path().join("objects").join("pack");
         assert!(pack_dir.exists());
         assert!(!a.vault.should_auto_gc(), "Auto-GC should reset loose object condition");
+    }
+
+    #[test]
+    fn file_history_and_vault_history_track_revisions_and_content() {
+        let remote = shared_remote();
+        let mut a = open_vault();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+
+        // Commit 1: create note1 and note2
+        write_note(&a, "note1.tmt", "Version 1 of note 1\n");
+        write_note(&a, "note2.tmt", "Version 1 of note 2\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        // Commit 2: modify note1 only
+        write_note(&a, "note1.tmt", "Version 2 of note 1\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        // Commit 3: modify note2 only
+        write_note(&a, "note2.tmt", "Version 2 of note 2\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        // Check file_history for note1.tmt (should only have 2 revisions: V2 and V1, newest first)
+        let hist1 = a.vault.file_history(Path::new("note1.tmt"), 10).unwrap();
+        assert_eq!(hist1.len(), 2);
+        assert_eq!(hist1[0].content, "Version 2 of note 1\n");
+        assert_eq!(hist1[1].content, "Version 1 of note 1\n");
+        assert_eq!(hist1[0].short_id.len(), 7);
+
+        // Check file_history for note2.tmt
+        let hist2 = a.vault.file_history(Path::new("note2.tmt"), 10).unwrap();
+        assert_eq!(hist2.len(), 2);
+        assert_eq!(hist2[0].content, "Version 2 of note 2\n");
+        assert_eq!(hist2[1].content, "Version 1 of note 2\n");
+
+        // Check vault_history (total 3 commits)
+        let vault_hist = a.vault.vault_history(10).unwrap();
+        assert_eq!(vault_hist.len(), 3);
     }
 }
