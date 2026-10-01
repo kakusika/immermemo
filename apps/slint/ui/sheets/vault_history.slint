@@ -35,7 +35,7 @@ export component VaultHistorySheet inherits Rectangle {
 
             Text {
                 horizontal-stretch: 1;
-                text: root.vault-name != "" ? "保管庫の履歴: " + root.vault-name : "保管庫の履歴";
+                text: root.vault-name != "" ? @tr("Vault History: {}", root.vault-name) : @tr("Vault History");
                 font-size: 17px;
                 font-weight: 700;
                 vertical-alignment: center;
@@ -63,7 +63,7 @@ export component VaultHistorySheet inherits Rectangle {
                 padding: 24px;
 
                 Text {
-                    text: "コミット履歴はありません";
+                    text: @tr("No commit history yet");
                     font-size: 16px;
                     font-weight: 600;
                     color: Palette.foreground;
@@ -71,7 +71,7 @@ export component VaultHistorySheet inherits Rectangle {
                 }
 
                 Text {
-                    text: "ノートを作成または同期すると、保管庫の履歴がここに表示されます。";
+                    text: @tr("Creating or syncing notes will record the vault's history here.");
                     font-size: 13px;
                     color: Colors.muted;
                     horizontal-alignment: center;

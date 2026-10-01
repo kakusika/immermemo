@@ -37,7 +37,7 @@ export component PropertiesScreen inherits Rectangle {
 
             Text {
                 horizontal-stretch: 1;
-                text: "プロパティ";
+                text: @tr("Properties");
                 font-size: Metrics.font-title;
                 font-weight: 700;
                 vertical-alignment: center;
@@ -56,7 +56,7 @@ export component PropertiesScreen inherits Rectangle {
                 alignment: center;
                 spacing: Metrics.spacing-md;
                 Text {
-                    text: "現在開いているノートはありません。";
+                    text: @tr("No note is currently open.");
                     font-size: Metrics.font-body;
                     color: Colors.muted;
                     horizontal-alignment: center;
@@ -88,7 +88,7 @@ export component PropertiesScreen inherits Rectangle {
                         VerticalLayout {
                             spacing: Metrics.spacing-xs;
                             Text {
-                                text: "ノート情報";
+                                text: @tr("Note Info");
                                 font-size: Metrics.font-caption;
                                 font-weight: 700;
                                 color: Colors.muted;
@@ -123,7 +123,7 @@ export component PropertiesScreen inherits Rectangle {
                                 horizontal-stretch: 1;
                                 spacing: 2px * Metrics.ui-scale;
                                 Text {
-                                    text: "文字数";
+                                    text: @tr("Characters");
                                     font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
@@ -140,7 +140,7 @@ export component PropertiesScreen inherits Rectangle {
                                 horizontal-stretch: 1;
                                 spacing: 2px * Metrics.ui-scale;
                                 Text {
-                                    text: "単語数";
+                                    text: @tr("Words");
                                     font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
@@ -157,7 +157,7 @@ export component PropertiesScreen inherits Rectangle {
                                 horizontal-stretch: 1;
                                 spacing: 2px * Metrics.ui-scale;
                                 Text {
-                                    text: "行数";
+                                    text: @tr("Lines");
                                     font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
@@ -199,8 +199,8 @@ export component PropertiesScreen inherits Rectangle {
                             Text {
                                 horizontal-stretch: 1;
                                 text: root.conflict-total > 0
-                                    ? (root.conflict-total + " 箇所の競合があります")
-                                    : "競合が発生しています";
+                                    ? @tr("{n} conflict found" | "{n} conflicts found" % root.conflict-total)
+                                    : @tr("Conflict detected");
                                 font-size: Metrics.font-body;
                                 font-weight: 700;
                                 color: Colors.warning;
@@ -222,7 +222,7 @@ export component PropertiesScreen inherits Rectangle {
                                     padding: Metrics.spacing-sm;
                                     spacing: Metrics.spacing-xs;
                                     Text {
-                                        text: "📱 あなたの変更 (Local):";
+                                        text: @tr("📱 Your changes (Local):");
                                         font-size: Metrics.font-caption;
                                         font-weight: 700;
                                         color: Palette.accent-background;
@@ -247,7 +247,7 @@ export component PropertiesScreen inherits Rectangle {
                                     padding: Metrics.spacing-sm;
                                     spacing: Metrics.spacing-xs;
                                     Text {
-                                        text: "☁️ リモートの変更 (Remote):";
+                                        text: @tr("☁️ Remote changes (Remote):");
                                         font-size: Metrics.font-caption;
                                         font-weight: 700;
                                         color: Colors.warning;
@@ -273,7 +273,7 @@ export component PropertiesScreen inherits Rectangle {
                                 alignment: center;
                                 spacing: Metrics.spacing-xs + 2px * Metrics.ui-scale;
                                 Text {
-                                    text: "🔍 解決シートを開いて確認・解決";
+                                    text: @tr("🔍 Open resolution sheet");
                                     font-size: Metrics.font-sub;
                                     font-weight: 700;
                                     color: #ffffff;
@@ -291,13 +291,13 @@ export component PropertiesScreen inherits Rectangle {
                             spacing: Metrics.spacing-sm;
                             Button {
                                 horizontal-stretch: 1;
-                                text: "ローカル側を採用";
+                                text: @tr("Keep Mine");
                                 clicked => { root.resolve-mine(); }
                             }
 
                             Button {
                                 horizontal-stretch: 1;
-                                text: "リモート側を採用";
+                                text: @tr("Keep Theirs");
                                 clicked => { root.resolve-theirs(); }
                             }
                         }
@@ -311,7 +311,7 @@ export component PropertiesScreen inherits Rectangle {
                     spacing: Metrics.spacing-sm;
 
                     Text {
-                        text: "操作";
+                        text: @tr("Actions");
                         font-size: Metrics.font-caption;
                         font-weight: 700;
                         color: Colors.muted;
@@ -327,12 +327,12 @@ export component PropertiesScreen inherits Rectangle {
                             spacing: Metrics.spacing-xs;
 
                             ActionRow {
-                                text: "名前を変更...";
+                                text: @tr("Rename...");
                                 clicked => { root.rename-requested(); }
                             }
 
                             ActionRow {
-                                text: "ノートを削除...";
+                                text: @tr("Delete Note...");
                                 tint: Colors.danger;
                                 clicked => { root.delete-requested(); }
                             }

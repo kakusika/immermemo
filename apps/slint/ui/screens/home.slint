@@ -15,7 +15,7 @@ export component HomeScreen inherits Rectangle {
     in property <length> inset-bottom: 0px;
 
     // Vault info
-    in property <string> vault-name: "Default";
+    in property <string> vault-name: @tr("Default");
     in property <string> vault-path: "";
     in property <int> note-count: 0;
     in property <int> conflict-count: 0;
@@ -48,7 +48,7 @@ export component HomeScreen inherits Rectangle {
 
             Text {
                 horizontal-stretch: 1;
-                text: "ホーム";
+                text: @tr("Home");
                 font-size: Metrics.font-title;
                 font-weight: 700;
                 vertical-alignment: center;
@@ -97,7 +97,7 @@ export component HomeScreen inherits Rectangle {
                                 spacing: 2px * Metrics.ui-scale;
 
                                 Text {
-                                    text: "現在の保管庫";
+                                    text: @tr("Current Vault");
                                     font-size: Metrics.font-caption;
                                     font-weight: 700;
                                     color: Colors.muted;
@@ -105,7 +105,7 @@ export component HomeScreen inherits Rectangle {
                                 }
 
                                 Text {
-                                    text: root.vault-name != "" ? root.vault-name : "Notes";
+                                    text: root.vault-name != "" ? root.vault-name : @tr("Notes");
                                     font-size: Metrics.font-title;
                                     font-weight: 700;
                                     color: Palette.foreground;
@@ -136,7 +136,7 @@ export component HomeScreen inherits Rectangle {
                             VerticalLayout {
                                 spacing: 2px * Metrics.ui-scale;
                                 Text {
-                                    text: "ノート数";
+                                    text: @tr("Notes");
                                     font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
@@ -152,7 +152,7 @@ export component HomeScreen inherits Rectangle {
                             if root.conflict-count > 0: VerticalLayout {
                                 spacing: 2px * Metrics.ui-scale;
                                 Text {
-                                    text: "競合";
+                                    text: @tr("Conflicts");
                                     font-size: Metrics.font-sm;
                                     color: Colors.warning;
                                 }
@@ -190,7 +190,7 @@ export component HomeScreen inherits Rectangle {
 
                         Text {
                             horizontal-stretch: 1;
-                            text: "同期ステータス";
+                            text: @tr("Sync Status");
                             font-size: Metrics.font-caption;
                             font-weight: 700;
                             color: Colors.muted;
@@ -213,7 +213,7 @@ export component HomeScreen inherits Rectangle {
                             }
 
                             Text {
-                                text: "同期中...";
+                                text: @tr("Syncing...");
                                 font-size: Metrics.font-caption;
                                 font-weight: 600;
                                 color: Palette.accent-background;
@@ -247,7 +247,7 @@ export component HomeScreen inherits Rectangle {
 
                                 Text {
                                     horizontal-stretch: 1;
-                                    text: "同期に失敗しました";
+                                    text: @tr("Sync failed");
                                     font-size: Metrics.font-body;
                                     font-weight: 700;
                                     color: Colors.danger;
@@ -334,7 +334,7 @@ export component HomeScreen inherits Rectangle {
                                         }
 
                                         Text {
-                                            text: root.sync-error-copied ? "コピーしました" : "エラーをコピー";
+                                            text: root.sync-error-copied ? @tr("Copied") : @tr("Copy Error");
                                             font-size: Metrics.font-sub;
                                             font-weight: 600;
                                             color: root.sync-error-copied ? #2e7d32 : Palette.foreground;
@@ -370,7 +370,7 @@ export component HomeScreen inherits Rectangle {
                                         }
 
                                         Text {
-                                            text: "再試行";
+                                            text: @tr("Retry");
                                             font-size: Metrics.font-sub;
                                             font-weight: 600;
                                             color: #ffffff;
@@ -409,14 +409,14 @@ export component HomeScreen inherits Rectangle {
                                     spacing: 2px * Metrics.ui-scale;
 
                                     Text {
-                                        text: "リモート未設定";
+                                        text: @tr("No remote configured");
                                         font-size: Metrics.font-body;
                                         font-weight: 600;
                                         color: Palette.foreground;
                                     }
 
                                     Text {
-                                        text: "Git リモートを設定すると自動同期できます";
+                                        text: @tr("Set a git remote to enable automatic sync");
                                         font-size: Metrics.font-sm;
                                         color: Colors.muted;
                                         wrap: word-wrap;
@@ -438,7 +438,7 @@ export component HomeScreen inherits Rectangle {
                                         HorizontalLayout {
                                             alignment: center;
                                             Text {
-                                                text: "設定";
+                                                text: @tr("Settings");
                                                 font-size: Metrics.font-sm;
                                                 font-weight: 600;
                                                 color: Palette.accent-background;
@@ -467,7 +467,7 @@ export component HomeScreen inherits Rectangle {
                                     spacing: 2px * Metrics.ui-scale;
 
                                     Text {
-                                        text: root.syncing ? "同期を実行中..." : "同期完了";
+                                        text: root.syncing ? @tr("Syncing...") : @tr("Up to date");
                                         font-size: Metrics.font-body;
                                         font-weight: 600;
                                         color: root.syncing ? Palette.accent-background : Palette.foreground;
@@ -475,8 +475,8 @@ export component HomeScreen inherits Rectangle {
 
                                     Text {
                                         text: root.syncing
-                                            ? "リモートとの差分を確認・更新しています"
-                                            : (root.last-synced-at != "" ? "最終同期: " + root.last-synced-at : (root.status != "" ? root.status : "ローカルとリモートは同期済みです"));
+                                            ? @tr("Checking for changes with the remote")
+                                            : (root.last-synced-at != "" ? @tr("Last synced: {}", root.last-synced-at) : (root.status != "" ? root.status : @tr("Local and remote are in sync")));
                                         font-size: Metrics.font-sm;
                                         color: Colors.muted;
                                         wrap: word-wrap;
@@ -511,7 +511,7 @@ export component HomeScreen inherits Rectangle {
                                             }
 
                                             Text {
-                                                text: "同期";
+                                                text: @tr("Sync");
                                                 font-size: Metrics.font-sm;
                                                 font-weight: 600;
                                                 color: root.syncing ? Colors.muted : Palette.foreground;
@@ -532,7 +532,7 @@ export component HomeScreen inherits Rectangle {
                     spacing: Metrics.spacing-sm;
 
                     Text {
-                        text: "未解決のコンフリクト";
+                        text: @tr("Unresolved Conflicts");
                         font-size: Metrics.font-caption;
                         font-weight: 700;
                         color: Colors.warning;
@@ -565,7 +565,7 @@ export component HomeScreen inherits Rectangle {
 
                                 Text {
                                     horizontal-stretch: 1;
-                                    text: root.conflict-count + " 件のノートに競合があります";
+                                    text: @tr("{n} note has a conflict" | "{n} notes have conflicts" % root.conflict-count);
                                     font-size: Metrics.font-body;
                                     font-weight: 700;
                                     color: Colors.warning;
@@ -574,7 +574,7 @@ export component HomeScreen inherits Rectangle {
                             }
 
                             Text {
-                                text: "タップして競合ノートを開く・解決する →";
+                                text: @tr("Tap to open and resolve conflicted notes →");
                                 font-size: Metrics.font-sub;
                                 font-weight: 600;
                                 color: Colors.warning.darker(10%);
@@ -590,7 +590,7 @@ export component HomeScreen inherits Rectangle {
                     spacing: Metrics.spacing-sm;
 
                     Text {
-                        text: "編集中ノート";
+                        text: @tr("Currently Editing");
                         font-size: Metrics.font-caption;
                         font-weight: 700;
                         color: Colors.muted;
@@ -617,7 +617,7 @@ export component HomeScreen inherits Rectangle {
                             }
 
                             Text {
-                                text: "タップして編集を続ける →";
+                                text: @tr("Tap to keep editing →");
                                 font-size: Metrics.font-sub;
                                 color: Palette.accent-background;
                             }
@@ -632,7 +632,7 @@ export component HomeScreen inherits Rectangle {
                     spacing: Metrics.spacing-sm;
 
                     Text {
-                        text: "クイックアクション";
+                        text: @tr("Quick Actions");
                         font-size: Metrics.font-caption;
                         font-weight: 700;
                         color: Colors.muted;
@@ -648,23 +648,23 @@ export component HomeScreen inherits Rectangle {
                             spacing: Metrics.spacing-xs;
 
                             ActionRow {
-                                text: "+ 新しいノート";
+                                text: @tr("+ New Note");
                                 tint: Palette.accent-background;
                                 clicked => { root.new-note(); }
                             }
 
                             ActionRow {
-                                text: "保管庫を切り替え...";
+                                text: @tr("Switch Vault...");
                                 clicked => { root.open-vaults(); }
                             }
 
                             ActionRow {
-                                text: "設定・同期...";
+                                text: @tr("Settings & Sync...");
                                 clicked => { root.open-settings(); }
                             }
 
                             ActionRow {
-                                text: "保管庫の履歴・コミット...";
+                                text: @tr("Vault History & Commits...");
                                 clicked => { root.open-vault-history(); }
                             }
                         }

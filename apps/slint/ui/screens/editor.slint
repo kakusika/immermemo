@@ -190,7 +190,7 @@ export component EditorScreen inherits Rectangle {
                 alignment: center;
 
                 Text {
-                    text: "Conflict";
+                    text: @tr("Conflict");
                     font-size: 13px;
                     font-weight: 700;
                     color: Colors.warning;
@@ -211,7 +211,7 @@ export component EditorScreen inherits Rectangle {
                         padding-left: 8px;
                         padding-right: 8px;
                         Text {
-                            text: "解決シートを開く";
+                            text: @tr("Open Resolution");
                             font-size: 12px;
                             font-weight: 700;
                             color: #ffffff;
@@ -234,7 +234,7 @@ export component EditorScreen inherits Rectangle {
                         padding-left: 8px;
                         padding-right: 8px;
                         Text {
-                            text: "Next";
+                            text: @tr("Next");
                             font-size: 12px;
                             font-weight: 600;
                             color: Palette.foreground;
@@ -257,7 +257,7 @@ export component EditorScreen inherits Rectangle {
                         padding-left: 8px;
                         padding-right: 8px;
                         Text {
-                            text: "Keep Mine";
+                            text: @tr("Keep Mine");
                             font-size: 12px;
                             font-weight: 600;
                             color: #ffffff;
@@ -280,7 +280,7 @@ export component EditorScreen inherits Rectangle {
                         padding-left: 8px;
                         padding-right: 8px;
                         Text {
-                            text: "Keep Theirs";
+                            text: @tr("Keep Theirs");
                             font-size: 12px;
                             font-weight: 600;
                             color: Palette.foreground;
@@ -307,7 +307,7 @@ export component EditorScreen inherits Rectangle {
                     max-width: 320px;
 
                     Text {
-                        text: root.note-count == 0 ? "No notes yet" : "No note selected";
+                        text: root.note-count == 0 ? @tr("No notes yet") : @tr("No note selected");
                         font-size: 20px;
                         font-weight: 600;
                         horizontal-alignment: center;
@@ -316,8 +316,8 @@ export component EditorScreen inherits Rectangle {
 
                     Text {
                         text: root.note-count == 0
-                            ? "Create your first note to start writing."
-                            : "Choose a note from the list, or create a new one.";
+                            ? @tr("Create your first note to start writing.")
+                            : @tr("Choose a note from the list, or create a new one.");
                         font-size: 14px;
                         horizontal-alignment: center;
                         color: Colors.muted;
@@ -341,7 +341,7 @@ export component EditorScreen inherits Rectangle {
                                 padding-left: 18px;
                                 padding-right: 18px;
                                 Text {
-                                    text: "+ New Note";
+                                    text: @tr("+ New Note");
                                     font-size: 15px;
                                     font-weight: 600;
                                     color: Palette.accent-foreground;
@@ -416,7 +416,7 @@ export component EditorScreen inherits Rectangle {
 
                             // In-body note title (Notion / Apple Notes style)
                             Text {
-                                text: root.title != "" ? root.title : "Untitled";
+                                text: root.title != "" ? root.title : @tr("Untitled");
                                 font-size: Metrics.font-headline;
                                 font-weight: 700;
                                 color: Palette.foreground;
@@ -432,7 +432,7 @@ export component EditorScreen inherits Rectangle {
                                     alignment: start;
                                     view-text := Text {
                                         width: 100%;
-                                        text: root.body != "" ? root.body : "Tap Edit or double-tap here to write.";
+                                        text: root.body != "" ? root.body : @tr("Tap Edit or double-tap here to write.");
                                         font-size: root.font-size;
                                         color: root.body != "" ? Palette.foreground : Colors.muted;
                                         wrap: word-wrap;

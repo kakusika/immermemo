@@ -2460,6 +2460,7 @@ dependencies = [
  "jni 0.21.1",
  "slint",
  "slint-build",
+ "sys-locale",
  "tempfile",
  "tomet-parser",
  "tomet-printer",

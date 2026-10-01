@@ -3,6 +3,8 @@ fn main() {
     let default_style = if is_android { "material" } else { "fluent" };
     let style = std::env::var("SLINT_STYLE").unwrap_or_else(|_| default_style.to_string());
 
-    let config = slint_build::CompilerConfiguration::new().with_style(style);
+    let config = slint_build::CompilerConfiguration::new()
+        .with_style(style)
+        .with_bundled_translations("translations");
     slint_build::compile_with_config("ui/app.slint", config).unwrap();
 }

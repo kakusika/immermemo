@@ -192,12 +192,6 @@ fn main() {
     )));
     app.set_current(0);
 
-    app.set_remote_open(true);
-    app.set_remote_has_token(true);
-    app.set_remote_url_draft("https://github.com/you/notes.git".into());
-    render(&window, size, &format!("{prefix}-remote.ppm"));
-    app.set_remote_open(false);
-
     // Tab 4: Settings
     app.set_active_tab(4);
     app.set_current_vault_name("notes".into());

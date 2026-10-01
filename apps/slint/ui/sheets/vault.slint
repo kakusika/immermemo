@@ -41,7 +41,7 @@ export component VaultSheet inherits Rectangle {
 
             Text {
                 horizontal-stretch: 1;
-                text: "Vaults";
+                text: @tr("Vaults");
                 font-size: 20px;
                 font-weight: 600;
                 vertical-alignment: center;
@@ -70,7 +70,7 @@ export component VaultSheet inherits Rectangle {
                 }
 
                 if i == root.current: Text {
-                    text: "current";
+                    text: @tr("current");
                     font-size: 13px;
                     color: Palette.accent-background;
                     vertical-alignment: center;
@@ -99,7 +99,7 @@ export component VaultSheet inherits Rectangle {
         }
 
         ActionRow {
-            text: "+ Add vault";
+            text: @tr("+ Add vault");
             tint: Palette.accent-background;
             clicked => { root.add(); }
         }
@@ -121,7 +121,7 @@ export component VaultSheet inherits Rectangle {
         cancel => { root.menu-index = -1; }
 
         if root.vaults.length > 1: ActionRow {
-            text: "Delete";
+            text: @tr("Delete");
             tint: Colors.danger;
             clicked => {
                 let idx = root.menu-index;
@@ -130,7 +130,7 @@ export component VaultSheet inherits Rectangle {
             }
         }
         if root.vaults.length <= 1: ActionRow {
-            text: "Cannot delete the only vault";
+            text: @tr("Cannot delete the only vault");
             tint: Colors.muted;
             clicked => {
                 root.menu-index = -1;

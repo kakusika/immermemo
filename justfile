@@ -81,3 +81,10 @@ logs:
 # A screenshot of whatever's on screen, saved next to this file
 screenshot name="screenshot.png":
     adb exec-out screencap -p > {{name}}
+
+# Regenerate the translation template from every @tr(...) in apps/slint/ui,
+# to see what's missing from (or stale in) a .po file under
+# apps/slint/translations/. Requires `cargo install slint-tr-extractor`.
+tr-extract:
+    cd apps/slint && find ui -name '*.slint' | xargs slint-tr-extractor -o /tmp/immermemo-slint.pot
+    @echo "Wrote /tmp/immermemo-slint.pot"

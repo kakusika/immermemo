@@ -29,6 +29,19 @@ accepts.
 
 Write all code comments in English. Do not use Japanese in code.
 
+**Exception:** user-facing strings in `apps/slint/ui/*.slint` go through
+Slint's i18n (`@tr("...")`, English as the source string, same as any
+other code) and are translated in per-language catalogs under
+`apps/slint/translations/<lang>/LC_MESSAGES/immermemo-slint.po` (wired
+up in `apps/slint/build.rs` via `with_bundled_translations`, selected at
+startup in `apps/slint/src/lib.rs`'s `select_system_translation`). Those
+`.po` files are expected to hold non-English text -- that's the whole
+point of them -- and aren't covered by "no Japanese in code" above. When
+adding or changing a `@tr(...)` string, regenerate the template with
+`slint-tr-extractor` (`cargo install slint-tr-extractor`, then `find
+apps/slint/ui -name '*.slint' | xargs slint-tr-extractor -o /tmp/x.pot`)
+rather than hand-editing a `.po` file out of sync with the source.
+
 `docs/design.md` is written in plain Japanese, deliberately -- it's the
 account of the system that gets discussed and revised in conversation
 with the app's author, in the language that conversation happens in, not

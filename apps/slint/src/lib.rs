@@ -44,6 +44,20 @@ pub fn desktop_app_data_dir() -> anyhow::Result<PathBuf> {
     Ok(base.join("immermemo"))
 }
 
+/// Switches the UI to whichever bundled translation (see
+/// `translations/<lang>/LC_MESSAGES/immermemo-slint.po`) matches the
+/// system's locale, silently keeping the English source strings if none
+/// matches -- there is no language picker yet, so this is the only way a
+/// non-English translation ever gets used. Must run after `App::new()`
+/// (the Slint translation machinery isn't ready any earlier).
+fn select_system_translation() {
+    let Some(locale) = sys_locale::get_locale() else {
+        return;
+    };
+    let lang = locale.split(['-', '_']).next().unwrap_or(&locale);
+    let _ = slint::select_bundled_translation(lang);
+}
+
 /// Opens the window and runs until it is closed.
 ///
 /// `default_vault_dir` only matters the very first time the app ever
@@ -83,6 +97,7 @@ pub fn run(
     let remote = app_data.load_remote(&vault_dir);
 
     let app = App::new()?;
+    select_system_translation();
     let font_size_choice = app_data.load_font_size().unwrap_or(1);
     let theme_choice = app_data.load_theme().unwrap_or(0);
     app.set_font_size_choice(font_size_choice);
@@ -295,10 +310,6 @@ pub fn run(
             app.set_current_vault_path(s.vault_dir.display().to_string().into());
             app.set_settings_open(true);
         }
-    });
-    app.on_close_remote({
-        let weak = app.as_weak();
-        move || weak.unwrap().set_remote_open(false)
     });
     app.on_trigger_haptic(|| {
         haptic::perform_haptic();
@@ -565,7 +576,6 @@ pub fn run(
             s.remote = Some(url.to_owned());
             drop(s);
             app.set_remote_configured(true);
-            app.set_remote_open(false);
             app.set_settings_open(false);
             start_sync(&app, &session);
         }
@@ -981,5 +991,11 @@ mod tests {
         assert!(app.get_syncing());
         finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
         assert!(!app.get_syncing());
+
+        // 8. The bundled `ja` translation catalog is discoverable at runtime
+        // (a stale/missing .po file would show up here, not just at compile
+        // time, since the directory is read again when selecting a language).
+        assert!(slint::select_bundled_translation("ja").is_ok());
+        let _ = slint::select_bundled_translation("en");
     }
 }

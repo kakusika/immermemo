@@ -20,7 +20,7 @@ export component FilesScreen inherits Rectangle {
     in property <length> inset-bottom: 0px;
     in property <bool> highlight-current: false;
     in property <bool> remote-configured: false;
-    in property <string> vault-name: "Notes";
+    in property <string> vault-name: @tr("Notes");
 
     callback select(int);
     callback new-note();
@@ -44,7 +44,7 @@ export component FilesScreen inherits Rectangle {
                     alignment: start;
 
                     Text {
-                        text: root.vault-name != "" ? root.vault-name : "Notes";
+                        text: root.vault-name != "" ? root.vault-name : @tr("Notes");
                         font-size: Metrics.font-title;
                         font-weight: 700;
                         color: Palette.foreground;
@@ -99,7 +99,7 @@ export component FilesScreen inherits Rectangle {
                 }
 
                 Text {
-                    text: "No notes yet";
+                    text: @tr("No notes yet");
                     font-size: Metrics.font-body;
                     font-weight: 600;
                     color: Colors.muted;
@@ -107,7 +107,7 @@ export component FilesScreen inherits Rectangle {
                 }
 
                 Text {
-                    text: "Tap + below to create your first note";
+                    text: @tr("Tap + below to create your first note");
                     font-size: Metrics.font-sub;
                     color: Colors.muted;
                     horizontal-alignment: center;

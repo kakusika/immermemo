@@ -47,8 +47,8 @@ export component HistorySheet inherits Rectangle {
             Text {
                 horizontal-stretch: 1;
                 text: (root.viewing-preview && !root.is-wide)
-                    ? "プレビュー"
-                    : (root.note-title != "" ? "バージョン履歴: " + root.note-title : "バージョン履歴");
+                    ? @tr("Preview")
+                    : (root.note-title != "" ? @tr("History: {}", root.note-title) : @tr("Version History"));
                 font-size: 17px;
                 font-weight: 700;
                 vertical-alignment: center;
@@ -77,7 +77,7 @@ export component HistorySheet inherits Rectangle {
                 padding: 24px;
 
                 Text {
-                    text: "このノートの履歴はありません";
+                    text: @tr("This note has no history yet");
                     font-size: 16px;
                     font-weight: 600;
                     color: Palette.foreground;
@@ -85,7 +85,7 @@ export component HistorySheet inherits Rectangle {
                 }
 
                 Text {
-                    text: "ノートを保存・同期すると、過去のバージョンがここに記録されます。";
+                    text: @tr("Saving or syncing this note will record past versions here.");
                     font-size: 13px;
                     color: Colors.muted;
                     horizontal-alignment: center;
@@ -275,7 +275,7 @@ export component HistorySheet inherits Rectangle {
                     }
 
                     Text {
-                        text: "このバージョンを復元";
+                        text: @tr("Restore This Version");
                         font-size: 15px;
                         font-weight: 700;
                         color: Palette.accent-foreground;
@@ -348,7 +348,7 @@ export component HistorySheet inherits Rectangle {
                 HorizontalLayout {
                     alignment: center;
                     Text {
-                        text: root.selected-index >= 0 && root.selected-index < root.dates.length ? root.dates[root.selected-index] + " の内容" : "プレビュー";
+                        text: root.selected-index >= 0 && root.selected-index < root.dates.length ? @tr("{} contents", root.dates[root.selected-index]) : @tr("Preview");
                         font-size: 14px;
                         font-weight: 600;
                         color: Colors.muted;
@@ -382,7 +382,7 @@ export component HistorySheet inherits Rectangle {
                             }
 
                             Text {
-                                text: "このバージョンを復元";
+                                text: @tr("Restore This Version");
                                 font-size: 13px;
                                 font-weight: 700;
                                 color: Palette.accent-foreground;

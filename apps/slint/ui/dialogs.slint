@@ -92,12 +92,12 @@ export component TextInputDialog inherits Rectangle {
                 spacing: 10px;
 
                 Button {
-                    text: "Cancel";
+                    text: @tr("Cancel");
                     clicked => { root.cancel(); }
                 }
 
                 Button {
-                    text: "Save";
+                    text: @tr("Save");
                     primary: true;
                     enabled: root.text-draft != "";
                     clicked => { root.save(root.text-draft); }
@@ -113,7 +113,7 @@ export component ConfirmDialog inherits Rectangle {
     in property <bool> narrow: true;
     in property <string> title;
     in property <string> body;
-    in property <string> confirm-text: "Confirm";
+    in property <string> confirm-text: @tr("Confirm");
     in property <length> inset-bottom: 0px;
     callback confirm();
     callback cancel();
@@ -192,7 +192,7 @@ export component ConfirmDialog inherits Rectangle {
                 spacing: 10px;
 
                 Button {
-                    text: "Cancel";
+                    text: @tr("Cancel");
                     clicked => { root.cancel(); }
                 }
 

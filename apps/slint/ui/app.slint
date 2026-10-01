@@ -1,11 +1,16 @@
 import { Palette } from "std-widgets.slint";
-import { Metrics, ActionRow, Colors, BottomNavBar, MiniNoteCard } from "components.slint";
+import {
+    Metrics,
+    ActionRow,
+    Colors,
+    BottomNavBar,
+    MiniNoteCard,
+} from "components.slint";
 import { HomeScreen } from "screens/home.slint";
 import { FilesScreen } from "screens/files.slint";
 import { EditorScreen } from "screens/editor.slint";
 import { PropertiesScreen } from "screens/properties.slint";
 import { SearchScreen } from "screens/search.slint";
-import { RemoteSheet } from "sheets/remote.slint";
 import { VaultSheet } from "sheets/vault.slint";
 import { SettingsSheet } from "sheets/settings.slint";
 import { ConflictSheet } from "sheets/conflict.slint";
@@ -74,7 +79,6 @@ export component App inherits Window {
     in property <bool> can-redo;
     in-out property <string> body;
     in property <bool> remote-configured;
-    in-out property <bool> remote-open: false;
     in-out property <string> remote-url-draft;
     in-out property <string> remote-token-draft;
     in property <bool> remote-has-token;
@@ -144,7 +148,6 @@ export component App inherits Window {
     callback font-size-changed(int);
     callback theme-changed(int);
     callback save-remote(string, string);
-    callback close-remote();
     callback rename-requested(int);
     callback delete-requested(int);
     callback confirm-rename(string);
@@ -214,11 +217,6 @@ export component App inherits Window {
             root.vault-sheet-open = false;
             return true;
         }
-        if (root.remote-open) {
-            root.remote-open = false;
-            return true;
-        }
-
         // 3. Close note sheet if open (unfocus if keyboard is up or typing)
         if (root.note-sheet-open) {
             if (pane.edit-mode || pane.editor-has-focus || root.keyboard > 0px) {
@@ -527,7 +525,6 @@ export component App inherits Window {
                     }
                 }
             }
-
         }
 
         // Layer 2: Fullscreen Note Editor Sheet Overlay
@@ -695,144 +692,132 @@ export component App inherits Window {
             }
         }
 
-    if root.remote-open: RemoteSheet {
-        width: 100%;
-        height: 100%;
-        has-token: root.remote-has-token;
-        url-draft <=> root.remote-url-draft;
-        token-draft <=> root.remote-token-draft;
-        inset-top: root.inset-top;
-        inset-bottom: root.inset-bottom;
-        save(url, token) => { root.save-remote(url, token); }
-        cancel => { root.close-remote(); }
-    }
+        if root.note-menu-index >= 0: ActionSheet {
+            open: true;
+            narrow: root.narrow;
+            title: root.note-menu-index >= 0 ? root.notes[root.note-menu-index] : "";
+            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+            cancel => { root.note-menu-index = -1; }
 
-    if root.note-menu-index >= 0: ActionSheet {
-        open: true;
-        narrow: root.narrow;
-        title: root.note-menu-index >= 0 ? root.notes[root.note-menu-index] : "";
-        inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
-        cancel => { root.note-menu-index = -1; }
+            ActionRow {
+                text: @tr("Rename");
+                clicked => {
+                    let idx = root.note-menu-index;
+                    root.note-menu-index = -1;
+                    root.rename-requested(idx);
+                }
+            }
 
-        ActionRow {
-            text: "Rename";
-            clicked => {
-                let idx = root.note-menu-index;
-                root.note-menu-index = -1;
-                root.rename-requested(idx);
+            ActionRow {
+                text: @tr("Delete");
+                tint: Colors.danger;
+                clicked => {
+                    let idx = root.note-menu-index;
+                    root.note-menu-index = -1;
+                    root.delete-requested(idx);
+                }
             }
         }
 
-        ActionRow {
-            text: "Delete";
-            tint: Colors.danger;
-            clicked => {
-                let idx = root.note-menu-index;
-                root.note-menu-index = -1;
-                root.delete-requested(idx);
+        if root.rename-open: TextInputDialog {
+            open: true;
+            narrow: root.narrow;
+            title: @tr("Rename note");
+            text-draft <=> root.rename-draft;
+            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+            save(name) => {
+                root.rename-open = false;
+                root.confirm-rename(name);
             }
+            cancel => { root.rename-open = false; }
         }
-    }
 
-    if root.rename-open: TextInputDialog {
-        open: true;
-        narrow: root.narrow;
-        title: "Rename note";
-        text-draft <=> root.rename-draft;
-        inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
-        save(name) => {
-            root.rename-open = false;
-            root.confirm-rename(name);
+        if root.delete-confirm-open: ConfirmDialog {
+            open: true;
+            narrow: root.narrow;
+            title: @tr("Delete this note?");
+            body: @tr("This can't be undone from here.");
+            confirm-text: @tr("Delete");
+            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+            confirm => {
+                root.delete-confirm-open = false;
+                root.confirm-delete();
+            }
+            cancel => { root.delete-confirm-open = false; }
         }
-        cancel => { root.rename-open = false; }
-    }
 
-    if root.delete-confirm-open: ConfirmDialog {
-        open: true;
-        narrow: root.narrow;
-        title: "Delete this note?";
-        body: "This can't be undone from here.";
-        confirm-text: "Delete";
-        inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
-        confirm => {
-            root.delete-confirm-open = false;
-            root.confirm-delete();
+        if root.vault-sheet-open: VaultSheet {
+            width: 100%;
+            height: 100%;
+            vaults: root.vaults;
+            current: root.current-vault;
+            inset-top: root.inset-top;
+            inset-bottom: root.inset-bottom;
+            select(i) => {
+                root.vault-sheet-open = false;
+                root.switch-vault(i);
+            }
+            add => { root.add-vault-requested(); }
+            close => { root.vault-sheet-open = false; }
+            delete-requested(i) => { root.delete-vault-requested(i); }
+            trigger-haptic => { root.trigger-haptic(); }
         }
-        cancel => { root.delete-confirm-open = false; }
-    }
 
-    if root.vault-sheet-open: VaultSheet {
-        width: 100%;
-        height: 100%;
-        vaults: root.vaults;
-        current: root.current-vault;
-        inset-top: root.inset-top;
-        inset-bottom: root.inset-bottom;
-        select(i) => {
-            root.vault-sheet-open = false;
-            root.switch-vault(i);
+        if root.delete-vault-confirm-open: ConfirmDialog {
+            open: true;
+            narrow: root.narrow;
+            title: @tr("Remove this vault?");
+            body: @tr("Its notes will stay on disk, but its sync settings and git history will be forgotten.");
+            confirm-text: @tr("Remove");
+            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+            confirm => {
+                root.delete-vault-confirm-open = false;
+                root.confirm-delete-vault();
+            }
+            cancel => { root.delete-vault-confirm-open = false; }
         }
-        add => { root.add-vault-requested(); }
-        close => { root.vault-sheet-open = false; }
-        delete-requested(i) => { root.delete-vault-requested(i); }
-        trigger-haptic => { root.trigger-haptic(); }
-    }
 
-    if root.delete-vault-confirm-open: ConfirmDialog {
-        open: true;
-        narrow: root.narrow;
-        title: "Remove this vault?";
-        body: "Its notes will stay on disk, but its sync settings and git history will be forgotten.";
-        confirm-text: "Remove";
-        inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
-        confirm => {
-            root.delete-vault-confirm-open = false;
-            root.confirm-delete-vault();
+        if root.add-vault-open: TextInputDialog {
+            open: true;
+            narrow: root.narrow;
+            title: @tr("Add vault");
+            text-draft <=> root.add-vault-draft;
+            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+            save(input) => {
+                root.add-vault-open = false;
+                root.confirm-add-vault(input);
+            }
+            cancel => { root.add-vault-open = false; }
         }
-        cancel => { root.delete-vault-confirm-open = false; }
-    }
 
-    if root.add-vault-open: TextInputDialog {
-        open: true;
-        narrow: root.narrow;
-        title: "Add vault";
-        text-draft <=> root.add-vault-draft;
-        inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
-        save(input) => {
-            root.add-vault-open = false;
-            root.confirm-add-vault(input);
+        if root.conflict-sheet-open: ConflictSheet {
+            width: 100%;
+            height: 100%;
+            open: true;
+            conflict-index: root.active-conflict-index;
+            conflict-total: root.active-conflict-total;
+            mine-text: root.active-conflict-mine;
+            theirs-text: root.active-conflict-theirs;
+            close => { root.conflict-sheet-open = false; }
+            resolve-choice(choice) => { root.resolve-conflict-step(choice); }
+            prev-conflict => { root.prev-conflict-step(); }
+            next-conflict => { root.next-conflict-step(); }
         }
-        cancel => { root.add-vault-open = false; }
-    }
 
-    if root.conflict-sheet-open: ConflictSheet {
-        width: 100%;
-        height: 100%;
-        open: true;
-        conflict-index: root.active-conflict-index;
-        conflict-total: root.active-conflict-total;
-        mine-text: root.active-conflict-mine;
-        theirs-text: root.active-conflict-theirs;
-        close => { root.conflict-sheet-open = false; }
-        resolve-choice(choice) => { root.resolve-conflict-step(choice); }
-        prev-conflict => { root.prev-conflict-step(); }
-        next-conflict => { root.next-conflict-step(); }
-    }
-
-    if root.history-sheet-open: HistorySheet {
-        width: 100%;
-        height: 100%;
-        open: true;
-        note-title: root.current-title;
-        commits: root.history-commits;
-        dates: root.history-dates;
-        previews: root.history-previews;
-        selected-index <=> root.history-selected-index;
-        inset-top: root.inset-top;
-        inset-bottom: root.inset-bottom;
-        close => { root.history-sheet-open = false; }
-        restore(idx) => { root.restore-history-version(idx); }
-    }
+        if root.history-sheet-open: HistorySheet {
+            width: 100%;
+            height: 100%;
+            open: true;
+            note-title: root.current-title;
+            commits: root.history-commits;
+            dates: root.history-dates;
+            previews: root.history-previews;
+            selected-index <=> root.history-selected-index;
+            inset-top: root.inset-top;
+            inset-bottom: root.inset-bottom;
+            close => { root.history-sheet-open = false; }
+            restore(idx) => { root.restore-history-version(idx); }
+        }
 
         if root.vault-history-open: VaultHistorySheet {
             width: 100%;

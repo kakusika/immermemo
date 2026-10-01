@@ -1,0 +1,698 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: immermemo-slint\n"
+"POT-Creation-Date: 2026-10-01 00:00+0000\n"
+"PO-Revision-Date: 2026-10-01 00:00+0000\n"
+"Language-Team: Japanese\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: ui/components.slint:564
+msgctxt "MiniNoteCard"
+msgid "Untitled"
+msgstr "無題"
+
+#: ui/components.slint:572
+msgctxt "MiniNoteCard"
+msgid "Conflict detected"
+msgstr "競合が発生しています"
+
+#: ui/components.slint:631
+msgctxt "BottomNavBar"
+msgid "Home"
+msgstr "ホーム"
+
+#: ui/components.slint:641
+msgctxt "BottomNavBar"
+msgid "Files"
+msgstr "ファイル一覧"
+
+#: ui/components.slint:652
+msgctxt "BottomNavBar"
+msgid "Search"
+msgstr "検索"
+
+#: ui/components.slint:662
+msgctxt "BottomNavBar"
+msgid "Properties"
+msgstr "プロパティ"
+
+#: ui/components.slint:672
+msgctxt "BottomNavBar"
+msgid "Settings"
+msgstr "設定"
+
+#: ui/dialogs.slint:95
+msgctxt "TextInputDialog"
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: ui/dialogs.slint:100
+msgctxt "TextInputDialog"
+msgid "Save"
+msgstr "保存"
+
+#: ui/dialogs.slint:116
+msgctxt "ConfirmDialog"
+msgid "Confirm"
+msgstr "確認"
+
+#: ui/dialogs.slint:195
+msgctxt "ConfirmDialog"
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: ui/app.slint:703
+msgctxt "App"
+msgid "Rename"
+msgstr "名前を変更"
+
+#: ui/app.slint:712 ui/app.slint:740
+msgctxt "App"
+msgid "Delete"
+msgstr "削除"
+
+#: ui/app.slint:725
+msgctxt "App"
+msgid "Rename note"
+msgstr "ノート名を変更"
+
+#: ui/app.slint:738
+msgctxt "App"
+msgid "Delete this note?"
+msgstr "このノートを削除しますか？"
+
+#: ui/app.slint:739
+msgctxt "App"
+msgid "This can't be undone from here."
+msgstr "この操作は元に戻せません。"
+
+#: ui/app.slint:769
+msgctxt "App"
+msgid "Remove this vault?"
+msgstr "この保管庫を削除しますか？"
+
+#: ui/app.slint:770
+msgctxt "App"
+msgid ""
+"Its notes will stay on disk, but its sync settings and git history will be "
+"forgotten."
+msgstr "ノート自体はディスクに残りますが、同期設定とGitの履歴は失われます。"
+
+#: ui/app.slint:771
+msgctxt "App"
+msgid "Remove"
+msgstr "削除"
+
+#: ui/app.slint:783
+msgctxt "App"
+msgid "Add vault"
+msgstr "保管庫を追加"
+
+#: ui/sheets/vault.slint:44
+msgctxt "VaultSheet"
+msgid "Vaults"
+msgstr "保管庫"
+
+#: ui/sheets/vault.slint:73
+msgctxt "VaultSheet"
+msgid "current"
+msgstr "現在"
+
+#: ui/sheets/vault.slint:102
+msgctxt "VaultSheet"
+msgid "+ Add vault"
+msgstr "＋ 保管庫を追加"
+
+#: ui/sheets/vault.slint:124
+msgctxt "VaultSheet"
+msgid "Delete"
+msgstr "削除"
+
+#: ui/sheets/vault.slint:133
+msgctxt "VaultSheet"
+msgid "Cannot delete the only vault"
+msgstr "唯一の保管庫は削除できません"
+
+#: ui/sheets/conflict.slint:58
+msgctxt "ConflictSheet"
+msgid "⚠️ Resolve Conflict"
+msgstr "⚠️ コンフリクト解決"
+
+#: ui/sheets/conflict.slint:116
+msgctxt "ConflictSheet"
+msgid "📱 Your changes (Local)"
+msgstr "📱 あなたの変更 (Local)"
+
+#: ui/sheets/conflict.slint:132 ui/sheets/conflict.slint:194
+msgctxt "ConflictSheet"
+msgid "(deleted or empty)"
+msgstr "(削除または空)"
+
+#: ui/sheets/conflict.slint:149
+msgctxt "ConflictSheet"
+msgid "Keep This Version (Keep Local)"
+msgstr "この変更を採用 (Keep Local)"
+
+#: ui/sheets/conflict.slint:178
+msgctxt "ConflictSheet"
+msgid "☁️ Remote changes (Remote)"
+msgstr "☁️ リモートの変更 (Remote)"
+
+#: ui/sheets/conflict.slint:211
+msgctxt "ConflictSheet"
+msgid "Keep This Version (Keep Remote)"
+msgstr "この変更を採用 (Keep Remote)"
+
+#: ui/sheets/conflict.slint:236
+msgctxt "ConflictSheet"
+msgid "+ Keep Both (Local → Remote)"
+msgstr "＋ 両方を残す (Local → Remote)"
+
+#: ui/sheets/conflict.slint:263
+msgctxt "ConflictSheet"
+msgid "◀ Previous Conflict"
+msgstr "◀ 前の競合"
+
+#: ui/sheets/conflict.slint:286
+msgctxt "ConflictSheet"
+msgid "Next Conflict ▶"
+msgstr "次の競合 ▶"
+
+#: ui/sheets/history.slint:50 ui/sheets/history.slint:351
+msgctxt "HistorySheet"
+msgid "Preview"
+msgstr "プレビュー"
+
+#: ui/sheets/history.slint:51
+msgctxt "HistorySheet"
+msgid "History: {}"
+msgstr "バージョン履歴: {}"
+
+#: ui/sheets/history.slint:51
+msgctxt "HistorySheet"
+msgid "Version History"
+msgstr "バージョン履歴"
+
+#: ui/sheets/history.slint:80
+msgctxt "HistorySheet"
+msgid "This note has no history yet"
+msgstr "このノートの履歴はありません"
+
+#: ui/sheets/history.slint:88
+msgctxt "HistorySheet"
+msgid "Saving or syncing this note will record past versions here."
+msgstr "ノートを保存・同期すると、過去のバージョンがここに記録されます。"
+
+#: ui/sheets/history.slint:278 ui/sheets/history.slint:385
+msgctxt "HistorySheet"
+msgid "Restore This Version"
+msgstr "このバージョンを復元"
+
+#: ui/sheets/history.slint:351
+msgctxt "HistorySheet"
+msgid "{} contents"
+msgstr "{} の内容"
+
+#: ui/sheets/vault_history.slint:38
+msgctxt "VaultHistorySheet"
+msgid "Vault History: {}"
+msgstr "保管庫の履歴: {}"
+
+#: ui/sheets/vault_history.slint:38
+msgctxt "VaultHistorySheet"
+msgid "Vault History"
+msgstr "保管庫の履歴"
+
+#: ui/sheets/vault_history.slint:66
+msgctxt "VaultHistorySheet"
+msgid "No commit history yet"
+msgstr "コミット履歴はありません"
+
+#: ui/sheets/vault_history.slint:74
+msgctxt "VaultHistorySheet"
+msgid "Creating or syncing notes will record the vault's history here."
+msgstr "ノートを作成または同期すると、保管庫の履歴がここに表示されます。"
+
+#: ui/sheets/settings.slint:58
+msgctxt "SettingsSheet"
+msgid "Settings"
+msgstr "設定"
+
+#: ui/sheets/settings.slint:88
+msgctxt "SettingsSheet"
+msgid "SYNC & REMOTE"
+msgstr "同期とリモート"
+
+#: ui/sheets/settings.slint:106
+msgctxt "SettingsSheet"
+msgid "Remote repository URL"
+msgstr "リモートリポジトリのURL"
+
+#: ui/sheets/settings.slint:113
+msgctxt "SettingsSheet"
+msgid "https://github.com/you/notes.git"
+msgstr "https://github.com/you/notes.git"
+
+#: ui/sheets/settings.slint:121
+msgctxt "SettingsSheet"
+msgid "Access token"
+msgstr "アクセストークン"
+
+#: ui/sheets/settings.slint:128
+msgctxt "SettingsSheet"
+msgid "Leave blank to keep the saved token"
+msgstr "保存済みのトークンを使う場合は空欄のまま"
+
+#: ui/sheets/settings.slint:128
+msgctxt "SettingsSheet"
+msgid "Personal access token"
+msgstr "パーソナルアクセストークン"
+
+#: ui/sheets/settings.slint:146
+msgctxt "SettingsSheet"
+msgid "Syncing..."
+msgstr "同期中..."
+
+#: ui/sheets/settings.slint:146
+msgctxt "SettingsSheet"
+msgid "Sync Now"
+msgstr "今すぐ同期"
+
+#: ui/sheets/settings.slint:152
+msgctxt "SettingsSheet"
+msgid "Save Remote"
+msgstr "リモートを保存"
+
+#: ui/sheets/settings.slint:168
+msgctxt "SettingsSheet"
+msgid "VAULTS"
+msgstr "保管庫"
+
+#: ui/sheets/settings.slint:185
+msgctxt "SettingsSheet"
+msgid "Active Vault"
+msgstr "現在の保管庫"
+
+#: ui/sheets/settings.slint:194
+msgctxt "SettingsSheet"
+msgid "Default"
+msgstr "デフォルト"
+
+#: ui/sheets/settings.slint:214
+msgctxt "SettingsSheet"
+msgid "Manage & Switch Vaults →"
+msgstr "保管庫の管理・切り替え →"
+
+#: ui/sheets/settings.slint:229
+msgctxt "SettingsSheet"
+msgid "APPEARANCE & EDITOR"
+msgstr "外観とエディタ"
+
+#: ui/sheets/settings.slint:249
+msgctxt "SettingsSheet"
+msgid "Theme"
+msgstr "テーマ"
+
+#: ui/sheets/settings.slint:264
+msgctxt "SettingsSheet"
+msgid "System"
+msgstr "システム"
+
+#: ui/sheets/settings.slint:287
+msgctxt "SettingsSheet"
+msgid "Light"
+msgstr "ライト"
+
+#: ui/sheets/settings.slint:310
+msgctxt "SettingsSheet"
+msgid "Dark"
+msgstr "ダーク"
+
+#: ui/sheets/settings.slint:338
+msgctxt "SettingsSheet"
+msgid "Editor Font Size"
+msgstr "エディタのフォントサイズ"
+
+#: ui/sheets/settings.slint:353
+msgctxt "SettingsSheet"
+msgid "Small (14)"
+msgstr "小 (14)"
+
+#: ui/sheets/settings.slint:376
+msgctxt "SettingsSheet"
+msgid "Medium (17)"
+msgstr "中 (17)"
+
+#: ui/sheets/settings.slint:399
+msgctxt "SettingsSheet"
+msgid "Large (20)"
+msgstr "大 (20)"
+
+#: ui/sheets/settings.slint:427
+msgctxt "SettingsSheet"
+msgid "UI Scale"
+msgstr "UIの拡大率"
+
+#: ui/sheets/settings.slint:535
+msgctxt "SettingsSheet"
+msgid "ABOUT"
+msgstr "このアプリについて"
+
+#: ui/sheets/settings.slint:551
+msgctxt "SettingsSheet"
+msgid "Immermemo v{}"
+msgstr "Immermemo v{}"
+
+#: ui/sheets/settings.slint:558
+msgctxt "SettingsSheet"
+msgid ""
+"A mobile note app for writing Tomet (.tmt) notes, synced over git without "
+"git touching user files."
+msgstr "Tomet (.tmt) 形式のノートを書くモバイルノートアプリ。gitがユーザーのファイルに触れることなく同期します。"
+
+#: ui/sheets/settings.slint:569
+msgctxt "SettingsSheet"
+msgid "AST-level three-way merge with conflict tracking (@mobile.conflict)."
+msgstr "AST単位の3-wayマージと競合追跡 (@mobile.conflict) に対応しています。"
+
+#: ui/screens/search.slint:60
+msgctxt "SearchScreen"
+msgid "Search note titles and contents..."
+msgstr "ノートのタイトルや本文を検索..."
+
+#: ui/screens/search.slint:139
+msgctxt "SearchScreen"
+msgid "No notes match \"{}\""
+msgstr "\"{}\" に一致するノートはありません"
+
+#: ui/screens/search.slint:163
+msgctxt "SearchScreen"
+msgid "Search notes by title or contents"
+msgstr "タイトルや本文でノートを検索できます"
+
+#: ui/screens/files.slint:23 ui/screens/files.slint:47
+msgctxt "FilesScreen"
+msgid "Notes"
+msgstr "ノート"
+
+#: ui/screens/files.slint:102
+msgctxt "FilesScreen"
+msgid "No notes yet"
+msgstr "ノートがありません"
+
+#: ui/screens/files.slint:110
+msgctxt "FilesScreen"
+msgid "Tap + below to create your first note"
+msgstr "下の＋をタップして最初のノートを作成しましょう"
+
+#. Vault info
+#: ui/screens/home.slint:18
+msgctxt "HomeScreen"
+msgid "Default"
+msgstr "デフォルト"
+
+#: ui/screens/home.slint:51
+msgctxt "HomeScreen"
+msgid "Home"
+msgstr "ホーム"
+
+#: ui/screens/home.slint:100
+msgctxt "HomeScreen"
+msgid "Current Vault"
+msgstr "現在の保管庫"
+
+#: ui/screens/home.slint:108 ui/screens/home.slint:139
+msgctxt "HomeScreen"
+msgid "Notes"
+msgstr "ノート数"
+
+#: ui/screens/home.slint:155
+msgctxt "HomeScreen"
+msgid "Conflicts"
+msgstr "競合"
+
+#: ui/screens/home.slint:193
+msgctxt "HomeScreen"
+msgid "Sync Status"
+msgstr "同期ステータス"
+
+#: ui/screens/home.slint:216 ui/screens/home.slint:470
+msgctxt "HomeScreen"
+msgid "Syncing..."
+msgstr "同期中..."
+
+#: ui/screens/home.slint:250
+msgctxt "HomeScreen"
+msgid "Sync failed"
+msgstr "同期に失敗しました"
+
+#: ui/screens/home.slint:337
+msgctxt "HomeScreen"
+msgid "Copied"
+msgstr "コピーしました"
+
+#: ui/screens/home.slint:337
+msgctxt "HomeScreen"
+msgid "Copy Error"
+msgstr "エラーをコピー"
+
+#: ui/screens/home.slint:373
+msgctxt "HomeScreen"
+msgid "Retry"
+msgstr "再試行"
+
+#: ui/screens/home.slint:412
+msgctxt "HomeScreen"
+msgid "No remote configured"
+msgstr "リモート未設定"
+
+#: ui/screens/home.slint:419
+msgctxt "HomeScreen"
+msgid "Set a git remote to enable automatic sync"
+msgstr "Gitリモートを設定すると自動同期できます"
+
+#: ui/screens/home.slint:441
+msgctxt "HomeScreen"
+msgid "Settings"
+msgstr "設定"
+
+#: ui/screens/home.slint:470
+msgctxt "HomeScreen"
+msgid "Up to date"
+msgstr "同期完了"
+
+#: ui/screens/home.slint:478
+msgctxt "HomeScreen"
+msgid "Checking for changes with the remote"
+msgstr "リモートとの差分を確認しています"
+
+#: ui/screens/home.slint:479
+msgctxt "HomeScreen"
+msgid "Last synced: {}"
+msgstr "最終同期: {}"
+
+#: ui/screens/home.slint:479
+msgctxt "HomeScreen"
+msgid "Local and remote are in sync"
+msgstr "ローカルとリモートは同期済みです"
+
+#: ui/screens/home.slint:514
+msgctxt "HomeScreen"
+msgid "Sync"
+msgstr "同期"
+
+#: ui/screens/home.slint:535
+msgctxt "HomeScreen"
+msgid "Unresolved Conflicts"
+msgstr "未解決のコンフリクト"
+
+#: ui/screens/home.slint:568
+msgctxt "HomeScreen"
+msgid "{n} note has a conflict"
+msgid_plural "{n} notes have conflicts"
+msgstr[0] "{n} 件のノートに競合があります"
+
+#: ui/screens/home.slint:577
+msgctxt "HomeScreen"
+msgid "Tap to open and resolve conflicted notes →"
+msgstr "タップして競合ノートを開く・解決する →"
+
+#: ui/screens/home.slint:593
+msgctxt "HomeScreen"
+msgid "Currently Editing"
+msgstr "編集中ノート"
+
+#: ui/screens/home.slint:620
+msgctxt "HomeScreen"
+msgid "Tap to keep editing →"
+msgstr "タップして編集を続ける →"
+
+#: ui/screens/home.slint:635
+msgctxt "HomeScreen"
+msgid "Quick Actions"
+msgstr "クイックアクション"
+
+#: ui/screens/home.slint:651
+msgctxt "HomeScreen"
+msgid "+ New Note"
+msgstr "＋ 新しいノート"
+
+#: ui/screens/home.slint:657
+msgctxt "HomeScreen"
+msgid "Switch Vault..."
+msgstr "保管庫を切り替え..."
+
+#: ui/screens/home.slint:662
+msgctxt "HomeScreen"
+msgid "Settings & Sync..."
+msgstr "設定・同期..."
+
+#: ui/screens/home.slint:667
+msgctxt "HomeScreen"
+msgid "Vault History & Commits..."
+msgstr "保管庫の履歴・コミット..."
+
+#: ui/screens/properties.slint:40
+msgctxt "PropertiesScreen"
+msgid "Properties"
+msgstr "プロパティ"
+
+#: ui/screens/properties.slint:59
+msgctxt "PropertiesScreen"
+msgid "No note is currently open."
+msgstr "現在開いているノートはありません。"
+
+#: ui/screens/properties.slint:91
+msgctxt "PropertiesScreen"
+msgid "Note Info"
+msgstr "ノート情報"
+
+#: ui/screens/properties.slint:126
+msgctxt "PropertiesScreen"
+msgid "Characters"
+msgstr "文字数"
+
+#: ui/screens/properties.slint:143
+msgctxt "PropertiesScreen"
+msgid "Words"
+msgstr "単語数"
+
+#: ui/screens/properties.slint:160
+msgctxt "PropertiesScreen"
+msgid "Lines"
+msgstr "行数"
+
+#: ui/screens/properties.slint:202
+msgctxt "PropertiesScreen"
+msgid "{n} conflict found"
+msgid_plural "{n} conflicts found"
+msgstr[0] "{n} 箇所の競合があります"
+
+#: ui/screens/properties.slint:203
+msgctxt "PropertiesScreen"
+msgid "Conflict detected"
+msgstr "競合が発生しています"
+
+#: ui/screens/properties.slint:225
+msgctxt "PropertiesScreen"
+msgid "📱 Your changes (Local):"
+msgstr "📱 あなたの変更 (Local):"
+
+#: ui/screens/properties.slint:250
+msgctxt "PropertiesScreen"
+msgid "☁️ Remote changes (Remote):"
+msgstr "☁️ リモートの変更 (Remote):"
+
+#: ui/screens/properties.slint:276
+msgctxt "PropertiesScreen"
+msgid "🔍 Open resolution sheet"
+msgstr "🔍 解決シートを開いて確認・解決"
+
+#: ui/screens/properties.slint:294
+msgctxt "PropertiesScreen"
+msgid "Keep Mine"
+msgstr "ローカル側を採用"
+
+#: ui/screens/properties.slint:300
+msgctxt "PropertiesScreen"
+msgid "Keep Theirs"
+msgstr "リモート側を採用"
+
+#: ui/screens/properties.slint:314
+msgctxt "PropertiesScreen"
+msgid "Actions"
+msgstr "操作"
+
+#: ui/screens/properties.slint:330
+msgctxt "PropertiesScreen"
+msgid "Rename..."
+msgstr "名前を変更..."
+
+#: ui/screens/properties.slint:335
+msgctxt "PropertiesScreen"
+msgid "Delete Note..."
+msgstr "ノートを削除..."
+
+#: ui/screens/editor.slint:193
+msgctxt "EditorScreen"
+msgid "Conflict"
+msgstr "競合"
+
+#: ui/screens/editor.slint:214
+msgctxt "EditorScreen"
+msgid "Open Resolution"
+msgstr "解決シートを開く"
+
+#: ui/screens/editor.slint:237
+msgctxt "EditorScreen"
+msgid "Next"
+msgstr "次へ"
+
+#: ui/screens/editor.slint:260
+msgctxt "EditorScreen"
+msgid "Keep Mine"
+msgstr "自分の変更を採用"
+
+#: ui/screens/editor.slint:283
+msgctxt "EditorScreen"
+msgid "Keep Theirs"
+msgstr "相手の変更を採用"
+
+#: ui/screens/editor.slint:310
+msgctxt "EditorScreen"
+msgid "No notes yet"
+msgstr "ノートがありません"
+
+#: ui/screens/editor.slint:310
+msgctxt "EditorScreen"
+msgid "No note selected"
+msgstr "ノートが選択されていません"
+
+#: ui/screens/editor.slint:319
+msgctxt "EditorScreen"
+msgid "Create your first note to start writing."
+msgstr "最初のノートを作成して書き始めましょう。"
+
+#: ui/screens/editor.slint:320
+msgctxt "EditorScreen"
+msgid "Choose a note from the list, or create a new one."
+msgstr "一覧からノートを選ぶか、新しいノートを作成してください。"
+
+#: ui/screens/editor.slint:344
+msgctxt "EditorScreen"
+msgid "+ New Note"
+msgstr "＋ 新しいノート"
+
+#: ui/screens/editor.slint:419
+msgctxt "EditorScreen"
+msgid "Untitled"
+msgstr "無題"
+
+#: ui/screens/editor.slint:435
+msgctxt "EditorScreen"
+msgid "Tap Edit or double-tap here to write."
+msgstr "「編集」をタップするか、ここをダブルタップして書き始めてください。"

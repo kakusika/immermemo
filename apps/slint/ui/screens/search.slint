@@ -57,7 +57,7 @@ export component SearchScreen inherits Rectangle {
                             width: 100%;
                             height: 100%;
                             vertical-alignment: center;
-                            text: "ノートのタイトルや本文を検索...";
+                            text: @tr("Search note titles and contents...");
                             font-size: Metrics.font-md;
                             color: Colors.muted;
                             overflow: elide;
@@ -136,7 +136,7 @@ export component SearchScreen inherits Rectangle {
                 }
 
                 Text {
-                    text: "\"" + root.query + "\" に一致するノートはありません";
+                    text: @tr("No notes match \"{}\"", root.query);
                     font-size: Metrics.font-md;
                     color: Colors.muted;
                     horizontal-alignment: center;
@@ -160,7 +160,7 @@ export component SearchScreen inherits Rectangle {
                 }
 
                 Text {
-                    text: "タイトルや本文でノートを検索できます";
+                    text: @tr("Search notes by title or contents");
                     font-size: Metrics.font-md;
                     color: Colors.muted;
                     horizontal-alignment: center;

@@ -55,7 +55,7 @@ export component ConflictSheet inherits Rectangle {
                 alignment: center;
 
                 Text {
-                    text: "⚠️ コンフリクト解決";
+                    text: @tr("⚠️ Resolve Conflict");
                     font-size: 16px;
                     font-weight: 700;
                     color: Colors.warning;
@@ -113,7 +113,7 @@ export component ConflictSheet inherits Rectangle {
                             HorizontalLayout {
                                 spacing: 6px;
                                 Text {
-                                    text: "📱 あなたの変更 (Local)";
+                                    text: @tr("📱 Your changes (Local)");
                                     font-size: 13px;
                                     font-weight: 700;
                                     color: Palette.accent-background;
@@ -129,7 +129,7 @@ export component ConflictSheet inherits Rectangle {
                                 HorizontalLayout {
                                     padding: 8px;
                                     Text {
-                                        text: root.mine-text != "" ? root.mine-text : "(削除または空)";
+                                        text: root.mine-text != "" ? root.mine-text : @tr("(deleted or empty)");
                                         font-size: 14px;
                                         color: root.mine-text != "" ? Palette.foreground : Colors.muted;
                                         wrap: word-wrap;
@@ -146,7 +146,7 @@ export component ConflictSheet inherits Rectangle {
                                 HorizontalLayout {
                                     alignment: center;
                                     Text {
-                                        text: "この変更を採用 (Keep Local)";
+                                        text: @tr("Keep This Version (Keep Local)");
                                         font-size: 13px;
                                         font-weight: 600;
                                         color: #ffffff;
@@ -175,7 +175,7 @@ export component ConflictSheet inherits Rectangle {
                             HorizontalLayout {
                                 spacing: 6px;
                                 Text {
-                                    text: "☁️ リモートの変更 (Remote)";
+                                    text: @tr("☁️ Remote changes (Remote)");
                                     font-size: 13px;
                                     font-weight: 700;
                                     color: Colors.warning;
@@ -191,7 +191,7 @@ export component ConflictSheet inherits Rectangle {
                                 HorizontalLayout {
                                     padding: 8px;
                                     Text {
-                                        text: root.theirs-text != "" ? root.theirs-text : "(削除または空)";
+                                        text: root.theirs-text != "" ? root.theirs-text : @tr("(deleted or empty)");
                                         font-size: 14px;
                                         color: root.theirs-text != "" ? Palette.foreground : Colors.muted;
                                         wrap: word-wrap;
@@ -208,7 +208,7 @@ export component ConflictSheet inherits Rectangle {
                                 HorizontalLayout {
                                     alignment: center;
                                     Text {
-                                        text: "この変更を採用 (Keep Remote)";
+                                        text: @tr("Keep This Version (Keep Remote)");
                                         font-size: 13px;
                                         font-weight: 600;
                                         color: #ffffff;
@@ -233,7 +233,7 @@ export component ConflictSheet inherits Rectangle {
                             alignment: center;
                             spacing: 6px;
                             Text {
-                                text: "＋ 両方を残す (Local → Remote)";
+                                text: @tr("+ Keep Both (Local → Remote)");
                                 font-size: 13px;
                                 font-weight: 600;
                                 color: Palette.foreground;
@@ -260,7 +260,7 @@ export component ConflictSheet inherits Rectangle {
                             HorizontalLayout {
                                 alignment: center;
                                 Text {
-                                    text: "◀ 前の競合";
+                                    text: @tr("◀ Previous Conflict");
                                     font-size: 12px;
                                     font-weight: 600;
                                     color: root.conflict-index > 0 ? Palette.foreground : Colors.muted;
@@ -283,7 +283,7 @@ export component ConflictSheet inherits Rectangle {
                             HorizontalLayout {
                                 alignment: center;
                                 Text {
-                                    text: "次の競合 ▶";
+                                    text: @tr("Next Conflict ▶");
                                     font-size: 12px;
                                     font-weight: 600;
                                     color: root.conflict-index < root.conflict-total - 1 ? Palette.foreground : Colors.muted;

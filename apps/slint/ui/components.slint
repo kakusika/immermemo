@@ -561,7 +561,7 @@ export component MiniNoteCard inherits Rectangle {
             spacing: 2px;
 
             Text {
-                text: root.title != "" ? root.title : "Untitled";
+                text: root.title != "" ? root.title : @tr("Untitled");
                 font-size: Metrics.font-body;
                 font-weight: 600;
                 color: Palette.foreground;
@@ -569,7 +569,7 @@ export component MiniNoteCard inherits Rectangle {
             }
 
             if root.has-conflict: Text {
-                text: "競合が発生しています";
+                text: @tr("Conflict detected");
                 font-size: Metrics.font-caption;
                 color: Colors.warning;
                 overflow: elide;
@@ -628,7 +628,7 @@ export component BottomNavBar inherits Rectangle {
 
         NavItem {
             icon: Shapes.home;
-            label: "ホーム";
+            label: @tr("Home");
             active: root.active-tab == 0;
             clicked => {
                 root.active-tab = 0;
@@ -638,7 +638,7 @@ export component BottomNavBar inherits Rectangle {
 
         NavItem {
             icon: Shapes.files;
-            label: "ファイル一覧";
+            label: @tr("Files");
             active: root.active-tab == 1;
             badge-count: root.conflict-count;
             clicked => {
@@ -649,7 +649,7 @@ export component BottomNavBar inherits Rectangle {
 
         NavItem {
             icon: Shapes.search;
-            label: "検索";
+            label: @tr("Search");
             active: root.active-tab == 2;
             clicked => {
                 root.active-tab = 2;
@@ -659,7 +659,7 @@ export component BottomNavBar inherits Rectangle {
 
         NavItem {
             icon: Shapes.properties;
-            label: "プロパティ";
+            label: @tr("Properties");
             active: root.active-tab == 3;
             clicked => {
                 root.active-tab = 3;
@@ -669,7 +669,7 @@ export component BottomNavBar inherits Rectangle {
 
         NavItem {
             icon: Shapes.settings;
-            label: "設定";
+            label: @tr("Settings");
             active: root.active-tab == 4;
             clicked => {
                 root.active-tab = 4;
