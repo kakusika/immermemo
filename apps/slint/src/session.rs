@@ -415,7 +415,7 @@ pub fn apply_restored(app: &App, session: &Rc<RefCell<Session>>, restored: Optio
             Err(e) => set_status(app, format!("Save failed: {e}")),
         }
     }
-    let has_conflict = text.contains("@mobile.conflict");
+    let has_conflict = text.contains(immermemo_merge::CONFLICT_MARKER);
     app.set_current_has_conflict(has_conflict);
     if let Some(idx) = session.borrow().current {
         let mut s = session.borrow_mut();

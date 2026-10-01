@@ -118,7 +118,10 @@ mod tests {
 
         // The window reopens notes by path, so they must be absolute.
         assert_eq!(conflicted, vec![b.notes.path().join("note.tmt")]);
-        assert!(b.read("note.tmt").contains("@mobile.conflict"));
+        assert!(
+            b.read("note.tmt")
+                .contains(immermemo_merge::CONFLICT_MARKER)
+        );
     }
 
     #[test]

@@ -184,7 +184,7 @@ pub fn run(
                     history.edit(&text);
                 }
                 show_history_state(&app, &s);
-                let has_conflict = text.contains("@mobile.conflict");
+                let has_conflict = text.contains(immermemo_merge::CONFLICT_MARKER);
                 if app.get_current_has_conflict() != has_conflict {
                     app.set_current_has_conflict(has_conflict);
                     if let Some(idx) = s.current
@@ -588,18 +588,17 @@ pub fn run(
             let Ok(text) = std::fs::read_to_string(path) else {
                 return;
             };
-            const MARKER: &str = "@mobile.conflict";
             let mut offset = *jump_pos.borrow();
             if offset >= text.len() {
                 offset = 0;
             }
             let found = text[offset..]
-                .find(MARKER)
+                .find(immermemo_merge::CONFLICT_MARKER)
                 .map(|p| offset + p)
-                .or_else(|| text.find(MARKER));
+                .or_else(|| text.find(immermemo_merge::CONFLICT_MARKER));
             if let Some(pos) = found {
                 app.invoke_set_cursor(pos as i32);
-                *jump_pos.borrow_mut() = pos + MARKER.len();
+                *jump_pos.borrow_mut() = pos + immermemo_merge::CONFLICT_MARKER.len();
             }
         }
     });
@@ -901,7 +900,7 @@ mod tests {
         assert_eq!(app.get_status(), "All conflicts resolved");
 
         let disk_text = std::fs::read_to_string(&multi_note_path).unwrap();
-        assert!(!disk_text.contains("@mobile.conflict"));
+        assert!(!disk_text.contains(immermemo_merge::CONFLICT_MARKER));
         assert!(disk_text.contains("Alpha min."));
         assert!(disk_text.contains("Middle untouched."));
         assert!(disk_text.contains("Beta mintheirs."));
