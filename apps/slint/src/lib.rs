@@ -95,6 +95,11 @@ pub fn run(
     app.set_current_vault_name(vault_display_name(&vault_dir).into());
     app.set_current_vault_path(vault_dir.display().to_string().into());
     app.set_remote_configured(remote.is_some());
+    let index = app_data
+        .index_path(&vault_dir)
+        .ok()
+        .and_then(|p| immermemo_index::NoteIndex::open(&p).ok())
+        .unwrap_or_else(|| immermemo_index::NoteIndex::open_in_memory().unwrap());
     let session = Rc::new(RefCell::new(Session {
         vault_dir,
         app_data,
@@ -102,6 +107,7 @@ pub fn run(
         token_store_for,
         known_vaults,
         remote,
+        index,
         notes: Vec::new(),
         conflicted: Vec::new(),
         search_query: String::new(),
@@ -145,6 +151,9 @@ pub fn run(
             let dir = session.borrow().vault_dir.clone();
             match notes::create(&dir) {
                 Ok(path) => {
+                    if let Ok(rel) = path.strip_prefix(&dir) {
+                        let _ = session.borrow_mut().index.record_write(&dir, rel, "");
+                    }
                     session.borrow_mut().search_query.clear();
                     app.set_search_query(SharedString::new());
                     refresh_list(&app, &session);
@@ -185,9 +194,13 @@ pub fn run(
                     app.set_conflict_count(conflict_count as i32);
                 }
             }
-            if let Some(path) = s.current_path() {
-                match std::fs::write(path, text.as_str()) {
+            if let Some(path) = s.current_path().cloned() {
+                match std::fs::write(&path, text.as_str()) {
                     Ok(_) => {
+                        let vault_dir = s.vault_dir.clone();
+                        if let Ok(rel) = path.strip_prefix(&vault_dir) {
+                            let _ = s.index.record_write(&vault_dir, rel, text.as_str());
+                        }
                         if app.get_status_is_error() && app.get_status().starts_with("Save failed")
                         {
                             set_status(&app, "");
@@ -326,6 +339,13 @@ pub fn run(
             let was_current = session.borrow().current_path() == Some(&path);
             match notes::rename(&path, &new_name) {
                 Ok(new_path) => {
+                    let vault_dir = session.borrow().vault_dir.clone();
+                    if let (Ok(old_rel), Ok(new_rel)) = (
+                        path.strip_prefix(&vault_dir),
+                        new_path.strip_prefix(&vault_dir),
+                    ) {
+                        let _ = session.borrow_mut().index.record_rename(old_rel, new_rel);
+                    }
                     refresh_list(&app, &session);
                     if was_current {
                         let index = session.borrow().notes.iter().position(|p| *p == new_path);
@@ -366,9 +386,13 @@ pub fn run(
             let Some(path) = session.borrow().notes.get(index).cloned() else {
                 return;
             };
+            let vault_dir = session.borrow().vault_dir.clone();
             if let Err(e) = notes::delete(&path) {
                 set_status(&app, format!("Could not delete the note: {e}"));
                 return;
+            }
+            if let Ok(rel) = path.strip_prefix(&vault_dir) {
+                let _ = session.borrow_mut().index.record_delete(rel);
             }
             let was_current = session.borrow().current_path() == Some(&path);
             refresh_list(&app, &session);
@@ -717,6 +741,7 @@ mod tests {
             token_store_for: Box::new(move |_| Ok(token_store.clone())),
             known_vaults: vec![vault_dir.clone()],
             remote: None,
+            index: immermemo_index::NoteIndex::open_in_memory().unwrap(),
             notes: vec![note_path.clone()],
             conflicted: vec![true],
             search_query: String::new(),
@@ -857,7 +882,7 @@ mod tests {
         // Successful sync clears error
         finish_sync(&app, &session, Err("some error".to_string()));
         assert_eq!(app.get_last_sync_error(), "Sync failed: some error");
-        finish_sync(&app, &session, Ok(vec![]));
+        finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
         assert_eq!(app.get_last_sync_error(), "");
         assert_eq!(app.get_status(), "Synced");
         assert!(!app.get_status_is_error());

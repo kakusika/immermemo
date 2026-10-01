@@ -10,6 +10,7 @@ use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use crate::credentials::TokenCredentials;
 use crate::sync;
 use crate::{App, TokenStoreFactory};
+use immermemo_index::NoteIndex;
 use immermemo_vault::appdata::AppData;
 use immermemo_vault::credentials::TokenStore;
 use immermemo_vault::history::{History, Restored};
@@ -34,6 +35,7 @@ pub struct Session {
     /// The remote URL, kept here once loaded so Sync doesn't re-read it from
     /// disk on every tap. Not secret -- the token lives in `token_store`.
     pub remote: Option<String>,
+    pub index: NoteIndex,
     pub notes: Vec<PathBuf>,
     pub conflicted: Vec<bool>,
     pub search_query: String,
@@ -120,12 +122,12 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
 pub fn refresh_list(app: &App, session: &Rc<RefCell<Session>>) {
     let mut s = session.borrow_mut();
     let previous = s.current_path().cloned();
-    s.notes = notes::scan(&s.vault_dir);
-    s.conflicted = s
-        .notes
-        .iter()
-        .map(|p| notes::has_conflict_marker(p))
-        .collect();
+    let vault_dir = s.vault_dir.clone();
+    let _ = s.index.reconcile_filesystem(&vault_dir);
+    let all = s.index.list_all().unwrap_or_default();
+    let vault_dir = s.vault_dir.clone();
+    s.notes = all.iter().map(|n| vault_dir.join(&n.path)).collect();
+    s.conflicted = all.iter().map(|n| n.has_conflict).collect();
     let conflict_count = s.conflicted.iter().filter(|&&c| c).count();
     s.current = previous.and_then(|p| s.notes.iter().position(|n| *n == p));
     drop(s);
@@ -135,24 +137,28 @@ pub fn refresh_list(app: &App, session: &Rc<RefCell<Session>>) {
 
 pub fn update_filtered_list(app: &App, session: &Rc<RefCell<Session>>) {
     let mut s = session.borrow_mut();
-    s.filtered_results = notes::search(&s.vault_dir, &s.notes, &s.search_query);
+    let hits = s.index.search(&s.search_query).unwrap_or_default();
+    let vault_dir = s.vault_dir.clone();
 
-    let names: Vec<SharedString> = s
-        .filtered_results
-        .iter()
-        .map(|r| notes::display_name(&s.vault_dir, &s.notes[r.note_index]).into())
-        .collect();
-    let conflicted: Vec<bool> = s
-        .filtered_results
-        .iter()
-        .map(|r| s.conflicted[r.note_index])
-        .collect();
-    let snippets: Vec<SharedString> = s
-        .filtered_results
-        .iter()
-        .map(|r| r.snippet.clone().unwrap_or_default().into())
-        .collect();
+    let mut filtered_results = Vec::with_capacity(hits.len());
+    let mut names = Vec::with_capacity(hits.len());
+    let mut conflicted = Vec::with_capacity(hits.len());
+    let mut snippets = Vec::with_capacity(hits.len());
 
+    for hit in hits {
+        let abs_path = vault_dir.join(&hit.path);
+        if let Some(index) = s.notes.iter().position(|p| *p == abs_path) {
+            filtered_results.push(notes::SearchResult {
+                note_index: index,
+                snippet: hit.snippet.clone(),
+            });
+            names.push(SharedString::from(hit.title));
+            conflicted.push(hit.has_conflict);
+            snippets.push(SharedString::from(hit.snippet.unwrap_or_default()));
+        }
+    }
+
+    s.filtered_results = filtered_results;
     let ui_current = s
         .current
         .and_then(|cur| s.filtered_results.iter().position(|r| r.note_index == cur));
@@ -209,9 +215,16 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     app.set_current_vault_name(vault_display_name(&vault_dir).into());
     app.set_current_vault_path(vault_dir.display().to_string().into());
     let _ = s.app_data.save_current_vault(&vault_dir);
+    let index = s
+        .app_data
+        .index_path(&vault_dir)
+        .ok()
+        .and_then(|p| NoteIndex::open(&p).ok())
+        .unwrap_or_else(|| NoteIndex::open_in_memory().unwrap());
     s.vault_dir = vault_dir;
     s.token_store = token_store;
     s.remote = remote.clone();
+    s.index = index;
     s.search_query.clear();
     s.current = None;
     s.history = None;
@@ -438,6 +451,11 @@ pub fn resolve_active_conflict(
     show_history_state(app, &s);
     app.set_body(resolved_text.clone().into());
     update_note_stats(app, &resolved_text);
+    let vault_dir = s.vault_dir.clone();
+    if let Ok(rel) = path.strip_prefix(&vault_dir) {
+        let _ = s.index.record_write(&vault_dir, rel, &resolved_text);
+        let _ = s.index.set_conflict(rel, false);
+    }
 
     let index = s.current.unwrap_or(0);
     if index < s.conflicted.len() {
@@ -549,6 +567,11 @@ pub fn resolve_conflict_step(
 
     let remaining_conflicts = immermemo_merge::find_conflicts(&resolved_doc);
     let has_conflict = !remaining_conflicts.is_empty();
+    let vault_dir = s.vault_dir.clone();
+    if let Ok(rel) = path.strip_prefix(&vault_dir) {
+        let _ = s.index.record_write(&vault_dir, rel, &resolved_text);
+        let _ = s.index.set_conflict(rel, has_conflict);
+    }
 
     let index = s.current.unwrap_or(0);
     if index < s.conflicted.len() {
@@ -570,12 +593,22 @@ pub fn resolve_conflict_step(
     }
 }
 
-pub fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<Vec<PathBuf>, String>) {
+pub fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<immermemo_sync::SyncReport, String>) {
     app.set_syncing(false);
     match result {
-        Ok(needing_resolution) => {
+        Ok(report) => {
             app.set_last_sync_error(SharedString::new());
             app.set_sync_error_copied(false);
+            {
+                let mut s = session.borrow_mut();
+                let vault_dir = s.vault_dir.clone();
+                let _ = s.index.apply_sync_report(
+                    &vault_dir,
+                    &report.updated_notes,
+                    &report.deleted_notes,
+                    &report.notes_needing_resolution,
+                );
+            }
             let reopen = {
                 let s = session.borrow();
                 s.current_path().cloned()
@@ -610,12 +643,12 @@ pub fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<Vec
             }
             set_status(
                 app,
-                if needing_resolution.is_empty() {
+                if report.notes_needing_resolution.is_empty() {
                     "Synced".to_owned()
                 } else {
                     format!(
                         "Synced; {} note(s) need resolution",
-                        needing_resolution.len()
+                        report.notes_needing_resolution.len()
                     )
                 },
             );

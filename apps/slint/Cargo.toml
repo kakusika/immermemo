@@ -13,6 +13,7 @@ name = "immermemo"
 path = "src/main.rs"
 
 [dependencies]
+immermemo-index = { workspace = true }
 immermemo-merge = { workspace = true }
 immermemo-sync = { workspace = true }
 immermemo-vault = { workspace = true }

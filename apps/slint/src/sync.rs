@@ -4,35 +4,31 @@
 //! `crate::credentials`' job -- or where the gitdir lives -- that is
 //! `crate::appdata`'s. This module is just the call into `immermemo_sync`.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use immermemo_sync::{CertificateVerifier, CredentialProvider, Vault};
+use immermemo_sync::{CertificateVerifier, CredentialProvider, SyncReport, Vault};
 
-/// Returns the notes (absolute paths) that came back with unresolved conflicts.
+/// Runs a sync against `remote` and returns the resulting `SyncReport`.
 pub fn run(
     vault_dir: &Path,
     gitdir: &Path,
     remote: &str,
     credentials: &dyn CredentialProvider,
     certificate_verifier: Option<Box<dyn CertificateVerifier>>,
-) -> anyhow::Result<Vec<PathBuf>> {
+) -> anyhow::Result<SyncReport> {
     if !gitdir.exists() {
         std::fs::create_dir_all(gitdir)?;
     }
     let mut vault = Vault::open(vault_dir, gitdir)?;
     vault.set_certificate_verifier(certificate_verifier);
     vault.set_remote(remote)?;
-    let report = vault.sync(credentials)?;
-    Ok(report
-        .notes_needing_resolution
-        .into_iter()
-        .map(|p| vault_dir.join(p))
-        .collect())
+    vault.sync(credentials)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
     use immermemo_vault::appdata::AppData;
     use tempfile::TempDir;
 
@@ -80,13 +76,18 @@ mod tests {
 
         fn sync(&self, remote: &TempDir) -> anyhow::Result<Vec<PathBuf>> {
             let gitdir = self.app_data.gitdir(self.notes.path())?;
-            run(
+            let report = run(
                 self.notes.path(),
                 &gitdir,
                 remote.path().to_str().unwrap(),
                 &NoCredentials,
                 None,
-            )
+            )?;
+            Ok(report
+                .notes_needing_resolution
+                .into_iter()
+                .map(|p| self.notes.path().join(p))
+                .collect())
         }
     }
 

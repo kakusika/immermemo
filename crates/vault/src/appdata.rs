@@ -59,6 +59,11 @@ impl AppData {
         Ok(self.vault_data_dir(vault_dir)?.join("token"))
     }
 
+    /// Where that vault's SQLite search and metadata index lives.
+    pub fn index_path(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
+        Ok(self.vault_data_dir(vault_dir)?.join("index.db"))
+    }
+
     fn remote_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
         Ok(self.vault_data_dir(vault_dir)?.join("remote.txt"))
     }
@@ -280,9 +285,14 @@ mod tests {
             data.token_path(one.path()).unwrap(),
             data.token_path(two.path()).unwrap()
         );
+        assert_ne!(
+            data.index_path(one.path()).unwrap(),
+            data.index_path(two.path()).unwrap()
+        );
         // Not nested inside the bare gitdir: that directory belongs to
         // libgit2, nothing else should write into it.
         assert!(!data.token_path(one.path()).unwrap().starts_with(&a));
+        assert!(!data.index_path(one.path()).unwrap().starts_with(&a));
     }
 
     #[test]
