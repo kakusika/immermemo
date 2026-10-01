@@ -28,12 +28,12 @@ export component App inherits Window {
     public function open-note-sheet() {
         root.note-sheet-open = true;
         root.drag-sheet-progress = 1.0;
-        pane.focus-editor();
+        pane.view-mode();
         root.trigger-haptic();
     }
 
     public function close-note-sheet() {
-        pane.unfocus();
+        pane.view-mode();
         root.note-sheet-open = false;
         root.drag-sheet-progress = 0.0;
         root.trigger-haptic();
@@ -93,6 +93,7 @@ export component App inherits Window {
     in-out property <length> editor-font-size: 17px;
     in-out property <int> theme-choice: 0;
     in-out property <float> ui-scale <=> Metrics.ui-scale;
+    in-out property <bool> editor-edit-mode <=> pane.edit-mode;
 
     function apply-theme-choice() {
         if (root.theme-choice == 1) {
@@ -220,8 +221,8 @@ export component App inherits Window {
 
         // 3. Close note sheet if open (unfocus if keyboard is up or typing)
         if (root.note-sheet-open) {
-            if (pane.editor-has-focus || root.keyboard > 0px) {
-                pane.unfocus();
+            if (pane.edit-mode || pane.editor-has-focus || root.keyboard > 0px) {
+                pane.view-mode();
                 return true;
             }
             root.close-note-sheet();
@@ -271,6 +272,7 @@ export component App inherits Window {
     // Sheet gesture tracking & transition animation (music-player style)
     in-out property <bool> is-dragging-sheet: false;
     in-out property <float> drag-sheet-progress: 0.0;
+    property <bool> sheet-threshold-passed: false;
     property <float> sheet-progress: root.is-dragging-sheet
         ? root.drag-sheet-progress
         : (root.note-sheet-open ? 1.0 : 0.0);
@@ -362,6 +364,7 @@ export component App inherits Window {
                     new-note => {
                         root.new-note();
                         root.open-note-sheet();
+                        pane.focus-editor();
                     }
                     sync => { root.sync(); }
                     open-vaults => { root.open-vault-sheet(); }
@@ -413,6 +416,7 @@ export component App inherits Window {
                     new-note => {
                         root.new-note();
                         root.open-note-sheet();
+                        pane.focus-editor();
                     }
                     sync => { root.sync(); }
                     open-settings => {
@@ -586,17 +590,19 @@ export component App inherits Window {
                         ? (1.0 - root.drag-sheet-progress) * travel
                         : 0px;
                     let downward = max(0px, dy + current-offset);
+                    let progress = clamp(1.0 - (downward / travel), 0.0, 1.0);
+                    let passed = progress <= 0.60;
+                    if (passed != root.sheet-threshold-passed) {
+                        root.sheet-threshold-passed = passed;
+                        root.trigger-haptic();
+                    }
                     root.is-dragging-sheet = true;
-                    root.drag-sheet-progress = clamp(1.0 - (downward / travel), 0.0, 1.0);
+                    root.drag-sheet-progress = progress;
                 }
                 sheet-drag-swiped(dy) => {
-                    let travel = max(100px, root.mini-card-resting-y);
-                    let current-offset = root.is-dragging-sheet
-                        ? (1.0 - root.drag-sheet-progress) * travel
-                        : 0px;
-                    let downward = dy + current-offset;
-                    let should-close = downward > 40px * Metrics.ui-scale || root.drag-sheet-progress < 0.75;
+                    let should-close = root.drag-sheet-progress <= 0.60;
                     root.is-dragging-sheet = false;
+                    root.sheet-threshold-passed = false;
                     if (should-close) {
                         root.close-note-sheet();
                     } else {
@@ -606,6 +612,7 @@ export component App inherits Window {
                 }
                 sheet-drag-cancelled => {
                     root.is-dragging-sheet = false;
+                    root.sheet-threshold-passed = false;
                     root.drag-sheet-progress = 1.0;
                 }
             }

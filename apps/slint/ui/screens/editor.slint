@@ -29,7 +29,8 @@ export component EditorScreen inherits Rectangle {
     in property <bool> remote-configured: false;
     in property <string> last-synced-at: "";
     in-out property <string> body;
-    out property <bool> editor-has-focus: editor.has-focus;
+    in-out property <bool> edit-mode: false;
+    out property <bool> editor-has-focus: root.edit-mode && editor.has-focus;
     out property <bool> scroll-at-top: editor-scroll.content-y >= -1px;
     in property <bool> header-swipe-enabled: true;
     callback sheet-drag-moved(length);
@@ -51,17 +52,30 @@ export component EditorScreen inherits Rectangle {
 
     // Moves the caret after Rust restores text from the undo history.
     public function set-cursor(offset: int) {
-        editor.set-selection-offsets(offset, offset);
+        if (root.edit-mode) {
+            editor.set-selection-offsets(offset, offset);
+        }
     }
 
     // Claims focus on the text editor
     public function focus-editor() {
+        root.edit-mode = true;
         editor.focus();
     }
 
     // Dismisses focus from the text editor
     public function unfocus() {
-        editor.clear-focus();
+        if (root.edit-mode) {
+            editor.clear-focus();
+        }
+    }
+
+    // Switches to view mode and dismisses focus
+    public function view-mode() {
+        root.edit-mode = false;
+        if (root.edit-mode) {
+            editor.clear-focus();
+        }
     }
 
     background: Colors.page-background;
@@ -110,6 +124,7 @@ export component EditorScreen inherits Rectangle {
                         : root.status-is-error ? Colors.danger
                         : root.status != "" ? Colors.muted
                         : Colors.muted;
+                    spinning: root.syncing;
                     clicked => { root.manual-sync(); }
                 }
 
@@ -119,11 +134,24 @@ export component EditorScreen inherits Rectangle {
                     clicked => { root.open-history(); }
                 }
 
-                if root.has-note: UndoRedoBubble {
+                if root.has-note && root.edit-mode: UndoRedoBubble {
                     can-undo: root.can-undo;
                     can-redo: root.can-redo;
                     undo => { root.undo(); }
                     redo => { root.redo(); }
+                }
+
+                // Edit / Done toggle button
+                if root.has-note: BubbleButton {
+                    shape: root.edit-mode ? Shapes.check : Shapes.note;
+                    tint: root.edit-mode ? Palette.accent-background : Palette.foreground;
+                    clicked => {
+                        if (root.edit-mode) {
+                            root.view-mode();
+                        } else {
+                            root.focus-editor();
+                        }
+                    }
                 }
             }
         }
@@ -331,68 +359,118 @@ export component EditorScreen inherits Rectangle {
         }
 
         // Body area with in-body title and text editor
-        body-container := Rectangle {
+        body-gesture := SwipeGestureHandler {
             visible: root.has-note;
             horizontal-stretch: root.has-note ? 1 : 0;
             vertical-stretch: root.has-note ? 1 : 0;
             height: root.has-note ? 100% : 0%;
+            enabled: root.header-swipe-enabled && root.scroll-at-top && (!root.edit-mode || !root.editor-has-focus);
+            handle-swipe-down: true;
 
-            edit-scope := FocusScope {
+            moved => {
+                if (self.swiping) {
+                    let dy = self.current-position.y - self.pressed-position.y;
+                    root.sheet-drag-moved(dy);
+                }
+            }
+            swiped => {
+                let dy = self.current-position.y - self.pressed-position.y;
+                root.sheet-drag-swiped(dy);
+            }
+            cancelled => {
+                root.sheet-drag-cancelled();
+            }
+
+            body-container := Rectangle {
                 width: 100%;
                 height: 100%;
-                capture-key-pressed(event) => {
-                    if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
-                        root.undo();
-                        return accept;
-                    }
-                    if (event.modifiers.control && (event.text == "y" || event.text == "Y" || ((event.text == "z" || event.text == "Z") && event.modifiers.shift))) {
-                        root.redo();
-                        return accept;
-                    }
-                    return reject;
-                }
 
-                editor-scroll := AppScrollView {
+                edit-scope := FocusScope {
                     width: 100%;
                     height: 100%;
-
-                    VerticalLayout {
-                        padding-left: Metrics.gutter;
-                        padding-right: Metrics.gutter;
-                        padding-top: Metrics.spacing-lg;
-                        padding-bottom: Metrics.spacing-3xl;
-                        spacing: Metrics.spacing-md;
-
-                        // In-body note title (Notion / Apple Notes style)
-                        Text {
-                            text: root.title != "" ? root.title : "Untitled";
-                            font-size: Metrics.font-headline;
-                            font-weight: 700;
-                            color: Palette.foreground;
-                            wrap: word-wrap;
+                    capture-key-pressed(event) => {
+                        if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
+                            root.undo();
+                            return accept;
                         }
+                        if (event.modifiers.control && (event.text == "y" || event.text == "Y" || ((event.text == "z" || event.text == "Z") && event.modifiers.shift))) {
+                            root.redo();
+                            return accept;
+                        }
+                        return reject;
+                    }
 
-                        editor := TextInput {
-                            enabled: root.has-note;
-                            font-size: root.font-size;
-                            text <=> root.body;
-                            color: Palette.foreground;
-                            selection-background-color: Palette.accent-background.with-alpha(0.3);
-                            selection-foreground-color: Palette.foreground;
-                            single-line: false;
-                            wrap: word-wrap;
-                            min-height: max(160px, editor-scroll.visible-height - 120px);
-                            edited => { root.edited(self.text); }
-                            cursor-position-changed(cpos) => {
-                                let cpos-screen-y = editor.y + cpos.y;
-                                if (cpos-screen-y + editor-scroll.content-y < 0px) {
-                                    editor-scroll.content-y = min(
-                                        0px,
-                                        editor-scroll.visible-height - cpos-screen-y - 32px,
-                                        max(editor-scroll.visible-height - self.height, -cpos-screen-y),
-                                    );
-                                } else if (cpos-screen-y + editor-scroll.content-y > editor-scroll.visible-height - 32px) {
-                                    editor-scroll.content-y = min(0px, max(editor-scroll.visible-height - self.height, editor-scroll.visible-height - cpos-screen-y - 32px));
+                    editor-scroll := AppScrollView {
+                        width: 100%;
+                        height: 100%;
+
+                        VerticalLayout {
+                            width: 100%;
+                            alignment: start;
+                            padding-left: Metrics.gutter;
+                            padding-right: Metrics.gutter;
+                            padding-top: Metrics.spacing-lg;
+                            padding-bottom: Metrics.spacing-3xl;
+                            spacing: Metrics.spacing-md;
+                            min-height: editor-scroll.visible-height + 1px;
+
+                            // In-body note title (Notion / Apple Notes style)
+                            Text {
+                                text: root.title != "" ? root.title : "Untitled";
+                                font-size: Metrics.font-headline;
+                                font-weight: 700;
+                                color: Palette.foreground;
+                                wrap: word-wrap;
+                            }
+
+                            // View mode display: clean non-editing text with double-tap detector
+                            view-box := Rectangle {
+                                visible: !root.edit-mode;
+                                height: !root.edit-mode ? max(160px, max(view-text.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
+
+                                VerticalLayout {
+                                    alignment: start;
+                                    view-text := Text {
+                                        width: 100%;
+                                        text: root.body != "" ? root.body : "Tap Edit or double-tap here to write.";
+                                        font-size: root.font-size;
+                                        color: root.body != "" ? Palette.foreground : Colors.muted;
+                                        wrap: word-wrap;
+                                    }
+                                }
+
+                                TouchArea {
+                                    width: 100%;
+                                    height: 100%;
+                                    double-clicked => {
+                                        root.focus-editor();
+                                    }
+                                }
+                            }
+
+                            editor := TextInput {
+                                visible: root.edit-mode;
+                                enabled: root.has-note && root.edit-mode;
+                                font-size: root.font-size;
+                                text <=> root.body;
+                                color: Palette.foreground;
+                                selection-background-color: Palette.accent-background.with-alpha(0.3);
+                                selection-foreground-color: Palette.foreground;
+                                single-line: false;
+                                wrap: word-wrap;
+                                height: root.edit-mode ? max(160px, max(self.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
+                                edited => { root.edited(self.text); }
+                                cursor-position-changed(cpos) => {
+                                    let cpos-screen-y = editor.y + cpos.y;
+                                    if (cpos-screen-y + editor-scroll.content-y < 0px) {
+                                        editor-scroll.content-y = min(
+                                            0px,
+                                            editor-scroll.visible-height - cpos-screen-y - 32px,
+                                            max(editor-scroll.visible-height - self.height, -cpos-screen-y),
+                                        );
+                                    } else if (cpos-screen-y + editor-scroll.content-y > editor-scroll.visible-height - 32px) {
+                                        editor-scroll.content-y = min(0px, max(editor-scroll.visible-height - self.height, editor-scroll.visible-height - cpos-screen-y - 32px));
+                                    }
                                 }
                             }
                         }

@@ -132,10 +132,18 @@ fn main() {
     app.set_is_dragging_sheet(false);
     app.set_drag_sheet_progress(0.0);
 
-    // Note Editor Sheet
+    // Note Editor Sheet (View Mode)
     app.set_note_sheet_open(true);
+    app.set_editor_edit_mode(false);
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor.ppm"));
+
+    // Note Editor Sheet (Edit Mode)
+    app.set_editor_edit_mode(true);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-editor-edit.ppm"));
+    app.set_editor_edit_mode(false);
+
     app.set_current_has_conflict(true);
     render(&window, size, &format!("{prefix}-conflict.ppm"));
 
