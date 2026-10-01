@@ -28,6 +28,7 @@ export component FilesScreen inherits Rectangle {
     callback open-settings();
     callback note-menu-requested(int);
     callback trigger-haptic();
+    callback trigger-heavy-haptic();
     callback open-vault-sheet();
 
     background: Palette.background;
@@ -192,7 +193,7 @@ export component FilesScreen inherits Rectangle {
                         running: touch.pressed && !long-pressed;
                         triggered => {
                             long-pressed = true;
-                            root.trigger-haptic();
+                            root.trigger-heavy-haptic();
                             root.note-menu-requested(i);
                         }
                     }

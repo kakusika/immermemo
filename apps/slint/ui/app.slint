@@ -18,6 +18,7 @@ export component App inherits Window {
     preferred-width: 960px;
     preferred-height: 640px;
     background: Palette.background;
+    forward-focus: root-focus-scope;
 
     // Navigation: 0: Home, 1: Files, 2: Note, 3: Details, 4: Search
     in-out property <int> active-tab: 2;
@@ -139,6 +140,7 @@ export component App inherits Window {
     callback prev-conflict-step();
     callback next-conflict-step();
     callback trigger-haptic();
+    callback trigger-heavy-haptic();
     callback search-query-changed(string);
     callback open-conflict-note();
     callback copy-sync-error();
@@ -146,6 +148,82 @@ export component App inherits Window {
     callback open-history();
     callback restore-history-version(int);
     callback open-vault-history();
+
+    property <int> previous-tab: 1;
+
+    public function handle-back() -> bool {
+        // 1. Close open dialogs
+        if (root.delete-vault-confirm-open) {
+            root.delete-vault-confirm-open = false;
+            return true;
+        }
+        if (root.add-vault-open) {
+            root.add-vault-open = false;
+            return true;
+        }
+        if (root.rename-open) {
+            root.rename-open = false;
+            return true;
+        }
+        if (root.delete-confirm-open) {
+            root.delete-confirm-open = false;
+            return true;
+        }
+        if (root.note-menu-index >= 0) {
+            root.note-menu-index = -1;
+            return true;
+        }
+
+        // 2. Close open sheets
+        if (root.conflict-sheet-open) {
+            root.conflict-sheet-open = false;
+            return true;
+        }
+        if (root.history-sheet-open) {
+            root.history-sheet-open = false;
+            return true;
+        }
+        if (root.vault-history-open) {
+            root.vault-history-open = false;
+            return true;
+        }
+        if (root.vault-sheet-open) {
+            root.vault-sheet-open = false;
+            return true;
+        }
+        if (root.remote-open) {
+            root.remote-open = false;
+            return true;
+        }
+        if (root.settings-open) {
+            root.settings-open = false;
+            return true;
+        }
+
+        // 3. Unfocus editor if focused or virtual keyboard is visible
+        if (pane.editor-has-focus || root.keyboard > 0px) {
+            pane.unfocus();
+            return true;
+        }
+
+        // 4. If on Note screen (tab 2), navigate back to previous screen
+        if (root.active-tab == 2) {
+            root.active-tab = (root.previous-tab != 2) ? root.previous-tab : 1;
+            root.trigger-haptic();
+            return true;
+        }
+
+        // 5. If on any other secondary tab (Files: 1, Details: 3, Search: 4), navigate back to Home (0)
+        if (root.active-tab != 0) {
+            root.active-tab = 0;
+            root.trigger-haptic();
+            return true;
+        }
+
+        // 6. Already at root Home tab with nothing open:
+        // Return false to allow Android to perform the default action (minimize/close app)
+        return false;
+    }
 
     public function set-cursor(offset: int) {
         pane.set-cursor(offset);
@@ -171,10 +249,23 @@ export component App inherits Window {
     property <bool> is-swiping: false;
     property <length> swipe-dx: 0px;
 
-    // Main App Layout
-    VerticalLayout {
-        padding: 0px;
-        spacing: 0px;
+    // Main App Layout wrapped in FocusScope for Back gesture & Escape key handling
+    root-focus-scope := FocusScope {
+        width: 100%;
+        height: 100%;
+
+        capture-key-pressed(event) => {
+            if (event.text == Key.Back || event.text == Key.Escape) {
+                if (root.handle-back()) {
+                    return accept;
+                }
+            }
+            return reject;
+        }
+
+        VerticalLayout {
+            padding: 0px;
+            spacing: 0px;
 
         // Content Area with 5 swipeable screens
         content-box := Rectangle {
@@ -200,9 +291,15 @@ export component App inherits Window {
                     root.is-swiping = false;
                     let dx = self.current-position.x - self.pressed-position.x;
                     if (dx < -40px && root.active-tab < 4) {
+                        if (root.active-tab + 1 == 2) {
+                            root.previous-tab = root.active-tab;
+                        }
                         root.active-tab += 1;
                         root.trigger-haptic();
                     } else if (dx > 40px && root.active-tab > 0) {
+                        if (root.active-tab - 1 == 2) {
+                            root.previous-tab = root.active-tab;
+                        }
                         root.active-tab -= 1;
                         root.trigger-haptic();
                     }
@@ -235,6 +332,7 @@ export component App inherits Window {
                     current-note-title: root.current-title;
                     has-current-note: root.current >= 0;
                     new-note => {
+                        root.previous-tab = 0;
                         root.new-note();
                         root.active-tab = 2;
                         pane.focus-editor();
@@ -244,6 +342,7 @@ export component App inherits Window {
                     open-settings => { root.open-settings(); }
                     open-vault-history => { root.open-vault-history(); }
                     open-current-note => {
+                        root.previous-tab = 0;
                         root.active-tab = 2;
                         pane.focus-editor();
                     }
@@ -280,11 +379,13 @@ export component App inherits Window {
                     remote-configured: root.remote-configured;
                     vault-name: root.current-vault-name;
                     select(i) => {
+                        root.previous-tab = 1;
                         root.select(i);
                         root.active-tab = 2; // Jump to Note editor
                         pane.focus-editor();
                     }
                     new-note => {
+                        root.previous-tab = 1;
                         root.new-note();
                         root.active-tab = 2; // Jump to Note editor
                         pane.focus-editor();
@@ -293,6 +394,7 @@ export component App inherits Window {
                     open-settings => { root.open-settings(); }
                     note-menu-requested(i) => { root.note-menu-index = i; }
                     trigger-haptic => { root.trigger-haptic(); }
+                    trigger-heavy-haptic => { root.trigger-heavy-haptic(); }
                     open-vault-sheet => { root.open-vault-sheet(); }
 
                     animate x {
@@ -318,6 +420,7 @@ export component App inherits Window {
                         can-undo: root.can-undo;
                         can-redo: root.can-redo;
                         show-back: false;
+                        back => { root.handle-back(); }
                         inset-top: root.inset-top;
                         inset-bottom: root.keyboard > 0px ? root.keyboard : root.inset-bottom;
                         font-size: root.editor-font-size;
@@ -404,6 +507,7 @@ export component App inherits Window {
                     conflicted: root.conflicted;
                     query-changed(q) => { root.search-query-changed(q); }
                     select(i) => {
+                        root.previous-tab = 4;
                         root.select(i);
                         root.active-tab = 2; // Jump to Note editor
                         pane.focus-editor();
@@ -426,6 +530,9 @@ export component App inherits Window {
             current-has-conflict: root.current-has-conflict;
             inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
             tab-selected(idx) => {
+                if (idx == 2) {
+                    root.previous-tab = root.active-tab;
+                }
                 root.active-tab = idx;
                 root.trigger-haptic();
                 pane.unfocus();
@@ -598,15 +705,16 @@ export component App inherits Window {
         restore(idx) => { root.restore-history-version(idx); }
     }
 
-    if root.vault-history-open: VaultHistorySheet {
-        width: 100%;
-        height: 100%;
-        open: true;
-        vault-name: root.current-vault-name;
-        commits: root.vault-history-commits;
-        dates: root.vault-history-dates;
-        inset-top: root.inset-top;
-        inset-bottom: root.inset-bottom;
-        close => { root.vault-history-open = false; }
+        if root.vault-history-open: VaultHistorySheet {
+            width: 100%;
+            height: 100%;
+            open: true;
+            vault-name: root.current-vault-name;
+            commits: root.vault-history-commits;
+            dates: root.vault-history-dates;
+            inset-top: root.inset-top;
+            inset-bottom: root.inset-bottom;
+            close => { root.vault-history-open = false; }
+        }
     }
 }

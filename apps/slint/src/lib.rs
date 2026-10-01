@@ -303,6 +303,9 @@ pub fn run(
     app.on_trigger_haptic(|| {
         haptic::perform_haptic();
     });
+    app.on_trigger_heavy_haptic(|| {
+        haptic::perform_heavy_haptic();
+    });
 
     app.on_search_query_changed({
         let (weak, session) = (app.as_weak(), session.clone());

@@ -31,10 +31,30 @@ pub unsafe fn init_android_haptics(
     let _ = ANDROID_APP_VM.set((vm, global_ref));
 }
 
-/// Triggers a brief haptic feedback (tactile tick) for long-press actions.
+/// Android HapticFeedbackConstants types.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HapticType {
+    /// HapticFeedbackConstants.CLOCK_TICK (4): Light, crisp tactile tick for tab switching and navigation.
+    Light,
+    /// HapticFeedbackConstants.LONG_PRESS (0): Standard heavy tactile buzz for long-press actions.
+    Heavy,
+}
+
+/// Triggers a light haptic feedback (tactile tick) for tab switching and navigation.
 pub fn perform_haptic() {
+    perform_haptic_with_type(HapticType::Light);
+}
+
+/// Triggers a heavier haptic feedback for long-press actions.
+pub fn perform_heavy_haptic() {
+    perform_haptic_with_type(HapticType::Heavy);
+}
+
+/// Triggers haptic feedback of the given type.
+pub fn perform_haptic_with_type(_haptic_type: HapticType) {
     #[cfg(target_os = "android")]
     {
+        let haptic_type = _haptic_type;
         let Some((vm, activity_ref)) = ANDROID_APP_VM.get() else {
             return;
         };
@@ -43,7 +63,14 @@ pub fn perform_haptic() {
         };
         let activity = activity_ref.as_obj();
 
-        // 0 is HapticFeedbackConstants.LONG_PRESS
+        // On Android:
+        // 4 is HapticFeedbackConstants.CLOCK_TICK (light, crisp tick)
+        // 0 is HapticFeedbackConstants.LONG_PRESS (heavy buzz)
+        let constant: i32 = match haptic_type {
+            HapticType::Light => 4,
+            HapticType::Heavy => 0,
+        };
+
         let res: jni::errors::Result<()> = (|| {
             let window = env
                 .call_method(activity, "getWindow", "()Landroid/view/Window;", &[])?
@@ -55,7 +82,7 @@ pub fn perform_haptic() {
                 decor_view,
                 "performHapticFeedback",
                 "(I)Z",
-                &[jni::objects::JValue::Int(0)],
+                &[jni::objects::JValue::Int(constant)],
             )?;
             Ok(())
         })();
