@@ -2,11 +2,12 @@
 //! [ciphertext, including the GCM tag]`. The IV is small and never secret;
 //! keeping it alongside the ciphertext is standard practice for GCM.
 //!
-//! Kept separate from [`crate::android_keystore`] (which is Android-only and
-//! untestable outside a device) so this format has ordinary desktop tests.
+//! Kept separate from `apps/slint/src/android/keystore.rs` (which is
+//! Android-only and untestable outside a device) so this format has
+//! ordinary desktop tests.
 
-// Only `android_keystore` (Android-only) calls these; on every other target
-// they exist solely for the tests below.
+// Only apps/slint/src/android/keystore.rs (Android-only) calls these; on
+// every other target they exist solely for the tests below.
 #[cfg_attr(not(target_os = "android"), allow(dead_code))]
 pub fn encode(iv: &[u8], ciphertext: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(1 + iv.len() + ciphertext.len());
