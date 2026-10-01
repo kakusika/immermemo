@@ -720,13 +720,13 @@ pub fn format_timestamp(epoch_secs: i64) -> String {
         .unwrap_or(0);
     let diff = now.saturating_sub(epoch_secs);
     let rel = if diff < 60 {
-        "たった今".to_string()
+        "just now".to_string()
     } else if diff < 3600 {
-        format!("{}分前", diff / 60)
+        format!("{}m ago", diff / 60)
     } else if diff < 86400 {
-        format!("{}時間前", diff / 3600)
+        format!("{}h ago", diff / 3600)
     } else {
-        format!("{}日前", diff / 86400)
+        format!("{}d ago", diff / 86400)
     };
 
     let secs_per_day = 86400;
