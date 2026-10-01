@@ -34,21 +34,31 @@ pub struct CommitSummary {
 }
 
 impl Vault {
+    /// A revwalk from HEAD, newest first -- the setup [`file_history`](Self::file_history)
+    /// and [`vault_history`](Self::vault_history) both need before they can
+    /// diverge into "did this commit touch `rel_path`" vs. "take every commit".
+    /// `None` if there's no HEAD to walk from yet (a freshly linked vault).
+    fn history_revwalk(&self) -> Option<git2::Revwalk<'_>> {
+        let mut revwalk = self.repo.revwalk().ok()?;
+        if self.repo.head().is_err() {
+            return None;
+        }
+        revwalk.push_head().ok()?;
+        revwalk
+            .set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::TIME)
+            .ok()?;
+        Some(revwalk)
+    }
+
     /// Returns the commit history that modified `rel_path`, newest first.
     pub fn file_history(
         &self,
         rel_path: &Path,
         max_count: usize,
     ) -> anyhow::Result<Vec<FileRevision>> {
-        let mut revwalk = match self.repo.revwalk() {
-            Ok(rw) => rw,
-            Err(_) => return Ok(Vec::new()),
-        };
-        if self.repo.head().is_err() {
+        let Some(revwalk) = self.history_revwalk() else {
             return Ok(Vec::new());
-        }
-        revwalk.push_head()?;
-        revwalk.set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::TIME)?;
+        };
 
         let mut revisions = Vec::new();
         let path_str = rel_path.to_str().unwrap_or_default();
@@ -109,15 +119,9 @@ impl Vault {
 
     /// Returns the recent commit summaries across the entire vault, newest first.
     pub fn vault_history(&self, max_count: usize) -> anyhow::Result<Vec<CommitSummary>> {
-        let mut revwalk = match self.repo.revwalk() {
-            Ok(rw) => rw,
-            Err(_) => return Ok(Vec::new()),
-        };
-        if self.repo.head().is_err() {
+        let Some(revwalk) = self.history_revwalk() else {
             return Ok(Vec::new());
-        }
-        revwalk.push_head()?;
-        revwalk.set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::TIME)?;
+        };
 
         let mut commits = Vec::new();
         for oid in revwalk {

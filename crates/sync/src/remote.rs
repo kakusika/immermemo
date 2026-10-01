@@ -9,9 +9,14 @@ use std::rc::Rc;
 use crate::{BRANCH, CredentialProvider, REMOTE_NAME, Vault};
 
 impl Vault {
-    pub(crate) fn fetch(&self, credentials: &dyn CredentialProvider) -> anyhow::Result<()> {
-        let mut remote = self.repo.find_remote(REMOTE_NAME)?;
-        let url = remote.url().unwrap_or_default().to_string();
+    /// Builds the credentials + certificate-check callbacks shared by
+    /// [`fetch`](Self::fetch) and [`push`](Self::push); each still adds
+    /// its own extra callback on top (push needs to know about rejection).
+    fn remote_callbacks<'a>(
+        &'a self,
+        credentials: &'a dyn CredentialProvider,
+        url: String,
+    ) -> RemoteCallbacks<'a> {
         let mut callbacks = RemoteCallbacks::new();
         callbacks.credentials(move |_url, _username, _allowed| {
             credentials
@@ -19,6 +24,13 @@ impl Vault {
                 .map_err(|e| git2::Error::from_str(&e.to_string()))
         });
         self.install_certificate_check(&mut callbacks);
+        callbacks
+    }
+
+    pub(crate) fn fetch(&self, credentials: &dyn CredentialProvider) -> anyhow::Result<()> {
+        let mut remote = self.repo.find_remote(REMOTE_NAME)?;
+        let url = remote.url().unwrap_or_default().to_string();
+        let callbacks = self.remote_callbacks(credentials, url);
         let mut opts = FetchOptions::new();
         opts.remote_callbacks(callbacks);
         remote.fetch(
@@ -40,19 +52,13 @@ impl Vault {
         let rejected: Rc<RefCell<bool>> = Rc::new(RefCell::new(false));
         let rejected_in_callback = Rc::clone(&rejected);
 
-        let mut callbacks = RemoteCallbacks::new();
-        callbacks.credentials(move |_url, _username, _allowed| {
-            credentials
-                .credentials(&url)
-                .map_err(|e| git2::Error::from_str(&e.to_string()))
-        });
+        let mut callbacks = self.remote_callbacks(credentials, url);
         callbacks.push_update_reference(move |_refname, status| {
             if status.is_some() {
                 *rejected_in_callback.borrow_mut() = true;
             }
             Ok(())
         });
-        self.install_certificate_check(&mut callbacks);
 
         let mut opts = PushOptions::new();
         opts.remote_callbacks(callbacks);

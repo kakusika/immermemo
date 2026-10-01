@@ -207,7 +207,7 @@ impl Vault {
                     let _ = self.gc();
                 }
                 return Ok(SyncReport {
-                    notes_needing_resolution: self.conflicted_notes()?,
+                    notes_needing_resolution: self.conflicted_among(&checkout.updated),
                     updated_notes: checkout.updated,
                     deleted_notes: checkout.deleted,
                 });

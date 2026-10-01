@@ -99,24 +99,29 @@ impl Vault {
         Ok(CheckoutReport { updated, deleted })
     }
 
-    /// Which `.tmt` notes in the working tree still contain an unresolved
-    /// `@mobile.conflict`, after a sync's checkout.
-    pub(crate) fn conflicted_notes(&self) -> anyhow::Result<Vec<PathBuf>> {
-        let mut found = Vec::new();
-        immermemo_vault::notes::walk_tmt_files(&self.working_tree, &mut |path, _meta| {
-            if let Ok(rel) = path.strip_prefix(&self.working_tree) {
-                found.push(rel.to_path_buf());
-            }
-        });
-        Ok(found
-            .into_iter()
+    /// Which of `updated` (the notes this sync's checkout just wrote --
+    /// see [`checkout_differential`](Self::checkout_differential)) still
+    /// contain an unresolved `@mobile.conflict`.
+    ///
+    /// Only checks files this sync actually touched rather than
+    /// re-walking and re-parsing the whole working tree: a note this
+    /// sync didn't write can't have gained a *new* conflict, and one
+    /// left over from an earlier sync the user still hasn't resolved is
+    /// already reflected in `immermemo-index`'s persisted `has_conflict`
+    /// column (see `NoteIndex::apply_sync_report`), which is what the
+    /// app's "unresolved conflicts" count actually reads -- this field
+    /// is only the one-time "here's what this sync just did" report.
+    pub(crate) fn conflicted_among(&self, updated: &[PathBuf]) -> Vec<PathBuf> {
+        updated
+            .iter()
             .filter(|rel| {
                 std::fs::read_to_string(self.working_tree.join(rel))
                     .ok()
                     .and_then(|src| tomet_parser::parse_document(&src).ok())
                     .is_some_and(|doc| immermemo_merge::has_conflicts(&doc))
             })
-            .collect())
+            .cloned()
+            .collect()
     }
 }
 
