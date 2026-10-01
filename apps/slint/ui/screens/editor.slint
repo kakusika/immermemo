@@ -8,6 +8,7 @@ import {
     UndoRedoBubble,
     TopBar,
     AppScrollView,
+    PillButton,
 } from "../components.slint";
 
 export component EditorScreen inherits Rectangle {
@@ -201,96 +202,33 @@ export component EditorScreen inherits Rectangle {
                     horizontal-stretch: 1;
                 }
 
-                Rectangle {
-                    height: 28px;
-                    width: resolve-btn-layout.preferred-width + 16px;
-                    border-radius: 14px;
-                    background: resolve-touch.pressed ? Colors.warning.darker(15%) : Colors.warning;
-
-                    resolve-btn-layout := HorizontalLayout {
-                        padding-left: 8px;
-                        padding-right: 8px;
-                        Text {
-                            text: @tr("Open Resolution");
-                            font-size: 12px;
-                            font-weight: 700;
-                            color: #ffffff;
-                            vertical-alignment: center;
-                        }
-                    }
-
-                    resolve-touch := TouchArea {
-                        clicked => { root.open-conflict-sheet(); }
-                    }
+                PillButton {
+                    text: @tr("Open Resolution");
+                    fill: Colors.warning;
+                    pressed-fill: Colors.warning.darker(15%);
+                    text-color: #ffffff;
+                    bold: true;
+                    clicked => { root.open-conflict-sheet(); }
                 }
 
-                Rectangle {
-                    height: 28px;
-                    width: next-btn-layout.preferred-width + 16px;
-                    border-radius: 14px;
-                    background: next-touch.pressed ? Palette.foreground.with-alpha(0.18) : Palette.foreground.with-alpha(0.08);
-
-                    next-btn-layout := HorizontalLayout {
-                        padding-left: 8px;
-                        padding-right: 8px;
-                        Text {
-                            text: @tr("Next");
-                            font-size: 12px;
-                            font-weight: 600;
-                            color: Palette.foreground;
-                            vertical-alignment: center;
-                        }
-                    }
-
-                    next-touch := TouchArea {
-                        clicked => { root.jump-conflict(); }
-                    }
+                PillButton {
+                    text: @tr("Next");
+                    clicked => { root.jump-conflict(); }
                 }
 
-                Rectangle {
-                    height: 28px;
-                    width: mine-btn-layout.preferred-width + 16px;
-                    border-radius: 14px;
-                    background: mine-touch.pressed ? Colors.warning.darker(15%) : Colors.warning;
-
-                    mine-btn-layout := HorizontalLayout {
-                        padding-left: 8px;
-                        padding-right: 8px;
-                        Text {
-                            text: @tr("Keep Mine");
-                            font-size: 12px;
-                            font-weight: 600;
-                            color: #ffffff;
-                            vertical-alignment: center;
-                        }
-                    }
-
-                    mine-touch := TouchArea {
-                        clicked => { root.resolve-mine(); }
-                    }
+                PillButton {
+                    text: @tr("Keep Mine");
+                    fill: Colors.warning;
+                    pressed-fill: Colors.warning.darker(15%);
+                    text-color: #ffffff;
+                    clicked => { root.resolve-mine(); }
                 }
 
-                Rectangle {
-                    height: 28px;
-                    width: theirs-btn-layout.preferred-width + 16px;
-                    border-radius: 14px;
-                    background: theirs-touch.pressed ? Palette.foreground.with-alpha(0.22) : Palette.foreground.with-alpha(0.12);
-
-                    theirs-btn-layout := HorizontalLayout {
-                        padding-left: 8px;
-                        padding-right: 8px;
-                        Text {
-                            text: @tr("Keep Theirs");
-                            font-size: 12px;
-                            font-weight: 600;
-                            color: Palette.foreground;
-                            vertical-alignment: center;
-                        }
-                    }
-
-                    theirs-touch := TouchArea {
-                        clicked => { root.resolve-theirs(); }
-                    }
+                PillButton {
+                    text: @tr("Keep Theirs");
+                    fill: Palette.foreground.with-alpha(0.12);
+                    pressed-fill: Palette.foreground.with-alpha(0.22);
+                    clicked => { root.resolve-theirs(); }
                 }
             }
         }

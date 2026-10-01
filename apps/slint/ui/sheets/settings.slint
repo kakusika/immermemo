@@ -7,6 +7,7 @@ import {
     TopBar,
     ActionRow,
     AppScrollView,
+    SegmentedControl,
 } from "../components.slint";
 
 // A full-screen sheet for application settings: Sync & Remote, Vault management,
@@ -243,84 +244,20 @@ export component SettingsSheet inherits Rectangle {
 
                             // Theme Selector
                             VerticalLayout {
-                                spacing: 8px;
+                                spacing: Metrics.spacing-sm;
 
                                 Text {
                                     text: @tr("Theme");
-                                    font-size: 13px;
+                                    font-size: Metrics.font-sub;
                                     color: Colors.muted;
                                 }
 
-                                HorizontalLayout {
-                                    spacing: 8px;
-
-                                    Rectangle {
-                                        horizontal-stretch: 1;
-                                        height: 36px;
-                                        border-radius: 18px;
-                                        background: root.theme-choice == 0 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
-
-                                        Text {
-                                            text: @tr("System");
-                                            font-size: 13px;
-                                            font-weight: root.theme-choice == 0 ? 600 : 400;
-                                            color: root.theme-choice == 0 ? Palette.accent-foreground : Palette.foreground;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-
-                                        TouchArea {
-                                            clicked => {
-                                                root.theme-choice = 0;
-                                                root.theme-changed(0);
-                                            }
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        horizontal-stretch: 1;
-                                        height: 36px;
-                                        border-radius: 18px;
-                                        background: root.theme-choice == 1 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
-
-                                        Text {
-                                            text: @tr("Light");
-                                            font-size: 13px;
-                                            font-weight: root.theme-choice == 1 ? 600 : 400;
-                                            color: root.theme-choice == 1 ? Palette.accent-foreground : Palette.foreground;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-
-                                        TouchArea {
-                                            clicked => {
-                                                root.theme-choice = 1;
-                                                root.theme-changed(1);
-                                            }
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        horizontal-stretch: 1;
-                                        height: 36px;
-                                        border-radius: 18px;
-                                        background: root.theme-choice == 2 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
-
-                                        Text {
-                                            text: @tr("Dark");
-                                            font-size: 13px;
-                                            font-weight: root.theme-choice == 2 ? 600 : 400;
-                                            color: root.theme-choice == 2 ? Palette.accent-foreground : Palette.foreground;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-
-                                        TouchArea {
-                                            clicked => {
-                                                root.theme-choice = 2;
-                                                root.theme-changed(2);
-                                            }
-                                        }
+                                SegmentedControl {
+                                    options: [@tr("System"), @tr("Light"), @tr("Dark")];
+                                    selected: root.theme-choice;
+                                    changed(i) => {
+                                        root.theme-choice = i;
+                                        root.theme-changed(i);
                                     }
                                 }
                             }
@@ -332,84 +269,20 @@ export component SettingsSheet inherits Rectangle {
 
                             // Font Size Selector
                             VerticalLayout {
-                                spacing: 8px;
+                                spacing: Metrics.spacing-sm;
 
                                 Text {
                                     text: @tr("Editor Font Size");
-                                    font-size: 13px;
+                                    font-size: Metrics.font-sub;
                                     color: Colors.muted;
                                 }
 
-                                HorizontalLayout {
-                                    spacing: 8px;
-
-                                    Rectangle {
-                                        horizontal-stretch: 1;
-                                        height: 36px;
-                                        border-radius: 18px;
-                                        background: root.font-size-choice == 0 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
-
-                                        Text {
-                                            text: @tr("Small (14)");
-                                            font-size: 13px;
-                                            font-weight: root.font-size-choice == 0 ? 600 : 400;
-                                            color: root.font-size-choice == 0 ? Palette.accent-foreground : Palette.foreground;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-
-                                        TouchArea {
-                                            clicked => {
-                                                root.font-size-choice = 0;
-                                                root.font-size-changed(0);
-                                            }
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        horizontal-stretch: 1;
-                                        height: 36px;
-                                        border-radius: 18px;
-                                        background: root.font-size-choice == 1 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
-
-                                        Text {
-                                            text: @tr("Medium (17)");
-                                            font-size: 13px;
-                                            font-weight: root.font-size-choice == 1 ? 600 : 400;
-                                            color: root.font-size-choice == 1 ? Palette.accent-foreground : Palette.foreground;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-
-                                        TouchArea {
-                                            clicked => {
-                                                root.font-size-choice = 1;
-                                                root.font-size-changed(1);
-                                            }
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        horizontal-stretch: 1;
-                                        height: 36px;
-                                        border-radius: 18px;
-                                        background: root.font-size-choice == 2 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
-
-                                        Text {
-                                            text: @tr("Large (20)");
-                                            font-size: 13px;
-                                            font-weight: root.font-size-choice == 2 ? 600 : 400;
-                                            color: root.font-size-choice == 2 ? Palette.accent-foreground : Palette.foreground;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-
-                                        TouchArea {
-                                            clicked => {
-                                                root.font-size-choice = 2;
-                                                root.font-size-changed(2);
-                                            }
-                                        }
+                                SegmentedControl {
+                                    options: [@tr("Small (14)"), @tr("Medium (17)"), @tr("Large (20)")];
+                                    selected: root.font-size-choice;
+                                    changed(i) => {
+                                        root.font-size-choice = i;
+                                        root.font-size-changed(i);
                                     }
                                 }
                             }
@@ -429,95 +302,11 @@ export component SettingsSheet inherits Rectangle {
                                     color: Colors.muted;
                                 }
 
-                                HorizontalLayout {
-                                    spacing: Metrics.spacing-sm;
-
-                                    Rectangle {
-                                        horizontal-stretch: 1;
-                                        height: Metrics.bubble-chip-height;
-                                        border-radius: self.height / 2;
-                                        background: Metrics.ui-scale < 0.95 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
-
-                                        Text {
-                                            text: "90%";
-                                            font-size: Metrics.font-sub;
-                                            font-weight: Metrics.ui-scale < 0.95 ? 600 : 400;
-                                            color: Metrics.ui-scale < 0.95 ? Palette.accent-foreground : Palette.foreground;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-
-                                        TouchArea {
-                                            clicked => {
-                                                Metrics.ui-scale = 0.9;
-                                            }
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        horizontal-stretch: 1;
-                                        height: Metrics.bubble-chip-height;
-                                        border-radius: self.height / 2;
-                                        background: Metrics.ui-scale >= 0.95 && Metrics.ui-scale <= 1.05 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
-
-                                        Text {
-                                            text: "100%";
-                                            font-size: Metrics.font-sub;
-                                            font-weight: Metrics.ui-scale >= 0.95 && Metrics.ui-scale <= 1.05 ? 600 : 400;
-                                            color: Metrics.ui-scale >= 0.95 && Metrics.ui-scale <= 1.05 ? Palette.accent-foreground : Palette.foreground;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-
-                                        TouchArea {
-                                            clicked => {
-                                                Metrics.ui-scale = 1.0;
-                                            }
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        horizontal-stretch: 1;
-                                        height: Metrics.bubble-chip-height;
-                                        border-radius: self.height / 2;
-                                        background: Metrics.ui-scale > 1.05 && Metrics.ui-scale <= 1.18 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
-
-                                        Text {
-                                            text: "110%";
-                                            font-size: Metrics.font-sub;
-                                            font-weight: Metrics.ui-scale > 1.05 && Metrics.ui-scale <= 1.18 ? 600 : 400;
-                                            color: Metrics.ui-scale > 1.05 && Metrics.ui-scale <= 1.18 ? Palette.accent-foreground : Palette.foreground;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-
-                                        TouchArea {
-                                            clicked => {
-                                                Metrics.ui-scale = 1.1;
-                                            }
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        horizontal-stretch: 1;
-                                        height: Metrics.bubble-chip-height;
-                                        border-radius: self.height / 2;
-                                        background: Metrics.ui-scale > 1.18 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
-
-                                        Text {
-                                            text: "125%";
-                                            font-size: Metrics.font-sub;
-                                            font-weight: Metrics.ui-scale > 1.18 ? 600 : 400;
-                                            color: Metrics.ui-scale > 1.18 ? Palette.accent-foreground : Palette.foreground;
-                                            horizontal-alignment: center;
-                                            vertical-alignment: center;
-                                        }
-
-                                        TouchArea {
-                                            clicked => {
-                                                Metrics.ui-scale = 1.25;
-                                            }
-                                        }
+                                SegmentedControl {
+                                    options: ["90%", "100%", "110%", "125%"];
+                                    selected: Metrics.ui-scale < 0.95 ? 0 : (Metrics.ui-scale <= 1.05 ? 1 : (Metrics.ui-scale <= 1.18 ? 2 : 3));
+                                    changed(i) => {
+                                        Metrics.ui-scale = [0.9, 1.0, 1.1, 1.25][i];
                                     }
                                 }
                             }

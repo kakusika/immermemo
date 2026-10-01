@@ -1,16 +1,32 @@
 import { Palette, LineEdit, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "components.slint";
 
-// Modern responsive text input dialog / bottom sheet.
-// On narrow/mobile screens: slides up from the bottom as a bottom sheet.
-// On wide/desktop screens: centered modal dialog with backdrop scrim.
-export component TextInputDialog inherits Rectangle {
+// The narrow-screen "grabber" pill shown at the top of a bottom sheet.
+component DragHandle inherits HorizontalLayout {
+    alignment: center;
+    Rectangle {
+        width: 36px;
+        height: 4px;
+        border-radius: 2px;
+        background: Palette.foreground.with-alpha(0.2);
+    }
+}
+
+// The scrim + animated card shared by every bottom-sheet/dialog hybrid in
+// this file: on narrow/mobile screens it slides up from the bottom, on
+// wide/desktop screens it's a centered modal with a backdrop scrim.
+// Content (drag handle, title, body, buttons) is entirely up to the
+// caller via @children -- this only owns the shell and its animation.
+component ModalShell inherits Rectangle {
     in property <bool> open: false;
     in property <bool> narrow: true;
-    in property <string> title;
-    in-out property <string> text-draft;
     in property <length> inset-bottom: 0px;
-    callback save(string);
+    in property <length> card-max-width: 440px;
+    in property <length> content-padding-left: 20px;
+    in property <length> content-padding-right: 20px;
+    in property <length> content-padding-top: 16px;
+    in property <length> content-padding-bottom: 20px;
+    in property <length> content-spacing: 16px;
     callback cancel();
 
     width: 100%;
@@ -36,7 +52,7 @@ export component TextInputDialog inherits Rectangle {
 
     // Modal Card / Bottom Sheet
     card := Rectangle {
-        width: root.narrow ? (parent.width - 24px) : min(440px, parent.width - 32px);
+        width: root.narrow ? (parent.width - 24px) : min(root.card-max-width, parent.width - 32px);
         height: content-layout.preferred-height;
         x: (parent.width - self.width) / 2;
         y: root.narrow
@@ -50,58 +66,74 @@ export component TextInputDialog inherits Rectangle {
         background: Palette.background;
         border-radius: 20px;
         drop-shadow-blur: 24px;
-        drop-shadow-color: #00000044;
+        drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #00000088 : #00000044;
 
         content-layout := VerticalLayout {
-            padding-left: 20px;
-            padding-right: 20px;
-            padding-top: 16px;
-            padding-bottom: 20px;
-            spacing: 16px;
+            padding-left: root.content-padding-left;
+            padding-right: root.content-padding-right;
+            padding-top: root.content-padding-top;
+            padding-bottom: root.content-padding-bottom;
+            spacing: root.content-spacing;
 
-            if root.narrow: HorizontalLayout {
-                alignment: center;
-                Rectangle {
-                    width: 36px;
-                    height: 4px;
-                    border-radius: 2px;
-                    background: Palette.foreground.with-alpha(0.2);
+            @children
+        }
+    }
+}
+
+// Modern responsive text input dialog / bottom sheet.
+export component TextInputDialog inherits Rectangle {
+    in property <bool> open: false;
+    in property <bool> narrow: true;
+    in property <string> title;
+    in-out property <string> text-draft;
+    in property <length> inset-bottom: 0px;
+    callback save(string);
+    callback cancel();
+
+    width: 100%;
+    height: 100%;
+
+    ModalShell {
+        open: root.open;
+        narrow: root.narrow;
+        inset-bottom: root.inset-bottom;
+        card-max-width: 440px;
+        cancel => { root.cancel(); }
+
+        if root.narrow: DragHandle {}
+
+        Text {
+            text: root.title;
+            font-size: 20px;
+            font-weight: 600;
+            color: Palette.foreground;
+        }
+
+        text-field := LineEdit {
+            height: Metrics.touch;
+            text <=> root.text-draft;
+            accepted => {
+                if (root.text-draft != "") {
+                    root.save(root.text-draft);
                 }
             }
+        }
 
-            Text {
-                text: root.title;
-                font-size: 20px;
-                font-weight: 600;
-                color: Palette.foreground;
+        HorizontalLayout {
+            height: 40px;
+            alignment: end;
+            spacing: 10px;
+
+            Button {
+                text: @tr("Cancel");
+                clicked => { root.cancel(); }
             }
 
-            text-field := LineEdit {
-                height: Metrics.touch;
-                text <=> root.text-draft;
-                accepted => {
-                    if (root.text-draft != "") {
-                        root.save(root.text-draft);
-                    }
-                }
-            }
-
-            HorizontalLayout {
-                height: 40px;
-                alignment: end;
-                spacing: 10px;
-
-                Button {
-                    text: @tr("Cancel");
-                    clicked => { root.cancel(); }
-                }
-
-                Button {
-                    text: @tr("Save");
-                    primary: true;
-                    enabled: root.text-draft != "";
-                    clicked => { root.save(root.text-draft); }
-                }
+            Button {
+                text: @tr("Save");
+                primary: true;
+                enabled: root.text-draft != "";
+                clicked => { root.save(root.text-draft); }
             }
         }
     }
@@ -120,87 +152,44 @@ export component ConfirmDialog inherits Rectangle {
 
     width: 100%;
     height: 100%;
-    visible: root.open || self.opacity > 0.01;
-    opacity: root.open ? 1.0 : 0.0;
-    animate opacity {
-        duration: 140ms;
-        easing: ease-out;
-    }
 
-    Rectangle {
-        width: 100%;
-        height: 100%;
-        background: #000000.with-alpha(0.45);
+    ModalShell {
+        open: root.open;
+        narrow: root.narrow;
+        inset-bottom: root.inset-bottom;
+        card-max-width: 420px;
+        cancel => { root.cancel(); }
 
-        TouchArea {
-            enabled: root.open;
-            clicked => { root.cancel(); }
-        }
-    }
+        if root.narrow: DragHandle {}
 
-    card := Rectangle {
-        width: root.narrow ? (parent.width - 24px) : min(420px, parent.width - 32px);
-        height: content-layout.preferred-height;
-        x: (parent.width - self.width) / 2;
-        y: root.narrow
-            ? (root.open ? parent.height - self.height - 12px - root.inset-bottom : parent.height)
-            : ((parent.height - self.height) / 2 + (root.open ? 0px : 24px));
-        animate y {
-            duration: 160ms;
-            easing: ease-out;
+        Text {
+            text: root.title;
+            font-size: 20px;
+            font-weight: 600;
+            color: Palette.foreground;
         }
 
-        background: Palette.background;
-        border-radius: 20px;
-        drop-shadow-blur: 24px;
-        drop-shadow-color: #00000044;
+        if root.body != "": Text {
+            text: root.body;
+            font-size: 14px;
+            color: Colors.muted;
+            wrap: word-wrap;
+        }
 
-        content-layout := VerticalLayout {
-            padding-left: 20px;
-            padding-right: 20px;
-            padding-top: 16px;
-            padding-bottom: 20px;
-            spacing: 16px;
+        HorizontalLayout {
+            height: 40px;
+            alignment: end;
+            spacing: 10px;
 
-            if root.narrow: HorizontalLayout {
-                alignment: center;
-                Rectangle {
-                    width: 36px;
-                    height: 4px;
-                    border-radius: 2px;
-                    background: Palette.foreground.with-alpha(0.2);
-                }
+            Button {
+                text: @tr("Cancel");
+                clicked => { root.cancel(); }
             }
 
-            Text {
-                text: root.title;
-                font-size: 20px;
-                font-weight: 600;
-                color: Palette.foreground;
-            }
-
-            if root.body != "": Text {
-                text: root.body;
-                font-size: 14px;
-                color: Colors.muted;
-                wrap: word-wrap;
-            }
-
-            HorizontalLayout {
-                height: 40px;
-                alignment: end;
-                spacing: 10px;
-
-                Button {
-                    text: @tr("Cancel");
-                    clicked => { root.cancel(); }
-                }
-
-                Button {
-                    text: root.confirm-text;
-                    primary: true;
-                    clicked => { root.confirm(); }
-                }
+            Button {
+                text: root.confirm-text;
+                primary: true;
+                clicked => { root.confirm(); }
             }
         }
     }
@@ -217,73 +206,34 @@ export component ActionSheet inherits Rectangle {
 
     width: 100%;
     height: 100%;
-    visible: root.open || self.opacity > 0.01;
-    opacity: root.open ? 1.0 : 0.0;
-    animate opacity {
-        duration: 140ms;
-        easing: ease-out;
-    }
 
-    Rectangle {
-        width: 100%;
-        height: 100%;
-        background: #000000.with-alpha(0.45);
+    ModalShell {
+        open: root.open;
+        narrow: root.narrow;
+        inset-bottom: root.inset-bottom;
+        card-max-width: 380px;
+        content-padding-left: 10px;
+        content-padding-right: 10px;
+        content-padding-top: 14px;
+        content-padding-bottom: 12px;
+        content-spacing: 2px;
+        cancel => { root.cancel(); }
 
-        TouchArea {
-            enabled: root.open;
-            clicked => { root.cancel(); }
-        }
-    }
+        if root.narrow: DragHandle {}
 
-    card := Rectangle {
-        width: root.narrow ? (parent.width - 24px) : min(380px, parent.width - 32px);
-        height: content-layout.preferred-height;
-        x: (parent.width - self.width) / 2;
-        y: root.narrow
-            ? (root.open ? parent.height - self.height - 12px - root.inset-bottom : parent.height)
-            : ((parent.height - self.height) / 2 + (root.open ? 0px : 24px));
-        animate y {
-            duration: 160ms;
-            easing: ease-out;
-        }
-
-        background: Palette.background;
-        border-radius: 20px;
-        drop-shadow-blur: 24px;
-        drop-shadow-color: #00000044;
-
-        content-layout := VerticalLayout {
-            padding-top: 14px;
-            padding-bottom: 12px;
-            padding-left: 10px;
-            padding-right: 10px;
-            spacing: 2px;
-
-            if root.narrow: HorizontalLayout {
-                alignment: center;
-                padding-bottom: 6px;
-                Rectangle {
-                    width: 36px;
-                    height: 4px;
-                    border-radius: 2px;
-                    background: Palette.foreground.with-alpha(0.2);
-                }
+        if root.title != "": HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            padding-bottom: 6px;
+            Text {
+                text: root.title;
+                font-size: 15px;
+                font-weight: 600;
+                color: Colors.muted;
+                overflow: elide;
             }
-
-            if root.title != "": HorizontalLayout {
-                padding-left: 12px;
-                padding-right: 12px;
-                padding-bottom: 6px;
-                Text {
-                    text: root.title;
-                    font-size: 15px;
-                    font-weight: 600;
-                    color: Colors.muted;
-                    overflow: elide;
-                }
-            }
-
-            @children
         }
+
+        @children
     }
 }

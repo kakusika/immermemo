@@ -154,8 +154,8 @@ msgstr "(削除または空)"
 
 #: ui/sheets/conflict.slint:149
 msgctxt "ConflictSheet"
-msgid "Keep This Version (Keep Local)"
-msgstr "この変更を採用 (Keep Local)"
+msgid "Keep Mine"
+msgstr "自分の変更を採用"
 
 #: ui/sheets/conflict.slint:178
 msgctxt "ConflictSheet"
@@ -164,8 +164,8 @@ msgstr "☁️ リモートの変更 (Remote)"
 
 #: ui/sheets/conflict.slint:211
 msgctxt "ConflictSheet"
-msgid "Keep This Version (Keep Remote)"
-msgstr "この変更を採用 (Keep Remote)"
+msgid "Keep Theirs"
+msgstr "相手の変更を採用"
 
 #: ui/sheets/conflict.slint:236
 msgctxt "ConflictSheet"
@@ -615,12 +615,12 @@ msgstr "🔍 解決シートを開いて確認・解決"
 #: ui/screens/properties.slint:294
 msgctxt "PropertiesScreen"
 msgid "Keep Mine"
-msgstr "ローカル側を採用"
+msgstr "自分の変更を採用"
 
 #: ui/screens/properties.slint:300
 msgctxt "PropertiesScreen"
 msgid "Keep Theirs"
-msgstr "リモート側を採用"
+msgstr "相手の変更を採用"
 
 #: ui/screens/properties.slint:314
 msgctxt "PropertiesScreen"

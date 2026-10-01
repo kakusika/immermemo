@@ -58,6 +58,7 @@ export global Metrics {
 export global Colors {
     out property <color> warning: #d9822b;
     out property <color> danger: #d9302f;
+    out property <color> success: #2e7d32;
     out property <color> separator: Palette.foreground.with-alpha(0.12);
     out property <color> muted: Palette.foreground.with-alpha(0.6);
 
@@ -271,6 +272,39 @@ export component BubbleChip inherits Rectangle {
     }
 }
 
+// A small text-only pill button with a caller-chosen color (the editor's
+// conflict bar needs "Keep Mine" in warning-orange next to "Next" in a
+// neutral tone, which BubbleChip's fixed neutral background can't do).
+export component PillButton inherits Rectangle {
+    in property <string> text;
+    in property <color> fill: Palette.foreground.with-alpha(0.08);
+    in property <color> pressed-fill: Palette.foreground.with-alpha(0.18);
+    in property <color> text-color: Palette.foreground;
+    in property <bool> bold: false;
+    callback clicked();
+
+    height: 28px * Metrics.ui-scale;
+    width: label.preferred-width + 16px * Metrics.ui-scale;
+    border-radius: self.height / 2;
+    background: touch.pressed ? root.pressed-fill : root.fill;
+
+    label := HorizontalLayout {
+        padding-left: 8px * Metrics.ui-scale;
+        padding-right: 8px * Metrics.ui-scale;
+        Text {
+            text: root.text;
+            font-size: Metrics.font-sm;
+            font-weight: root.bold ? 700 : 600;
+            color: root.text-color;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
 // Capsule-grouped undo/redo bubble
 export component UndoRedoBubble inherits Rectangle {
     in property <bool> can-undo: false;
@@ -375,6 +409,45 @@ export component ActionRow inherits Rectangle {
 
     touch := TouchArea {
         clicked => { root.clicked(); }
+    }
+}
+
+// A row of equal-width pill segments, exactly one selected at a time
+// (Settings' Theme/Font Size/UI Scale pickers all share this shape).
+// A controlled component, like a radio group: `selected` is owned by the
+// caller (an index for Theme/Font Size, a range-derived index for UI
+// Scale) and only ever read here -- clicking a segment doesn't set
+// `selected` itself, it reports the click via `changed` and waits for
+// the caller to feed the new value back in, so callers whose index
+// isn't a simple stored int (UI Scale's is derived from a continuous
+// `Metrics.ui-scale`) work the same way as ones where it is.
+export component SegmentedControl inherits HorizontalLayout {
+    in property <[string]> options;
+    in property <int> selected: 0;
+    callback changed(int);
+
+    spacing: Metrics.spacing-sm;
+
+    for opt[i] in root.options: Rectangle {
+        horizontal-stretch: 1;
+        height: Metrics.bubble-chip-height;
+        border-radius: self.height / 2;
+        background: i == root.selected ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+        Text {
+            text: opt;
+            font-size: Metrics.font-sub;
+            font-weight: i == root.selected ? 600 : 400;
+            color: i == root.selected ? Palette.accent-foreground : Palette.foreground;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        TouchArea {
+            clicked => {
+                root.changed(i);
+            }
+        }
     }
 }
 

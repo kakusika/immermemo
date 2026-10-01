@@ -308,11 +308,11 @@ export component HomeScreen inherits Rectangle {
                                     height: Metrics.bubble-button-size;
                                     border-radius: Metrics.radius-sm;
                                     background: root.sync-error-copied
-                                        ? #2e7d32.with-alpha(0.18)
+                                        ? Colors.success.with-alpha(0.18)
                                         : Palette.alternate-background;
                                     border-width: 1px;
                                     border-color: root.sync-error-copied
-                                        ? #2e7d32.with-alpha(0.5)
+                                        ? Colors.success.with-alpha(0.5)
                                         : Colors.separator;
 
                                     TouchArea {
@@ -329,7 +329,7 @@ export component HomeScreen inherits Rectangle {
                                                 width: Metrics.icon-sm;
                                                 height: Metrics.icon-sm;
                                                 shape: root.sync-error-copied ? Shapes.check : Shapes.copy;
-                                                tint: root.sync-error-copied ? #2e7d32 : Palette.foreground;
+                                                tint: root.sync-error-copied ? Colors.success : Palette.foreground;
                                             }
                                         }
 
@@ -337,7 +337,7 @@ export component HomeScreen inherits Rectangle {
                                             text: root.sync-error-copied ? @tr("Copied") : @tr("Copy Error");
                                             font-size: Metrics.font-sub;
                                             font-weight: 600;
-                                            color: root.sync-error-copied ? #2e7d32 : Palette.foreground;
+                                            color: root.sync-error-copied ? Colors.success : Palette.foreground;
                                             vertical-alignment: center;
                                         }
                                     }
