@@ -40,7 +40,6 @@ slint = { version = "1.18", default-features = false, features = [
   "backend-android-activity-06",
   "compat-1-2",
   "renderer-femtovg",
-  "renderer-software",
 ] }
 
 [build-dependencies]
