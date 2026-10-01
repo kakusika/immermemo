@@ -180,7 +180,10 @@ export component SearchScreen inherits Rectangle {
                         height: parent.height - Metrics.spacing-xs;
                         border-radius: Metrics.radius-lg;
                         background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
-                        animate background { duration: 120ms; easing: ease-out; }
+                        animate background {
+                            duration: 120ms;
+                            easing: ease-out;
+                        }
 
                         HorizontalLayout {
                             padding-left: Metrics.spacing-lg;

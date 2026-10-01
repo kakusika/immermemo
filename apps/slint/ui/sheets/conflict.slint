@@ -1,5 +1,13 @@
 import { Palette } from "std-widgets.slint";
-import { Metrics, Colors, Shapes, Icon, IconButton, BubbleButton, AppScrollView } from "../components.slint";
+import {
+    Metrics,
+    Colors,
+    Shapes,
+    Icon,
+    IconButton,
+    BubbleButton,
+    AppScrollView,
+} from "../components.slint";
 
 export component ConflictSheet inherits Rectangle {
     in property <bool> open: false;
@@ -32,7 +40,7 @@ export component ConflictSheet inherits Rectangle {
         clip: true;
 
         // Consume touches inside the sheet
-        TouchArea {}
+        TouchArea { }
 
         VerticalLayout {
             padding-left: 16px;

@@ -1,7 +1,7 @@
 pub mod credentials;
-mod sync;
 mod haptic;
 mod session;
+mod sync;
 
 #[cfg(target_os = "android")]
 mod android;
@@ -18,10 +18,10 @@ use immermemo_vault::history::History;
 use immermemo_vault::notes;
 
 use session::{
-    apply_restored, open_first_conflicted_note, open_initial_or_last_note, open_note, refresh_list,
-    refresh_vault_list, resolve_active_conflict, resolve_conflict_step, set_status,
-    show_history_state, start_sync, switch_vault, sync_conflict_sheet_state, update_filtered_list,
-    vault_display_name, vault_path_from_input, Session, SESSION,
+    SESSION, Session, apply_restored, open_first_conflicted_note, open_initial_or_last_note,
+    open_note, refresh_list, refresh_vault_list, resolve_active_conflict, resolve_conflict_step,
+    set_status, show_history_state, start_sync, switch_vault, sync_conflict_sheet_state,
+    update_filtered_list, vault_display_name, vault_path_from_input,
 };
 
 slint::include_modules!();
@@ -208,7 +208,8 @@ pub fn run(
                             if let Ok(rel) = path.strip_prefix(&vault_dir) {
                                 let _ = s.index.record_write(&vault_dir, rel, text.as_str());
                             }
-                            if app.get_status_is_error() && app.get_status().starts_with("Save failed")
+                            if app.get_status_is_error()
+                                && app.get_status().starts_with("Save failed")
                             {
                                 set_status(&app, "");
                             }
@@ -729,8 +730,8 @@ pub fn run(
 mod tests {
     use super::*;
     use crate::session::{copy_to_clipboard, finish_sync};
-    use std::sync::Arc;
     use slint::Model;
+    use std::sync::Arc;
 
     #[test]
     fn ui_helpers_and_conflict_resolution() {
@@ -834,9 +835,15 @@ mod tests {
 
         // 4. Conflict sheet step-by-step resolution
         let multi_note_path = vault_dir.join("multi_conflict.tmt");
-        let base_doc = tomet_parser::parse_document("Alpha base.\n\nMiddle untouched.\n\nBeta base.\n").unwrap();
-        let local_doc = tomet_parser::parse_document("Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n").unwrap();
-        let remote_doc = tomet_parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n").unwrap();
+        let base_doc =
+            tomet_parser::parse_document("Alpha base.\n\nMiddle untouched.\n\nBeta base.\n")
+                .unwrap();
+        let local_doc =
+            tomet_parser::parse_document("Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n")
+                .unwrap();
+        let remote_doc =
+            tomet_parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n")
+                .unwrap();
         let merged_doc = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc).document;
         let conflicted_text = tomet_printer::document_to_tm(&merged_doc);
         std::fs::write(&multi_note_path, &conflicted_text).unwrap();
@@ -896,7 +903,11 @@ mod tests {
 
         // 5. Sync error tracking, copying, and dismissal
         let err_text = "Sync failed: no merge base found; class=Merge (22)";
-        finish_sync(&app, &session, Err("no merge base found; class=Merge (22)".to_string()));
+        finish_sync(
+            &app,
+            &session,
+            Err("no merge base found; class=Merge (22)".to_string()),
+        );
         assert_eq!(app.get_last_sync_error(), err_text);
         assert!(app.get_status_is_error());
         assert_eq!(app.get_status(), err_text);

@@ -1,5 +1,14 @@
 import { Palette } from "std-widgets.slint";
-import { Metrics, Colors, Shapes, IconButton, BubbleButton, UndoRedoBubble, TopBar, AppScrollView } from "../components.slint";
+import {
+    Metrics,
+    Colors,
+    Shapes,
+    IconButton,
+    BubbleButton,
+    UndoRedoBubble,
+    TopBar,
+    AppScrollView,
+} from "../components.slint";
 
 export component EditorScreen inherits Rectangle {
     in property <string> title;
@@ -95,7 +104,6 @@ export component EditorScreen inherits Rectangle {
                 undo => { root.undo(); }
                 redo => { root.redo(); }
             }
-
         }
 
         Rectangle {

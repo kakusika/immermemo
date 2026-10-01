@@ -36,7 +36,6 @@ export component FilesScreen inherits Rectangle {
         TopBar {
             inset-top: root.inset-top;
 
-
             Rectangle {
                 horizontal-stretch: 1;
                 HorizontalLayout {
@@ -103,6 +102,7 @@ export component FilesScreen inherits Rectangle {
                     height: Metrics.icon-xl;
                     x: (parent.width - self.width) / 2;
                 }
+
                 Text {
                     text: "No notes yet";
                     font-size: Metrics.font-body;
@@ -110,6 +110,7 @@ export component FilesScreen inherits Rectangle {
                     color: Colors.muted;
                     horizontal-alignment: center;
                 }
+
                 Text {
                     text: "Tap + below to create your first note";
                     font-size: Metrics.font-sub;

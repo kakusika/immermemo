@@ -261,15 +261,23 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
 }
 
 pub fn update_note_stats(app: &App, text: &str) {
-    let char_count = text.chars().count() as i32;
-    let word_count = text.split_whitespace().count() as i32;
     let line_count = if text.is_empty() {
         0
     } else {
         text.lines().count() as i32
     };
-    app.set_char_count(char_count);
-    app.set_word_count(word_count);
+
+    if let Ok(doc) = tomet_parser::parse_document(text) {
+        let stats = tomet_stats::measure(&doc);
+        app.set_char_count(stats.characters as i32);
+        app.set_word_count(stats.words as i32);
+    } else {
+        // Fallback for unparseable drafts while actively typing
+        let char_count = text.chars().filter(|c| !c.is_whitespace()).count() as i32;
+        let word_count = text.split_whitespace().count() as i32;
+        app.set_char_count(char_count);
+        app.set_word_count(word_count);
+    }
     app.set_line_count(line_count);
 }
 
@@ -314,7 +322,10 @@ pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
             s.current = Some(index);
             s.history = Some(History::new(&text));
             let _ = s.app_data.save_last_note(&s.vault_dir, &path);
-            let ui_current = s.filtered_results.iter().position(|r| r.note_index == index);
+            let ui_current = s
+                .filtered_results
+                .iter()
+                .position(|r| r.note_index == index);
             app.set_current(ui_current.map_or(-1, |i| i as i32));
             app.set_current_title(notes::display_name(&s.vault_dir, &path).into());
             let note_rel_path = path
@@ -525,11 +536,7 @@ pub fn sync_conflict_sheet_state(app: &App, session: &Rc<RefCell<Session>>) {
     }
 }
 
-pub fn resolve_conflict_step(
-    app: &App,
-    session: &Rc<RefCell<Session>>,
-    choice: i32,
-) {
+pub fn resolve_conflict_step(app: &App, session: &Rc<RefCell<Session>>, choice: i32) {
     let mut s = session.borrow_mut();
     let Some(path) = s.current_path().cloned() else {
         return;
@@ -605,7 +612,11 @@ pub fn resolve_conflict_step(
     }
 }
 
-pub fn finish_sync(app: &App, session: &Rc<RefCell<Session>>, result: Result<immermemo_sync::SyncReport, String>) {
+pub fn finish_sync(
+    app: &App,
+    session: &Rc<RefCell<Session>>,
+    result: Result<immermemo_sync::SyncReport, String>,
+) {
     app.set_syncing(false);
     let mut should_sync_again = false;
     match result {
@@ -773,25 +784,29 @@ pub fn trigger_auto_sync(app: &App, session: &Rc<RefCell<Session>>) {
 pub fn schedule_auto_sync(app: &App, duration: std::time::Duration) {
     let weak = app.as_weak();
     AUTO_SYNC_TIMER.with(|timer| {
-        timer.borrow_mut().start(
-            slint::TimerMode::SingleShot,
-            duration,
-            move || {
+        timer
+            .borrow_mut()
+            .start(slint::TimerMode::SingleShot, duration, move || {
                 let Some(app) = weak.upgrade() else { return };
                 let session = SESSION.with(|cell| cell.borrow().clone());
                 let Some(session) = session else { return };
                 trigger_auto_sync(&app, &session);
-            },
-        );
+            });
     });
 }
 
 pub fn open_note_history(app: &App, session: &Rc<RefCell<Session>>) {
     let s = session.borrow();
-    let Some(current_path) = s.current_path().cloned() else { return };
+    let Some(current_path) = s.current_path().cloned() else {
+        return;
+    };
     let vault_dir = s.vault_dir.clone();
-    let Ok(rel_path) = current_path.strip_prefix(&vault_dir) else { return };
-    let Ok(gitdir) = s.app_data.gitdir(&vault_dir) else { return };
+    let Ok(rel_path) = current_path.strip_prefix(&vault_dir) else {
+        return;
+    };
+    let Ok(gitdir) = s.app_data.gitdir(&vault_dir) else {
+        return;
+    };
     drop(s);
 
     let revisions = match Vault::open(&vault_dir, &gitdir) {
@@ -804,7 +819,10 @@ pub fn open_note_history(app: &App, session: &Rc<RefCell<Session>>) {
     let mut previews = Vec::with_capacity(revisions.len());
 
     for rev in &revisions {
-        commit_ids.push(SharedString::from(format!("{} - {}", rev.short_id, rev.summary)));
+        commit_ids.push(SharedString::from(format!(
+            "{} - {}",
+            rev.short_id, rev.summary
+        )));
         dates.push(SharedString::from(format_timestamp(rev.timestamp_secs)));
         previews.push(SharedString::from(&rev.content));
     }
@@ -821,8 +839,12 @@ pub fn open_note_history(app: &App, session: &Rc<RefCell<Session>>) {
 pub fn restore_note_version(app: &App, session: &Rc<RefCell<Session>>, rev_idx: usize) {
     let (vault_dir, current_path, content) = {
         let s = session.borrow();
-        let Some(path) = s.current_path().cloned() else { return };
-        let Some(rev) = s.note_history_revisions.get(rev_idx) else { return };
+        let Some(path) = s.current_path().cloned() else {
+            return;
+        };
+        let Some(rev) = s.note_history_revisions.get(rev_idx) else {
+            return;
+        };
         (s.vault_dir.clone(), path, rev.content.clone())
     };
 
@@ -831,7 +853,9 @@ pub fn restore_note_version(app: &App, session: &Rc<RefCell<Session>>, rev_idx: 
         return;
     }
 
-    let Ok(rel_path) = current_path.strip_prefix(&vault_dir) else { return };
+    let Ok(rel_path) = current_path.strip_prefix(&vault_dir) else {
+        return;
+    };
     let mut s = session.borrow_mut();
     let _ = s.index.record_write(&vault_dir, rel_path, &content);
     if let Some(h) = s.history.as_mut() {
@@ -851,7 +875,9 @@ pub fn restore_note_version(app: &App, session: &Rc<RefCell<Session>>, rev_idx: 
 pub fn open_vault_history(app: &App, session: &Rc<RefCell<Session>>) {
     let s = session.borrow();
     let vault_dir = s.vault_dir.clone();
-    let Ok(gitdir) = s.app_data.gitdir(&vault_dir) else { return };
+    let Ok(gitdir) = s.app_data.gitdir(&vault_dir) else {
+        return;
+    };
     drop(s);
 
     let commits = match Vault::open(&vault_dir, &gitdir) {
@@ -863,7 +889,10 @@ pub fn open_vault_history(app: &App, session: &Rc<RefCell<Session>>) {
     let mut dates = Vec::with_capacity(commits.len());
 
     for c in commits {
-        commit_summaries.push(SharedString::from(format!("{} - {}", c.short_id, c.summary)));
+        commit_summaries.push(SharedString::from(format!(
+            "{} - {}",
+            c.short_id, c.summary
+        )));
         dates.push(SharedString::from(format_timestamp(c.timestamp_secs)));
     }
 

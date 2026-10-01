@@ -853,7 +853,9 @@ fn find_conflicts_block_seq(blocks: &[Block], items: &mut Vec<ConflictItem>) {
             items.push(ConflictItem {
                 index: items.len(),
                 mine: tomet_printer::document_to_tm(&mine_doc).trim().to_string(),
-                theirs: tomet_printer::document_to_tm(&theirs_doc).trim().to_string(),
+                theirs: tomet_printer::document_to_tm(&theirs_doc)
+                    .trim()
+                    .to_string(),
             });
 
             i = end_at + 1;

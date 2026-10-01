@@ -74,7 +74,11 @@ impl AppData {
     /// If no URL has been saved in appdata yet, but `vault_dir` has an in-tree
     /// git repository with an `origin` remote, returns that URL.
     pub fn load_remote(&self, vault_dir: &Path) -> Option<String> {
-        if let Some(url) = self.remote_file(vault_dir).ok().and_then(|p| read_trimmed(&p)) {
+        if let Some(url) = self
+            .remote_file(vault_dir)
+            .ok()
+            .and_then(|p| read_trimmed(&p))
+        {
             return Some(url);
         }
         let in_tree = vault_dir.join(".git");

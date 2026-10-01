@@ -1,5 +1,13 @@
 import { Palette } from "std-widgets.slint";
-import { Metrics, Colors, Shapes, Icon, BubbleButton, TopBar, AppScrollView } from "../components.slint";
+import {
+    Metrics,
+    Colors,
+    Shapes,
+    Icon,
+    BubbleButton,
+    TopBar,
+    AppScrollView,
+} from "../components.slint";
 
 export component HistorySheet inherits Rectangle {
     in property <bool> open: false;
@@ -319,6 +327,7 @@ export component HistorySheet inherits Rectangle {
                                     color: root.selected-index == i ? Palette.accent-background : Palette.foreground;
                                     overflow: elide;
                                 }
+
                                 Text {
                                     text: commit;
                                     font-size: 11px;

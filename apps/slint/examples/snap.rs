@@ -99,9 +99,7 @@ fn main() {
     // Tab 4: Search query with snippet preview
     app.set_active_tab(4);
     app.set_search_query("計画".into());
-    app.set_notes(ModelRc::new(VecModel::from(vec![
-        "旅行の計画".into(),
-    ])));
+    app.set_notes(ModelRc::new(VecModel::from(vec!["旅行の計画".into()])));
     app.set_conflicted(ModelRc::new(VecModel::from(vec![false])));
     app.set_snippets(ModelRc::new(VecModel::from(vec![
         "...来月の旅行の計画について話し合う...".into(),

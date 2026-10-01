@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 const EXTENSION: &str = "tmt";
 const CONFLICT_MARKER: &str = "@mobile.conflict";
@@ -140,7 +140,9 @@ impl NoteIndex {
                     let cached_secs: u64 = row.get(2)?;
                     let cached_nanos: u32 = row.get(3)?;
                     // Check if matching disk file has identical metadata
-                    if let Some((_, size, secs, nanos)) = disk_files.iter().find(|(p, _, _, _)| p == &rel_path) {
+                    if let Some((_, size, secs, nanos)) =
+                        disk_files.iter().find(|(p, _, _, _)| p == &rel_path)
+                    {
                         if *size == cached_size && *secs == cached_secs && *nanos == cached_nanos {
                             report.unchanged += 1;
                         }
@@ -159,7 +161,9 @@ impl NoteIndex {
 
         // Process disk files: insert new, update modified
         {
-            let mut check_stmt = tx.prepare_cached("SELECT size, mtime_secs, mtime_nanos FROM notes WHERE path = ?1")?;
+            let mut check_stmt = tx.prepare_cached(
+                "SELECT size, mtime_secs, mtime_nanos FROM notes WHERE path = ?1",
+            )?;
             let mut upsert_stmt = tx.prepare_cached(
                 "INSERT INTO notes (path, title, mtime_secs, mtime_nanos, size, has_conflict, body)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
@@ -169,7 +173,7 @@ impl NoteIndex {
                     mtime_nanos = excluded.mtime_nanos,
                     size = excluded.size,
                     has_conflict = excluded.has_conflict,
-                    body = excluded.body"
+                    body = excluded.body",
             )?;
 
             for (rel_path, size, mtime_secs, mtime_nanos) in disk_files {
@@ -184,7 +188,8 @@ impl NoteIndex {
                 });
 
                 if let Ok((cached_size, cached_sec, cached_nano)) = existing {
-                    if cached_size == size && cached_sec == mtime_secs && cached_nano == mtime_nanos {
+                    if cached_size == size && cached_sec == mtime_secs && cached_nano == mtime_nanos
+                    {
                         needs_read = false;
                     }
                 }
@@ -230,7 +235,10 @@ impl NoteIndex {
         deleted_notes: &[PathBuf],
         notes_needing_resolution: &[PathBuf],
     ) -> anyhow::Result<()> {
-        let conflict_set: HashSet<&Path> = notes_needing_resolution.iter().map(|p| p.as_path()).collect();
+        let conflict_set: HashSet<&Path> = notes_needing_resolution
+            .iter()
+            .map(|p| p.as_path())
+            .collect();
         let tx = self.conn.transaction()?;
 
         {
@@ -250,16 +258,18 @@ impl NoteIndex {
                     mtime_nanos = excluded.mtime_nanos,
                     size = excluded.size,
                     has_conflict = excluded.has_conflict,
-                    body = excluded.body"
+                    body = excluded.body",
             )?;
 
             for rel_path in updated_notes {
                 let abs_path = vault_dir.join(rel_path);
                 if let Ok(meta) = abs_path.metadata() {
                     let size = meta.len();
-                    let (mtime_secs, mtime_nanos) = mtime_parts(meta.modified().unwrap_or(SystemTime::UNIX_EPOCH));
+                    let (mtime_secs, mtime_nanos) =
+                        mtime_parts(meta.modified().unwrap_or(SystemTime::UNIX_EPOCH));
                     let body = std::fs::read_to_string(&abs_path).unwrap_or_default();
-                    let has_conflict = conflict_set.contains(rel_path.as_path()) || body.contains(CONFLICT_MARKER);
+                    let has_conflict =
+                        conflict_set.contains(rel_path.as_path()) || body.contains(CONFLICT_MARKER);
                     let title = display_name_from_rel(rel_path);
                     let path_str = rel_path.to_string_lossy().to_string();
 
@@ -278,7 +288,8 @@ impl NoteIndex {
 
         // Ensure conflict markers for any other notes needing resolution are recorded
         {
-            let mut conflict_stmt = tx.prepare_cached("UPDATE notes SET has_conflict = 1 WHERE path = ?1")?;
+            let mut conflict_stmt =
+                tx.prepare_cached("UPDATE notes SET has_conflict = 1 WHERE path = ?1")?;
             for rel_path in notes_needing_resolution {
                 conflict_stmt.execute(params![rel_path.to_string_lossy()])?;
             }
@@ -289,10 +300,16 @@ impl NoteIndex {
     }
 
     /// Records or updates a note directly in the index (e.g. after a local save).
-    pub fn record_write(&mut self, vault_dir: &Path, rel_path: &Path, content: &str) -> anyhow::Result<()> {
+    pub fn record_write(
+        &mut self,
+        vault_dir: &Path,
+        rel_path: &Path,
+        content: &str,
+    ) -> anyhow::Result<()> {
         let abs_path = vault_dir.join(rel_path);
         let meta = abs_path.metadata()?;
-        let (mtime_secs, mtime_nanos) = mtime_parts(meta.modified().unwrap_or(SystemTime::UNIX_EPOCH));
+        let (mtime_secs, mtime_nanos) =
+            mtime_parts(meta.modified().unwrap_or(SystemTime::UNIX_EPOCH));
         let title = display_name_from_rel(rel_path);
         let has_conflict = content.contains(CONFLICT_MARKER);
         let path_str = rel_path.to_string_lossy().to_string();
@@ -321,7 +338,11 @@ impl NoteIndex {
     }
 
     /// Renames a note in the index.
-    pub fn record_rename(&mut self, old_rel_path: &Path, new_rel_path: &Path) -> anyhow::Result<()> {
+    pub fn record_rename(
+        &mut self,
+        old_rel_path: &Path,
+        new_rel_path: &Path,
+    ) -> anyhow::Result<()> {
         let old_str = old_rel_path.to_string_lossy().to_string();
         let new_str = new_rel_path.to_string_lossy().to_string();
         let new_title = display_name_from_rel(new_rel_path);
@@ -336,7 +357,8 @@ impl NoteIndex {
     /// Deletes a note from the index.
     pub fn record_delete(&mut self, rel_path: &Path) -> anyhow::Result<()> {
         let path_str = rel_path.to_string_lossy().to_string();
-        self.conn.execute("DELETE FROM notes WHERE path = ?1", params![&path_str])?;
+        self.conn
+            .execute("DELETE FROM notes WHERE path = ?1", params![&path_str])?;
         Ok(())
     }
 
@@ -352,7 +374,9 @@ impl NoteIndex {
 
     /// Returns all indexed notes sorted by relative path.
     pub fn list_all(&self) -> anyhow::Result<Vec<IndexedNote>> {
-        let mut stmt = self.conn.prepare("SELECT path, title, has_conflict FROM notes ORDER BY path ASC")?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT path, title, has_conflict FROM notes ORDER BY path ASC")?;
         let rows = stmt.query_map([], |row| {
             let path_str: String = row.get(0)?;
             let title: String = row.get(1)?;
@@ -555,7 +579,8 @@ fn collect_tmt_files(
         } else if path.extension().is_some_and(|e| e == EXTENSION) {
             if let Ok(meta) = entry.metadata() {
                 if let Ok(rel) = path.strip_prefix(root) {
-                    let (secs, nanos) = mtime_parts(meta.modified().unwrap_or(SystemTime::UNIX_EPOCH));
+                    let (secs, nanos) =
+                        mtime_parts(meta.modified().unwrap_or(SystemTime::UNIX_EPOCH));
                     found.push((rel.to_path_buf(), meta.len(), secs, nanos));
                 }
             }
@@ -749,7 +774,10 @@ mod tests {
         let results = index.search("RUST").unwrap();
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].path, PathBuf::from("rust-guide.tmt"));
-        assert_eq!(results[0].snippet, Some("A complete guide to programming in rust".into()));
+        assert_eq!(
+            results[0].snippet,
+            Some("A complete guide to programming in rust".into())
+        );
         assert_eq!(results[1].path, PathBuf::from("todo.tmt"));
         assert_eq!(results[1].snippet, Some("Learn Rust async runtime".into()));
 
@@ -783,7 +811,9 @@ mod tests {
         let abs_path = vault.path().join(&path);
         std::fs::write(&abs_path, "Initial draft content").unwrap();
 
-        index.record_write(vault.path(), &path, "Initial draft content").unwrap();
+        index
+            .record_write(vault.path(), &path, "Initial draft content")
+            .unwrap();
         assert_eq!(index.list_all().unwrap().len(), 1);
         assert_eq!(index.list_all().unwrap()[0].title, "draft");
 
@@ -793,7 +823,10 @@ mod tests {
         std::fs::rename(&abs_path, &new_abs).unwrap();
 
         index.record_rename(&path, &new_path).unwrap();
-        assert_eq!(index.list_all().unwrap()[0].path, PathBuf::from("final.tmt"));
+        assert_eq!(
+            index.list_all().unwrap()[0].path,
+            PathBuf::from("final.tmt")
+        );
         assert_eq!(index.list_all().unwrap()[0].title, "final");
 
         // Delete
@@ -807,7 +840,11 @@ mod tests {
         let mut index = NoteIndex::open_in_memory().unwrap();
 
         let n1 = vault.path().join("code.tmt");
-        std::fs::write(&n1, "Programming in C++ and C# with 100% \"test_coverage\" (awesome)!").unwrap();
+        std::fs::write(
+            &n1,
+            "Programming in C++ and C# with 100% \"test_coverage\" (awesome)!",
+        )
+        .unwrap();
 
         index.reconcile_filesystem(vault.path()).unwrap();
 
@@ -834,12 +871,15 @@ mod tests {
         let p1 = PathBuf::from("a.tmt");
         let p2 = PathBuf::from("b.tmt");
 
-        index.conn.execute(
-            "INSERT INTO notes (path, title, mtime_secs, mtime_nanos, size, has_conflict, body)
+        index
+            .conn
+            .execute(
+                "INSERT INTO notes (path, title, mtime_secs, mtime_nanos, size, has_conflict, body)
              VALUES ('a.tmt', 'a', 0, 0, 0, 0, 'content a'),
                     ('b.tmt', 'b', 0, 0, 0, 0, 'content b')",
-            [],
-        ).unwrap();
+                [],
+            )
+            .unwrap();
 
         assert_eq!(index.conflict_count().unwrap(), 0);
 

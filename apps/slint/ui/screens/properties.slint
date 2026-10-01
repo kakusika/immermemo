@@ -94,12 +94,14 @@ export component PropertiesScreen inherits Rectangle {
                                 color: Colors.muted;
                                 letter-spacing: 0.5px;
                             }
+
                             Text {
                                 text: root.note-title;
                                 font-size: Metrics.font-subtitle;
                                 font-weight: 700;
                                 color: Palette.foreground;
                             }
+
                             if root.note-path != "": Text {
                                 text: root.note-path;
                                 font-size: Metrics.font-sm;
@@ -125,6 +127,7 @@ export component PropertiesScreen inherits Rectangle {
                                     font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
+
                                 Text {
                                     text: root.char-count;
                                     font-size: Metrics.font-body;
@@ -141,6 +144,7 @@ export component PropertiesScreen inherits Rectangle {
                                     font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
+
                                 Text {
                                     text: root.word-count;
                                     font-size: Metrics.font-body;
@@ -157,6 +161,7 @@ export component PropertiesScreen inherits Rectangle {
                                     font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
+
                                 Text {
                                     text: root.line-count;
                                     font-size: Metrics.font-body;
@@ -222,6 +227,7 @@ export component PropertiesScreen inherits Rectangle {
                                         font-weight: 700;
                                         color: Palette.accent-background;
                                     }
+
                                     Text {
                                         text: root.conflict-mine-preview;
                                         font-size: Metrics.font-sub;
@@ -246,6 +252,7 @@ export component PropertiesScreen inherits Rectangle {
                                         font-weight: 700;
                                         color: Colors.warning;
                                     }
+
                                     Text {
                                         text: root.conflict-theirs-preview;
                                         font-size: Metrics.font-sub;
@@ -287,6 +294,7 @@ export component PropertiesScreen inherits Rectangle {
                                 text: "ローカル側を採用";
                                 clicked => { root.resolve-mine(); }
                             }
+
                             Button {
                                 horizontal-stretch: 1;
                                 text: "リモート側を採用";

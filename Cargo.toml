@@ -1,7 +1,13 @@
 [workspace]
 resolver = "3"
 
-members = ["apps/slint", "crates/index", "crates/merge", "crates/sync", "crates/vault"]
+members = [
+  "apps/slint",
+  "crates/index",
+  "crates/merge",
+  "crates/sync",
+  "crates/vault",
+]
 
 default-members = ["apps/slint"]
 
@@ -22,6 +28,7 @@ tomet-load = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-parser = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-printer = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-semantics = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-stats = { git = "https://github.com/tomet-lang/tomet.git" }
 tomet-tree = { git = "https://github.com/tomet-lang/tomet.git" }
 
 #= Crates.io

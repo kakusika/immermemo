@@ -17,7 +17,10 @@ export component TextInputDialog inherits Rectangle {
     height: 100%;
     visible: root.open || self.opacity > 0.01;
     opacity: root.open ? 1.0 : 0.0;
-    animate opacity { duration: 140ms; easing: ease-out; }
+    animate opacity {
+        duration: 140ms;
+        easing: ease-out;
+    }
 
     // Scrim / Backdrop overlay
     Rectangle {
@@ -39,7 +42,10 @@ export component TextInputDialog inherits Rectangle {
         y: root.narrow
             ? (root.open ? parent.height - self.height - 12px - root.inset-bottom : parent.height)
             : ((parent.height - self.height) / 2 + (root.open ? 0px : 24px));
-        animate y { duration: 160ms; easing: ease-out; }
+        animate y {
+            duration: 160ms;
+            easing: ease-out;
+        }
 
         background: Palette.background;
         border-radius: 20px;
@@ -116,7 +122,10 @@ export component ConfirmDialog inherits Rectangle {
     height: 100%;
     visible: root.open || self.opacity > 0.01;
     opacity: root.open ? 1.0 : 0.0;
-    animate opacity { duration: 140ms; easing: ease-out; }
+    animate opacity {
+        duration: 140ms;
+        easing: ease-out;
+    }
 
     Rectangle {
         width: 100%;
@@ -136,7 +145,10 @@ export component ConfirmDialog inherits Rectangle {
         y: root.narrow
             ? (root.open ? parent.height - self.height - 12px - root.inset-bottom : parent.height)
             : ((parent.height - self.height) / 2 + (root.open ? 0px : 24px));
-        animate y { duration: 160ms; easing: ease-out; }
+        animate y {
+            duration: 160ms;
+            easing: ease-out;
+        }
 
         background: Palette.background;
         border-radius: 20px;
@@ -207,7 +219,10 @@ export component ActionSheet inherits Rectangle {
     height: 100%;
     visible: root.open || self.opacity > 0.01;
     opacity: root.open ? 1.0 : 0.0;
-    animate opacity { duration: 140ms; easing: ease-out; }
+    animate opacity {
+        duration: 140ms;
+        easing: ease-out;
+    }
 
     Rectangle {
         width: 100%;
@@ -227,7 +242,10 @@ export component ActionSheet inherits Rectangle {
         y: root.narrow
             ? (root.open ? parent.height - self.height - 12px - root.inset-bottom : parent.height)
             : ((parent.height - self.height) / 2 + (root.open ? 0px : 24px));
-        animate y { duration: 160ms; easing: ease-out; }
+        animate y {
+            duration: 160ms;
+            easing: ease-out;
+        }
 
         background: Palette.background;
         border-radius: 20px;

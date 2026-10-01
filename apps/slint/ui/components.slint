@@ -172,7 +172,10 @@ export component BubbleButton inherits Rectangle {
         background: touch.pressed && root.enabled
             ? Palette.foreground.with-alpha(0.16)
             : Palette.foreground.with-alpha(0.08);
-        animate background { duration: 120ms; easing: ease-out; }
+        animate background {
+            duration: 120ms;
+            easing: ease-out;
+        }
 
         Icon {
             shape: root.shape;
@@ -181,7 +184,10 @@ export component BubbleButton inherits Rectangle {
             height: Metrics.icon-md;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            animate tint { duration: 120ms; easing: ease-out; }
+            animate tint {
+                duration: 120ms;
+                easing: ease-out;
+            }
         }
     }
 
@@ -208,7 +214,10 @@ export component BubbleChip inherits Rectangle {
         background: touch.pressed && root.enabled
             ? Palette.foreground.with-alpha(0.16)
             : Palette.foreground.with-alpha(0.08);
-        animate background { duration: 120ms; easing: ease-out; }
+        animate background {
+            duration: 120ms;
+            easing: ease-out;
+        }
 
         HorizontalLayout {
             padding-left: Metrics.spacing-md;
@@ -328,7 +337,10 @@ export component ActionRow inherits Rectangle {
     height: Metrics.touch;
     border-radius: Metrics.radius-sm + 2px * Metrics.ui-scale;
     background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
-    animate background { duration: 150ms; easing: ease-out; }
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
 
     Text {
         x: Metrics.gutter;
@@ -402,7 +414,10 @@ component NavItem inherits Rectangle {
                 height: 32px * Metrics.ui-scale;
                 border-radius: self.height / 2;
                 background: root.active ? Palette.accent-background.with-alpha(0.18) : transparent;
-                animate background { duration: 150ms; easing: ease-out; }
+                animate background {
+                    duration: 150ms;
+                    easing: ease-out;
+                }
 
                 Icon {
                     shape: root.icon;
@@ -411,7 +426,10 @@ component NavItem inherits Rectangle {
                     height: Metrics.icon-md;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;
-                    animate tint { duration: 120ms; easing: ease-out; }
+                    animate tint {
+                        duration: 120ms;
+                        easing: ease-out;
+                    }
                 }
 
                 if root.badge-count > 0: Rectangle {
@@ -451,7 +469,10 @@ component NavItem inherits Rectangle {
             font-weight: root.active ? 600 : 500;
             color: root.active ? Palette.accent-background : Colors.muted;
             horizontal-alignment: center;
-            animate color { duration: 120ms; easing: ease-out; }
+            animate color {
+                duration: 120ms;
+                easing: ease-out;
+            }
         }
     }
 }
@@ -494,6 +515,7 @@ export component BottomNavBar inherits Rectangle {
                 root.tab-selected(0);
             }
         }
+
         NavItem {
             icon: Shapes.files;
             label: "ファイル一覧";
@@ -504,6 +526,7 @@ export component BottomNavBar inherits Rectangle {
                 root.tab-selected(1);
             }
         }
+
         NavItem {
             icon: Shapes.note;
             label: "ノート";
@@ -514,6 +537,7 @@ export component BottomNavBar inherits Rectangle {
                 root.tab-selected(2);
             }
         }
+
         NavItem {
             icon: Shapes.properties;
             label: "プロパティ";
@@ -523,6 +547,7 @@ export component BottomNavBar inherits Rectangle {
                 root.tab-selected(3);
             }
         }
+
         NavItem {
             icon: Shapes.search;
             label: "検索";

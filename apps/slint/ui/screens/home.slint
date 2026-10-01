@@ -145,6 +145,7 @@ export component HomeScreen inherits Rectangle {
                                     font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
+
                                 Text {
                                     text: root.note-count;
                                     font-size: Metrics.font-body;
@@ -160,6 +161,7 @@ export component HomeScreen inherits Rectangle {
                                     font-size: Metrics.font-sm;
                                     color: Colors.warning;
                                 }
+
                                 Text {
                                     text: root.conflict-count;
                                     font-size: Metrics.font-body;
@@ -168,7 +170,9 @@ export component HomeScreen inherits Rectangle {
                                 }
                             }
 
-                            Rectangle { horizontal-stretch: 1; }
+                            Rectangle {
+                                horizontal-stretch: 1;
+                            }
 
                             if root.status != "": Text {
                                 text: root.status;
@@ -207,6 +211,7 @@ export component HomeScreen inherits Rectangle {
                                 shape: Shapes.sync;
                                 tint: Palette.accent-background;
                             }
+
                             Text {
                                 text: "同期中...";
                                 font-size: Metrics.font-caption;

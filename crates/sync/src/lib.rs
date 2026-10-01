@@ -302,7 +302,11 @@ impl Vault {
     }
 
     /// Returns the commit history that modified `rel_path`, newest first.
-    pub fn file_history(&self, rel_path: &Path, max_count: usize) -> anyhow::Result<Vec<FileRevision>> {
+    pub fn file_history(
+        &self,
+        rel_path: &Path,
+        max_count: usize,
+    ) -> anyhow::Result<Vec<FileRevision>> {
         let mut revwalk = match self.repo.revwalk() {
             Ok(rw) => rw,
             Err(_) => return Ok(Vec::new()),
@@ -565,7 +569,9 @@ impl Vault {
         let mut index = self.repo.index()?;
         index.clear()?;
         for path in paths {
-            let base_blob = base_tree.as_ref().and_then(|t| blob_at(&self.repo, t, &path));
+            let base_blob = base_tree
+                .as_ref()
+                .and_then(|t| blob_at(&self.repo, t, &path));
             let local_blob = blob_at(&self.repo, &local_tree, &path);
             let remote_blob = blob_at(&self.repo, &remote_tree, &path);
 
@@ -899,7 +905,10 @@ fn stage_bytes(
 fn system_time_to_index_time(t: std::time::SystemTime) -> (i32, u32) {
     match t.duration_since(std::time::UNIX_EPOCH) {
         Ok(d) => (d.as_secs() as i32, d.subsec_nanos()),
-        Err(e) => (-(e.duration().as_secs() as i32), e.duration().subsec_nanos()),
+        Err(e) => (
+            -(e.duration().as_secs() as i32),
+            e.duration().subsec_nanos(),
+        ),
     }
 }
 
@@ -1217,7 +1226,10 @@ mod tests {
 
         // Verify working tree is clean for external git tools
         let statuses = in_tree_repo.statuses(None).unwrap();
-        assert!(statuses.is_empty(), "Working tree should be clean in in-tree repo");
+        assert!(
+            statuses.is_empty(),
+            "Working tree should be clean in in-tree repo"
+        );
 
         // Device B: Mobile / cloud setup using private bare repo
         let mut b = open_vault();
@@ -1240,7 +1252,10 @@ mod tests {
 
         // In-tree repo continues to see working tree as clean
         let statuses = in_tree_repo.statuses(None).unwrap();
-        assert!(statuses.is_empty(), "Working tree should remain clean after receiving remote changes");
+        assert!(
+            statuses.is_empty(),
+            "Working tree should remain clean after receiving remote changes"
+        );
     }
 
     #[test]
@@ -1277,7 +1292,10 @@ mod tests {
 
         // Note A must preserve its initial mtime (differential checkout did not touch it)
         let current_mtime = std::fs::metadata(&note_a_path).unwrap().modified().unwrap();
-        assert_eq!(initial_mtime, current_mtime, "Untouched note mtime should be preserved");
+        assert_eq!(
+            initial_mtime, current_mtime,
+            "Untouched note mtime should be preserved"
+        );
 
         // Sync again with no changes on either side
         let report = a.vault.sync(&NoCredentials).unwrap();
@@ -1297,7 +1315,10 @@ mod tests {
         let mut b = open_vault();
         b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
         let report = b.vault.sync(&NoCredentials).unwrap();
-        assert_eq!(report.updated_notes, vec![PathBuf::from("folder/nested.tmt")]);
+        assert_eq!(
+            report.updated_notes,
+            vec![PathBuf::from("folder/nested.tmt")]
+        );
         assert!(b.working_tree.path().join("folder/nested.tmt").exists());
 
         // Client A deletes nested.tmt and syncs
@@ -1306,9 +1327,15 @@ mod tests {
 
         // Client B syncs and receives the deletion
         let report = b.vault.sync(&NoCredentials).unwrap();
-        assert_eq!(report.deleted_notes, vec![PathBuf::from("folder/nested.tmt")]);
+        assert_eq!(
+            report.deleted_notes,
+            vec![PathBuf::from("folder/nested.tmt")]
+        );
         assert!(!b.working_tree.path().join("folder/nested.tmt").exists());
-        assert!(!b.working_tree.path().join("folder").exists(), "Empty directory should be removed");
+        assert!(
+            !b.working_tree.path().join("folder").exists(),
+            "Empty directory should be removed"
+        );
     }
 
     #[test]
@@ -1332,7 +1359,10 @@ mod tests {
                 }
             }
         }
-        assert!(loose_count_before > 0, "Should have loose objects before GC");
+        assert!(
+            loose_count_before > 0,
+            "Should have loose objects before GC"
+        );
 
         // Run GC explicitly
         let gc_report = a.vault.gc().unwrap();
@@ -1375,7 +1405,12 @@ mod tests {
     #[test]
     fn should_auto_gc_detects_shard_threshold() {
         let a = open_vault();
-        let sample_shard = a.vault.repo.path().join("objects").join(AUTO_GC_SAMPLE_SHARD);
+        let sample_shard = a
+            .vault
+            .repo
+            .path()
+            .join("objects")
+            .join(AUTO_GC_SAMPLE_SHARD);
         std::fs::create_dir_all(&sample_shard).unwrap();
 
         // Below threshold
@@ -1385,13 +1420,19 @@ mod tests {
         for i in 0..AUTO_GC_SHARD_THRESHOLD {
             std::fs::write(sample_shard.join(format!("dummy_{i}")), b"dummy").unwrap();
         }
-        assert!(a.vault.should_auto_gc(), "Should trigger auto-GC when threshold is met");
+        assert!(
+            a.vault.should_auto_gc(),
+            "Should trigger auto-GC when threshold is met"
+        );
 
         // Clean up dummy files
         for i in 0..AUTO_GC_SHARD_THRESHOLD {
             let _ = std::fs::remove_file(sample_shard.join(format!("dummy_{i}")));
         }
-        assert!(!a.vault.should_auto_gc(), "Should not trigger after cleanup");
+        assert!(
+            !a.vault.should_auto_gc(),
+            "Should not trigger after cleanup"
+        );
     }
 
     #[test]
@@ -1402,7 +1443,12 @@ mod tests {
         write_note(&a, "note.tmt", "Initial content\n");
 
         // Populate sample shard to force auto-GC trigger on next sync
-        let sample_shard = a.vault.repo.path().join("objects").join(AUTO_GC_SAMPLE_SHARD);
+        let sample_shard = a
+            .vault
+            .repo
+            .path()
+            .join("objects")
+            .join(AUTO_GC_SAMPLE_SHARD);
         std::fs::create_dir_all(&sample_shard).unwrap();
         for i in 0..AUTO_GC_SHARD_THRESHOLD {
             std::fs::write(sample_shard.join(format!("dummy_{i}")), b"dummy").unwrap();
@@ -1416,7 +1462,10 @@ mod tests {
         // Auto-GC should have run, creating pack and clearing loose objects
         let pack_dir = a.vault.repo.path().join("objects").join("pack");
         assert!(pack_dir.exists());
-        assert!(!a.vault.should_auto_gc(), "Auto-GC should reset loose object condition");
+        assert!(
+            !a.vault.should_auto_gc(),
+            "Auto-GC should reset loose object condition"
+        );
     }
 
     #[test]

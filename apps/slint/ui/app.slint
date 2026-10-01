@@ -257,7 +257,10 @@ export component App inherits Window {
                         root.dismiss-sync-error();
                     }
 
-                    animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
+                    animate x {
+                        duration: root.is-swiping ? 0ms : 220ms;
+                        easing: ease-out;
+                    }
                 }
 
                 // Screen 1: Files / Notes list
@@ -292,7 +295,10 @@ export component App inherits Window {
                     trigger-haptic => { root.trigger-haptic(); }
                     open-vault-sheet => { root.open-vault-sheet(); }
 
-                    animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
+                    animate x {
+                        duration: root.is-swiping ? 0ms : 220ms;
+                        easing: ease-out;
+                    }
                 }
 
                 // Screen 2: Note Editor
@@ -340,7 +346,10 @@ export component App inherits Window {
                         open-history => { root.open-history(); }
                     }
 
-                    animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
+                    animate x {
+                        duration: root.is-swiping ? 0ms : 220ms;
+                        easing: ease-out;
+                    }
                 }
 
                 // Screen 3: Details / Properties
@@ -375,7 +384,10 @@ export component App inherits Window {
                     resolve-mine => { root.resolve-mine(); }
                     resolve-theirs => { root.resolve-theirs(); }
 
-                    animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
+                    animate x {
+                        duration: root.is-swiping ? 0ms : 220ms;
+                        easing: ease-out;
+                    }
                 }
 
                 // Screen 4: Search
@@ -397,7 +409,10 @@ export component App inherits Window {
                         pane.focus-editor();
                     }
 
-                    animate x { duration: root.is-swiping ? 0ms : 220ms; easing: ease-out; }
+                    animate x {
+                        duration: root.is-swiping ? 0ms : 220ms;
+                        easing: ease-out;
+                    }
                 }
             }
         }

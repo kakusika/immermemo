@@ -290,7 +290,8 @@ mod tests {
 
     #[test]
     fn search_empty_query_returns_all_notes() {
-        let dir = std::env::temp_dir().join(format!("immermemo-search-empty-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("immermemo-search-empty-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let a = dir.join("a.tmt");
@@ -313,7 +314,8 @@ mod tests {
 
     #[test]
     fn search_matches_title_and_body_with_ranking_and_snippets() {
-        let dir = std::env::temp_dir().join(format!("immermemo-search-ranking-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("immermemo-search-ranking-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let n0 = dir.join("rust-notes.tmt");
@@ -331,7 +333,10 @@ mod tests {
         // n2 does not match
         assert_eq!(results.len(), 2);
         assert_eq!(results[0].note_index, 0);
-        assert_eq!(results[0].snippet, Some("A guide to programming in rust".into()));
+        assert_eq!(
+            results[0].snippet,
+            Some("A guide to programming in rust".into())
+        );
         assert_eq!(results[1].note_index, 1);
         assert_eq!(results[1].snippet, Some("Learn Rust async runtime".into()));
 

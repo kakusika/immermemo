@@ -28,8 +28,8 @@ pub fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
     use immermemo_vault::appdata::AppData;
+    use std::path::PathBuf;
     use tempfile::TempDir;
 
     /// Local transport (a plain filesystem path) never invokes the
@@ -157,7 +157,10 @@ mod tests {
         } else {
             false
         };
-        assert!(!private_has_git, "Private git directory should not be created when in-tree .git exists");
+        assert!(
+            !private_has_git,
+            "Private git directory should not be created when in-tree .git exists"
+        );
 
         // The commit exists in the in-tree .git repo
         let repo = git2::Repository::open(a.notes.path()).unwrap();

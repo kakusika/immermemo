@@ -9,7 +9,7 @@ use immermemo_vault::appdata::AppData;
 use immermemo_vault::credentials::TokenStore;
 
 use crate::haptic;
-use crate::{run, TokenStoreFactory};
+use crate::{TokenStoreFactory, run};
 
 /// Android starts the app here (the activity loads this library), not at
 /// `main`. Everything -- notes, the private gitdir, the encrypted token --
