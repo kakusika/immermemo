@@ -1,5 +1,5 @@
 import { Palette } from "std-widgets.slint";
-import { Metrics, ActionRow, Colors, BottomNavBar } from "components.slint";
+import { Metrics, ActionRow, Colors, BottomNavBar, MiniNoteCard } from "components.slint";
 import { HomeScreen } from "screens/home.slint";
 import { FilesScreen } from "screens/files.slint";
 import { EditorScreen } from "screens/editor.slint";
@@ -17,11 +17,25 @@ export component App inherits Window {
     title: "immermemo";
     preferred-width: 960px;
     preferred-height: 640px;
-    background: Palette.background;
+    background: Colors.page-background;
     forward-focus: root-focus-scope;
 
-    // Navigation: 0: Home, 1: Files, 2: Note, 3: Details, 4: Search
-    in-out property <int> active-tab: 2;
+    // Navigation: 0: Home, 1: Files, 2: Search, 3: Properties, 4: Settings
+    in-out property <int> active-tab: 0;
+
+    in-out property <bool> note-sheet-open: false;
+
+    public function open-note-sheet() {
+        root.note-sheet-open = true;
+        pane.focus-editor();
+        root.trigger-haptic();
+    }
+
+    public function close-note-sheet() {
+        pane.unfocus();
+        root.note-sheet-open = false;
+        root.trigger-haptic();
+    }
 
     in property <[string]> notes;
     in property <[string]> snippets: [];
@@ -101,6 +115,12 @@ export component App inherits Window {
             root.active-tab = 1;
         }
     }
+    changed settings-open => {
+        if (root.settings-open) {
+            root.active-tab = 4;
+            root.settings-open = false;
+        }
+    }
 
     in-out property <bool> narrow: false;
     init => {
@@ -149,7 +169,7 @@ export component App inherits Window {
     callback restore-history-version(int);
     callback open-vault-history();
 
-    property <int> previous-tab: 1;
+    property <int> previous-tab: 0;
 
     public function handle-back() -> bool {
         // 1. Close open dialogs
@@ -195,32 +215,25 @@ export component App inherits Window {
             root.remote-open = false;
             return true;
         }
-        if (root.settings-open) {
-            root.settings-open = false;
+
+        // 3. Close note sheet if open (unfocus if keyboard is up or typing)
+        if (root.note-sheet-open) {
+            if (pane.editor-has-focus || root.keyboard > 0px) {
+                pane.unfocus();
+                return true;
+            }
+            root.close-note-sheet();
             return true;
         }
 
-        // 3. Unfocus editor if focused or virtual keyboard is visible
-        if (pane.editor-has-focus || root.keyboard > 0px) {
-            pane.unfocus();
-            return true;
-        }
-
-        // 4. If on Note screen (tab 2), navigate back to previous screen
-        if (root.active-tab == 2) {
-            root.active-tab = (root.previous-tab != 2) ? root.previous-tab : 1;
-            root.trigger-haptic();
-            return true;
-        }
-
-        // 5. If on any other secondary tab (Files: 1, Details: 3, Search: 4), navigate back to Home (0)
+        // 4. If on any secondary tab (Files: 1, Search: 2, Properties: 3, Settings: 4), navigate back to Home (0)
         if (root.active-tab != 0) {
             root.active-tab = 0;
             root.trigger-haptic();
             return true;
         }
 
-        // 6. Already at root Home tab with nothing open:
+        // 5. Already at root Home tab with nothing open:
         // Return false to allow Android to perform the default action (minimize/close app)
         return false;
     }
@@ -236,7 +249,7 @@ export component App inherits Window {
         root.keyboard = root.virtual-keyboard-size.height > 0
             ? max(0px, root.height - root.virtual-keyboard-position.y)
             : 0px;
-        if (old_kb > 0px && root.keyboard == 0px && root.active-tab == 2) {
+        if (old_kb > 0px && root.keyboard == 0px && root.note-sheet-open) {
             pane.unfocus();
         }
     }
@@ -244,6 +257,26 @@ export component App inherits Window {
     changed virtual-keyboard-position => { root.update-keyboard(); }
     changed height => { root.update-keyboard(); }
     property <length> inset-bottom: max(root.safe-area-insets.bottom + root.extra-inset-bottom, root.keyboard);
+    property <length> bottom-bar-total-height: root.keyboard == 0px
+        ? (Metrics.bottom-bar-height + root.safe-area-insets.bottom + root.extra-inset-bottom)
+        : 0px;
+    property <length> mini-card-resting-y: root.height - root.bottom-bar-total-height - Metrics.mini-card-height - 8px * Metrics.ui-scale;
+    property <length> mini-card-extra-inset: (root.current >= 0 && root.keyboard == 0px)
+        ? (Metrics.mini-card-height + 16px * Metrics.ui-scale)
+        : 0px;
+    property <length> screen-inset-bottom: max(root.bottom-bar-total-height + root.mini-card-extra-inset, root.keyboard);
+
+    // Sheet gesture tracking & transition animation (music-player style)
+    in-out property <bool> is-dragging-sheet: false;
+    in-out property <float> drag-sheet-progress: 0.0;
+    property <float> sheet-progress: root.is-dragging-sheet
+        ? root.drag-sheet-progress
+        : (root.note-sheet-open ? 1.0 : 0.0);
+
+    animate sheet-progress {
+        duration: root.is-dragging-sheet ? 0ms : 240ms;
+        easing: ease-out;
+    }
 
     // Horizontal swipe gesture tracking for tab navigation
     property <bool> is-swiping: false;
@@ -263,19 +296,18 @@ export component App inherits Window {
             return reject;
         }
 
-        VerticalLayout {
-            padding: 0px;
-            spacing: 0px;
-
-        // Content Area with 5 swipeable screens
+        // Layer 1: Content Area with 5 swipeable screens
         content-box := Rectangle {
-            vertical-stretch: 1;
+            x: 0px;
+            y: 0px;
+            width: 100%;
+            height: 100%;
             clip: true;
 
             SwipeGestureHandler {
                 width: 100%;
                 height: 100%;
-                enabled: root.narrow && root.keyboard == 0px && (root.active-tab != 2 || !pane.editor-has-focus);
+                enabled: root.narrow && root.keyboard == 0px && !root.note-sheet-open && !root.is-dragging-sheet;
                 handle-swipe-left: root.active-tab < 4;
                 handle-swipe-right: root.active-tab > 0;
 
@@ -291,15 +323,9 @@ export component App inherits Window {
                     root.is-swiping = false;
                     let dx = self.current-position.x - self.pressed-position.x;
                     if (dx < -40px && root.active-tab < 4) {
-                        if (root.active-tab + 1 == 2) {
-                            root.previous-tab = root.active-tab;
-                        }
                         root.active-tab += 1;
                         root.trigger-haptic();
                     } else if (dx > 40px && root.active-tab > 0) {
-                        if (root.active-tab - 1 == 2) {
-                            root.previous-tab = root.active-tab;
-                        }
                         root.active-tab -= 1;
                         root.trigger-haptic();
                     }
@@ -318,7 +344,7 @@ export component App inherits Window {
                     width: parent.width;
                     height: parent.height;
                     inset-top: root.inset-top;
-                    inset-bottom: root.inset-bottom;
+                    inset-bottom: root.screen-inset-bottom;
                     vault-name: root.current-vault-name;
                     vault-path: root.current-vault-path;
                     note-count: root.notes.length;
@@ -332,22 +358,22 @@ export component App inherits Window {
                     current-note-title: root.current-title;
                     has-current-note: root.current >= 0;
                     new-note => {
-                        root.previous-tab = 0;
                         root.new-note();
-                        root.active-tab = 2;
-                        pane.focus-editor();
+                        root.open-note-sheet();
                     }
                     sync => { root.sync(); }
                     open-vaults => { root.open-vault-sheet(); }
-                    open-settings => { root.open-settings(); }
+                    open-settings => {
+                        root.active-tab = 4;
+                        root.trigger-haptic();
+                    }
                     open-vault-history => { root.open-vault-history(); }
                     open-current-note => {
-                        root.previous-tab = 0;
-                        root.active-tab = 2;
-                        pane.focus-editor();
+                        root.open-note-sheet();
                     }
                     open-conflict-note => {
                         root.open-conflict-note();
+                        root.open-note-sheet();
                     }
                     copy-sync-error => {
                         root.copy-sync-error();
@@ -374,24 +400,23 @@ export component App inherits Window {
                     status: root.status;
                     syncing: root.syncing;
                     inset-top: root.inset-top;
-                    inset-bottom: root.inset-bottom;
+                    inset-bottom: root.screen-inset-bottom;
                     highlight-current: true;
                     remote-configured: root.remote-configured;
                     vault-name: root.current-vault-name;
                     select(i) => {
-                        root.previous-tab = 1;
                         root.select(i);
-                        root.active-tab = 2; // Jump to Note editor
-                        pane.focus-editor();
+                        root.open-note-sheet();
                     }
                     new-note => {
-                        root.previous-tab = 1;
                         root.new-note();
-                        root.active-tab = 2; // Jump to Note editor
-                        pane.focus-editor();
+                        root.open-note-sheet();
                     }
                     sync => { root.sync(); }
-                    open-settings => { root.open-settings(); }
+                    open-settings => {
+                        root.active-tab = 4;
+                        root.trigger-haptic();
+                    }
                     note-menu-requested(i) => { root.note-menu-index = i; }
                     trigger-haptic => { root.trigger-haptic(); }
                     trigger-heavy-haptic => { root.trigger-heavy-haptic(); }
@@ -403,50 +428,22 @@ export component App inherits Window {
                     }
                 }
 
-                // Screen 2: Note Editor
-                editor-wrapper := Rectangle {
+                // Screen 2: Search
+                search-screen := SearchScreen {
                     x: (2 - root.active-tab) * parent.width + root.swipe-dx;
                     y: 0px;
                     width: parent.width;
                     height: parent.height;
-
-                    pane := EditorScreen {
-                        width: 100%;
-                        height: 100%;
-                        title: root.current-title;
-                        has-note: root.current >= 0;
-                        note-count: root.notes.length;
-                        has-conflict: root.current-has-conflict;
-                        can-undo: root.can-undo;
-                        can-redo: root.can-redo;
-                        show-back: false;
-                        back => { root.handle-back(); }
-                        inset-top: root.inset-top;
-                        inset-bottom: root.keyboard > 0px ? root.keyboard : root.inset-bottom;
-                        font-size: root.editor-font-size;
-                        status: root.status;
-                        status-is-error: root.status-is-error;
-                        body <=> root.body;
-                        edited(t) => { root.edited(t); }
-                        undo => { root.undo(); }
-                        redo => { root.redo(); }
-                        dismiss-status => {
-                            root.status = "";
-                            root.status-is-error = false;
-                        }
-                        new-note => {
-                            root.new-note();
-                            pane.focus-editor();
-                        }
-                        resolve-mine => { root.resolve-mine(); }
-                        resolve-theirs => { root.resolve-theirs(); }
-                        jump-conflict => { root.jump-conflict(); }
-                        open-conflict-sheet => { root.open-conflict-sheet(); }
-                        syncing: root.syncing;
-                        remote-configured: root.remote-configured;
-                        last-synced-at: root.last-synced-at;
-                        manual-sync => { root.sync(); }
-                        open-history => { root.open-history(); }
+                    inset-top: root.inset-top;
+                    inset-bottom: root.screen-inset-bottom;
+                    query <=> root.search-query;
+                    notes: root.notes;
+                    snippets: root.snippets;
+                    conflicted: root.conflicted;
+                    query-changed(q) => { root.search-query-changed(q); }
+                    select(i) => {
+                        root.select(i);
+                        root.open-note-sheet();
                     }
 
                     animate x {
@@ -462,7 +459,7 @@ export component App inherits Window {
                     width: parent.width;
                     height: parent.height;
                     inset-top: root.inset-top;
-                    inset-bottom: root.inset-bottom;
+                    inset-bottom: root.screen-inset-bottom;
                     has-note: root.current >= 0;
                     note-title: root.current-title;
                     note-path: root.current-note-path;
@@ -493,25 +490,30 @@ export component App inherits Window {
                     }
                 }
 
-                // Screen 4: Search
-                search-screen := SearchScreen {
+                // Screen 4: Settings
+                settings-screen := SettingsSheet {
                     x: (4 - root.active-tab) * parent.width + root.swipe-dx;
                     y: 0px;
                     width: parent.width;
                     height: parent.height;
+                    show-back: false;
+                    has-token: root.remote-has-token;
+                    url-draft <=> root.remote-url-draft;
+                    token-draft <=> root.remote-token-draft;
+                    syncing: root.syncing;
+                    sync-status: root.status;
+                    current-vault-name: root.current-vault-name;
+                    current-vault-path: root.current-vault-path;
+                    font-size-choice <=> root.font-size-choice;
+                    theme-choice <=> root.theme-choice;
                     inset-top: root.inset-top;
-                    inset-bottom: root.inset-bottom;
-                    query <=> root.search-query;
-                    notes: root.notes;
-                    snippets: root.snippets;
-                    conflicted: root.conflicted;
-                    query-changed(q) => { root.search-query-changed(q); }
-                    select(i) => {
-                        root.previous-tab = 4;
-                        root.select(i);
-                        root.active-tab = 2; // Jump to Note editor
-                        pane.focus-editor();
-                    }
+                    inset-bottom: root.screen-inset-bottom;
+                    save-remote(url, token) => { root.save-remote(url, token); }
+                    sync => { root.sync(); }
+                    open-vaults => { root.open-vault-sheet(); }
+                    font-size-changed(c) => { root.font-size-changed(c); }
+                    theme-changed(c) => { root.theme-changed(c); }
+                    close => { root.active-tab = 0; }
 
                     animate x {
                         duration: root.is-swiping ? 0ms : 220ms;
@@ -519,52 +521,192 @@ export component App inherits Window {
                     }
                 }
             }
+
         }
 
-        // Bottom Navigation Bar
-        BottomNavBar {
-            visible: root.keyboard == 0px;
-            height: root.keyboard == 0px ? (Metrics.bottom-bar-height + root.safe-area-insets.bottom + root.extra-inset-bottom) : 0px;
+        // Layer 2: Fullscreen Note Editor Sheet Overlay
+        // Starts at the mini-card position and expands to fullscreen (0px)
+        editor-sheet := Rectangle {
+            x: 0px;
+            y: (1.0 - root.sheet-progress) * root.mini-card-resting-y;
+            width: 100%;
+            height: 100%;
+            // Reach full opacity at 10% progress so background content never bleeds through
+            opacity: clamp(root.sheet-progress * 10.0, 0.0, 1.0);
+            visible: root.sheet-progress > 0.01;
+            clip: true;
+            // Morph corner radii: start rounded like the mini card, flatten as sheet fills screen
+            border-top-left-radius: Metrics.radius-lg * (1.0 - root.sheet-progress);
+            border-top-right-radius: Metrics.radius-lg * (1.0 - root.sheet-progress);
+
+            pane := EditorScreen {
+                width: 100%;
+                height: 100%;
+                title: root.current-title;
+                has-note: root.current >= 0;
+                note-count: root.notes.length;
+                has-conflict: root.current-has-conflict;
+                can-undo: root.can-undo;
+                can-redo: root.can-redo;
+                show-back: false;
+                back => { root.handle-back(); }
+                collapse => { root.close-note-sheet(); }
+                inset-top: root.inset-top;
+                inset-bottom: root.keyboard > 0px ? root.keyboard : root.safe-area-insets.bottom + root.extra-inset-bottom;
+                font-size: root.editor-font-size;
+                status: root.status;
+                status-is-error: root.status-is-error;
+                body <=> root.body;
+                edited(t) => { root.edited(t); }
+                undo => { root.undo(); }
+                redo => { root.redo(); }
+                dismiss-status => {
+                    root.status = "";
+                    root.status-is-error = false;
+                }
+                new-note => {
+                    root.new-note();
+                    pane.focus-editor();
+                }
+                resolve-mine => { root.resolve-mine(); }
+                resolve-theirs => { root.resolve-theirs(); }
+                jump-conflict => { root.jump-conflict(); }
+                open-conflict-sheet => { root.open-conflict-sheet(); }
+                syncing: root.syncing;
+                remote-configured: root.remote-configured;
+                last-synced-at: root.last-synced-at;
+                manual-sync => { root.sync(); }
+                open-history => { root.open-history(); }
+            }
+        }
+
+        // Header downward-swipe gesture to collapse note sheet with real-time tracking
+        header-drag-gesture := SwipeGestureHandler {
+            x: 48px * Metrics.ui-scale;
+            y: 0px;
+            width: parent.width - 48px * Metrics.ui-scale - 190px * Metrics.ui-scale;
+            height: 60px * Metrics.ui-scale + root.inset-top;
+            enabled: root.note-sheet-open && root.keyboard == 0px;
+            handle-swipe-down: true;
+
+            moved => {
+                if (self.swiping) {
+                    root.is-dragging-sheet = true;
+                    let dy = self.current-position.y - self.pressed-position.y;
+                    let downward = max(0px, dy);
+                    let travel = max(100px, root.mini-card-resting-y);
+                    root.drag-sheet-progress = clamp(1.0 - (downward / travel), 0.0, 1.0);
+                }
+            }
+
+            swiped => {
+                root.is-dragging-sheet = false;
+                let dy = self.current-position.y - self.pressed-position.y;
+                if (dy > 40px * Metrics.ui-scale || root.drag-sheet-progress < 0.75) {
+                    root.close-note-sheet();
+                } else {
+                    root.note-sheet-open = true;
+                }
+                root.drag-sheet-progress = 0.0;
+            }
+
+            cancelled => {
+                root.is-dragging-sheet = false;
+                root.drag-sheet-progress = 0.0;
+            }
+        }
+
+        // Visual layer: tracks the finger by moving with sheet-progress.
+        // This Rectangle contains only the card rendering — no gesture handling.
+        // Placed BEFORE the gesture area so it renders underneath and doesn't
+        // intercept touch events that the SwipeGestureHandler needs.
+        mini-card-visual := Rectangle {
+            x: Metrics.spacing-sm;
+            y: (1.0 - root.sheet-progress) * root.mini-card-resting-y;  // follows finger
+            width: parent.width - 2 * Metrics.spacing-sm;
+            height: Metrics.mini-card-height;
+            opacity: max(0.0, 1.0 - root.sheet-progress * 10.0);
+            visible: root.current >= 0 && root.keyboard == 0px && root.sheet-progress < 0.15;
+
+            MiniNoteCard {
+                width: 100%;
+                height: 100%;
+                title: root.current-title;
+                preview: root.snippets.length > root.current && root.current >= 0 ? root.snippets[root.current] : "";
+                has-conflict: root.current-has-conflict;
+                syncing: root.syncing;
+                clicked => { root.open-note-sheet(); }
+                expand => { root.open-note-sheet(); }
+            }
+        }
+
+        // Hit-test layer: fixed position so gesture coordinate space never shifts.
+        // Moving this container while the gesture is inside would cause
+        // current-position to be reported in the shifted local frame, halving the
+        // effective drag distance (feedback loop).
+        // Placed AFTER the visual so it sits on top for input capture;
+        // SwipeGestureHandler has no visual children so it doesn't obscure the card.
+        mini-card-gesture-area := SwipeGestureHandler {
+            x: Metrics.spacing-sm;
+            y: root.mini-card-resting-y;               // FIXED — never changes during drag
+            width: parent.width - 2 * Metrics.spacing-sm;
+            height: Metrics.mini-card-height;
+            enabled: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open;
+            handle-swipe-up: true;
+
+            moved => {
+                if (self.swiping) {
+                    root.is-dragging-sheet = true;
+                    let dy = self.current-position.y - self.pressed-position.y;
+                    let upward = max(0px, -dy);
+                    let travel = max(100px, root.mini-card-resting-y);
+                    root.drag-sheet-progress = clamp(upward / travel, 0.0, 1.0);
+                }
+            }
+
+            swiped => {
+                root.is-dragging-sheet = false;
+                let dy = self.current-position.y - self.pressed-position.y;
+                if (-dy > 40px * Metrics.ui-scale || root.drag-sheet-progress > 0.25) {
+                    root.open-note-sheet();
+                } else {
+                    root.note-sheet-open = false;
+                }
+                root.drag-sheet-progress = 0.0;
+            }
+
+            cancelled => {
+                root.is-dragging-sheet = false;
+                root.drag-sheet-progress = 0.0;
+            }
+
+            // Tap pass-through: SwipeGestureHandler forwards non-swipe pointer
+            // events to children. This TouchArea catches taps that would previously
+            // have reached MiniNoteCard (now in a separate visual layer below).
+            TouchArea {
+                width: 100%;
+                height: 100%;
+                clicked => { root.open-note-sheet(); }
+            }
+        }
+
+        // Layer 3: Bottom Navigation Bar
+        // Sits in front of the Note Sheet; translates downward off-screen as the sheet opens
+        bottom-nav-bar := BottomNavBar {
+            x: 0px;
+            y: (root.height - root.bottom-bar-total-height) + root.sheet-progress * root.bottom-bar-total-height;
+            width: 100%;
+            height: root.bottom-bar-total-height;
+            visible: root.keyboard == 0px && root.sheet-progress < 0.99;
             active-tab <=> root.active-tab;
             conflict-count: root.conflict-count;
             current-has-conflict: root.current-has-conflict;
             inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
             tab-selected(idx) => {
-                if (idx == 2) {
-                    root.previous-tab = root.active-tab;
-                }
                 root.active-tab = idx;
                 root.trigger-haptic();
-                pane.unfocus();
             }
         }
-    }
-
-    // Overlays & Sheets
-    if root.settings-open: SettingsSheet {
-        width: 100%;
-        height: 100%;
-        has-token: root.remote-has-token;
-        url-draft <=> root.remote-url-draft;
-        token-draft <=> root.remote-token-draft;
-        syncing: root.syncing;
-        sync-status: root.status;
-        current-vault-name: root.current-vault-name;
-        current-vault-path: root.current-vault-path;
-        font-size-choice <=> root.font-size-choice;
-        theme-choice <=> root.theme-choice;
-        inset-top: root.inset-top;
-        inset-bottom: root.inset-bottom;
-        save-remote(url, token) => { root.save-remote(url, token); }
-        sync => { root.sync(); }
-        open-vaults => {
-            root.settings-open = false;
-            root.open-vault-sheet();
-        }
-        font-size-changed(c) => { root.font-size-changed(c); }
-        theme-changed(c) => { root.theme-changed(c); }
-        close => { root.close-settings(); }
-    }
 
     if root.remote-open: RemoteSheet {
         width: 100%;

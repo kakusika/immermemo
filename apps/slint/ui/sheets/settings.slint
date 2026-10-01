@@ -34,6 +34,7 @@ export component SettingsSheet inherits Rectangle {
 
     // App info
     in property <string> app-version: "0.1.0";
+    in property <bool> show-back: true;
 
     callback close();
     callback save-remote(string, string);
@@ -42,12 +43,12 @@ export component SettingsSheet inherits Rectangle {
     callback font-size-changed(int);
     callback theme-changed(int);
 
-    background: Palette.background;
+    background: Colors.page-background;
 
     VerticalLayout {
         TopBar {
             inset-top: root.inset-top;
-            IconButton {
+            if root.show-back: IconButton {
                 shape: Shapes.back;
                 clicked => { root.close(); }
             }

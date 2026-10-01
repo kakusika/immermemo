@@ -20,7 +20,7 @@ export component SearchScreen inherits Rectangle {
     callback query-changed(string);
     callback select(int);
 
-    background: Palette.background;
+    background: Colors.page-background;
 
     VerticalLayout {
         TopBar {
@@ -38,12 +38,15 @@ export component SearchScreen inherits Rectangle {
                     padding-right: Metrics.spacing-sm;
                     spacing: Metrics.spacing-sm;
 
-                    Icon {
-                        shape: Shapes.search;
-                        tint: Colors.muted;
-                        width: Metrics.icon-md;
-                        height: Metrics.icon-md;
-                        y: (parent.height - self.height) / 2;
+                    VerticalLayout {
+                        alignment: center;
+
+                        Icon {
+                            shape: Shapes.search;
+                            tint: Colors.muted;
+                            width: Metrics.icon-md;
+                            height: Metrics.icon-md;
+                        }
                     }
 
                     Rectangle {
@@ -76,27 +79,30 @@ export component SearchScreen inherits Rectangle {
                         }
                     }
 
-                    if root.query != "": Rectangle {
-                        width: Metrics.icon-lg + 4px * Metrics.ui-scale;
-                        height: self.width;
-                        horizontal-stretch: 0;
-                        y: (parent.height - self.height) / 2;
-                        border-radius: self.width / 2;
-                        background: clear_btn.pressed ? Palette.foreground.with-alpha(0.12) : transparent;
+                    if root.query != "": VerticalLayout {
+                        alignment: center;
 
-                        Icon {
-                            shape: Shapes.close;
-                            tint: Colors.muted;
-                            width: Metrics.icon-sm;
-                            height: Metrics.icon-sm;
-                            x: (parent.width - self.width) / 2;
-                            y: (parent.height - self.height) / 2;
-                        }
+                        Rectangle {
+                            width: Metrics.icon-lg + 4px * Metrics.ui-scale;
+                            height: self.width;
+                            horizontal-stretch: 0;
+                            border-radius: self.width / 2;
+                            background: clear_btn.pressed ? Palette.foreground.with-alpha(0.12) : transparent;
 
-                        clear_btn := TouchArea {
-                            clicked => {
-                                root.query = "";
-                                root.query-changed("");
+                            Icon {
+                                shape: Shapes.close;
+                                tint: Colors.muted;
+                                width: Metrics.icon-sm;
+                                height: Metrics.icon-sm;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            clear_btn := TouchArea {
+                                clicked => {
+                                    root.query = "";
+                                    root.query-changed("");
+                                }
                             }
                         }
                     }

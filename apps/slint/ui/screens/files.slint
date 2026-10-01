@@ -31,7 +31,7 @@ export component FilesScreen inherits Rectangle {
     callback trigger-heavy-haptic();
     callback open-vault-sheet();
 
-    background: Palette.background;
+    background: Colors.page-background;
 
     VerticalLayout {
         TopBar {
@@ -72,12 +72,6 @@ export component FilesScreen inherits Rectangle {
                 enabled: !root.syncing;
                 tint: root.syncing ? Palette.accent-background : Palette.foreground;
                 clicked => { root.sync(); }
-            }
-
-            BubbleButton {
-                shape: Shapes.settings;
-                tint: root.remote-configured ? Palette.foreground : Colors.warning;
-                clicked => { root.open-settings(); }
             }
         }
 

@@ -52,6 +52,7 @@ export global Metrics {
     out property <length> radius-md: 14px * root.ui-scale;
     out property <length> radius-lg: 16px * root.ui-scale;
     out property <length> radius-pill: 9999px;
+    out property <length> mini-card-height: 56px * root.ui-scale;
 }
 
 export global Colors {
@@ -59,10 +60,24 @@ export global Colors {
     out property <color> danger: #d9302f;
     out property <color> separator: Palette.foreground.with-alpha(0.12);
     out property <color> muted: Palette.foreground.with-alpha(0.6);
+
+    // Dynamic surface elevation colors derived adaptively from system Palette
+    out property <color> page-background: Palette.color-scheme == ColorScheme.dark
+        ? Palette.background.darker(0.35)
+        : Palette.background.darker(0.04);
+    out property <color> surface: Palette.background;
+    out property <color> surface-elevated: Palette.color-scheme == ColorScheme.dark
+        ? Palette.alternate-background
+        : Palette.background;
+    out property <color> card-border: Palette.foreground.with-alpha(0.08);
 }
 
 // A 24x24 icon drawn as a stroked path, so no icon font has to exist on the
 // device.
+// IMPORTANT SLINT LAYOUT RULE: In a HorizontalLayout, fixed-height elements like
+// Icon or badges will default to y: 0 (top-aligned) because HorizontalLayout lacks
+// cross-axis alignment. Always wrap an Icon or badge in `VerticalLayout { alignment: center; ... }`
+// when placing it alongside text in a HorizontalLayout to guarantee vertical centering.
 export component Icon inherits Path {
     in property <string> shape;
     in property <color> tint: Palette.foreground;
@@ -80,6 +95,8 @@ export component Icon inherits Path {
 export global Shapes {
     out property <string> back: "M15 5 L8 12 L15 19";
     out property <string> forward: "M9 5 L16 12 L9 19";
+    out property <string> down: "M6 9 L12 15 L18 9";
+    out property <string> up: "M6 15 L12 9 L18 15";
     out property <string> plus: "M12 5 L12 19 M5 12 L19 12";
     out property <string> undo: "M9 6 L4 11 L9 16 M4 11 L15 11 C18.5 11 20 13 20 15.5 C20 18.5 18.5 20 15 20";
     out property <string> redo: "M15 6 L20 11 L15 16 M20 11 L9 11 C5.5 11 4 13 4 15.5 C4 18.5 5.5 20 9 20";
@@ -477,30 +494,126 @@ component NavItem inherits Rectangle {
     }
 }
 
+// Floating Mini-Player Note Card shown above the bottom nav bar
+export component MiniNoteCard inherits Rectangle {
+    in property <string> title: "";
+    in property <string> preview: "";
+    in property <bool> has-conflict: false;
+    in property <bool> syncing: false;
+    callback clicked();
+    callback expand();
+
+    height: Metrics.mini-card-height;
+    background: Colors.surface-elevated;
+    border-radius: Metrics.radius-lg;
+    drop-shadow-blur: 10px * Metrics.ui-scale;
+    drop-shadow-offset-y: 2px * Metrics.ui-scale;
+    drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024;
+
+    HorizontalLayout {
+        padding-left: 8px * Metrics.ui-scale;
+        padding-right: 8px * Metrics.ui-scale;
+        spacing: 8px * Metrics.ui-scale;
+
+        // Left note icon badge (vertically centered)
+        VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 36px * Metrics.ui-scale;
+                height: 36px * Metrics.ui-scale;
+                border-radius: Metrics.radius-md;
+                background: root.has-conflict
+                    ? Colors.warning.with-alpha(0.18)
+                    : Palette.accent-background.with-alpha(0.18);
+
+                Icon {
+                    shape: root.has-conflict ? Shapes.alert : Shapes.note;
+                    tint: root.has-conflict ? Colors.warning : Palette.accent-background;
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+        }
+
+        // Center title & excerpt
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: root.title != "" ? root.title : "Untitled";
+                font-size: Metrics.font-body;
+                font-weight: 600;
+                color: Palette.foreground;
+                overflow: elide;
+            }
+
+            if root.has-conflict: Text {
+                text: "競合が発生しています";
+                font-size: Metrics.font-caption;
+                color: Colors.warning;
+                overflow: elide;
+            }
+
+            if !root.has-conflict && root.preview != "": Text {
+                text: root.preview;
+                font-size: Metrics.font-caption;
+                color: Colors.muted;
+                overflow: elide;
+            }
+        }
+
+        // Right expand chevron (vertically centered)
+        VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 32px * Metrics.ui-scale;
+                height: 32px * Metrics.ui-scale;
+                border-radius: self.height / 2;
+                background: touch.pressed ? Palette.foreground.with-alpha(0.1) : transparent;
+
+                Icon {
+                    shape: Shapes.up;
+                    tint: Colors.muted;
+                    width: Metrics.icon-sm;
+                    height: Metrics.icon-sm;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
 export component BottomNavBar inherits Rectangle {
-    in-out property <int> active-tab: 2;
+    in-out property <int> active-tab: 0;
     in property <length> inset-bottom: 0px;
     in property <int> conflict-count: 0;
     in property <bool> current-has-conflict: false;
     callback tab-selected(int);
 
     height: Metrics.bottom-bar-height + root.inset-bottom;
-    background: Palette.background;
-
-    // Subtle top border / separator
-    Rectangle {
-        x: 0px;
-        y: 0px;
-        width: 100%;
-        height: 1px;
-        background: Colors.separator;
-    }
+    background: Colors.surface-elevated;
+    drop-shadow-blur: 10px * Metrics.ui-scale;
+    drop-shadow-offset-y: -2px * Metrics.ui-scale;
+    drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #00000088 : #00000018;
 
     HorizontalLayout {
         x: 0px;
-        y: 1px;
+        y: 0px;
         width: 100%;
-        height: Metrics.bottom-bar-height - 1px;
+        height: Metrics.bottom-bar-height;
         padding-left: 0px;
         padding-right: 0px;
         padding-bottom: 0px;
@@ -528,10 +641,9 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: Shapes.note;
-            label: "ノート";
+            icon: Shapes.search;
+            label: "検索";
             active: root.active-tab == 2;
-            badge-dot: root.current-has-conflict;
             clicked => {
                 root.active-tab = 2;
                 root.tab-selected(2);
@@ -549,8 +661,8 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: Shapes.search;
-            label: "検索";
+            icon: Shapes.settings;
+            label: "設定";
             active: root.active-tab == 4;
             clicked => {
                 root.active-tab = 4;

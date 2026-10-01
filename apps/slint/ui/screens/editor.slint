@@ -34,6 +34,7 @@ export component EditorScreen inherits Rectangle {
     callback undo();
     callback redo();
     callback back();
+    callback collapse();
     callback new-note();
     callback dismiss-status();
     callback resolve-mine();
@@ -58,19 +59,31 @@ export component EditorScreen inherits Rectangle {
         editor.clear-focus();
     }
 
-    background: Palette.background;
+    background: Colors.page-background;
 
     VerticalLayout {
         TopBar {
             inset-top: root.inset-top;
 
-            if root.show-back: BubbleButton {
-                shape: Shapes.back;
-                clicked => { root.back(); }
+            // Down chevron button to collapse sheet into mini-player
+            BubbleButton {
+                shape: Shapes.down;
+                clicked => { root.collapse(); }
             }
+
             Rectangle {
                 horizontal-stretch: 1;
                 clip: true;
+
+                // Subtle drag-handle pill indicator
+                Rectangle {
+                    width: 36px * Metrics.ui-scale;
+                    height: 4px * Metrics.ui-scale;
+                    border-radius: 2px * Metrics.ui-scale;
+                    background: Palette.foreground.with-alpha(0.18);
+                    x: (parent.width - self.width) / 2;
+                    y: 2px;
+                }
 
                 Text {
                     width: parent.width;
@@ -81,7 +94,7 @@ export component EditorScreen inherits Rectangle {
                     vertical-alignment: center;
                     overflow: elide;
                     x: 4px * Metrics.ui-scale;
-                    y: (parent.height - self.height) / 2;
+                    y: (parent.height - self.height) / 2 + 2px;
                 }
             }
 

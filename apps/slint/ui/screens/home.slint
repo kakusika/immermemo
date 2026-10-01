@@ -40,7 +40,7 @@ export component HomeScreen inherits Rectangle {
     callback copy-sync-error();
     callback dismiss-sync-error();
 
-    background: Palette.background;
+    background: Colors.page-background;
 
     VerticalLayout {
         TopBar {
@@ -60,11 +60,6 @@ export component HomeScreen inherits Rectangle {
                 tint: root.syncing ? Palette.accent-background : Palette.foreground;
                 enabled: !root.syncing;
                 clicked => { root.sync(); }
-            }
-
-            BubbleButton {
-                shape: Shapes.settings;
-                clicked => { root.open-settings(); }
             }
         }
 
@@ -205,11 +200,16 @@ export component HomeScreen inherits Rectangle {
                         if root.syncing: HorizontalLayout {
                             spacing: Metrics.spacing-xs;
                             alignment: center;
-                            Icon {
-                                width: Metrics.icon-sm;
-                                height: Metrics.icon-sm;
-                                shape: Shapes.sync;
-                                tint: Palette.accent-background;
+
+                            VerticalLayout {
+                                alignment: center;
+
+                                Icon {
+                                    width: Metrics.icon-sm;
+                                    height: Metrics.icon-sm;
+                                    shape: Shapes.sync;
+                                    tint: Palette.accent-background;
+                                }
                             }
 
                             Text {
@@ -254,23 +254,27 @@ export component HomeScreen inherits Rectangle {
                                     vertical-alignment: center;
                                 }
 
-                                Rectangle {
-                                    width: Metrics.icon-lg + 4px * Metrics.ui-scale;
-                                    height: self.width;
-                                    border-radius: self.width / 2;
-                                    background: Palette.foreground.with-alpha(0.06);
+                                VerticalLayout {
+                                    alignment: center;
 
-                                    TouchArea {
-                                        clicked => { root.dismiss-sync-error(); }
-                                    }
+                                    Rectangle {
+                                        width: Metrics.icon-lg + 4px * Metrics.ui-scale;
+                                        height: self.width;
+                                        border-radius: self.width / 2;
+                                        background: Palette.foreground.with-alpha(0.06);
 
-                                    Icon {
-                                        width: Metrics.icon-sm;
-                                        height: Metrics.icon-sm;
-                                        shape: Shapes.close;
-                                        tint: Colors.muted;
-                                        x: (parent.width - self.width) / 2;
-                                        y: (parent.height - self.height) / 2;
+                                        TouchArea {
+                                            clicked => { root.dismiss-sync-error(); }
+                                        }
+
+                                        Icon {
+                                            width: Metrics.icon-sm;
+                                            height: Metrics.icon-sm;
+                                            shape: Shapes.close;
+                                            tint: Colors.muted;
+                                            x: (parent.width - self.width) / 2;
+                                            y: (parent.height - self.height) / 2;
+                                        }
                                     }
                                 }
                             }

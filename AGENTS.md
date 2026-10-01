@@ -35,6 +35,28 @@ with the app's author, in the language that conversation happens in, not
 a spec for other engineers. Crate-level module docs stay English, same
 as the code they sit beside.
 
+## UI & Slint conventions
+
+- **Vertical centering in `HorizontalLayout`**:
+  Slint's `HorizontalLayout` has no cross-axis alignment (`align-items: center`).
+  Children without explicit/fixed heights stretch across the full row height.
+  `Text` elements vertically center their text glyphs within their stretched box
+  (`vertical-alignment: center`), but fixed-height children (such as `Icon`, badges,
+  or buttons) are positioned at `y = 0` (top edge). To vertically center any
+  fixed-height element inside a `HorizontalLayout`, wrap it in:
+  ```slint
+  VerticalLayout {
+      alignment: center;
+      Icon { ... }
+  }
+  ```
+- **Theme colors**:
+  Never hardcode hex colors for surfaces, backgrounds, or borders. Use the Slint
+  `Palette` tokens and derive contrast dynamically (e.g.
+  `Palette.color-scheme == ColorScheme.dark ? Palette.background.darker(...) : ...`),
+  respecting system light/dark modes and user device settings.
+
+
 ## Verifying changes
 
 ```bash

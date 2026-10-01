@@ -916,7 +916,7 @@ pub fn open_first_conflicted_note(app: &App, session: &Rc<RefCell<Session>>) {
     };
     if let Some(idx) = target_idx {
         open_note(app, session, idx);
-        app.set_active_tab(2);
+        app.set_note_sheet_open(true);
         sync_conflict_sheet_state(app, session);
         app.set_conflict_sheet_open(true);
     }

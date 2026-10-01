@@ -863,9 +863,11 @@ mod tests {
 
         // Test open_first_conflicted_note from Home tab
         app.set_active_tab(0);
+        app.set_note_sheet_open(false);
         app.set_conflict_sheet_open(false);
         open_first_conflicted_note(&app, &session);
-        assert_eq!(app.get_active_tab(), 2);
+        assert_eq!(app.get_active_tab(), 0);
+        assert!(app.get_note_sheet_open());
         assert!(app.get_conflict_sheet_open());
         assert_eq!(app.get_active_conflict_total(), 2);
         assert_eq!(app.get_active_conflict_mine(), "min");

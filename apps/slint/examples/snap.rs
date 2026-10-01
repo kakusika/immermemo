@@ -96,8 +96,8 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-list.ppm"));
 
-    // Tab 4: Search query with snippet preview
-    app.set_active_tab(4);
+    // Tab 2: Search query with snippet preview
+    app.set_active_tab(2);
     app.set_search_query("計画".into());
     app.set_notes(ModelRc::new(VecModel::from(vec!["旅行の計画".into()])));
     app.set_conflicted(ModelRc::new(VecModel::from(vec![false])));
@@ -125,9 +125,15 @@ fn main() {
         false, false, true, false, false,
     ])));
 
-    // Tab 2: Note Editor
-    app.set_active_tab(2);
-    app.set_list_open(false);
+    // Note Editor Sheet Transition (50% progress gesture tracking)
+    app.set_is_dragging_sheet(true);
+    app.set_drag_sheet_progress(0.5);
+    render(&window, size, &format!("{prefix}-transition-half.ppm"));
+    app.set_is_dragging_sheet(false);
+    app.set_drag_sheet_progress(0.0);
+
+    // Note Editor Sheet
+    app.set_note_sheet_open(true);
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor.ppm"));
     app.set_current_has_conflict(true);
@@ -144,6 +150,7 @@ fn main() {
     app.set_conflict_sheet_open(false);
 
     app.set_current_has_conflict(false);
+    app.set_note_sheet_open(false);
 
     // Tab 3: Details / Properties
     app.set_active_tab(3);
@@ -156,7 +163,7 @@ fn main() {
     app.set_current_has_conflict(false);
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-properties.ppm"));
-    app.set_active_tab(2);
+    app.set_note_sheet_open(true);
     std::thread::sleep(std::time::Duration::from_millis(300));
 
     app.set_status("Save failed: permission denied".into());
@@ -164,6 +171,7 @@ fn main() {
     render(&window, size, &format!("{prefix}-error.ppm"));
     app.set_status("".into());
     app.set_status_is_error(false);
+    app.set_note_sheet_open(false);
 
     app.set_current(-1);
     app.set_notes(ModelRc::new(VecModel::default()));
@@ -182,11 +190,13 @@ fn main() {
     render(&window, size, &format!("{prefix}-remote.ppm"));
     app.set_remote_open(false);
 
-    app.set_settings_open(true);
+    // Tab 4: Settings
+    app.set_active_tab(4);
     app.set_current_vault_name("notes".into());
     app.set_current_vault_path("/home/user/notes".into());
+    std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-settings.ppm"));
-    app.set_settings_open(false);
+    app.set_active_tab(0);
 
     app.set_note_menu_index(2);
     std::thread::sleep(std::time::Duration::from_millis(300));
@@ -221,4 +231,18 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-home-scaled-125.ppm"));
     app.set_ui_scale(1.0);
+
+    // Verify dark mode contrast & elevation
+    app.set_theme_choice(2); // Dark theme
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-home-dark.ppm"));
+    app.set_active_tab(1);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-list-dark.ppm"));
+    app.set_note_sheet_open(true);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-editor-dark.ppm"));
+    app.set_note_sheet_open(false);
+    app.set_active_tab(0);
+    app.set_theme_choice(0);
 }
