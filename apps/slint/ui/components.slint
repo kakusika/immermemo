@@ -153,9 +153,10 @@ export component TopBar inherits Rectangle {
     in property <length> inset-top: 0px;
     in property <string> title;
     in property <string> subtitle;
+    in property <brush> bar-background: Palette.background;
     // Slots for the buttons at either end.
     height: root.inset-top + Metrics.bar-height;
-    background: Palette.background;
+    background: root.bar-background;
 
     VerticalLayout {
         padding-top: root.inset-top;
@@ -500,8 +501,12 @@ export component MiniNoteCard inherits Rectangle {
     in property <string> preview: "";
     in property <bool> has-conflict: false;
     in property <bool> syncing: false;
+    in property <bool> remote-configured: true;
+    in property <string> status: "";
+    in property <bool> status-is-error: false;
     callback clicked();
     callback expand();
+    callback sync();
 
     height: Metrics.mini-card-height;
     background: Colors.surface-elevated;
@@ -509,6 +514,13 @@ export component MiniNoteCard inherits Rectangle {
     drop-shadow-blur: 10px * Metrics.ui-scale;
     drop-shadow-offset-y: 2px * Metrics.ui-scale;
     drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024;
+
+    // Background tap target to open note sheet
+    touch := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
 
     HorizontalLayout {
         padding-left: 8px * Metrics.ui-scale;
@@ -567,31 +579,21 @@ export component MiniNoteCard inherits Rectangle {
             }
         }
 
-        // Right expand chevron (vertically centered)
-        VerticalLayout {
+        // Right sync status button (vertically centered)
+        if root.remote-configured: VerticalLayout {
             alignment: center;
 
-            Rectangle {
-                width: 32px * Metrics.ui-scale;
-                height: 32px * Metrics.ui-scale;
-                border-radius: self.height / 2;
-                background: touch.pressed ? Palette.foreground.with-alpha(0.1) : transparent;
-
-                Icon {
-                    shape: Shapes.up;
-                    tint: Colors.muted;
-                    width: Metrics.icon-sm;
-                    height: Metrics.icon-sm;
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
-                }
+            BubbleButton {
+                shape: root.syncing ? Shapes.sync
+                    : root.status-is-error ? Shapes.alert
+                    : root.status != "" ? Shapes.check
+                    : Shapes.cloud;
+                tint: root.syncing ? Palette.accent-background
+                    : root.status-is-error ? Colors.danger
+                    : root.status != "" ? Colors.muted
+                    : Colors.muted;
+                clicked => { root.sync(); }
             }
-        }
-    }
-
-    touch := TouchArea {
-        clicked => {
-            root.clicked();
         }
     }
 }
@@ -690,6 +692,7 @@ export component AppScrollView inherits Rectangle {
         width: 100%;
         height: 100%;
         interactive: root.enabled;
+        mouse-drag-pan-enabled: true;
 
         @children
     }

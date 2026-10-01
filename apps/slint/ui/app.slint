@@ -27,6 +27,7 @@ export component App inherits Window {
 
     public function open-note-sheet() {
         root.note-sheet-open = true;
+        root.drag-sheet-progress = 1.0;
         pane.focus-editor();
         root.trigger-haptic();
     }
@@ -34,6 +35,7 @@ export component App inherits Window {
     public function close-note-sheet() {
         pane.unfocus();
         root.note-sheet-open = false;
+        root.drag-sheet-progress = 0.0;
         root.trigger-haptic();
     }
 
@@ -577,116 +579,94 @@ export component App inherits Window {
                 last-synced-at: root.last-synced-at;
                 manual-sync => { root.sync(); }
                 open-history => { root.open-history(); }
-            }
-        }
-
-        // Header downward-swipe gesture to collapse note sheet with real-time tracking
-        header-drag-gesture := SwipeGestureHandler {
-            x: 48px * Metrics.ui-scale;
-            y: 0px;
-            width: parent.width - 48px * Metrics.ui-scale - 190px * Metrics.ui-scale;
-            height: 60px * Metrics.ui-scale + root.inset-top;
-            enabled: root.note-sheet-open && root.keyboard == 0px;
-            handle-swipe-down: true;
-
-            moved => {
-                if (self.swiping) {
-                    root.is-dragging-sheet = true;
-                    let dy = self.current-position.y - self.pressed-position.y;
-                    let downward = max(0px, dy);
+                header-swipe-enabled: root.note-sheet-open && root.keyboard == 0px;
+                sheet-drag-moved(dy) => {
                     let travel = max(100px, root.mini-card-resting-y);
+                    let current-offset = root.is-dragging-sheet
+                        ? (1.0 - root.drag-sheet-progress) * travel
+                        : 0px;
+                    let downward = max(0px, dy + current-offset);
+                    root.is-dragging-sheet = true;
                     root.drag-sheet-progress = clamp(1.0 - (downward / travel), 0.0, 1.0);
                 }
-            }
-
-            swiped => {
-                root.is-dragging-sheet = false;
-                let dy = self.current-position.y - self.pressed-position.y;
-                if (dy > 40px * Metrics.ui-scale || root.drag-sheet-progress < 0.75) {
-                    root.close-note-sheet();
-                } else {
-                    root.note-sheet-open = true;
-                }
-                root.drag-sheet-progress = 0.0;
-            }
-
-            cancelled => {
-                root.is-dragging-sheet = false;
-                root.drag-sheet-progress = 0.0;
-            }
-        }
-
-        // Visual layer: tracks the finger by moving with sheet-progress.
-        // This Rectangle contains only the card rendering — no gesture handling.
-        // Placed BEFORE the gesture area so it renders underneath and doesn't
-        // intercept touch events that the SwipeGestureHandler needs.
-        mini-card-visual := Rectangle {
-            x: Metrics.spacing-sm;
-            y: (1.0 - root.sheet-progress) * root.mini-card-resting-y;  // follows finger
-            width: parent.width - 2 * Metrics.spacing-sm;
-            height: Metrics.mini-card-height;
-            opacity: max(0.0, 1.0 - root.sheet-progress * 10.0);
-            visible: root.current >= 0 && root.keyboard == 0px && root.sheet-progress < 0.15;
-
-            MiniNoteCard {
-                width: 100%;
-                height: 100%;
-                title: root.current-title;
-                preview: root.snippets.length > root.current && root.current >= 0 ? root.snippets[root.current] : "";
-                has-conflict: root.current-has-conflict;
-                syncing: root.syncing;
-                clicked => { root.open-note-sheet(); }
-                expand => { root.open-note-sheet(); }
-            }
-        }
-
-        // Hit-test layer: fixed position so gesture coordinate space never shifts.
-        // Moving this container while the gesture is inside would cause
-        // current-position to be reported in the shifted local frame, halving the
-        // effective drag distance (feedback loop).
-        // Placed AFTER the visual so it sits on top for input capture;
-        // SwipeGestureHandler has no visual children so it doesn't obscure the card.
-        mini-card-gesture-area := SwipeGestureHandler {
-            x: Metrics.spacing-sm;
-            y: root.mini-card-resting-y;               // FIXED — never changes during drag
-            width: parent.width - 2 * Metrics.spacing-sm;
-            height: Metrics.mini-card-height;
-            enabled: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open;
-            handle-swipe-up: true;
-
-            moved => {
-                if (self.swiping) {
-                    root.is-dragging-sheet = true;
-                    let dy = self.current-position.y - self.pressed-position.y;
-                    let upward = max(0px, -dy);
+                sheet-drag-swiped(dy) => {
                     let travel = max(100px, root.mini-card-resting-y);
-                    root.drag-sheet-progress = clamp(upward / travel, 0.0, 1.0);
+                    let current-offset = root.is-dragging-sheet
+                        ? (1.0 - root.drag-sheet-progress) * travel
+                        : 0px;
+                    let downward = dy + current-offset;
+                    let should-close = downward > 40px * Metrics.ui-scale || root.drag-sheet-progress < 0.75;
+                    root.is-dragging-sheet = false;
+                    if (should-close) {
+                        root.close-note-sheet();
+                    } else {
+                        root.note-sheet-open = true;
+                        root.drag-sheet-progress = 1.0;
+                    }
+                }
+                sheet-drag-cancelled => {
+                    root.is-dragging-sheet = false;
+                    root.drag-sheet-progress = 1.0;
                 }
             }
+        }
 
-            swiped => {
-                root.is-dragging-sheet = false;
-                let dy = self.current-position.y - self.pressed-position.y;
-                if (-dy > 40px * Metrics.ui-scale || root.drag-sheet-progress > 0.25) {
-                    root.open-note-sheet();
-                } else {
-                    root.note-sheet-open = false;
-                }
-                root.drag-sheet-progress = 0.0;
-            }
+        // Mini note card container (anchored above the bottom nav bar)
+        // Fixed at resting position so upward swipe gesture coordinates never shift.
+        // Fades out quickly as sheet progress increases (editor sheet expands over it).
+        mini-card-container := Rectangle {
+            x: Metrics.spacing-sm;
+            y: root.mini-card-resting-y;
+            width: parent.width - 2 * Metrics.spacing-sm;
+            height: Metrics.mini-card-height;
+            visible: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open;
 
-            cancelled => {
-                root.is-dragging-sheet = false;
-                root.drag-sheet-progress = 0.0;
-            }
-
-            // Tap pass-through: SwipeGestureHandler forwards non-swipe pointer
-            // events to children. This TouchArea catches taps that would previously
-            // have reached MiniNoteCard (now in a separate visual layer below).
-            TouchArea {
+            mini-card-gesture := SwipeGestureHandler {
                 width: 100%;
                 height: 100%;
-                clicked => { root.open-note-sheet(); }
+                enabled: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open;
+                handle-swipe-up: true;
+
+                moved => {
+                    if (self.swiping) {
+                        root.is-dragging-sheet = true;
+                        let dy = self.current-position.y - self.pressed-position.y;
+                        let upward = max(0px, -dy);
+                        let travel = max(100px, root.mini-card-resting-y);
+                        root.drag-sheet-progress = clamp(upward / travel, 0.0, 1.0);
+                    }
+                }
+
+                swiped => {
+                    root.is-dragging-sheet = false;
+                    let dy = self.current-position.y - self.pressed-position.y;
+                    if (-dy > 40px * Metrics.ui-scale || root.drag-sheet-progress > 0.25) {
+                        root.open-note-sheet();
+                    } else {
+                        root.note-sheet-open = false;
+                        root.drag-sheet-progress = 0.0;
+                    }
+                }
+
+                cancelled => {
+                    root.is-dragging-sheet = false;
+                    root.drag-sheet-progress = 0.0;
+                }
+
+                MiniNoteCard {
+                    width: 100%;
+                    height: 100%;
+                    opacity: max(0.0, 1.0 - root.sheet-progress * 10.0);
+                    title: root.current-title;
+                    preview: root.snippets.length > root.current && root.current >= 0 ? root.snippets[root.current] : "";
+                    has-conflict: root.current-has-conflict;
+                    syncing: root.syncing;
+                    remote-configured: root.remote-configured;
+                    status: root.status;
+                    status-is-error: root.status-is-error;
+                    clicked => { root.open-note-sheet(); }
+                    sync => { root.sync(); }
+                }
             }
         }
 

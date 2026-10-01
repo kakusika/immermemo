@@ -30,6 +30,11 @@ export component EditorScreen inherits Rectangle {
     in property <string> last-synced-at: "";
     in-out property <string> body;
     out property <bool> editor-has-focus: editor.has-focus;
+    out property <bool> scroll-at-top: editor-scroll.content-y >= -1px;
+    in property <bool> header-swipe-enabled: true;
+    callback sheet-drag-moved(length);
+    callback sheet-drag-swiped(length);
+    callback sheet-drag-cancelled();
     callback edited(string);
     callback undo();
     callback redo();
@@ -62,66 +67,65 @@ export component EditorScreen inherits Rectangle {
     background: Colors.page-background;
 
     VerticalLayout {
-        TopBar {
-            inset-top: root.inset-top;
+        header-gesture := SwipeGestureHandler {
+            height: root.inset-top + Metrics.bar-height;
+            enabled: root.header-swipe-enabled;
+            handle-swipe-down: true;
 
-            // Down chevron button to collapse sheet into mini-player
-            BubbleButton {
-                shape: Shapes.down;
-                clicked => { root.collapse(); }
+            moved => {
+                if (self.swiping) {
+                    let dy = self.current-position.y - self.pressed-position.y;
+                    root.sheet-drag-moved(dy);
+                }
+            }
+            swiped => {
+                let dy = self.current-position.y - self.pressed-position.y;
+                root.sheet-drag-swiped(dy);
+            }
+            cancelled => {
+                root.sheet-drag-cancelled();
             }
 
-            Rectangle {
-                horizontal-stretch: 1;
-                clip: true;
+            TopBar {
+                inset-top: root.inset-top;
+                bar-background: transparent;
 
-                // Subtle drag-handle pill indicator
+                // Down chevron button to collapse sheet into mini-player
+                BubbleButton {
+                    shape: Shapes.down;
+                    clicked => { root.collapse(); }
+                }
+
                 Rectangle {
-                    width: 36px * Metrics.ui-scale;
-                    height: 4px * Metrics.ui-scale;
-                    border-radius: 2px * Metrics.ui-scale;
-                    background: Palette.foreground.with-alpha(0.18);
-                    x: (parent.width - self.width) / 2;
-                    y: 2px;
+                    horizontal-stretch: 1;
                 }
 
-                Text {
-                    width: parent.width;
-                    text: root.status != "" && !root.status-is-error ? root.status : root.title;
-                    font-size: Metrics.font-body;
-                    font-weight: 600;
-                    color: root.status != "" && !root.status-is-error ? Colors.muted : Palette.foreground;
-                    vertical-alignment: center;
-                    overflow: elide;
-                    x: 4px * Metrics.ui-scale;
-                    y: (parent.height - self.height) / 2 + 2px;
+                // Sync status button: check when synced, alert on error, spinner while syncing, cloud when idle
+                if root.remote-configured: BubbleButton {
+                    shape: root.syncing ? Shapes.sync
+                        : root.status-is-error ? Shapes.alert
+                        : root.status != "" ? Shapes.check
+                        : Shapes.cloud;
+                    tint: root.syncing ? Palette.accent-background
+                        : root.status-is-error ? Colors.danger
+                        : root.status != "" ? Colors.muted
+                        : Colors.muted;
+                    clicked => { root.manual-sync(); }
+                }
+
+                // Version history button
+                if root.has-note: BubbleButton {
+                    shape: Shapes.history;
+                    clicked => { root.open-history(); }
+                }
+
+                if root.has-note: UndoRedoBubble {
+                    can-undo: root.can-undo;
+                    can-redo: root.can-redo;
+                    undo => { root.undo(); }
+                    redo => { root.redo(); }
                 }
             }
-
-            // Sync status button
-            if root.remote-configured: BubbleButton {
-                shape: root.syncing ? Shapes.sync : (root.status-is-error ? Shapes.alert : Shapes.cloud);
-                tint: root.syncing ? Palette.accent-background : (root.status-is-error ? Colors.danger : Colors.muted);
-                clicked => { root.manual-sync(); }
-            }
-
-            // Version history button
-            if root.has-note: BubbleButton {
-                shape: Shapes.history;
-                clicked => { root.open-history(); }
-            }
-
-            if root.has-note: UndoRedoBubble {
-                can-undo: root.can-undo;
-                can-redo: root.can-redo;
-                undo => { root.undo(); }
-                redo => { root.redo(); }
-            }
-        }
-
-        Rectangle {
-            height: 1px;
-            background: Colors.separator;
         }
 
         if root.status != "" && root.status-is-error: Rectangle {

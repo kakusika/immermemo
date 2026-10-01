@@ -83,7 +83,7 @@ mkShell {
   ];
 
   ANDROID_HOME = androidHome;
-  ANDROID_SDK_ROOT = androidHome;
+  # ANDROID_SDK_ROOT = androidHome;
   ANDROID_NDK_ROOT = "${androidHome}/ndk-bundle";
   JAVA_HOME = pkgs.jdk17.home;
 
