@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 immermemo-merge = { workspace = true }
+immermemo-vault = { workspace = true }
 
 #= Tomet
 tomet-ast = { workspace = true }

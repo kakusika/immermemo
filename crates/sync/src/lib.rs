@@ -34,8 +34,8 @@
 //! remote, reconcile (fast-forward, or a real three-way merge when history
 //! has diverged), push, and check out the result. When history has
 //! diverged, the merge step never uses git's own (textual) merge driver --
-//! [`sync`] computes the merge base itself, and for every `.tmt` file that
-//! changed on both sides, reads all three blobs (base/local/remote),
+//! [`Vault::sync`] computes the merge base itself, and for every `.tmt` file
+//! that changed on both sides, reads all three blobs (base/local/remote),
 //! parses them, and hands them to [`immermemo_merge::merge`] instead. The
 //! result -- possibly containing `@mobile.conflict` markers -- becomes the
 //! new tree, and the merge commit is recorded as a real two-parent git
@@ -70,29 +70,35 @@
 //! One [`Vault`] per folder the user has linked; each vault's private
 //! gitdir is independent, keyed by the vault's id. Nothing here assumes a
 //! single vault per app install.
+//!
+//! # Module layout
+//!
+//! - [`remote`]: fetch and push over whatever transport the remote URL implies.
+//! - [`reconcile`]: fast-forward/adopt/three-way-merge once a fetch lands.
+//! - [`checkout`]: writing the merged tree back into the working tree, and
+//!   reading back which notes still have a conflict.
+//! - [`gc`]: packing loose objects, and the heuristic that decides when to.
+//! - [`history`]: reading a vault's git history back out.
+//! - `fs`: staging the working tree into the git index.
 
+mod checkout;
+mod fs;
+mod gc;
+mod history;
+mod reconcile;
+mod remote;
 pub mod tls;
 
-use std::cell::RefCell;
-use std::collections::BTreeSet;
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 
-use git2::{
-    Buf, Delta, FetchOptions, IndexEntry, IndexTime, Indexer, ObjectType, Oid, PushOptions,
-    RemoteCallbacks, Repository, Signature, Tree, TreeWalkMode, TreeWalkResult,
-};
+use git2::{Repository, Signature, Tree};
+
+pub use gc::GcReport;
+pub use history::{CommitSummary, FileRevision};
 
 const REMOTE_NAME: &str = "origin";
 const BRANCH: &str = "main";
 const MAX_PUSH_ATTEMPTS: u32 = 5;
-
-/// Shard directory inside `.git/objects/` sampled to decide whether auto-GC is needed.
-const AUTO_GC_SAMPLE_SHARD: &str = "17";
-/// If the sampled shard has at least this many files (~4 * 256 ≈ 1,000 loose objects total),
-/// `should_auto_gc` returns true.
-const AUTO_GC_SHARD_THRESHOLD: usize = 4;
 
 /// Supplies credentials for a fetch or push, without this crate knowing
 /// where they actually live. Implemented once per platform (Android:
@@ -134,42 +140,6 @@ pub struct SyncReport {
     pub updated_notes: Vec<PathBuf>,
     /// Relative paths of notes removed from the working tree during this sync.
     pub deleted_notes: Vec<PathBuf>,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct GcReport {
-    /// Number of objects packed into the new packfile.
-    pub packed_objects: usize,
-    /// Number of loose object files pruned from disk.
-    pub pruned_objects: usize,
-}
-
-/// A single revision of a file from Git history.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FileRevision {
-    /// Full 40-character commit hex hash.
-    pub commit_id: String,
-    /// 7-character short commit hash.
-    pub short_id: String,
-    /// Unix timestamp in seconds.
-    pub timestamp_secs: i64,
-    /// Commit message summary (first line).
-    pub summary: String,
-    /// Full text content of the file at this revision.
-    pub content: String,
-}
-
-/// A commit summary from the repository's history.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CommitSummary {
-    /// Full 40-character commit hex hash.
-    pub commit_id: String,
-    /// 7-character short commit hash.
-    pub short_id: String,
-    /// Unix timestamp in seconds.
-    pub timestamp_secs: i64,
-    /// Commit message summary (first line).
-    pub summary: String,
 }
 
 impl Vault {
@@ -250,177 +220,11 @@ impl Vault {
         anyhow::bail!("sync did not converge after {MAX_PUSH_ATTEMPTS} push attempts")
     }
 
-    /// Checks whether loose objects in the repository have accumulated beyond
-    /// the threshold where packing is recommended.
-    ///
-    /// Uses Git's standard heuristic of sampling a single 2-hex shard directory
-    /// (`objects/17/`) rather than scanning all 256 shards, keeping this check
-    /// sub-millisecond during regular sync cycles.
-    pub fn should_auto_gc(&self) -> bool {
-        let sample_dir = self.repo.path().join("objects").join(AUTO_GC_SAMPLE_SHARD);
-        match std::fs::read_dir(sample_dir) {
-            Ok(entries) => {
-                let count = entries.flatten().filter(|e| e.path().is_file()).count();
-                count >= AUTO_GC_SHARD_THRESHOLD
-            }
-            Err(_) => false,
-        }
-    }
-
-    /// Packs all reachable objects into a single packfile in `objects/pack/`
-    /// and prunes loose object files from disk.
-    ///
-    /// Safe to call at any time; if the repository has no objects or refs,
-    /// returns an empty [`GcReport`] without writing files.
-    pub fn gc(&self) -> anyhow::Result<GcReport> {
-        let mut pb = self.repo.packbuilder()?;
-        let mut revwalk = self.repo.revwalk()?;
-        let _ = revwalk.push_glob("refs/*");
-        pb.insert_walk(&mut revwalk)?;
-
-        let object_count = pb.object_count();
-        if object_count == 0 {
-            return Ok(GcReport::default());
-        }
-
-        let mut buf = Buf::new();
-        pb.write_buf(&mut buf)?;
-
-        let odb = self.repo.odb()?;
-        let pack_dir = self.repo.path().join("objects").join("pack");
-        std::fs::create_dir_all(&pack_dir)?;
-        let mut indexer = Indexer::new(Some(&odb), &pack_dir, 0o644, true)?;
-        indexer.write_all(&buf)?;
-        let _pack_name = indexer.commit()?;
-
-        let pruned_objects = prune_loose_objects(&self.repo.path().join("objects"))?;
-
-        Ok(GcReport {
-            packed_objects: object_count,
-            pruned_objects,
-        })
-    }
-
-    /// Returns the commit history that modified `rel_path`, newest first.
-    pub fn file_history(
-        &self,
-        rel_path: &Path,
-        max_count: usize,
-    ) -> anyhow::Result<Vec<FileRevision>> {
-        let mut revwalk = match self.repo.revwalk() {
-            Ok(rw) => rw,
-            Err(_) => return Ok(Vec::new()),
-        };
-        if self.repo.head().is_err() {
-            return Ok(Vec::new());
-        }
-        revwalk.push_head()?;
-        revwalk.set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::TIME)?;
-
-        let mut revisions = Vec::new();
-        let path_str = rel_path.to_str().unwrap_or_default();
-
-        for oid in revwalk {
-            let oid = oid?;
-            let commit = self.repo.find_commit(oid)?;
-            let tree = commit.tree()?;
-
-            let entry = tree.get_path(Path::new(path_str)).ok();
-            let entry_id = entry.as_ref().map(|e| e.id());
-
-            // Check if any parent had the exact same tree entry ID
-            let changed = if commit.parent_count() == 0 {
-                entry_id.is_some()
-            } else {
-                let mut parent_matches = false;
-                for parent in commit.parents() {
-                    let parent_tree = parent.tree()?;
-                    let parent_entry = parent_tree.get_path(Path::new(path_str)).ok();
-                    let parent_id = parent_entry.as_ref().map(|e| e.id());
-                    if parent_id == entry_id {
-                        parent_matches = true;
-                        break;
-                    }
-                }
-                !parent_matches && entry_id.is_some()
-            };
-
-            if changed {
-                if let Some(entry) = entry {
-                    let obj = entry.to_object(&self.repo)?;
-                    if let Some(blob) = obj.as_blob() {
-                        let content = String::from_utf8_lossy(blob.content()).into_owned();
-                        let commit_id = oid.to_string();
-                        let short_id = commit_id[..7.min(commit_id.len())].to_string();
-                        let timestamp_secs = commit.time().seconds();
-                        let summary = commit.summary().unwrap_or("").to_string();
-
-                        revisions.push(FileRevision {
-                            commit_id,
-                            short_id,
-                            timestamp_secs,
-                            summary,
-                            content,
-                        });
-
-                        if revisions.len() >= max_count {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(revisions)
-    }
-
-    /// Returns the recent commit summaries across the entire vault, newest first.
-    pub fn vault_history(&self, max_count: usize) -> anyhow::Result<Vec<CommitSummary>> {
-        let mut revwalk = match self.repo.revwalk() {
-            Ok(rw) => rw,
-            Err(_) => return Ok(Vec::new()),
-        };
-        if self.repo.head().is_err() {
-            return Ok(Vec::new());
-        }
-        revwalk.push_head()?;
-        revwalk.set_sorting(git2::Sort::TOPOLOGICAL | git2::Sort::TIME)?;
-
-        let mut commits = Vec::new();
-        for oid in revwalk {
-            let oid = oid?;
-            let commit = self.repo.find_commit(oid)?;
-            let commit_id = oid.to_string();
-            let short_id = commit_id[..7.min(commit_id.len())].to_string();
-            let timestamp_secs = commit.time().seconds();
-            let summary = commit.summary().unwrap_or("").to_string();
-
-            commits.push(CommitSummary {
-                commit_id,
-                short_id,
-                timestamp_secs,
-                summary,
-            });
-
-            if commits.len() >= max_count {
-                break;
-            }
-        }
-        Ok(commits)
-    }
-
-    fn head_commit(&self) -> Option<git2::Commit<'_>> {
-        self.repo
-            .find_reference(&format!("refs/heads/{BRANCH}"))
-            .ok()
-            .and_then(|r| r.peel_to_commit().ok())
-    }
-
     /// Stages the working tree's current contents and commits them onto
     /// the vault's local history. A no-op if nothing changed since HEAD.
     fn commit_working_tree(&self) -> anyhow::Result<()> {
         let mut index = self.repo.index()?;
-        stage_dir(
+        fs::stage_dir(
             &self.repo,
             &mut index,
             &self.working_tree,
@@ -455,7 +259,7 @@ impl Vault {
     /// Registers the certificate-check callback, if a verifier was set,
     /// onto `callbacks`. Shared between [`fetch`](Self::fetch) and
     /// [`push`](Self::push): both open their own TLS connection.
-    fn install_certificate_check<'a>(&'a self, callbacks: &mut RemoteCallbacks<'a>) {
+    fn install_certificate_check<'a>(&'a self, callbacks: &mut git2::RemoteCallbacks<'a>) {
         let Some(verifier) = &self.certificate_verifier else {
             return;
         };
@@ -471,139 +275,6 @@ impl Vault {
                 )))
             }
         });
-    }
-
-    fn fetch(&self, credentials: &dyn CredentialProvider) -> anyhow::Result<()> {
-        let mut remote = self.repo.find_remote(REMOTE_NAME)?;
-        let url = remote.url().unwrap_or_default().to_string();
-        let mut callbacks = RemoteCallbacks::new();
-        callbacks.credentials(move |_url, _username, _allowed| {
-            credentials
-                .credentials(&url)
-                .map_err(|e| git2::Error::from_str(&e.to_string()))
-        });
-        self.install_certificate_check(&mut callbacks);
-        let mut opts = FetchOptions::new();
-        opts.remote_callbacks(callbacks);
-        remote.fetch(
-            &[format!(
-                "+refs/heads/{BRANCH}:refs/remotes/{REMOTE_NAME}/{BRANCH}"
-            )],
-            Some(&mut opts),
-            None,
-        )?;
-        Ok(())
-    }
-
-    /// Brings the local branch up to date with what was just fetched:
-    /// adopts the remote's history if there was none locally, fast-forwards
-    /// if the remote is a strict descendant, does nothing if local is
-    /// already ahead (the next push will carry it), and otherwise performs
-    /// a real three-way merge (treating unrelated histories with no merge base
-    /// as having an empty base tree).
-    fn reconcile_with_remote(&self) -> anyhow::Result<()> {
-        let Ok(remote_ref) = self
-            .repo
-            .find_reference(&format!("refs/remotes/{REMOTE_NAME}/{BRANCH}"))
-        else {
-            return Ok(()); // remote has no history yet
-        };
-        let Some(remote_oid) = remote_ref.target() else {
-            return Ok(());
-        };
-
-        match self.head_commit() {
-            None => self.set_branch_tip(remote_oid, "adopt remote history")?,
-            Some(local) if local.id() == remote_oid => {}
-            Some(local) => {
-                let base_oid = match self.repo.merge_base(local.id(), remote_oid) {
-                    Ok(oid) => Some(oid),
-                    Err(e) if e.class() == git2::ErrorClass::Merge => None,
-                    Err(e) => return Err(e.into()),
-                };
-                if base_oid == Some(local.id()) {
-                    self.set_branch_tip(remote_oid, "fast-forward")?;
-                } else if base_oid == Some(remote_oid) {
-                    // Local is already ahead; nothing to reconcile.
-                } else {
-                    self.merge_histories(base_oid, local.id(), remote_oid)?;
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Force-sets `refs/heads/{BRANCH}` to `oid`. Used for both the
-    /// "adopt remote history" and "fast-forward" cases in
-    /// [`reconcile_with_remote`], which both do exactly this with only the
-    /// log message differing.
-    fn set_branch_tip(&self, oid: Oid, reason: &str) -> anyhow::Result<()> {
-        self.repo
-            .reference(&format!("refs/heads/{BRANCH}"), oid, true, reason)?;
-        Ok(())
-    }
-
-    /// Merges `local_oid` and `remote_oid` into a new merge commit.
-    /// If `base_oid` is `None` (unrelated histories), an empty base tree is used.
-    fn merge_histories(
-        &self,
-        base_oid: Option<Oid>,
-        local_oid: Oid,
-        remote_oid: Oid,
-    ) -> anyhow::Result<()> {
-        let base_tree = match base_oid {
-            Some(oid) => Some(self.repo.find_commit(oid)?.tree()?),
-            None => None,
-        };
-        let local_commit = self.repo.find_commit(local_oid)?;
-        let remote_commit = self.repo.find_commit(remote_oid)?;
-        let local_tree = local_commit.tree()?;
-        let remote_tree = remote_commit.tree()?;
-
-        let mut trees: Vec<&Tree<'_>> = vec![&local_tree, &remote_tree];
-        if let Some(ref bt) = base_tree {
-            trees.push(bt);
-        }
-        let paths = union_of_paths(&trees);
-
-        let mut index = self.repo.index()?;
-        index.clear()?;
-        for path in paths {
-            let base_blob = base_tree
-                .as_ref()
-                .and_then(|t| blob_at(&self.repo, t, &path));
-            let local_blob = blob_at(&self.repo, &local_tree, &path);
-            let remote_blob = blob_at(&self.repo, &remote_tree, &path);
-
-            let merged = match (base_blob, local_blob, remote_blob) {
-                // Deleted on both sides, or never existed on either --
-                // nothing to write.
-                (_, None, None) => None,
-                // Added on exactly one side: no disagreement.
-                (None, Some(l), None) => Some(l),
-                (None, None, Some(r)) => Some(r),
-                // Unchanged on one side: take whichever side is not base.
-                (b, Some(l), Some(r)) if b.as_deref() == Some(l.as_slice()) => Some(r),
-                (b, Some(l), Some(r)) if b.as_deref() == Some(r.as_slice()) => Some(l),
-                // Deleted on one side, present (possibly changed) on the
-                // other: keep the edit. See the module doc's "what isn't
-                // decided yet" -- this default hasn't been discussed.
-                (_, None, Some(r)) => Some(r),
-                (_, Some(l), None) => Some(l),
-                // Present, and different, on both sides: a real 3-way
-                // merge for .tmt content; anything else keeps `local`
-                // (also undecided -- see the module doc).
-                (b, Some(l), Some(r)) => Some(merge_bytes(&path, b, l, r)),
-            };
-
-            if let Some(bytes) = merged {
-                stage_bytes(&mut index, &path, &bytes, (0, 0))?;
-            }
-        }
-
-        let tree_oid = index.write_tree_to(&self.repo)?;
-        let tree = self.repo.find_tree(tree_oid)?;
-        self.commit_tree("merge", &tree, &[&local_commit, &remote_commit])
     }
 
     /// Creates a commit on `refs/heads/{BRANCH}` pointing at `tree`, with the
@@ -627,387 +298,12 @@ impl Vault {
         )?;
         Ok(())
     }
-
-    /// Pushes the local branch. Returns `Ok(true)` if it was accepted,
-    /// `Ok(false)` if the remote rejected it (moved since our last fetch)
-    /// so the caller can fetch, reconcile and retry.
-    fn push(&self, credentials: &dyn CredentialProvider) -> anyhow::Result<bool> {
-        let mut remote = self.repo.find_remote(REMOTE_NAME)?;
-        let url = remote.url().unwrap_or_default().to_string();
-        let rejected: Rc<RefCell<bool>> = Rc::new(RefCell::new(false));
-        let rejected_in_callback = Rc::clone(&rejected);
-
-        let mut callbacks = RemoteCallbacks::new();
-        callbacks.credentials(move |_url, _username, _allowed| {
-            credentials
-                .credentials(&url)
-                .map_err(|e| git2::Error::from_str(&e.to_string()))
-        });
-        callbacks.push_update_reference(move |_refname, status| {
-            if status.is_some() {
-                *rejected_in_callback.borrow_mut() = true;
-            }
-            Ok(())
-        });
-        self.install_certificate_check(&mut callbacks);
-
-        let mut opts = PushOptions::new();
-        opts.remote_callbacks(callbacks);
-        remote.push(
-            &[format!("refs/heads/{BRANCH}:refs/heads/{BRANCH}")],
-            Some(&mut opts),
-        )?;
-        Ok(!*rejected.borrow())
-    }
-
-    /// Checks out changes between `old_tree_oid` and HEAD into the working tree.
-    ///
-    /// Computes a tree-to-tree diff and applies only added, modified, and deleted files,
-    /// leaving unmodified files and their timestamps untouched on disk. If `old_tree_oid`
-    /// is None, writes all files in HEAD (initial checkout).
-    fn checkout_differential(&self, old_tree_oid: Option<Oid>) -> anyhow::Result<CheckoutReport> {
-        let Some(commit) = self.head_commit() else {
-            return Ok(CheckoutReport::default());
-        };
-        let new_tree = commit.tree()?;
-
-        if Some(new_tree.id()) == old_tree_oid {
-            return Ok(CheckoutReport::default());
-        }
-
-        let old_tree = match old_tree_oid {
-            Some(oid) => self.repo.find_tree(oid).ok(),
-            None => None,
-        };
-
-        let diff = self
-            .repo
-            .diff_tree_to_tree(old_tree.as_ref(), Some(&new_tree), None)?;
-
-        let mut updated = Vec::new();
-        let mut deleted = Vec::new();
-
-        for delta in diff.deltas() {
-            match delta.status() {
-                Delta::Deleted => {
-                    if let Some(old_file) = delta.old_file().path() {
-                        let path = self.working_tree.join(old_file);
-                        if path.exists() {
-                            let _ = std::fs::remove_file(&path);
-                            remove_empty_parent_dirs(&self.working_tree, &path);
-                        }
-                        deleted.push(old_file.to_owned());
-                    }
-                }
-                Delta::Added | Delta::Modified | Delta::Copied | Delta::Typechange => {
-                    if let Some(new_file) = delta.new_file().path() {
-                        if let Ok(blob) = self.repo.find_blob(delta.new_file().id()) {
-                            let path = self.working_tree.join(new_file);
-                            if let Some(parent) = path.parent() {
-                                let _ = std::fs::create_dir_all(parent);
-                            }
-                            std::fs::write(&path, blob.content())?;
-                            updated.push(new_file.to_owned());
-                        }
-                    }
-                }
-                Delta::Renamed => {
-                    if let Some(old_file) = delta.old_file().path() {
-                        let path = self.working_tree.join(old_file);
-                        if path.exists() {
-                            let _ = std::fs::remove_file(&path);
-                            remove_empty_parent_dirs(&self.working_tree, &path);
-                        }
-                        deleted.push(old_file.to_owned());
-                    }
-                    if let Some(new_file) = delta.new_file().path() {
-                        if let Ok(blob) = self.repo.find_blob(delta.new_file().id()) {
-                            let path = self.working_tree.join(new_file);
-                            if let Some(parent) = path.parent() {
-                                let _ = std::fs::create_dir_all(parent);
-                            }
-                            std::fs::write(&path, blob.content())?;
-                            updated.push(new_file.to_owned());
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        if let Ok(mut index) = self.repo.index() {
-            let _ = index.read_tree(&new_tree);
-            let _ = index.write();
-        }
-
-        Ok(CheckoutReport { updated, deleted })
-    }
-
-    /// Which `.tmt` notes in the working tree still contain an unresolved
-    /// `@mobile.conflict`, after a sync's checkout.
-    fn conflicted_notes(&self) -> anyhow::Result<Vec<PathBuf>> {
-        let mut found = Vec::new();
-        find_tmt_files(&self.working_tree, &self.working_tree, &mut found)?;
-        Ok(found
-            .into_iter()
-            .filter(|rel| {
-                std::fs::read_to_string(self.working_tree.join(rel))
-                    .ok()
-                    .and_then(|src| tomet_parser::parse_document(&src).ok())
-                    .is_some_and(|doc| immermemo_merge::has_conflicts(&doc))
-            })
-            .collect())
-    }
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-struct CheckoutReport {
-    updated: Vec<PathBuf>,
-    deleted: Vec<PathBuf>,
-}
-
-/// Merges one file's three versions. `.tmt` files go through
-/// `immermemo_merge`; anything else keeps `local` (no policy decided yet,
-/// see the module doc).
-fn merge_bytes(path: &str, base: Option<Vec<u8>>, local: Vec<u8>, remote: Vec<u8>) -> Vec<u8> {
-    if !path.ends_with(".tmt") {
-        return local;
-    }
-
-    let parse = |bytes: &[u8]| -> tomet_ast::Document {
-        std::str::from_utf8(bytes)
-            .ok()
-            .and_then(|s| tomet_parser::parse_document(s).ok())
-            .unwrap_or_default()
-    };
-    let base_doc = base.as_deref().map(parse).unwrap_or_default();
-    let local_doc = parse(&local);
-    let remote_doc = parse(&remote);
-    let result = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc);
-    tomet_printer::document_to_tm(&result.document).into_bytes()
-}
-
-/// Walks every non-ignored file under `dir` (relative to `root`), calling
-/// `on_file(abs_path, posix_rel)` for each. Skips `.git` entries and
-/// anything the repository's `.gitignore` rules would ignore. Used by
-/// [`stage_dir`] to avoid repeating the `read_dir` + gitignore-filter
-/// skeleton; `remove_unwanted` and `find_tmt_files` keep their own loops
-/// because they need to handle directory-level operations or lack a
-/// `Repository` reference.
-fn walk_working_tree<F>(
-    repo: &Repository,
-    root: &Path,
-    dir: &Path,
-    on_file: &mut F,
-) -> anyhow::Result<()>
-where
-    F: FnMut(&Path, &str) -> anyhow::Result<()>,
-{
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if entry.file_name().to_string_lossy() == ".git" {
-            continue;
-        }
-        let rel_path = path.strip_prefix(root)?;
-        if repo.status_should_ignore(rel_path)? {
-            continue;
-        }
-        if path.is_dir() {
-            walk_working_tree(repo, root, &path, on_file)?;
-        } else {
-            let rel = relative_posix_path(root, &path)?;
-            on_file(&path, &rel)?;
-        }
-    }
-    Ok(())
-}
-
-fn stage_dir(
-    repo: &Repository,
-    index: &mut git2::Index,
-    root: &Path,
-    dir: &Path,
-) -> anyhow::Result<()> {
-    let mut seen_paths = BTreeSet::new();
-
-    walk_working_tree(repo, root, dir, &mut |path, rel| {
-        seen_paths.insert(rel.to_string());
-
-        let meta = match std::fs::symlink_metadata(path) {
-            Ok(m) => m,
-            Err(_) => return Ok(()),
-        };
-        let file_size = meta.len() as u32;
-        let mtime = meta
-            .modified()
-            .map(system_time_to_index_time)
-            .unwrap_or((0, 0));
-
-        // Check if existing index entry matches mtime and size
-        if let Some(entry) = index.get_path(Path::new(rel), 0) {
-            if entry.file_size == file_size
-                && entry.mtime.seconds() == mtime.0
-                && entry.mtime.nanoseconds() == mtime.1
-                && entry.id != Oid::zero()
-            {
-                // Unchanged: stat cache matches, no need to read file contents or re-hash
-                return Ok(());
-            }
-        }
-
-        let data = std::fs::read(path)?;
-        stage_bytes(index, rel, &data, mtime)
-    })?;
-
-    // Remove any entries from index that no longer exist in working tree
-    let mut paths_to_remove = Vec::new();
-    for i in 0..index.len() {
-        if let Some(entry) = index.get(i) {
-            if let Ok(path_str) = std::str::from_utf8(&entry.path) {
-                if !seen_paths.contains(path_str) {
-                    paths_to_remove.push(PathBuf::from(path_str));
-                }
-            }
-        }
-    }
-    for p in paths_to_remove {
-        let _ = index.remove_path(&p);
-    }
-
-    Ok(())
-}
-
-fn stage_bytes(
-    index: &mut git2::Index,
-    path: &str,
-    data: &[u8],
-    mtime: (i32, u32),
-) -> anyhow::Result<()> {
-    let entry = IndexEntry {
-        ctime: IndexTime::new(mtime.0, mtime.1),
-        mtime: IndexTime::new(mtime.0, mtime.1),
-        dev: 0,
-        ino: 0,
-        mode: 0o100644,
-        uid: 0,
-        gid: 0,
-        file_size: data.len() as u32,
-        id: Oid::zero(),
-        flags: 0,
-        flags_extended: 0,
-        path: path.as_bytes().to_vec(),
-    };
-    index.add_frombuffer(&entry, data)?;
-    Ok(())
-}
-
-fn system_time_to_index_time(t: std::time::SystemTime) -> (i32, u32) {
-    match t.duration_since(std::time::UNIX_EPOCH) {
-        Ok(d) => (d.as_secs() as i32, d.subsec_nanos()),
-        Err(e) => (
-            -(e.duration().as_secs() as i32),
-            e.duration().subsec_nanos(),
-        ),
-    }
-}
-
-fn remove_empty_parent_dirs(root: &Path, file_path: &Path) {
-    let mut cur = file_path.parent();
-    while let Some(parent) = cur {
-        if parent == root || !parent.starts_with(root) {
-            break;
-        }
-        // std::fs::remove_dir succeeds only when the directory is empty.
-        if std::fs::remove_dir(parent).is_err() {
-            break;
-        }
-        cur = parent.parent();
-    }
-}
-
-fn prune_loose_objects(objects_dir: &Path) -> anyhow::Result<usize> {
-    let mut pruned = 0;
-    if !objects_dir.exists() {
-        return Ok(0);
-    }
-    for entry in std::fs::read_dir(objects_dir)? {
-        let entry = entry?;
-        let name = entry.file_name();
-        let name_str = name.to_string_lossy();
-        if name_str.len() == 2
-            && name_str.chars().all(|c| c.is_ascii_hexdigit())
-            && entry.path().is_dir()
-        {
-            let shard_dir = entry.path();
-            if let Ok(shard_entries) = std::fs::read_dir(&shard_dir) {
-                for file_entry in shard_entries.flatten() {
-                    let file_path = file_entry.path();
-                    if file_path.is_file() {
-                        if std::fs::remove_file(&file_path).is_ok() {
-                            pruned += 1;
-                        }
-                    }
-                }
-            }
-            let _ = std::fs::remove_dir(&shard_dir);
-        }
-    }
-    Ok(pruned)
-}
-
-fn relative_posix_path(root: &Path, path: &Path) -> anyhow::Result<String> {
-    Ok(path
-        .strip_prefix(root)?
-        .components()
-        .map(|c| c.as_os_str().to_string_lossy().into_owned())
-        .collect::<Vec<_>>()
-        .join("/"))
-}
-
-fn find_tmt_files(root: &Path, dir: &Path, found: &mut Vec<PathBuf>) -> anyhow::Result<()> {
-    // Plain recursive scan without gitignore filtering: this function is
-    // called after checkout, so the vault only contains user files. No
-    // Repository reference is available here, and the vault layout has no
-    // nested .git dirs that would need to be skipped beyond the top-level
-    // check below.
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if entry.file_name().to_string_lossy() == ".git" {
-            continue;
-        }
-        if path.is_dir() {
-            find_tmt_files(root, &path, found)?;
-        } else if path.extension().is_some_and(|e| e == "tmt") {
-            found.push(path.strip_prefix(root)?.to_owned());
-        }
-    }
-    Ok(())
-}
-
-fn union_of_paths(trees: &[&Tree<'_>]) -> BTreeSet<String> {
-    let mut paths = BTreeSet::new();
-    for tree in trees {
-        let _ = tree.walk(TreeWalkMode::PreOrder, |root, entry| {
-            if entry.kind() == Some(ObjectType::Blob) {
-                paths.insert(format!("{root}{}", entry.name().unwrap_or_default()));
-            }
-            TreeWalkResult::Ok
-        });
-    }
-    paths
-}
-
-fn blob_at(repo: &Repository, tree: &Tree<'_>, path: &str) -> Option<Vec<u8>> {
-    let entry = tree.get_path(Path::new(path)).ok()?;
-    let blob = repo.find_blob(entry.id()).ok()?;
-    Some(blob.content().to_vec())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gc::{AUTO_GC_SAMPLE_SHARD, AUTO_GC_SHARD_THRESHOLD};
     use tempfile::TempDir;
 
     /// Local transport (a plain filesystem path) never invokes the
