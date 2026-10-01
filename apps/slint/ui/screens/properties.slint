@@ -1,10 +1,11 @@
-import { Palette, Button, ScrollView } from "std-widgets.slint";
+import { Palette, Button } from "std-widgets.slint";
 import {
     Metrics,
     Colors,
     Shapes,
     TopBar,
     ActionRow,
+    AppScrollView,
 } from "../components.slint";
 
 export component PropertiesScreen inherits Rectangle {
@@ -37,7 +38,7 @@ export component PropertiesScreen inherits Rectangle {
             Text {
                 horizontal-stretch: 1;
                 text: "プロパティ";
-                font-size: 22px;
+                font-size: Metrics.font-title;
                 font-weight: 700;
                 vertical-alignment: center;
                 color: Palette.foreground;
@@ -53,55 +54,55 @@ export component PropertiesScreen inherits Rectangle {
             vertical-stretch: 1;
             VerticalLayout {
                 alignment: center;
-                spacing: 12px;
+                spacing: Metrics.spacing-md;
                 Text {
                     text: "現在開いているノートはありません。";
-                    font-size: 15px;
+                    font-size: Metrics.font-body;
                     color: Colors.muted;
                     horizontal-alignment: center;
                 }
             }
         }
 
-        if root.has-note: ScrollView {
+        if root.has-note: AppScrollView {
             vertical-stretch: 1;
 
             VerticalLayout {
                 padding-left: Metrics.gutter;
                 padding-right: Metrics.gutter;
-                padding-top: 16px;
-                padding-bottom: root.inset-bottom + 24px;
-                spacing: 20px;
+                padding-top: Metrics.spacing-lg;
+                padding-bottom: root.inset-bottom + Metrics.spacing-2xl;
+                spacing: Metrics.spacing-xl;
 
                 // ----------------------------------------------------
                 // Section: Document Info
                 // ----------------------------------------------------
                 Rectangle {
-                    border-radius: 14px;
+                    border-radius: Metrics.radius-md;
                     background: Palette.alternate-background;
 
                     VerticalLayout {
-                        padding: 16px;
-                        spacing: 12px;
+                        padding: Metrics.spacing-lg;
+                        spacing: Metrics.spacing-md;
 
                         VerticalLayout {
-                            spacing: 4px;
+                            spacing: Metrics.spacing-xs;
                             Text {
                                 text: "ノート情報";
-                                font-size: 11px;
+                                font-size: Metrics.font-caption;
                                 font-weight: 700;
                                 color: Colors.muted;
                                 letter-spacing: 0.5px;
                             }
                             Text {
                                 text: root.note-title;
-                                font-size: 18px;
+                                font-size: Metrics.font-subtitle;
                                 font-weight: 700;
                                 color: Palette.foreground;
                             }
                             if root.note-path != "": Text {
                                 text: root.note-path;
-                                font-size: 12px;
+                                font-size: Metrics.font-sm;
                                 color: Colors.muted;
                                 wrap: word-wrap;
                             }
@@ -114,19 +115,19 @@ export component PropertiesScreen inherits Rectangle {
 
                         // Statistics
                         HorizontalLayout {
-                            spacing: 16px;
+                            spacing: Metrics.spacing-lg;
 
                             VerticalLayout {
                                 horizontal-stretch: 1;
-                                spacing: 2px;
+                                spacing: 2px * Metrics.ui-scale;
                                 Text {
                                     text: "文字数";
-                                    font-size: 12px;
+                                    font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
                                 Text {
                                     text: root.char-count;
-                                    font-size: 17px;
+                                    font-size: Metrics.font-body;
                                     font-weight: 600;
                                     color: Palette.foreground;
                                 }
@@ -134,15 +135,15 @@ export component PropertiesScreen inherits Rectangle {
 
                             VerticalLayout {
                                 horizontal-stretch: 1;
-                                spacing: 2px;
+                                spacing: 2px * Metrics.ui-scale;
                                 Text {
                                     text: "単語数";
-                                    font-size: 12px;
+                                    font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
                                 Text {
                                     text: root.word-count;
-                                    font-size: 17px;
+                                    font-size: Metrics.font-body;
                                     font-weight: 600;
                                     color: Palette.foreground;
                                 }
@@ -150,15 +151,15 @@ export component PropertiesScreen inherits Rectangle {
 
                             VerticalLayout {
                                 horizontal-stretch: 1;
-                                spacing: 2px;
+                                spacing: 2px * Metrics.ui-scale;
                                 Text {
                                     text: "行数";
-                                    font-size: 12px;
+                                    font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
                                 Text {
                                     text: root.line-count;
-                                    font-size: 17px;
+                                    font-size: Metrics.font-body;
                                     font-weight: 600;
                                     color: Palette.foreground;
                                 }
@@ -171,22 +172,22 @@ export component PropertiesScreen inherits Rectangle {
                 // Section: Conflict Status
                 // ----------------------------------------------------
                 if root.has-conflict: Rectangle {
-                    border-radius: 14px;
+                    border-radius: Metrics.radius-md;
                     background: Colors.warning.with-alpha(0.12);
                     border-width: 1.5px;
                     border-color: Colors.warning.with-alpha(0.4);
 
                     VerticalLayout {
-                        padding: 16px;
-                        spacing: 12px;
+                        padding: Metrics.spacing-lg;
+                        spacing: Metrics.spacing-md;
 
                         HorizontalLayout {
                             alignment: center;
-                            spacing: 8px;
+                            spacing: Metrics.spacing-sm;
 
                             Text {
                                 text: "⚠️";
-                                font-size: 16px;
+                                font-size: Metrics.font-body;
                                 vertical-alignment: center;
                             }
 
@@ -195,7 +196,7 @@ export component PropertiesScreen inherits Rectangle {
                                 text: root.conflict-total > 0
                                     ? (root.conflict-total + " 箇所の競合があります")
                                     : "競合が発生しています";
-                                font-size: 15px;
+                                font-size: Metrics.font-body;
                                 font-weight: 700;
                                 color: Colors.warning;
                                 vertical-alignment: center;
@@ -204,26 +205,26 @@ export component PropertiesScreen inherits Rectangle {
 
                         // Conflict Preview cards if preview text is available
                         if root.conflict-mine-preview != "" || root.conflict-theirs-preview != "": VerticalLayout {
-                            spacing: 8px;
+                            spacing: Metrics.spacing-sm;
 
                             if root.conflict-mine-preview != "": Rectangle {
-                                border-radius: 8px;
+                                border-radius: Metrics.radius-sm;
                                 background: Palette.foreground.with-alpha(0.04);
                                 border-width: 1px;
                                 border-color: Palette.accent-background.with-alpha(0.35);
 
                                 VerticalLayout {
-                                    padding: 8px;
-                                    spacing: 4px;
+                                    padding: Metrics.spacing-sm;
+                                    spacing: Metrics.spacing-xs;
                                     Text {
                                         text: "📱 あなたの変更 (Local):";
-                                        font-size: 11px;
+                                        font-size: Metrics.font-caption;
                                         font-weight: 700;
                                         color: Palette.accent-background;
                                     }
                                     Text {
                                         text: root.conflict-mine-preview;
-                                        font-size: 13px;
+                                        font-size: Metrics.font-sub;
                                         color: Palette.foreground;
                                         overflow: elide;
                                     }
@@ -231,23 +232,23 @@ export component PropertiesScreen inherits Rectangle {
                             }
 
                             if root.conflict-theirs-preview != "": Rectangle {
-                                border-radius: 8px;
+                                border-radius: Metrics.radius-sm;
                                 background: Palette.foreground.with-alpha(0.04);
                                 border-width: 1px;
                                 border-color: Colors.warning.with-alpha(0.35);
 
                                 VerticalLayout {
-                                    padding: 8px;
-                                    spacing: 4px;
+                                    padding: Metrics.spacing-sm;
+                                    spacing: Metrics.spacing-xs;
                                     Text {
                                         text: "☁️ リモートの変更 (Remote):";
-                                        font-size: 11px;
+                                        font-size: Metrics.font-caption;
                                         font-weight: 700;
                                         color: Colors.warning;
                                     }
                                     Text {
                                         text: root.conflict-theirs-preview;
-                                        font-size: 13px;
+                                        font-size: Metrics.font-sub;
                                         color: Palette.foreground;
                                         overflow: elide;
                                     }
@@ -257,16 +258,16 @@ export component PropertiesScreen inherits Rectangle {
 
                         // Open Conflict Sheet Button
                         Rectangle {
-                            height: 38px;
-                            border-radius: 19px;
+                            height: Metrics.bubble-button-size;
+                            border-radius: self.height / 2;
                             background: resolve-sheet-touch.pressed ? Colors.warning.darker(15%) : Colors.warning;
 
                             HorizontalLayout {
                                 alignment: center;
-                                spacing: 6px;
+                                spacing: Metrics.spacing-xs + 2px * Metrics.ui-scale;
                                 Text {
                                     text: "🔍 解決シートを開いて確認・解決";
-                                    font-size: 13px;
+                                    font-size: Metrics.font-sub;
                                     font-weight: 700;
                                     color: #ffffff;
                                     vertical-alignment: center;
@@ -280,7 +281,7 @@ export component PropertiesScreen inherits Rectangle {
 
                         // Quick action buttons
                         HorizontalLayout {
-                            spacing: 8px;
+                            spacing: Metrics.spacing-sm;
                             Button {
                                 horizontal-stretch: 1;
                                 text: "ローカル側を採用";
@@ -299,23 +300,23 @@ export component PropertiesScreen inherits Rectangle {
                 // Section: Note Actions
                 // ----------------------------------------------------
                 VerticalLayout {
-                    spacing: 8px;
+                    spacing: Metrics.spacing-sm;
 
                     Text {
                         text: "操作";
-                        font-size: 11px;
+                        font-size: Metrics.font-caption;
                         font-weight: 700;
                         color: Colors.muted;
                         letter-spacing: 0.5px;
                     }
 
                     Rectangle {
-                        border-radius: 14px;
+                        border-radius: Metrics.radius-md;
                         background: Palette.alternate-background;
 
                         VerticalLayout {
-                            padding: 8px;
-                            spacing: 4px;
+                            padding: Metrics.spacing-sm;
+                            spacing: Metrics.spacing-xs;
 
                             ActionRow {
                                 text: "名前を変更...";

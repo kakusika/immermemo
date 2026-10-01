@@ -2,12 +2,56 @@ import { Palette } from "std-widgets.slint";
 
 // Touch targets are at least 48px: `px` here is a logical pixel, which the
 // backend scales to the phone's density, so 48px is about 48dp.
+// Scalable design tokens (Kirigami / Tailwind inspired).
+// All derivative tokens scale reactively with `ui-scale`.
 export global Metrics {
-    out property <length> touch: 48px;
-    out property <length> bar-height: 56px;
-    out property <length> row-height: 60px;
-    out property <length> fab: 56px;
-    out property <length> gutter: 16px;
+    // Base scale multiplier for runtime UI scaling (default 1.0)
+    in-out property <float> ui-scale: 1.0;
+
+    // Base grid unit (16px default)
+    out property <length> unit: 16px * root.ui-scale;
+
+    // Spacing scale
+    out property <length> spacing-xs: 4px * root.ui-scale;
+    out property <length> spacing-sm: 8px * root.ui-scale;
+    out property <length> spacing-md: 12px * root.ui-scale;
+    out property <length> spacing-lg: 16px * root.ui-scale;
+    out property <length> spacing-xl: 20px * root.ui-scale;
+    out property <length> spacing-2xl: 24px * root.ui-scale;
+    out property <length> spacing-3xl: 32px * root.ui-scale;
+
+    // Typography scale
+    out property <length> font-badge: 10px * root.ui-scale;
+    out property <length> font-caption: 11px * root.ui-scale;
+    out property <length> font-sm: 12px * root.ui-scale;
+    out property <length> font-sub: 13px * root.ui-scale;
+    out property <length> font-md: 14px * root.ui-scale;
+    out property <length> font-body: 16px * root.ui-scale;
+    out property <length> font-subtitle: 18px * root.ui-scale;
+    out property <length> font-title: 22px * root.ui-scale;
+    out property <length> font-headline: 28px * root.ui-scale;
+
+    // Touch targets & standard component sizing (Material 3 / Apple HIG standards)
+    out property <length> touch: 48px * root.ui-scale;
+    out property <length> top-bar-height: 56px * root.ui-scale;
+    out property <length> bar-height: root.top-bar-height;
+    out property <length> bottom-bar-height: 64px * root.ui-scale;
+    out property <length> row-height: 56px * root.ui-scale;
+    out property <length> fab: 56px * root.ui-scale;
+    out property <length> gutter: 16px * root.ui-scale;
+
+    // Component-specific tokens
+    out property <length> bubble-button-size: 40px * root.ui-scale;
+    out property <length> bubble-chip-height: 36px * root.ui-scale;
+    out property <length> search-bar-height: 46px * root.ui-scale;
+    out property <length> icon-sm: 16px * root.ui-scale;
+    out property <length> icon-md: 20px * root.ui-scale;
+    out property <length> icon-lg: 24px * root.ui-scale;
+    out property <length> icon-xl: 40px * root.ui-scale;
+    out property <length> radius-sm: 8px * root.ui-scale;
+    out property <length> radius-md: 14px * root.ui-scale;
+    out property <length> radius-lg: 16px * root.ui-scale;
+    out property <length> radius-pill: 9999px;
 }
 
 export global Colors {
@@ -100,9 +144,9 @@ export component TopBar inherits Rectangle {
         padding-top: root.inset-top;
         HorizontalLayout {
             height: Metrics.bar-height;
-            padding-left: 12px;
-            padding-right: 12px;
-            spacing: 8px;
+            padding-left: Metrics.spacing-md;
+            padding-right: Metrics.spacing-md;
+            spacing: Metrics.spacing-sm;
             @children
         }
     }
@@ -115,16 +159,16 @@ export component BubbleButton inherits Rectangle {
     in property <color> tint: Palette.foreground;
     callback clicked();
 
-    width: 36px;
+    width: Metrics.bubble-button-size;
     height: 100%;
     min-height: Metrics.touch;
 
     bubble := Rectangle {
-        width: 36px;
-        height: 36px;
+        width: Metrics.bubble-button-size;
+        height: Metrics.bubble-button-size;
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        border-radius: 18px;
+        border-radius: self.width / 2;
         background: touch.pressed && root.enabled
             ? Palette.foreground.with-alpha(0.16)
             : Palette.foreground.with-alpha(0.08);
@@ -133,8 +177,8 @@ export component BubbleButton inherits Rectangle {
         Icon {
             shape: root.shape;
             tint: root.enabled ? root.tint : Colors.muted.with-alpha(0.35);
-            width: 18px;
-            height: 18px;
+            width: Metrics.icon-md;
+            height: Metrics.icon-md;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
             animate tint { duration: 120ms; easing: ease-out; }
@@ -158,31 +202,31 @@ export component BubbleChip inherits Rectangle {
     preferred-height: Metrics.touch;
 
     chip := Rectangle {
-        height: 34px;
+        height: Metrics.bubble-chip-height;
         y: (parent.height - self.height) / 2;
-        border-radius: 17px;
+        border-radius: self.height / 2;
         background: touch.pressed && root.enabled
             ? Palette.foreground.with-alpha(0.16)
             : Palette.foreground.with-alpha(0.08);
         animate background { duration: 120ms; easing: ease-out; }
 
         HorizontalLayout {
-            padding-left: 12px;
-            padding-right: 12px;
-            spacing: 6px;
+            padding-left: Metrics.spacing-md;
+            padding-right: Metrics.spacing-md;
+            spacing: Metrics.spacing-xs + 2px * Metrics.ui-scale;
             alignment: center;
 
             if root.icon != "": Icon {
                 shape: root.icon;
                 tint: root.enabled ? root.tint : Colors.muted.with-alpha(0.35);
-                width: 15px;
-                height: 15px;
+                width: Metrics.icon-sm;
+                height: Metrics.icon-sm;
                 y: (parent.height - self.height) / 2;
             }
 
             Text {
                 text: root.text;
-                font-size: 14px;
+                font-size: Metrics.font-md;
                 font-weight: 600;
                 color: root.enabled ? root.tint : Colors.muted.with-alpha(0.35);
                 vertical-alignment: center;
@@ -203,16 +247,16 @@ export component UndoRedoBubble inherits Rectangle {
     callback undo();
     callback redo();
 
-    width: 76px;
+    width: Metrics.bubble-button-size * 2 + 2px * Metrics.ui-scale;
     height: 100%;
     min-height: Metrics.touch;
 
     capsule := Rectangle {
-        width: 76px;
-        height: 36px;
+        width: Metrics.bubble-button-size * 2 + 2px * Metrics.ui-scale;
+        height: Metrics.bubble-button-size;
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        border-radius: 18px;
+        border-radius: self.height / 2;
         background: Palette.foreground.with-alpha(0.08);
 
         HorizontalLayout {
@@ -220,17 +264,17 @@ export component UndoRedoBubble inherits Rectangle {
             spacing: 0px;
 
             undo-box := Rectangle {
-                width: 37px;
-                height: 36px;
-                border-top-left-radius: 18px;
-                border-bottom-left-radius: 18px;
+                width: (parent.width - 1px) / 2;
+                height: Metrics.bubble-button-size;
+                border-top-left-radius: self.height / 2;
+                border-bottom-left-radius: self.height / 2;
                 background: undo-touch.pressed && root.can-undo ? Palette.foreground.with-alpha(0.14) : transparent;
 
                 Icon {
                     shape: Shapes.undo;
                     tint: root.can-undo ? Palette.foreground : Colors.muted.with-alpha(0.3);
-                    width: 18px;
-                    height: 18px;
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;
                 }
@@ -244,23 +288,23 @@ export component UndoRedoBubble inherits Rectangle {
             // Divider line between undo and redo
             Rectangle {
                 width: 1px;
-                height: 18px;
-                y: 9px;
+                height: Metrics.icon-md;
+                y: (parent.height - self.height) / 2;
                 background: Colors.separator;
             }
 
             redo-box := Rectangle {
-                width: 37px;
-                height: 36px;
-                border-top-right-radius: 18px;
-                border-bottom-right-radius: 18px;
+                width: (parent.width - 1px) / 2;
+                height: Metrics.bubble-button-size;
+                border-top-right-radius: self.height / 2;
+                border-bottom-right-radius: self.height / 2;
                 background: redo-touch.pressed && root.can-redo ? Palette.foreground.with-alpha(0.14) : transparent;
 
                 Icon {
                     shape: Shapes.redo;
                     tint: root.can-redo ? Palette.foreground : Colors.muted.with-alpha(0.3);
-                    width: 18px;
-                    height: 18px;
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;
                 }
@@ -282,7 +326,7 @@ export component ActionRow inherits Rectangle {
     callback clicked();
 
     height: Metrics.touch;
-    border-radius: 10px;
+    border-radius: Metrics.radius-sm + 2px * Metrics.ui-scale;
     background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
     animate background { duration: 150ms; easing: ease-out; }
 
@@ -290,7 +334,7 @@ export component ActionRow inherits Rectangle {
         x: Metrics.gutter;
         text: root.text;
         color: root.tint;
-        font-size: 17px;
+        font-size: Metrics.font-body + 1px * Metrics.ui-scale;
         vertical-alignment: center;
         height: 100%;
     }
@@ -345,44 +389,44 @@ component NavItem inherits Rectangle {
         width: 100%;
         height: 100%;
         alignment: center;
-        spacing: 3px;
-        padding-top: 4px;
-        padding-bottom: 4px;
+        spacing: 3px * Metrics.ui-scale;
+        padding-top: 4px * Metrics.ui-scale;
+        padding-bottom: 4px * Metrics.ui-scale;
 
         // Centered pill indicator
         HorizontalLayout {
             alignment: center;
 
             Rectangle {
-                width: 56px;
-                height: 28px;
-                border-radius: 14px;
+                width: 60px * Metrics.ui-scale;
+                height: 32px * Metrics.ui-scale;
+                border-radius: self.height / 2;
                 background: root.active ? Palette.accent-background.with-alpha(0.18) : transparent;
                 animate background { duration: 150ms; easing: ease-out; }
 
                 Icon {
                     shape: root.icon;
                     tint: root.active ? Palette.accent-background : Colors.muted;
-                    width: 20px;
-                    height: 20px;
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;
                     animate tint { duration: 120ms; easing: ease-out; }
                 }
 
                 if root.badge-count > 0: Rectangle {
-                    x: parent.width - self.width - 4px;
-                    y: 1px;
-                    width: root.badge-count > 9 ? 18px : 14px;
-                    height: 14px;
-                    border-radius: 7px;
+                    x: parent.width - self.width - 4px * Metrics.ui-scale;
+                    y: 2px * Metrics.ui-scale;
+                    width: root.badge-count > 9 ? 18px * Metrics.ui-scale : 14px * Metrics.ui-scale;
+                    height: 14px * Metrics.ui-scale;
+                    border-radius: self.height / 2;
                     background: Colors.warning;
 
                     HorizontalLayout {
                         alignment: center;
                         Text {
                             text: root.badge-count > 99 ? "99+" : root.badge-count;
-                            font-size: 9px;
+                            font-size: Metrics.font-badge;
                             font-weight: 700;
                             color: #ffffff;
                             vertical-alignment: center;
@@ -391,11 +435,11 @@ component NavItem inherits Rectangle {
                 }
 
                 if root.badge-count == 0 && root.badge-dot: Rectangle {
-                    x: parent.width - 12px;
-                    y: 3px;
-                    width: 7px;
-                    height: 7px;
-                    border-radius: 3.5px;
+                    x: parent.width - 12px * Metrics.ui-scale;
+                    y: 3px * Metrics.ui-scale;
+                    width: 7px * Metrics.ui-scale;
+                    height: 7px * Metrics.ui-scale;
+                    border-radius: self.height / 2;
                     background: Colors.warning;
                 }
             }
@@ -403,7 +447,7 @@ component NavItem inherits Rectangle {
 
         Text {
             text: root.label;
-            font-size: 11px;
+            font-size: Metrics.font-sm;
             font-weight: root.active ? 600 : 500;
             color: root.active ? Palette.accent-background : Colors.muted;
             horizontal-alignment: center;
@@ -419,7 +463,7 @@ export component BottomNavBar inherits Rectangle {
     in property <bool> current-has-conflict: false;
     callback tab-selected(int);
 
-    height: 58px + root.inset-bottom;
+    height: Metrics.bottom-bar-height + root.inset-bottom;
     background: Palette.background;
 
     // Subtle top border / separator
@@ -435,7 +479,7 @@ export component BottomNavBar inherits Rectangle {
         x: 0px;
         y: 1px;
         width: 100%;
-        height: 57px;
+        height: Metrics.bottom-bar-height - 1px;
         padding-left: 0px;
         padding-right: 0px;
         padding-bottom: 0px;
@@ -488,5 +532,44 @@ export component BottomNavBar inherits Rectangle {
                 root.tab-selected(4);
             }
         }
+    }
+}
+
+// Clean mobile scroll view with a modern floating translucent pill scroll indicator,
+// replacing the wireframe outline scrollbar in standard widgets.
+export component AppScrollView inherits Rectangle {
+    in property <bool> enabled: true;
+    out property <length> visible-width <=> flickable.width;
+    out property <length> visible-height <=> flickable.height;
+    in-out property <length> content-width <=> flickable.content-width;
+    in-out property <length> content-height <=> flickable.content-height;
+    in-out property <length> content-x <=> flickable.content-x;
+    in-out property <length> content-y <=> flickable.content-y;
+    callback scrolled <=> flickable.flicked;
+
+    clip: true;
+
+    flickable := Flickable {
+        width: 100%;
+        height: 100%;
+        interactive: root.enabled;
+
+        @children
+    }
+
+    // Modern mobile floating pill scrollbar (solid semi-transparent, no wireframe box)
+    property <bool> show-scrollbar: flickable.content-height > flickable.height + 2px;
+    property <length> track-height: flickable.height;
+    property <length> thumb-height: max(28px, flickable.height * min(1.0, flickable.height / max(1px, flickable.content-height)));
+    property <length> max-scroll: max(1px, flickable.content-height - flickable.height);
+    property <length> thumb-y: (-flickable.content-y / root.max-scroll) * (root.track-height - root.thumb-height);
+
+    if root.show-scrollbar: Rectangle {
+        x: parent.width - 5px;
+        y: min(max(2px, root.thumb-y), root.track-height - root.thumb-height - 2px);
+        width: 3px;
+        height: root.thumb-height;
+        border-radius: 1.5px;
+        background: Palette.foreground.with-alpha(0.28);
     }
 }

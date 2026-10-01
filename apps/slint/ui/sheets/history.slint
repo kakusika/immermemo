@@ -1,5 +1,5 @@
-import { Palette, ScrollView } from "std-widgets.slint";
-import { Metrics, Colors, Shapes, Icon, BubbleButton, TopBar } from "../components.slint";
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors, Shapes, Icon, BubbleButton, TopBar, AppScrollView } from "../components.slint";
 
 export component HistorySheet inherits Rectangle {
     in property <bool> open: false;
@@ -87,7 +87,7 @@ export component HistorySheet inherits Rectangle {
         }
 
         // Mobile portrait mode: Commit list view
-        if root.commits.length > 0 && !root.is-wide && !root.viewing-preview: ScrollView {
+        if root.commits.length > 0 && !root.is-wide && !root.viewing-preview: AppScrollView {
             vertical-stretch: 1;
 
             VerticalLayout {
@@ -225,7 +225,7 @@ export component HistorySheet inherits Rectangle {
                 background: Palette.alternate-background;
                 clip: true;
 
-                ScrollView {
+                AppScrollView {
                     VerticalLayout {
                         padding-left: 6px;
                         padding-right: 6px;
@@ -290,7 +290,7 @@ export component HistorySheet inherits Rectangle {
                 border-radius: 10px;
                 clip: true;
 
-                ScrollView {
+                AppScrollView {
                     VerticalLayout {
                         padding: 6px;
                         spacing: 4px;
@@ -391,7 +391,7 @@ export component HistorySheet inherits Rectangle {
                     border-color: Colors.separator;
                     clip: true;
 
-                    ScrollView {
+                    AppScrollView {
                         VerticalLayout {
                             padding: 8px;
                             Text {

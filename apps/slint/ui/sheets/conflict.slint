@@ -1,5 +1,5 @@
-import { Palette, ScrollView } from "std-widgets.slint";
-import { Metrics, Colors, Shapes, Icon, IconButton, BubbleButton } from "../components.slint";
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors, Shapes, Icon, IconButton, BubbleButton, AppScrollView } from "../components.slint";
 
 export component ConflictSheet inherits Rectangle {
     in property <bool> open: false;
@@ -85,7 +85,7 @@ export component ConflictSheet inherits Rectangle {
             }
 
             // Scrollable Content Cards
-            ScrollView {
+            AppScrollView {
                 vertical-stretch: 1;
 
                 VerticalLayout {

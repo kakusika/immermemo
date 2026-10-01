@@ -1,4 +1,4 @@
-import { Palette, Button, ScrollView } from "std-widgets.slint";
+import { Palette, Button } from "std-widgets.slint";
 import {
     Metrics,
     Colors,
@@ -7,6 +7,7 @@ import {
     BubbleButton,
     TopBar,
     ActionRow,
+    AppScrollView,
 } from "../components.slint";
 
 export component HomeScreen inherits Rectangle {
@@ -48,7 +49,7 @@ export component HomeScreen inherits Rectangle {
             Text {
                 horizontal-stretch: 1;
                 text: "ホーム";
-                font-size: 22px;
+                font-size: Metrics.font-title;
                 font-weight: 700;
                 vertical-alignment: center;
                 color: Palette.foreground;
@@ -72,37 +73,37 @@ export component HomeScreen inherits Rectangle {
             background: Colors.separator;
         }
 
-        ScrollView {
+        AppScrollView {
             vertical-stretch: 1;
 
             VerticalLayout {
                 padding-left: Metrics.gutter;
                 padding-right: Metrics.gutter;
-                padding-top: 16px;
-                padding-bottom: root.inset-bottom + 24px;
-                spacing: 20px;
+                padding-top: Metrics.spacing-lg;
+                padding-bottom: root.inset-bottom + Metrics.spacing-2xl;
+                spacing: Metrics.spacing-xl;
 
                 // ----------------------------------------------------
                 // Section: Active Vault Card
                 // ----------------------------------------------------
                 Rectangle {
-                    border-radius: 14px;
+                    border-radius: Metrics.radius-md;
                     background: Palette.alternate-background;
 
                     VerticalLayout {
-                        padding: 16px;
-                        spacing: 12px;
+                        padding: Metrics.spacing-lg;
+                        spacing: Metrics.spacing-md;
 
                         HorizontalLayout {
-                            spacing: 10px;
+                            spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
 
                             VerticalLayout {
                                 horizontal-stretch: 1;
-                                spacing: 2px;
+                                spacing: 2px * Metrics.ui-scale;
 
                                 Text {
                                     text: "現在の保管庫";
-                                    font-size: 11px;
+                                    font-size: Metrics.font-caption;
                                     font-weight: 700;
                                     color: Colors.muted;
                                     letter-spacing: 0.5px;
@@ -110,7 +111,7 @@ export component HomeScreen inherits Rectangle {
 
                                 Text {
                                     text: root.vault-name != "" ? root.vault-name : "Notes";
-                                    font-size: 20px;
+                                    font-size: Metrics.font-title;
                                     font-weight: 700;
                                     color: Palette.foreground;
                                 }
@@ -124,7 +125,7 @@ export component HomeScreen inherits Rectangle {
 
                         if root.vault-path != "": Text {
                             text: root.vault-path;
-                            font-size: 12px;
+                            font-size: Metrics.font-sm;
                             color: Colors.muted;
                             wrap: word-wrap;
                         }
@@ -135,33 +136,33 @@ export component HomeScreen inherits Rectangle {
                         }
 
                         HorizontalLayout {
-                            spacing: 16px;
+                            spacing: Metrics.spacing-lg;
 
                             VerticalLayout {
-                                spacing: 2px;
+                                spacing: 2px * Metrics.ui-scale;
                                 Text {
                                     text: "ノート数";
-                                    font-size: 12px;
+                                    font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                 }
                                 Text {
                                     text: root.note-count;
-                                    font-size: 16px;
+                                    font-size: Metrics.font-body;
                                     font-weight: 600;
                                     color: Palette.foreground;
                                 }
                             }
 
                             if root.conflict-count > 0: VerticalLayout {
-                                spacing: 2px;
+                                spacing: 2px * Metrics.ui-scale;
                                 Text {
                                     text: "競合";
-                                    font-size: 12px;
+                                    font-size: Metrics.font-sm;
                                     color: Colors.warning;
                                 }
                                 Text {
                                     text: root.conflict-count;
-                                    font-size: 16px;
+                                    font-size: Metrics.font-body;
                                     font-weight: 600;
                                     color: Colors.warning;
                                 }
@@ -171,7 +172,7 @@ export component HomeScreen inherits Rectangle {
 
                             if root.status != "": Text {
                                 text: root.status;
-                                font-size: 12px;
+                                font-size: Metrics.font-sm;
                                 color: Colors.muted;
                                 vertical-alignment: center;
                             }
@@ -183,32 +184,32 @@ export component HomeScreen inherits Rectangle {
                 // Section: Sync Status
                 // ----------------------------------------------------
                 VerticalLayout {
-                    spacing: 8px;
+                    spacing: Metrics.spacing-sm;
 
                     HorizontalLayout {
-                        spacing: 8px;
+                        spacing: Metrics.spacing-sm;
 
                         Text {
                             horizontal-stretch: 1;
                             text: "同期ステータス";
-                            font-size: 11px;
+                            font-size: Metrics.font-caption;
                             font-weight: 700;
                             color: Colors.muted;
                             letter-spacing: 0.5px;
                         }
 
                         if root.syncing: HorizontalLayout {
-                            spacing: 4px;
+                            spacing: Metrics.spacing-xs;
                             alignment: center;
                             Icon {
-                                width: 14px;
-                                height: 14px;
+                                width: Metrics.icon-sm;
+                                height: Metrics.icon-sm;
                                 shape: Shapes.sync;
                                 tint: Palette.accent-background;
                             }
                             Text {
                                 text: "同期中...";
-                                font-size: 11px;
+                                font-size: Metrics.font-caption;
                                 font-weight: 600;
                                 color: Palette.accent-background;
                             }
@@ -217,23 +218,23 @@ export component HomeScreen inherits Rectangle {
 
                     // Card: Error State (When last-sync-error != "")
                     if root.last-sync-error != "": Rectangle {
-                        border-radius: 14px;
+                        border-radius: Metrics.radius-md;
                         background: Colors.danger.with-alpha(0.08);
                         border-width: 1.5px;
                         border-color: Colors.danger.with-alpha(0.4);
 
                         VerticalLayout {
-                            padding: 14px;
-                            spacing: 12px;
+                            padding: Metrics.spacing-md + 2px * Metrics.ui-scale;
+                            spacing: Metrics.spacing-md;
 
                             HorizontalLayout {
-                                spacing: 8px;
+                                spacing: Metrics.spacing-sm;
 
                                 VerticalLayout {
                                     alignment: center;
                                     Icon {
-                                        width: 18px;
-                                        height: 18px;
+                                        width: Metrics.icon-md;
+                                        height: Metrics.icon-md;
                                         shape: Shapes.close;
                                         tint: Colors.danger;
                                     }
@@ -242,16 +243,16 @@ export component HomeScreen inherits Rectangle {
                                 Text {
                                     horizontal-stretch: 1;
                                     text: "同期に失敗しました";
-                                    font-size: 15px;
+                                    font-size: Metrics.font-body;
                                     font-weight: 700;
                                     color: Colors.danger;
                                     vertical-alignment: center;
                                 }
 
                                 Rectangle {
-                                    width: 28px;
-                                    height: 28px;
-                                    border-radius: 14px;
+                                    width: Metrics.icon-lg + 4px * Metrics.ui-scale;
+                                    height: self.width;
+                                    border-radius: self.width / 2;
                                     background: Palette.foreground.with-alpha(0.06);
 
                                     TouchArea {
@@ -259,8 +260,8 @@ export component HomeScreen inherits Rectangle {
                                     }
 
                                     Icon {
-                                        width: 14px;
-                                        height: 14px;
+                                        width: Metrics.icon-sm;
+                                        height: Metrics.icon-sm;
                                         shape: Shapes.close;
                                         tint: Colors.muted;
                                         x: (parent.width - self.width) / 2;
@@ -271,32 +272,32 @@ export component HomeScreen inherits Rectangle {
 
                             // Error text display (selectable, word-wrapped)
                             Rectangle {
-                                border-radius: 8px;
+                                border-radius: Metrics.radius-sm;
                                 background: Palette.background;
                                 border-width: 1px;
                                 border-color: Colors.separator;
 
                                 VerticalLayout {
-                                    padding: 10px;
+                                    padding: Metrics.spacing-sm + 2px * Metrics.ui-scale;
 
                                     TextInput {
                                         text: root.last-sync-error;
                                         read-only: true;
                                         wrap: word-wrap;
                                         color: Palette.foreground;
-                                        font-size: 12px;
+                                        font-size: Metrics.font-sm;
                                     }
                                 }
                             }
 
                             // Action buttons: Copy Error and Retry Sync
                             HorizontalLayout {
-                                spacing: 10px;
+                                spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
 
                                 Rectangle {
                                     horizontal-stretch: 1;
-                                    height: 38px;
-                                    border-radius: 8px;
+                                    height: Metrics.bubble-button-size;
+                                    border-radius: Metrics.radius-sm;
                                     background: root.sync-error-copied
                                         ? #2e7d32.with-alpha(0.18)
                                         : Palette.alternate-background;
@@ -311,13 +312,13 @@ export component HomeScreen inherits Rectangle {
 
                                     HorizontalLayout {
                                         alignment: center;
-                                        spacing: 6px;
+                                        spacing: Metrics.spacing-xs + 2px * Metrics.ui-scale;
 
                                         VerticalLayout {
                                             alignment: center;
                                             Icon {
-                                                width: 16px;
-                                                height: 16px;
+                                                width: Metrics.icon-sm;
+                                                height: Metrics.icon-sm;
                                                 shape: root.sync-error-copied ? Shapes.check : Shapes.copy;
                                                 tint: root.sync-error-copied ? #2e7d32 : Palette.foreground;
                                             }
@@ -325,7 +326,7 @@ export component HomeScreen inherits Rectangle {
 
                                         Text {
                                             text: root.sync-error-copied ? "コピーしました" : "エラーをコピー";
-                                            font-size: 13px;
+                                            font-size: Metrics.font-sub;
                                             font-weight: 600;
                                             color: root.sync-error-copied ? #2e7d32 : Palette.foreground;
                                             vertical-alignment: center;
@@ -334,9 +335,9 @@ export component HomeScreen inherits Rectangle {
                                 }
 
                                 Rectangle {
-                                    height: 38px;
-                                    width: 100px;
-                                    border-radius: 8px;
+                                    height: Metrics.bubble-button-size;
+                                    width: 100px * Metrics.ui-scale;
+                                    border-radius: Metrics.radius-sm;
                                     background: Palette.accent-background;
                                     opacity: root.syncing ? 0.6 : 1.0;
 
@@ -347,13 +348,13 @@ export component HomeScreen inherits Rectangle {
 
                                     HorizontalLayout {
                                         alignment: center;
-                                        spacing: 6px;
+                                        spacing: Metrics.spacing-xs + 2px * Metrics.ui-scale;
 
                                         VerticalLayout {
                                             alignment: center;
                                             Icon {
-                                                width: 15px;
-                                                height: 15px;
+                                                width: Metrics.icon-sm;
+                                                height: Metrics.icon-sm;
                                                 shape: Shapes.sync;
                                                 tint: #ffffff;
                                             }
@@ -361,7 +362,7 @@ export component HomeScreen inherits Rectangle {
 
                                         Text {
                                             text: "再試行";
-                                            font-size: 13px;
+                                            font-size: Metrics.font-sub;
                                             font-weight: 600;
                                             color: #ffffff;
                                             vertical-alignment: center;
@@ -374,21 +375,21 @@ export component HomeScreen inherits Rectangle {
 
                     // Card: Normal / Idle / Remote Not Configured
                     if root.last-sync-error == "": Rectangle {
-                        border-radius: 14px;
+                        border-radius: Metrics.radius-md;
                         background: Palette.alternate-background;
 
                         VerticalLayout {
-                            padding: 14px;
-                            spacing: 10px;
+                            padding: Metrics.spacing-md + 2px * Metrics.ui-scale;
+                            spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
 
                             if !root.remote-configured: HorizontalLayout {
-                                spacing: 12px;
+                                spacing: Metrics.spacing-md;
 
                                 VerticalLayout {
                                     alignment: center;
                                     Icon {
-                                        width: 22px;
-                                        height: 22px;
+                                        width: Metrics.icon-lg;
+                                        height: Metrics.icon-lg;
                                         shape: Shapes.link;
                                         tint: Colors.muted;
                                     }
@@ -396,18 +397,18 @@ export component HomeScreen inherits Rectangle {
 
                                 VerticalLayout {
                                     horizontal-stretch: 1;
-                                    spacing: 2px;
+                                    spacing: 2px * Metrics.ui-scale;
 
                                     Text {
                                         text: "リモート未設定";
-                                        font-size: 14px;
+                                        font-size: Metrics.font-body;
                                         font-weight: 600;
                                         color: Palette.foreground;
                                     }
 
                                     Text {
                                         text: "Git リモートを設定すると自動同期できます";
-                                        font-size: 12px;
+                                        font-size: Metrics.font-sm;
                                         color: Colors.muted;
                                         wrap: word-wrap;
                                     }
@@ -416,9 +417,9 @@ export component HomeScreen inherits Rectangle {
                                 VerticalLayout {
                                     alignment: center;
                                     Rectangle {
-                                        height: 32px;
-                                        width: 60px;
-                                        border-radius: 6px;
+                                        height: Metrics.bubble-chip-height;
+                                        width: 60px * Metrics.ui-scale;
+                                        border-radius: Metrics.radius-sm;
                                         background: Palette.accent-background.with-alpha(0.12);
 
                                         TouchArea {
@@ -429,7 +430,7 @@ export component HomeScreen inherits Rectangle {
                                             alignment: center;
                                             Text {
                                                 text: "設定";
-                                                font-size: 12px;
+                                                font-size: Metrics.font-sm;
                                                 font-weight: 600;
                                                 color: Palette.accent-background;
                                                 vertical-alignment: center;
@@ -440,13 +441,13 @@ export component HomeScreen inherits Rectangle {
                             }
 
                             if root.remote-configured: HorizontalLayout {
-                                spacing: 10px;
+                                spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
 
                                 VerticalLayout {
                                     alignment: center;
                                     Icon {
-                                        width: 20px;
-                                        height: 20px;
+                                        width: Metrics.icon-md;
+                                        height: Metrics.icon-md;
                                         shape: Shapes.sync;
                                         tint: root.syncing ? Palette.accent-background : Colors.muted;
                                     }
@@ -454,11 +455,11 @@ export component HomeScreen inherits Rectangle {
 
                                 VerticalLayout {
                                     horizontal-stretch: 1;
-                                    spacing: 2px;
+                                    spacing: 2px * Metrics.ui-scale;
 
                                     Text {
                                         text: root.syncing ? "同期を実行中..." : "同期完了";
-                                        font-size: 14px;
+                                        font-size: Metrics.font-body;
                                         font-weight: 600;
                                         color: root.syncing ? Palette.accent-background : Palette.foreground;
                                     }
@@ -467,7 +468,7 @@ export component HomeScreen inherits Rectangle {
                                         text: root.syncing
                                             ? "リモートとの差分を確認・更新しています"
                                             : (root.last-synced-at != "" ? "最終同期: " + root.last-synced-at : (root.status != "" ? root.status : "ローカルとリモートは同期済みです"));
-                                        font-size: 12px;
+                                        font-size: Metrics.font-sm;
                                         color: Colors.muted;
                                         wrap: word-wrap;
                                     }
@@ -476,9 +477,9 @@ export component HomeScreen inherits Rectangle {
                                 VerticalLayout {
                                     alignment: center;
                                     Rectangle {
-                                        height: 34px;
-                                        width: 80px;
-                                        border-radius: 8px;
+                                        height: Metrics.bubble-chip-height;
+                                        width: 80px * Metrics.ui-scale;
+                                        border-radius: Metrics.radius-sm;
                                         background: Palette.foreground.with-alpha(0.06);
 
                                         TouchArea {
@@ -488,13 +489,13 @@ export component HomeScreen inherits Rectangle {
 
                                         HorizontalLayout {
                                             alignment: center;
-                                            spacing: 4px;
+                                            spacing: Metrics.spacing-xs;
 
                                             VerticalLayout {
                                                 alignment: center;
                                                 Icon {
-                                                    width: 14px;
-                                                    height: 14px;
+                                                    width: Metrics.icon-sm;
+                                                    height: Metrics.icon-sm;
                                                     shape: Shapes.sync;
                                                     tint: root.syncing ? Colors.muted : Palette.foreground;
                                                 }
@@ -502,7 +503,7 @@ export component HomeScreen inherits Rectangle {
 
                                             Text {
                                                 text: "同期";
-                                                font-size: 12px;
+                                                font-size: Metrics.font-sm;
                                                 font-weight: 600;
                                                 color: root.syncing ? Colors.muted : Palette.foreground;
                                                 vertical-alignment: center;
@@ -519,18 +520,18 @@ export component HomeScreen inherits Rectangle {
                 // Section: Unresolved Conflicts
                 // ----------------------------------------------------
                 if root.conflict-count > 0: VerticalLayout {
-                    spacing: 8px;
+                    spacing: Metrics.spacing-sm;
 
                     Text {
                         text: "未解決のコンフリクト";
-                        font-size: 11px;
+                        font-size: Metrics.font-caption;
                         font-weight: 700;
                         color: Colors.warning;
                         letter-spacing: 0.5px;
                     }
 
                     Rectangle {
-                        border-radius: 14px;
+                        border-radius: Metrics.radius-md;
                         background: Colors.warning.with-alpha(0.12);
                         border-width: 1.5px;
                         border-color: Colors.warning.with-alpha(0.4);
@@ -540,23 +541,23 @@ export component HomeScreen inherits Rectangle {
                         }
 
                         VerticalLayout {
-                            padding: 16px;
-                            spacing: 8px;
+                            padding: Metrics.spacing-lg;
+                            spacing: Metrics.spacing-sm;
 
                             HorizontalLayout {
-                                spacing: 8px;
+                                spacing: Metrics.spacing-sm;
                                 alignment: center;
 
                                 Text {
                                     text: "⚠️";
-                                    font-size: 18px;
+                                    font-size: Metrics.font-subtitle;
                                     vertical-alignment: center;
                                 }
 
                                 Text {
                                     horizontal-stretch: 1;
                                     text: root.conflict-count + " 件のノートに競合があります";
-                                    font-size: 15px;
+                                    font-size: Metrics.font-body;
                                     font-weight: 700;
                                     color: Colors.warning;
                                     vertical-alignment: center;
@@ -565,7 +566,7 @@ export component HomeScreen inherits Rectangle {
 
                             Text {
                                 text: "タップして競合ノートを開く・解決する →";
-                                font-size: 13px;
+                                font-size: Metrics.font-sub;
                                 font-weight: 600;
                                 color: Colors.warning.darker(10%);
                             }
@@ -577,18 +578,18 @@ export component HomeScreen inherits Rectangle {
                 // Section: Currently Open Note
                 // ----------------------------------------------------
                 if root.has-current-note: VerticalLayout {
-                    spacing: 8px;
+                    spacing: Metrics.spacing-sm;
 
                     Text {
                         text: "編集中ノート";
-                        font-size: 11px;
+                        font-size: Metrics.font-caption;
                         font-weight: 700;
                         color: Colors.muted;
                         letter-spacing: 0.5px;
                     }
 
                     Rectangle {
-                        border-radius: 14px;
+                        border-radius: Metrics.radius-md;
                         background: Palette.alternate-background;
 
                         TouchArea {
@@ -596,19 +597,19 @@ export component HomeScreen inherits Rectangle {
                         }
 
                         VerticalLayout {
-                            padding: 16px;
-                            spacing: 6px;
+                            padding: Metrics.spacing-lg;
+                            spacing: Metrics.spacing-xs + 2px * Metrics.ui-scale;
 
                             Text {
                                 text: root.current-note-title;
-                                font-size: 16px;
+                                font-size: Metrics.font-body;
                                 font-weight: 600;
                                 color: Palette.foreground;
                             }
 
                             Text {
                                 text: "タップして編集を続ける →";
-                                font-size: 13px;
+                                font-size: Metrics.font-sub;
                                 color: Palette.accent-background;
                             }
                         }
@@ -619,23 +620,23 @@ export component HomeScreen inherits Rectangle {
                 // Section: Quick Actions
                 // ----------------------------------------------------
                 VerticalLayout {
-                    spacing: 8px;
+                    spacing: Metrics.spacing-sm;
 
                     Text {
                         text: "クイックアクション";
-                        font-size: 11px;
+                        font-size: Metrics.font-caption;
                         font-weight: 700;
                         color: Colors.muted;
                         letter-spacing: 0.5px;
                     }
 
                     Rectangle {
-                        border-radius: 14px;
+                        border-radius: Metrics.radius-md;
                         background: Palette.alternate-background;
 
                         VerticalLayout {
-                            padding: 8px;
-                            spacing: 4px;
+                            padding: Metrics.spacing-sm;
+                            spacing: Metrics.spacing-xs;
 
                             ActionRow {
                                 text: "+ 新しいノート";

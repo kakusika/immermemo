@@ -1,4 +1,4 @@
-import { Palette, ListView } from "std-widgets.slint";
+import { Palette } from "std-widgets.slint";
 import {
     Metrics,
     Colors,
@@ -7,6 +7,7 @@ import {
     BubbleButton,
     TopBar,
     Fab,
+    AppScrollView,
 } from "../components.slint";
 
 export component FilesScreen inherits Rectangle {
@@ -44,7 +45,7 @@ export component FilesScreen inherits Rectangle {
 
                     Text {
                         text: root.vault-name != "" ? root.vault-name : "Notes";
-                        font-size: 22px;
+                        font-size: Metrics.font-title;
                         font-weight: 700;
                         color: Palette.foreground;
                         vertical-alignment: center;
@@ -53,7 +54,7 @@ export component FilesScreen inherits Rectangle {
 
                     Text {
                         text: "▾";
-                        font-size: 16px;
+                        font-size: Metrics.font-body;
                         color: Colors.muted;
                         vertical-alignment: center;
                     }
@@ -87,107 +88,112 @@ export component FilesScreen inherits Rectangle {
 
         // Top spacing
         Rectangle {
-            height: 6px;
+            height: Metrics.spacing-xs + 2px * Metrics.ui-scale;
         }
 
         if root.notes.length == 0: Rectangle {
             vertical-stretch: 1;
             VerticalLayout {
                 alignment: center;
-                spacing: 12px;
+                spacing: Metrics.spacing-md;
                 Icon {
                     shape: Shapes.files;
                     tint: Colors.muted.with-alpha(0.5);
-                    width: 40px;
-                    height: 40px;
+                    width: Metrics.icon-xl;
+                    height: Metrics.icon-xl;
                     x: (parent.width - self.width) / 2;
                 }
                 Text {
                     text: "No notes yet";
-                    font-size: 16px;
+                    font-size: Metrics.font-body;
                     font-weight: 600;
                     color: Colors.muted;
                     horizontal-alignment: center;
                 }
                 Text {
                     text: "Tap + below to create your first note";
-                    font-size: 13px;
+                    font-size: Metrics.font-sub;
                     color: Colors.muted;
                     horizontal-alignment: center;
                 }
             }
         }
 
-        if root.notes.length > 0: ListView {
+        if root.notes.length > 0: AppScrollView {
             vertical-stretch: 1;
-            for name[i] in root.notes: Rectangle {
-                height: 54px;
 
-                item-container := Rectangle {
-                    x: 8px;
-                    y: 3px;
-                    width: parent.width - 16px;
-                    height: parent.height - 6px;
-                    border-radius: 16px;
-                    background: (root.highlight-current && i == root.current)
-                        ? Palette.accent-background.with-alpha(0.20)
-                        : (touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent);
+            VerticalLayout {
+                padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
 
-                    animate background {
-                        duration: 150ms;
-                        easing: ease-out;
-                    }
+                for name[i] in root.notes: Rectangle {
+                    height: Metrics.row-height;
 
-                    HorizontalLayout {
-                        padding-left: 14px;
-                        padding-right: 14px;
-                        spacing: 10px;
+                    item-container := Rectangle {
+                        x: Metrics.spacing-sm;
+                        y: Metrics.spacing-xs / 2;
+                        width: parent.width - Metrics.spacing-lg;
+                        height: parent.height - Metrics.spacing-xs;
+                        border-radius: Metrics.radius-lg;
+                        background: (root.highlight-current && i == root.current)
+                            ? Palette.accent-background.with-alpha(0.20)
+                            : (touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent);
 
-                        VerticalLayout {
-                            horizontal-stretch: 1;
-                            alignment: center;
+                        animate background {
+                            duration: 150ms;
+                            easing: ease-out;
+                        }
 
-                            Text {
-                                text: name;
-                                font-size: 15px;
-                                font-weight: (root.highlight-current && i == root.current) ? 600 : 400;
-                                color: (root.highlight-current && i == root.current)
-                                    ? Palette.accent-background
-                                    : Palette.foreground;
-                                vertical-alignment: center;
-                                overflow: elide;
+                        HorizontalLayout {
+                            padding-left: Metrics.spacing-lg;
+                            padding-right: Metrics.spacing-lg;
+                            spacing: Metrics.spacing-md;
+
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                alignment: center;
+
+                                Text {
+                                    text: name;
+                                    font-size: Metrics.font-body;
+                                    font-weight: (root.highlight-current && i == root.current) ? 600 : 400;
+                                    color: (root.highlight-current && i == root.current)
+                                        ? Palette.accent-background
+                                        : Palette.foreground;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                }
+                            }
+
+                            if root.conflicted[i]: Rectangle {
+                                width: Metrics.spacing-sm;
+                                height: Metrics.spacing-sm;
+                                y: (parent.height - self.height) / 2;
+                                border-radius: Metrics.spacing-sm / 2;
+                                background: Colors.warning;
                             }
                         }
+                    }
 
-                        if root.conflicted[i]: Rectangle {
-                            width: 8px;
-                            height: 8px;
-                            y: (parent.height - self.height) / 2;
-                            border-radius: 4px;
-                            background: Colors.warning;
+                    property <bool> long-pressed: false;
+
+                    touch := TouchArea {
+                        clicked => {
+                            if (long-pressed) {
+                                long-pressed = false;
+                            } else {
+                                root.select(i);
+                            }
                         }
                     }
-                }
 
-                property <bool> long-pressed: false;
-
-                touch := TouchArea {
-                    clicked => {
-                        if (long-pressed) {
-                            long-pressed = false;
-                        } else {
-                            root.select(i);
+                    Timer {
+                        interval: 400ms;
+                        running: touch.pressed && !long-pressed;
+                        triggered => {
+                            long-pressed = true;
+                            root.trigger-haptic();
+                            root.note-menu-requested(i);
                         }
-                    }
-                }
-
-                Timer {
-                    interval: 400ms;
-                    running: touch.pressed && !long-pressed;
-                    triggered => {
-                        long-pressed = true;
-                        root.trigger-haptic();
-                        root.note-menu-requested(i);
                     }
                 }
             }

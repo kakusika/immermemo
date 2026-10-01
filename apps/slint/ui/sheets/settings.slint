@@ -1,4 +1,4 @@
-import { Palette, LineEdit, Button, ScrollView } from "std-widgets.slint";
+import { Palette, LineEdit, Button } from "std-widgets.slint";
 import {
     Metrics,
     Colors,
@@ -6,6 +6,7 @@ import {
     IconButton,
     TopBar,
     ActionRow,
+    AppScrollView,
 } from "../components.slint";
 
 // A full-screen sheet for application settings: Sync & Remote, Vault management,
@@ -66,7 +67,7 @@ export component SettingsSheet inherits Rectangle {
             background: Colors.separator;
         }
 
-        ScrollView {
+        AppScrollView {
             vertical-stretch: 1;
 
             VerticalLayout {
@@ -406,6 +407,114 @@ export component SettingsSheet inherits Rectangle {
                                             clicked => {
                                                 root.font-size-choice = 2;
                                                 root.font-size-changed(2);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                height: 1px;
+                                background: Colors.separator;
+                            }
+
+                            // UI Scale Selector
+                            VerticalLayout {
+                                spacing: Metrics.spacing-sm;
+
+                                Text {
+                                    text: "UI Scale";
+                                    font-size: Metrics.font-sub;
+                                    color: Colors.muted;
+                                }
+
+                                HorizontalLayout {
+                                    spacing: Metrics.spacing-sm;
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: Metrics.bubble-chip-height;
+                                        border-radius: self.height / 2;
+                                        background: Metrics.ui-scale < 0.95 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+                                        Text {
+                                            text: "90%";
+                                            font-size: Metrics.font-sub;
+                                            font-weight: Metrics.ui-scale < 0.95 ? 600 : 400;
+                                            color: Metrics.ui-scale < 0.95 ? Palette.accent-foreground : Palette.foreground;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            clicked => {
+                                                Metrics.ui-scale = 0.9;
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: Metrics.bubble-chip-height;
+                                        border-radius: self.height / 2;
+                                        background: Metrics.ui-scale >= 0.95 && Metrics.ui-scale <= 1.05 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+                                        Text {
+                                            text: "100%";
+                                            font-size: Metrics.font-sub;
+                                            font-weight: Metrics.ui-scale >= 0.95 && Metrics.ui-scale <= 1.05 ? 600 : 400;
+                                            color: Metrics.ui-scale >= 0.95 && Metrics.ui-scale <= 1.05 ? Palette.accent-foreground : Palette.foreground;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            clicked => {
+                                                Metrics.ui-scale = 1.0;
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: Metrics.bubble-chip-height;
+                                        border-radius: self.height / 2;
+                                        background: Metrics.ui-scale > 1.05 && Metrics.ui-scale <= 1.18 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+                                        Text {
+                                            text: "110%";
+                                            font-size: Metrics.font-sub;
+                                            font-weight: Metrics.ui-scale > 1.05 && Metrics.ui-scale <= 1.18 ? 600 : 400;
+                                            color: Metrics.ui-scale > 1.05 && Metrics.ui-scale <= 1.18 ? Palette.accent-foreground : Palette.foreground;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            clicked => {
+                                                Metrics.ui-scale = 1.1;
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: Metrics.bubble-chip-height;
+                                        border-radius: self.height / 2;
+                                        background: Metrics.ui-scale > 1.18 ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+                                        Text {
+                                            text: "125%";
+                                            font-size: Metrics.font-sub;
+                                            font-weight: Metrics.ui-scale > 1.18 ? 600 : 400;
+                                            color: Metrics.ui-scale > 1.18 ? Palette.accent-foreground : Palette.foreground;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            clicked => {
+                                                Metrics.ui-scale = 1.25;
                                             }
                                         }
                                     }

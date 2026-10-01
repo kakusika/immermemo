@@ -1,10 +1,11 @@
-import { Palette, ListView, LineEdit } from "std-widgets.slint";
+import { Palette } from "std-widgets.slint";
 import {
     Metrics,
     Colors,
     Shapes,
     TopBar,
     Icon,
+    AppScrollView,
 } from "../components.slint";
 
 export component SearchScreen inherits Rectangle {
@@ -28,46 +29,66 @@ export component SearchScreen inherits Rectangle {
             // Search bar taking full width of top bar
             Rectangle {
                 horizontal-stretch: 1;
-                height: 38px;
-                border-radius: 19px;
+                height: Metrics.search-bar-height;
+                border-radius: self.height / 2;
                 background: Palette.alternate-background;
 
                 HorizontalLayout {
-                    padding-left: 12px;
-                    padding-right: 8px;
-                    spacing: 8px;
+                    padding-left: Metrics.spacing-md;
+                    padding-right: Metrics.spacing-sm;
+                    spacing: Metrics.spacing-sm;
 
                     Icon {
                         shape: Shapes.search;
                         tint: Colors.muted;
-                        width: 18px;
-                        height: 18px;
+                        width: Metrics.icon-md;
+                        height: Metrics.icon-md;
                         y: (parent.height - self.height) / 2;
                     }
 
-                    search_input := LineEdit {
+                    Rectangle {
                         horizontal-stretch: 1;
-                        font-size: 14px;
-                        placeholder-text: "ノートのタイトルや本文を検索...";
-                        text <=> root.query;
-                        edited(text) => {
-                            root.query-changed(text);
+                        clip: true;
+
+                        if root.query == "": Text {
+                            width: 100%;
+                            height: 100%;
+                            vertical-alignment: center;
+                            text: "ノートのタイトルや本文を検索...";
+                            font-size: Metrics.font-md;
+                            color: Colors.muted;
+                            overflow: elide;
+                        }
+
+                        search_input := TextInput {
+                            width: 100%;
+                            height: 100%;
+                            vertical-alignment: center;
+                            font-size: Metrics.font-md;
+                            color: Palette.foreground;
+                            selection-background-color: Palette.accent-background.with-alpha(0.3);
+                            selection-foreground-color: Palette.foreground;
+                            single-line: true;
+                            text <=> root.query;
+                            edited => {
+                                root.query-changed(self.text);
+                            }
                         }
                     }
 
                     if root.query != "": Rectangle {
-                        width: 28px;
-                        height: 28px;
+                        width: Metrics.icon-lg + 4px * Metrics.ui-scale;
+                        height: self.width;
                         horizontal-stretch: 0;
                         y: (parent.height - self.height) / 2;
-                        border-radius: 14px;
+                        border-radius: self.width / 2;
                         background: clear_btn.pressed ? Palette.foreground.with-alpha(0.12) : transparent;
 
                         Icon {
                             shape: Shapes.close;
                             tint: Colors.muted;
-                            width: 14px;
-                            height: 14px;
+                            width: Metrics.icon-sm;
+                            height: Metrics.icon-sm;
                             x: (parent.width - self.width) / 2;
                             y: (parent.height - self.height) / 2;
                         }
@@ -90,7 +111,7 @@ export component SearchScreen inherits Rectangle {
 
         // Top spacing
         Rectangle {
-            height: 6px;
+            height: Metrics.spacing-xs + 2px * Metrics.ui-scale;
         }
 
         // Empty state when search query produced no results
@@ -98,19 +119,19 @@ export component SearchScreen inherits Rectangle {
             vertical-stretch: 1;
             VerticalLayout {
                 alignment: center;
-                spacing: 12px;
+                spacing: Metrics.spacing-md;
 
                 Icon {
                     shape: Shapes.search;
                     tint: Colors.muted;
-                    width: 36px;
-                    height: 36px;
+                    width: Metrics.icon-xl;
+                    height: Metrics.icon-xl;
                     x: (parent.width - self.width) / 2;
                 }
 
                 Text {
                     text: "\"" + root.query + "\" に一致するノートはありません";
-                    font-size: 14px;
+                    font-size: Metrics.font-md;
                     color: Colors.muted;
                     horizontal-alignment: center;
                 }
@@ -122,19 +143,19 @@ export component SearchScreen inherits Rectangle {
             vertical-stretch: 1;
             VerticalLayout {
                 alignment: center;
-                spacing: 8px;
+                spacing: Metrics.spacing-sm;
 
                 Icon {
                     shape: Shapes.search;
                     tint: Colors.muted.with-alpha(0.4);
-                    width: 40px;
-                    height: 40px;
+                    width: Metrics.icon-xl;
+                    height: Metrics.icon-xl;
                     x: (parent.width - self.width) / 2;
                 }
 
                 Text {
                     text: "タイトルや本文でノートを検索できます";
-                    font-size: 14px;
+                    font-size: Metrics.font-md;
                     color: Colors.muted;
                     horizontal-alignment: center;
                 }
@@ -142,60 +163,64 @@ export component SearchScreen inherits Rectangle {
         }
 
         // Search Results List
-        if root.notes.length > 0 && root.query != "": ListView {
+        if root.notes.length > 0 && root.query != "": AppScrollView {
             vertical-stretch: 1;
 
-            for name[i] in root.notes: Rectangle {
-                property <bool> has-snippet: root.snippets.length > i && root.snippets[i] != "";
-                height: has-snippet ? 66px : 52px;
+            VerticalLayout {
+                padding-bottom: root.inset-bottom + Metrics.spacing-2xl;
 
-                item_container := Rectangle {
-                    x: 8px;
-                    y: 3px;
-                    width: parent.width - 16px;
-                    height: parent.height - 6px;
-                    border-radius: 16px;
-                    background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
-                    animate background { duration: 120ms; easing: ease-out; }
+                for name[i] in root.notes: Rectangle {
+                    property <bool> has-snippet: root.snippets.length > i && root.snippets[i] != "";
+                    height: has-snippet ? (Metrics.row-height + 10px * Metrics.ui-scale) : Metrics.row-height;
 
-                    HorizontalLayout {
-                        padding-left: 14px;
-                        padding-right: 14px;
-                        spacing: 10px;
+                    item_container := Rectangle {
+                        x: Metrics.spacing-sm;
+                        y: Metrics.spacing-xs / 2;
+                        width: parent.width - Metrics.spacing-lg;
+                        height: parent.height - Metrics.spacing-xs;
+                        border-radius: Metrics.radius-lg;
+                        background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+                        animate background { duration: 120ms; easing: ease-out; }
 
-                        VerticalLayout {
-                            horizontal-stretch: 1;
-                            alignment: center;
-                            spacing: 2px;
+                        HorizontalLayout {
+                            padding-left: Metrics.spacing-lg;
+                            padding-right: Metrics.spacing-lg;
+                            spacing: Metrics.spacing-md;
 
-                            Text {
-                                text: name;
-                                font-size: 15px;
-                                font-weight: 500;
-                                color: Palette.foreground;
-                                overflow: elide;
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                alignment: center;
+                                spacing: 2px * Metrics.ui-scale;
+
+                                Text {
+                                    text: name;
+                                    font-size: Metrics.font-body;
+                                    font-weight: 500;
+                                    color: Palette.foreground;
+                                    overflow: elide;
+                                }
+
+                                if has-snippet: Text {
+                                    text: root.snippets[i];
+                                    font-size: Metrics.font-sm;
+                                    color: Colors.muted;
+                                    overflow: elide;
+                                }
                             }
 
-                            if has-snippet: Text {
-                                text: root.snippets[i];
-                                font-size: 12px;
-                                color: Colors.muted;
-                                overflow: elide;
+                            if root.conflicted.length > i && root.conflicted[i]: Rectangle {
+                                width: Metrics.spacing-sm;
+                                height: Metrics.spacing-sm;
+                                y: (parent.height - self.height) / 2;
+                                border-radius: Metrics.spacing-sm / 2;
+                                background: Colors.warning;
                             }
                         }
 
-                        if root.conflicted.length > i && root.conflicted[i]: Rectangle {
-                            width: 8px;
-                            height: 8px;
-                            y: (parent.height - self.height) / 2;
-                            border-radius: 4px;
-                            background: Colors.warning;
-                        }
-                    }
-
-                    touch := TouchArea {
-                        clicked => {
-                            root.select(i);
+                        touch := TouchArea {
+                            clicked => {
+                                root.select(i);
+                            }
                         }
                     }
                 }

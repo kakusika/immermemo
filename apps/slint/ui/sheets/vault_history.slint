@@ -1,5 +1,5 @@
-import { Palette, ScrollView } from "std-widgets.slint";
-import { Metrics, Colors, Shapes, Icon, BubbleButton, TopBar } from "../components.slint";
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors, Shapes, Icon, BubbleButton, TopBar, AppScrollView } from "../components.slint";
 
 export component VaultHistorySheet inherits Rectangle {
     in property <bool> open: false;
@@ -72,7 +72,7 @@ export component VaultHistorySheet inherits Rectangle {
             }
         }
 
-        if root.commits.length > 0: ScrollView {
+        if root.commits.length > 0: AppScrollView {
             vertical-stretch: 1;
 
             VerticalLayout {

@@ -75,6 +75,7 @@ export component App inherits Window {
     in-out property <int> font-size-choice: 1;
     in-out property <length> editor-font-size: 17px;
     in-out property <int> theme-choice: 0;
+    in-out property <float> ui-scale <=> Metrics.ui-scale;
 
     function apply-theme-choice() {
         if (root.theme-choice == 1) {
@@ -153,9 +154,13 @@ export component App inherits Window {
     property <length> inset-top: root.safe-area-insets.top + root.extra-inset-top;
     in-out property <length> keyboard: 0px;
     function update-keyboard() {
+        let old_kb = root.keyboard;
         root.keyboard = root.virtual-keyboard-size.height > 0
             ? max(0px, root.height - root.virtual-keyboard-position.y)
             : 0px;
+        if (old_kb > 0px && root.keyboard == 0px && root.active-tab == 2) {
+            pane.unfocus();
+        }
     }
     changed virtual-keyboard-size => { root.update-keyboard(); }
     changed virtual-keyboard-position => { root.update-keyboard(); }
@@ -179,7 +184,7 @@ export component App inherits Window {
             SwipeGestureHandler {
                 width: 100%;
                 height: 100%;
-                enabled: root.narrow && root.keyboard == 0px && root.active-tab != 2;
+                enabled: root.narrow && root.keyboard == 0px && (root.active-tab != 2 || !pane.editor-has-focus);
                 handle-swipe-left: root.active-tab < 4;
                 handle-swipe-right: root.active-tab > 0;
 
@@ -197,15 +202,9 @@ export component App inherits Window {
                     if (dx < -40px && root.active-tab < 4) {
                         root.active-tab += 1;
                         root.trigger-haptic();
-                        if (root.active-tab == 2) {
-                            pane.focus-editor();
-                        }
                     } else if (dx > 40px && root.active-tab > 0) {
                         root.active-tab -= 1;
                         root.trigger-haptic();
-                        if (root.active-tab == 2) {
-                            pane.focus-editor();
-                        }
                     }
                     root.swipe-dx = 0px;
                 }
@@ -406,7 +405,7 @@ export component App inherits Window {
         // Bottom Navigation Bar
         BottomNavBar {
             visible: root.keyboard == 0px;
-            height: root.keyboard == 0px ? (58px + root.safe-area-insets.bottom + root.extra-inset-bottom) : 0px;
+            height: root.keyboard == 0px ? (Metrics.bottom-bar-height + root.safe-area-insets.bottom + root.extra-inset-bottom) : 0px;
             active-tab <=> root.active-tab;
             conflict-count: root.conflict-count;
             current-has-conflict: root.current-has-conflict;
@@ -414,9 +413,7 @@ export component App inherits Window {
             tab-selected(idx) => {
                 root.active-tab = idx;
                 root.trigger-haptic();
-                if (idx == 2) {
-                    pane.focus-editor();
-                }
+                pane.unfocus();
             }
         }
     }

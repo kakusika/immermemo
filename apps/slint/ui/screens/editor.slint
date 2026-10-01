@@ -1,5 +1,5 @@
-import { Palette, TextEdit } from "std-widgets.slint";
-import { Metrics, Colors, Shapes, IconButton, BubbleButton, UndoRedoBubble, TopBar } from "../components.slint";
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors, Shapes, IconButton, BubbleButton, UndoRedoBubble, TopBar, AppScrollView } from "../components.slint";
 
 export component EditorScreen inherits Rectangle {
     in property <string> title;
@@ -20,6 +20,7 @@ export component EditorScreen inherits Rectangle {
     in property <bool> remote-configured: false;
     in property <string> last-synced-at: "";
     in-out property <string> body;
+    out property <bool> editor-has-focus: editor.has-focus;
     callback edited(string);
     callback undo();
     callback redo();
@@ -38,10 +39,14 @@ export component EditorScreen inherits Rectangle {
         editor.set-selection-offsets(offset, offset);
     }
 
-    // Claims focus so the back key (see capture-key-pressed below) reaches
-    // this pane without the user having to tap into the text body first.
+    // Claims focus on the text editor
     public function focus-editor() {
-        edit-scope.focus();
+        editor.focus();
+    }
+
+    // Dismisses focus from the text editor
+    public function unfocus() {
+        editor.clear-focus();
     }
 
     background: Palette.background;
@@ -61,12 +66,12 @@ export component EditorScreen inherits Rectangle {
                 Text {
                     width: parent.width;
                     text: root.status != "" && !root.status-is-error ? root.status : root.title;
-                    font-size: 15px;
+                    font-size: Metrics.font-body;
                     font-weight: 600;
                     color: root.status != "" && !root.status-is-error ? Colors.muted : Palette.foreground;
                     vertical-alignment: center;
                     overflow: elide;
-                    x: 4px;
+                    x: 4px * Metrics.ui-scale;
                     y: (parent.height - self.height) / 2;
                 }
             }
@@ -90,6 +95,7 @@ export component EditorScreen inherits Rectangle {
                 undo => { root.undo(); }
                 redo => { root.redo(); }
             }
+
         }
 
         Rectangle {
@@ -300,39 +306,15 @@ export component EditorScreen inherits Rectangle {
         }
 
         // Body area with in-body title and text editor
-        body-container := VerticalLayout {
+        body-container := Rectangle {
             visible: root.has-note;
             horizontal-stretch: root.has-note ? 1 : 0;
             vertical-stretch: root.has-note ? 1 : 0;
             height: root.has-note ? 100% : 0%;
-            padding-left: 0px;
-            padding-right: 0px;
-            padding-top: 8px;
-            padding-bottom: 0px;
-            spacing: 2px;
 
-            // In-body note title (Notion / Apple Notes style)
-            HorizontalLayout {
-                padding-left: Metrics.gutter;
-                padding-right: Metrics.gutter;
-                padding-top: 8px;
-                padding-bottom: 4px;
-
-                Text {
-                    horizontal-stretch: 1;
-                    text: root.title != "" ? root.title : "Untitled";
-                    font-size: 26px;
-                    font-weight: 700;
-                    color: Palette.foreground;
-                    wrap: word-wrap;
-                }
-            }
-
-            // Ctrl+Z / Ctrl+Y go to the Loro history instead of the widget's own
-            // undo; capture-key-pressed runs before the focused TextEdit sees the
-            // key.
             edit-scope := FocusScope {
-                vertical-stretch: 1;
+                width: 100%;
+                height: 100%;
                 capture-key-pressed(event) => {
                     if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
                         root.undo();
@@ -344,13 +326,52 @@ export component EditorScreen inherits Rectangle {
                     }
                     return reject;
                 }
-                editor := TextEdit {
-                    width: parent.width;
-                    height: parent.height;
-                    enabled: root.has-note;
-                    font-size: root.font-size;
-                    text <=> root.body;
-                    edited(t) => { root.edited(t); }
+
+                editor-scroll := AppScrollView {
+                    width: 100%;
+                    height: 100%;
+
+                    VerticalLayout {
+                        padding-left: Metrics.gutter;
+                        padding-right: Metrics.gutter;
+                        padding-top: Metrics.spacing-lg;
+                        padding-bottom: Metrics.spacing-3xl;
+                        spacing: Metrics.spacing-md;
+
+                        // In-body note title (Notion / Apple Notes style)
+                        Text {
+                            text: root.title != "" ? root.title : "Untitled";
+                            font-size: Metrics.font-headline;
+                            font-weight: 700;
+                            color: Palette.foreground;
+                            wrap: word-wrap;
+                        }
+
+                        editor := TextInput {
+                            enabled: root.has-note;
+                            font-size: root.font-size;
+                            text <=> root.body;
+                            color: Palette.foreground;
+                            selection-background-color: Palette.accent-background.with-alpha(0.3);
+                            selection-foreground-color: Palette.foreground;
+                            single-line: false;
+                            wrap: word-wrap;
+                            min-height: max(160px, editor-scroll.visible-height - 120px);
+                            edited => { root.edited(self.text); }
+                            cursor-position-changed(cpos) => {
+                                let cpos-screen-y = editor.y + cpos.y;
+                                if (cpos-screen-y + editor-scroll.content-y < 0px) {
+                                    editor-scroll.content-y = min(
+                                        0px,
+                                        editor-scroll.visible-height - cpos-screen-y - 32px,
+                                        max(editor-scroll.visible-height - self.height, -cpos-screen-y),
+                                    );
+                                } else if (cpos-screen-y + editor-scroll.content-y > editor-scroll.visible-height - 32px) {
+                                    editor-scroll.content-y = min(0px, max(editor-scroll.visible-height - self.height, editor-scroll.visible-height - cpos-screen-y - 32px));
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
