@@ -6,12 +6,25 @@
 //! Designed to scale to tens of thousands of notes without performing full filesystem
 //! walks or per-file disk reads on every UI refresh or keystroke search.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use immermemo_merge::CONFLICT_MARKER;
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, Row, params};
+
+/// Shared by every place that writes a note row: insert it fresh, or
+/// overwrite every column if the path already exists.
+const UPSERT_NOTE_SQL: &str =
+    "INSERT INTO notes (path, title, mtime_secs, mtime_nanos, size, has_conflict, body)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+     ON CONFLICT(path) DO UPDATE SET
+        title = excluded.title,
+        mtime_secs = excluded.mtime_secs,
+        mtime_nanos = excluded.mtime_nanos,
+        size = excluded.size,
+        has_conflict = excluded.has_conflict,
+        body = excluded.body";
 
 /// An indexed note in the vault.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -117,6 +130,14 @@ impl NoteIndex {
 
         collect_tmt_files(vault_dir, &mut disk_files);
 
+        // Looked up once per cached row below rather than linearly
+        // scanning `disk_files` each time -- this is the only place a
+        // vault with many thousands of notes would otherwise pay O(n*m).
+        let disk_meta: HashMap<PathBuf, (u64, u64, u32)> = disk_files
+            .iter()
+            .map(|(path, size, secs, nanos)| (path.clone(), (*size, *secs, *nanos)))
+            .collect();
+
         let tx = self.conn.transaction()?;
 
         // Retrieve existing paths and their cached metadata.
@@ -126,26 +147,20 @@ impl NoteIndex {
             let mut rows = stmt.query([])?;
             let mut to_remove: Vec<PathBuf> = Vec::new();
 
-            let disk_set: HashSet<&PathBuf> = disk_files.iter().map(|(p, _, _, _)| p).collect();
-
             while let Some(row) = rows.next()? {
                 let path_str: String = row.get(0)?;
                 let rel_path = PathBuf::from(&path_str);
-                if !disk_set.contains(&rel_path) {
-                    to_remove.push(rel_path);
-                } else {
-                    let cached_size: u64 = row.get(1)?;
-                    let cached_secs: u64 = row.get(2)?;
-                    let cached_nanos: u32 = row.get(3)?;
-                    // Check if matching disk file has identical metadata
-                    if let Some((_, size, secs, nanos)) =
-                        disk_files.iter().find(|(p, _, _, _)| p == &rel_path)
-                    {
+                match disk_meta.get(&rel_path) {
+                    None => to_remove.push(rel_path),
+                    Some((size, secs, nanos)) => {
+                        let cached_size: u64 = row.get(1)?;
+                        let cached_secs: u64 = row.get(2)?;
+                        let cached_nanos: u32 = row.get(3)?;
                         if *size == cached_size && *secs == cached_secs && *nanos == cached_nanos {
                             report.unchanged += 1;
                         }
+                        cached_notes.insert(rel_path);
                     }
-                    cached_notes.insert(rel_path);
                 }
             }
 
@@ -162,17 +177,7 @@ impl NoteIndex {
             let mut check_stmt = tx.prepare_cached(
                 "SELECT size, mtime_secs, mtime_nanos FROM notes WHERE path = ?1",
             )?;
-            let mut upsert_stmt = tx.prepare_cached(
-                "INSERT INTO notes (path, title, mtime_secs, mtime_nanos, size, has_conflict, body)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-                 ON CONFLICT(path) DO UPDATE SET
-                    title = excluded.title,
-                    mtime_secs = excluded.mtime_secs,
-                    mtime_nanos = excluded.mtime_nanos,
-                    size = excluded.size,
-                    has_conflict = excluded.has_conflict,
-                    body = excluded.body",
-            )?;
+            let mut upsert_stmt = tx.prepare_cached(UPSERT_NOTE_SQL)?;
 
             for (rel_path, size, mtime_secs, mtime_nanos) in disk_files {
                 let mut needs_read = true;
@@ -247,17 +252,7 @@ impl NoteIndex {
         }
 
         {
-            let mut upsert_stmt = tx.prepare_cached(
-                "INSERT INTO notes (path, title, mtime_secs, mtime_nanos, size, has_conflict, body)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-                 ON CONFLICT(path) DO UPDATE SET
-                    title = excluded.title,
-                    mtime_secs = excluded.mtime_secs,
-                    mtime_nanos = excluded.mtime_nanos,
-                    size = excluded.size,
-                    has_conflict = excluded.has_conflict,
-                    body = excluded.body",
-            )?;
+            let mut upsert_stmt = tx.prepare_cached(UPSERT_NOTE_SQL)?;
 
             for rel_path in updated_notes {
                 let abs_path = vault_dir.join(rel_path);
@@ -313,15 +308,7 @@ impl NoteIndex {
         let path_str = rel_path.to_string_lossy().to_string();
 
         self.conn.execute(
-            "INSERT INTO notes (path, title, mtime_secs, mtime_nanos, size, has_conflict, body)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-             ON CONFLICT(path) DO UPDATE SET
-                title = excluded.title,
-                mtime_secs = excluded.mtime_secs,
-                mtime_nanos = excluded.mtime_nanos,
-                size = excluded.size,
-                has_conflict = excluded.has_conflict,
-                body = excluded.body",
+            UPSERT_NOTE_SQL,
             params![
                 &path_str,
                 &title,
@@ -436,13 +423,7 @@ impl NoteIndex {
                  ORDER BY path ASC",
             )?;
 
-            let rows = stmt.query_map(params![&pattern], |row| {
-                let path_str: String = row.get(0)?;
-                let title: String = row.get(1)?;
-                let conflict_int: i32 = row.get(2)?;
-                let body: String = row.get(3)?;
-                Ok((PathBuf::from(path_str), title, conflict_int != 0, body))
-            })?;
+            let rows = stmt.query_map(params![&pattern], row_to_note_fields)?;
 
             for r in rows {
                 let (path, title, has_conflict, body) = r?;
@@ -473,13 +454,7 @@ impl NoteIndex {
             );
 
             if let Ok(mut stmt) = fts_result {
-                if let Ok(rows) = stmt.query_map(params![&fts_query], |row| {
-                    let path_str: String = row.get(0)?;
-                    let title: String = row.get(1)?;
-                    let conflict_int: i32 = row.get(2)?;
-                    let body: String = row.get(3)?;
-                    Ok((PathBuf::from(path_str), title, conflict_int != 0, body))
-                }) {
+                if let Ok(rows) = stmt.query_map(params![&fts_query], row_to_note_fields) {
                     for r in rows.flatten() {
                         let (path, title, has_conflict, body) = r;
                         if !seen_paths.contains(&path) {
@@ -508,13 +483,7 @@ impl NoteIndex {
                  ORDER BY path ASC",
             )?;
 
-            let rows = stmt.query_map(params![&pattern], |row| {
-                let path_str: String = row.get(0)?;
-                let title: String = row.get(1)?;
-                let conflict_int: i32 = row.get(2)?;
-                let body: String = row.get(3)?;
-                Ok((PathBuf::from(path_str), title, conflict_int != 0, body))
-            })?;
+            let rows = stmt.query_map(params![&pattern], row_to_note_fields)?;
 
             for r in rows.flatten() {
                 let (path, title, has_conflict, body) = r;
@@ -535,6 +504,17 @@ impl NoteIndex {
         hits.extend(body_hits);
         Ok(hits)
     }
+}
+
+/// The `(path, title, has_conflict, body)` shape every `search()` query
+/// reads a row into, shared by its title-match, FTS and LIKE-fallback
+/// passes -- they differ only in which `WHERE` clause found the row.
+fn row_to_note_fields(row: &Row) -> rusqlite::Result<(PathBuf, String, bool, String)> {
+    let path_str: String = row.get(0)?;
+    let title: String = row.get(1)?;
+    let conflict_int: i32 = row.get(2)?;
+    let body: String = row.get(3)?;
+    Ok((PathBuf::from(path_str), title, conflict_int != 0, body))
 }
 
 fn display_name_from_rel(rel_path: &Path) -> String {
