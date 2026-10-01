@@ -10,10 +10,8 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+use immermemo_merge::CONFLICT_MARKER;
 use rusqlite::{Connection, params};
-
-const EXTENSION: &str = "tmt";
-const CONFLICT_MARKER: &str = "@mobile.conflict";
 
 /// An indexed note in the vault.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -117,7 +115,7 @@ impl NoteIndex {
         let mut report = ReconcileReport::default();
         let mut disk_files: Vec<(PathBuf, u64, u64, u32)> = Vec::new(); // (rel_path, size, mtime_secs, mtime_nanos)
 
-        collect_tmt_files(vault_dir, vault_dir, &mut disk_files)?;
+        collect_tmt_files(vault_dir, &mut disk_files);
 
         let tx = self.conn.transaction()?;
 
@@ -556,37 +554,13 @@ fn escape_like(s: &str) -> String {
         .replace('_', "\\_")
 }
 
-fn collect_tmt_files(
-    root: &Path,
-    dir: &Path,
-    found: &mut Vec<(PathBuf, u64, u64, u32)>,
-) -> std::io::Result<()> {
-    let entries = match std::fs::read_dir(dir) {
-        Ok(e) => e,
-        Err(_) => return Ok(()),
-    };
-
-    for entry in entries.flatten() {
-        let name = entry.file_name();
-        let name_str = name.to_string_lossy();
-        if name_str.starts_with('.') {
-            continue;
+fn collect_tmt_files(root: &Path, found: &mut Vec<(PathBuf, u64, u64, u32)>) {
+    immermemo_vault::notes::walk_tmt_files(root, &mut |path, meta| {
+        if let Ok(rel) = path.strip_prefix(root) {
+            let (secs, nanos) = mtime_parts(meta.modified().unwrap_or(SystemTime::UNIX_EPOCH));
+            found.push((rel.to_path_buf(), meta.len(), secs, nanos));
         }
-
-        let path = entry.path();
-        if path.is_dir() {
-            collect_tmt_files(root, &path, found)?;
-        } else if path.extension().is_some_and(|e| e == EXTENSION) {
-            if let Ok(meta) = entry.metadata() {
-                if let Ok(rel) = path.strip_prefix(root) {
-                    let (secs, nanos) =
-                        mtime_parts(meta.modified().unwrap_or(SystemTime::UNIX_EPOCH));
-                    found.push((rel.to_path_buf(), meta.len(), secs, nanos));
-                }
-            }
-        }
-    }
-    Ok(())
+    });
 }
 
 /// Contextual snippet extraction matching Immermemo's display formatting.

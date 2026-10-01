@@ -4,8 +4,12 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-anyhow.workspace = true
-rusqlite.workspace = true
+immermemo-merge = { workspace = true }
+immermemo-vault = { workspace = true }
+
+#= Crates.io
+anyhow = { workspace = true }
+rusqlite = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
