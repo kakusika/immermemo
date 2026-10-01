@@ -25,12 +25,13 @@ element instead of a duplicated file or a merge-marker mess
 immermemo/
 ├── crates/
 │   ├── sync/    # git2-backed vault sync -- see its module doc
-│   └── merge/   # AST-level three-way merge -- see its module doc
+│   ├── merge/   # AST-level three-way merge -- see its module doc
+│   ├── index/   # SQLite-backed note index for listing and search
+│   └── vault/   # vault/note/credential domain logic, UI-framework-agnostic
 ├── vocab/
 │   └── mobile.vocabulary.tmt   # the @mobile.conflict vocabulary
-├── bindings/flutter/           # flutter_rust_bridge: crates/* -> Dart
 └── apps/
-    └── flutter/                # one app, iOS + Android
+    └── slint/                  # the app: desktop + Android, Slint UI
 ```
 
 `tomet` itself is never modified by this project -- it's consumed as an
@@ -42,9 +43,10 @@ is independent of the `tomet` repository.
 How the whole system fits together (sync protocol, what goes into git
 and what doesn't, the conflict pipeline): `docs/design.md`. What a
 crate is and why it exists, below that level: that crate's `//!` module
-doc (`crates/sync/src/lib.rs`, `crates/merge/src/lib.rs`). What the conflict
-vocabulary means: `vocab/mobile.vocabulary.tmt`, written against
-`tomet`'s own `docs/spec/vocabulary.tmt`.
+doc (`crates/sync/src/lib.rs`, `crates/merge/src/lib.rs`, and so on for
+`crates/index` and `crates/vault`). What the conflict vocabulary means:
+`vocab/mobile.vocabulary.tmt`, written against `tomet`'s own
+`docs/spec/vocabulary.tmt`.
 
 ## Building
 
@@ -52,7 +54,3 @@ vocabulary means: `vocab/mobile.vocabulary.tmt`, written against
 cargo build
 cargo test --workspace
 ```
-
-`crates/sync` and `crates/merge` are currently scaffolded with their full
-public API and module-level design docs; the bodies are `todo!()` pending
-implementation.
