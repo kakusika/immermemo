@@ -745,26 +745,49 @@ mod tests {
     use slint::Model;
     use std::sync::Arc;
 
+    // Slint's winit/femtovg backend can only ever initialize one event
+    // loop per process, so `App::new()` can only be called once across
+    // this whole test binary -- that's why this stays one #[test]
+    // function instead of several. Each numbered scenario from the
+    // original single function is now its own named helper below,
+    // called in sequence, so a failing assertion's backtrace at least
+    // names the scenario it broke in.
     #[test]
     fn ui_helpers_and_conflict_resolution() {
         let app = App::new().unwrap();
 
-        // 1. Status classification
-        set_status(&app, "Save failed: permission denied");
+        status_classification_tracks_is_error(&app);
+
+        let (_tmp, session, vault_dir, note_path) = set_up_session_with_one_conflicted_note(&app);
+        resolving_the_conflict_clears_the_marker_and_status(&app, &session, &note_path);
+        search_filtering_updates_the_notes_and_snippets_models(&app, &session, &vault_dir);
+        let multi_note_path =
+            conflict_sheet_steps_through_and_resolves_every_conflict(&app, &session, &vault_dir);
+        sync_error_is_tracked_copied_and_dismissed(&app, &session);
+        version_history_restore_and_auto_sync_queueing(&app, &session, &multi_note_path);
+        editing_while_a_sync_is_running_does_not_panic_on_reentrant_borrow(&app, &session);
+        bundled_japanese_translation_is_discoverable_at_runtime();
+    }
+
+    fn status_classification_tracks_is_error(app: &App) {
+        set_status(app, "Save failed: permission denied");
         assert!(app.get_status_is_error());
         assert_eq!(app.get_status(), "Save failed: permission denied");
 
-        set_status(&app, "Syncing...");
+        set_status(app, "Syncing...");
         assert!(!app.get_status_is_error());
         assert_eq!(app.get_status(), "Syncing...");
 
-        set_status(&app, "Sync failed: network timeout");
+        set_status(app, "Sync failed: network timeout");
         assert!(app.get_status_is_error());
 
-        set_status(&app, "Synced");
+        set_status(app, "Synced");
         assert!(!app.get_status_is_error());
+    }
 
-        // 2. Conflict resolution helper
+    fn set_up_session_with_one_conflicted_note(
+        app: &App,
+    ) -> (tempfile::TempDir, Rc<RefCell<Session>>, PathBuf, PathBuf) {
         let tmp = tempfile::tempdir().unwrap();
         let vault_dir = tmp.path().join("vault");
         std::fs::create_dir_all(&vault_dir).unwrap();
@@ -808,44 +831,62 @@ mod tests {
         app.set_current_has_conflict(true);
         app.set_body(conflicted_text.into());
 
-        resolve_active_conflict(&app, &session, immermemo_merge::ConflictResolution::Mine);
+        (tmp, session, vault_dir, note_path)
+    }
+
+    fn resolving_the_conflict_clears_the_marker_and_status(
+        app: &App,
+        session: &Rc<RefCell<Session>>,
+        note_path: &Path,
+    ) {
+        resolve_active_conflict(app, session, immermemo_merge::ConflictResolution::Mine);
 
         assert!(!app.get_current_has_conflict());
         assert_eq!(app.get_body(), "Mine.\n");
-        let disk_text = std::fs::read_to_string(&note_path).unwrap();
+        let disk_text = std::fs::read_to_string(note_path).unwrap();
         assert_eq!(disk_text, "Mine.\n");
-        assert!(!notes::has_conflict_marker(&note_path));
+        assert!(!notes::has_conflict_marker(note_path));
         assert!(app.get_status().contains("Resolved conflict"));
+    }
 
-        // 3. Search filtering and UI model update
+    fn search_filtering_updates_the_notes_and_snippets_models(
+        app: &App,
+        session: &Rc<RefCell<Session>>,
+        vault_dir: &Path,
+    ) {
         let n1 = vault_dir.join("roadmap.tmt");
         std::fs::write(&n1, "Project roadmap and milk supply\n").unwrap();
         session.borrow_mut().notes.push(n1);
         session.borrow_mut().conflicted.push(false);
 
         // Search query empty -> all notes
-        refresh_list(&app, &session);
+        refresh_list(app, session);
         assert_eq!(app.get_notes().row_count(), 2);
 
         // Filter for "milk" (present in roadmap content)
         session.borrow_mut().search_query = "milk".to_string();
-        update_filtered_list(&app, &session);
+        update_filtered_list(app, session);
         assert_eq!(app.get_notes().row_count(), 1);
         assert_eq!(app.get_snippets().row_count(), 1);
         assert_eq!(app.get_notes().row_data(0).unwrap(), "roadmap");
 
         // Filter for "test" (matches test.tmt title)
         session.borrow_mut().search_query = "test".to_string();
-        update_filtered_list(&app, &session);
+        update_filtered_list(app, session);
         assert_eq!(app.get_notes().row_count(), 1);
         assert_eq!(app.get_notes().row_data(0).unwrap(), "test");
 
         // Filter for nonexistent query
         session.borrow_mut().search_query = "nonexistent".to_string();
-        update_filtered_list(&app, &session);
+        update_filtered_list(app, session);
         assert_eq!(app.get_notes().row_count(), 0);
+    }
 
-        // 4. Conflict sheet step-by-step resolution
+    fn conflict_sheet_steps_through_and_resolves_every_conflict(
+        app: &App,
+        session: &Rc<RefCell<Session>>,
+        vault_dir: &Path,
+    ) -> PathBuf {
         let multi_note_path = vault_dir.join("multi_conflict.tmt");
         let base_doc =
             tomet_parser::parse_document("Alpha base.\n\nMiddle untouched.\n\nBeta base.\n")
@@ -874,7 +915,7 @@ mod tests {
         app.set_active_tab(0);
         app.set_note_sheet_open(false);
         app.set_conflict_sheet_open(false);
-        open_first_conflicted_note(&app, &session);
+        open_first_conflicted_note(app, session);
         assert_eq!(app.get_active_tab(), 0);
         assert!(app.get_note_sheet_open());
         assert!(app.get_conflict_sheet_open());
@@ -883,7 +924,7 @@ mod tests {
         assert_eq!(app.get_active_conflict_theirs(), "theirs");
 
         // Initial state sync
-        sync_conflict_sheet_state(&app, &session);
+        sync_conflict_sheet_state(app, session);
         assert_eq!(app.get_active_conflict_total(), 2);
         assert_eq!(app.get_active_conflict_index(), 0);
         assert_eq!(app.get_active_conflict_mine(), "min");
@@ -891,19 +932,19 @@ mod tests {
 
         // Navigate to next conflict
         app.set_active_conflict_index(1);
-        sync_conflict_sheet_state(&app, &session);
+        sync_conflict_sheet_state(app, session);
         assert_eq!(app.get_active_conflict_index(), 1);
         assert_eq!(app.get_active_conflict_mine(), "min");
         assert_eq!(app.get_active_conflict_theirs(), "theirs");
 
         // Resolve conflict at index 1 with Keep Both (choice 2)
-        resolve_conflict_step(&app, &session, 2);
+        resolve_conflict_step(app, session, 2);
         assert_eq!(app.get_active_conflict_total(), 1);
         assert!(app.get_current_has_conflict());
         assert_eq!(app.get_active_conflict_index(), 0);
 
         // Resolve the remaining conflict (index 0) with Keep Mine (choice 0)
-        resolve_conflict_step(&app, &session, 0);
+        resolve_conflict_step(app, session, 0);
         assert_eq!(app.get_active_conflict_total(), 0);
         assert!(!app.get_current_has_conflict());
         assert!(!app.get_conflict_sheet_open());
@@ -915,11 +956,14 @@ mod tests {
         assert!(disk_text.contains("Middle untouched."));
         assert!(disk_text.contains("Beta mintheirs."));
 
-        // 5. Sync error tracking, copying, and dismissal
+        multi_note_path
+    }
+
+    fn sync_error_is_tracked_copied_and_dismissed(app: &App, session: &Rc<RefCell<Session>>) {
         let err_text = "Sync failed: no merge base found; class=Merge (22)";
         finish_sync(
-            &app,
-            &session,
+            app,
+            session,
             Err("no merge base found; class=Merge (22)".to_string()),
         );
         assert_eq!(app.get_last_sync_error(), err_text);
@@ -928,7 +972,7 @@ mod tests {
         assert!(!app.get_sync_error_copied());
 
         // Copy error simulation
-        copy_to_clipboard(&app, err_text);
+        copy_to_clipboard(app, err_text);
         app.set_sync_error_copied(true);
         assert!(app.get_sync_error_copied());
 
@@ -941,15 +985,20 @@ mod tests {
         assert!(!app.get_status_is_error());
 
         // Successful sync clears error and updates last_synced_at
-        finish_sync(&app, &session, Err("some error".to_string()));
+        finish_sync(app, session, Err("some error".to_string()));
         assert_eq!(app.get_last_sync_error(), "Sync failed: some error");
-        finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
+        finish_sync(app, session, Ok(immermemo_sync::SyncReport::default()));
         assert_eq!(app.get_last_sync_error(), "");
         assert_eq!(app.get_status(), "Synced");
         assert!(!app.get_status_is_error());
         assert!(!app.get_last_synced_at().is_empty());
+    }
 
-        // 6. Version history and auto-sync queue
+    fn version_history_restore_and_auto_sync_queueing(
+        app: &App,
+        session: &Rc<RefCell<Session>>,
+        multi_note_path: &Path,
+    ) {
         let ts = session::format_timestamp(1700000000);
         assert!(ts.contains("2023-11-14"));
 
@@ -962,9 +1011,9 @@ mod tests {
         };
         session.borrow_mut().note_history_revisions = vec![rev1];
 
-        session::restore_note_version(&app, &session, 0);
+        session::restore_note_version(app, session, 0);
         assert_eq!(app.get_body(), "Historical content v1.\n");
-        let disk_text = std::fs::read_to_string(&multi_note_path).unwrap();
+        let disk_text = std::fs::read_to_string(multi_note_path).unwrap();
         assert_eq!(disk_text, "Historical content v1.\n");
         assert!(!app.get_history_sheet_open());
         assert!(app.get_status().contains("Restored note"));
@@ -972,29 +1021,35 @@ mod tests {
         // Auto-sync pending queue when already syncing
         app.set_syncing(true);
         session.borrow_mut().remote = Some("https://example.com/repo.git".to_string());
-        session::trigger_auto_sync(&app, &session);
+        session::trigger_auto_sync(app, session);
         assert!(session.borrow().pending_auto_sync);
 
         // When sync finishes, pending_auto_sync is cleared and next sync is scheduled
-        finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
+        finish_sync(app, session, Ok(immermemo_sync::SyncReport::default()));
         assert!(app.get_syncing());
-        finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
+        finish_sync(app, session, Ok(immermemo_sync::SyncReport::default()));
         assert!(!app.get_syncing());
+    }
 
-        // 7. Editing note while sync is running: verify no RefCell borrow panic
+    fn editing_while_a_sync_is_running_does_not_panic_on_reentrant_borrow(
+        app: &App,
+        session: &Rc<RefCell<Session>>,
+    ) {
         SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
         app.set_syncing(true);
-        session::schedule_auto_sync(&app, std::time::Duration::from_millis(50));
-        session::trigger_auto_sync(&app, &session);
+        session::schedule_auto_sync(app, std::time::Duration::from_millis(50));
+        session::trigger_auto_sync(app, session);
         assert!(session.borrow().pending_auto_sync);
-        finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
+        finish_sync(app, session, Ok(immermemo_sync::SyncReport::default()));
         assert!(app.get_syncing());
-        finish_sync(&app, &session, Ok(immermemo_sync::SyncReport::default()));
+        finish_sync(app, session, Ok(immermemo_sync::SyncReport::default()));
         assert!(!app.get_syncing());
+    }
 
-        // 8. The bundled `ja` translation catalog is discoverable at runtime
-        // (a stale/missing .po file would show up here, not just at compile
-        // time, since the directory is read again when selecting a language).
+    // The bundled `ja` translation catalog is discoverable at runtime (a
+    // stale/missing .po file would show up here, not just at compile time,
+    // since the directory is read again when selecting a language).
+    fn bundled_japanese_translation_is_discoverable_at_runtime() {
         assert!(slint::select_bundled_translation("ja").is_ok());
         let _ = slint::select_bundled_translation("en");
     }
