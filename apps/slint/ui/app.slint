@@ -271,6 +271,15 @@ export component App inherits Window {
     in-out property <bool> is-dragging-sheet: false;
     in-out property <float> drag-sheet-progress: 0.0;
     property <bool> sheet-threshold-passed: false;
+    // Timestamp the downward drag started, to turn a fast flick into a
+    // close even when it didn't travel past the distance threshold.
+    // SwipeGestureHandler exposes positions but no timestamps, so we
+    // stamp it ourselves with animation-tick() (ms since window creation).
+    property <duration> sheet-drag-start-time: 0ms;
+    // Average downward speed in px/ms (at ui-scale 1.0) that counts as a
+    // deliberate flick-to-close, scaled by ui-scale so it tracks the same
+    // fraction-of-screen-per-time at any font/UI size setting.
+    property <float> fast-swipe-velocity: 0.9;
     property <float> sheet-progress: root.is-dragging-sheet
         ? root.drag-sheet-progress
         : (root.note-sheet-open ? 1.0 : 0.0);
@@ -527,6 +536,17 @@ export component App inherits Window {
             }
         }
 
+        // Scrim: dims the screen behind the note sheet so the sheet reads
+        // as sitting on top of it, proportional to how open the sheet is.
+        sheet-scrim := Rectangle {
+            x: 0px;
+            y: 0px;
+            width: 100%;
+            height: 100%;
+            background: #000000.with-alpha(0.35 * root.sheet-progress);
+            visible: root.sheet-progress > 0.01;
+        }
+
         // Layer 2: Fullscreen Note Editor Sheet Overlay
         // Starts at the mini-card position and expands to fullscreen (0px)
         editor-sheet := Rectangle {
@@ -541,6 +561,10 @@ export component App inherits Window {
             // Morph corner radii: start rounded like the mini card, flatten as sheet fills screen
             border-top-left-radius: Metrics.radius-lg * (1.0 - root.sheet-progress);
             border-top-right-radius: Metrics.radius-lg * (1.0 - root.sheet-progress);
+            // Same elevation as the mini card it morphs from/to (components.slint MiniNoteCard)
+            drop-shadow-blur: 10px * Metrics.ui-scale;
+            drop-shadow-offset-y: 2px * Metrics.ui-scale;
+            drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024;
 
             pane := EditorScreen {
                 width: 100%;
@@ -582,6 +606,9 @@ export component App inherits Window {
                 open-history => { root.open-history(); }
                 header-swipe-enabled: root.note-sheet-open && root.keyboard == 0px;
                 sheet-drag-moved(dy) => {
+                    if (!root.is-dragging-sheet) {
+                        root.sheet-drag-start-time = animation-tick();
+                    }
                     let travel = max(100px, root.mini-card-resting-y);
                     let current-offset = root.is-dragging-sheet
                         ? (1.0 - root.drag-sheet-progress) * travel
@@ -597,7 +624,15 @@ export component App inherits Window {
                     root.drag-sheet-progress = progress;
                 }
                 sheet-drag-swiped(dy) => {
-                    let should-close = root.drag-sheet-progress <= 0.60;
+                    // Average downward speed over the whole gesture. A fast
+                    // flick closes the sheet even if it didn't travel past
+                    // the distance threshold -- gated on a minimum distance
+                    // so a quick tap/jitter can't trip it.
+                    let elapsed-ms = max(1.0, (animation-tick() - root.sheet-drag-start-time) / 1ms);
+                    let velocity = (dy / 1px) / elapsed-ms;
+                    let flicked-closed = dy > 24px * Metrics.ui-scale
+                        && velocity > root.fast-swipe-velocity * Metrics.ui-scale;
+                    let should-close = root.drag-sheet-progress <= 0.60 || flicked-closed;
                     root.is-dragging-sheet = false;
                     root.sheet-threshold-passed = false;
                     if (should-close) {
