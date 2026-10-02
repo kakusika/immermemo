@@ -278,15 +278,20 @@ export component App inherits Window {
     in-out property <bool> is-dragging-sheet: false;
     in-out property <float> drag-sheet-progress: 0.0;
     property <bool> sheet-threshold-passed: false;
-    // Timestamp the downward drag started, to turn a fast flick into a
-    // close even when it didn't travel past the distance threshold.
-    // SwipeGestureHandler exposes positions but no timestamps, so we
-    // stamp it ourselves with animation-tick() (ms since window creation).
-    property <duration> sheet-drag-start-time: 0ms;
     // Average downward speed in px/ms (at ui-scale 1.0) that counts as a
     // deliberate flick-to-close, scaled by ui-scale so it tracks the same
-    // fraction-of-screen-per-time at any font/UI size setting.
-    property <float> fast-swipe-velocity: 0.9;
+    // fraction-of-screen-per-time at any font/UI size setting. EditorScreen
+    // measures this itself (see its `drag-start-time` doc comment) and
+    // reports it alongside dy. 0.6 px/ms = 600px/s; a deliberate fast flick
+    // tends to run well over 1000px/s, so this stays clear of an ordinary
+    // drag's speed without needing to be as low as it was while the
+    // measurement itself was still unreliable.
+    property <float> fast-swipe-velocity: 0.6;
+    // mini-card-container never moves during its own gesture (see its own
+    // doc comment), so raw self.pressed-position/self.current-position are
+    // trustworthy here -- unlike the note sheet's header/body gestures,
+    // this one only needs a timestamp for velocity.
+    property <duration> mini-drag-start-time: 0ms;
     property <float> sheet-progress: root.is-dragging-sheet
         ? root.drag-sheet-progress
         : (root.note-sheet-open ? 1.0 : 0.0);
@@ -550,27 +555,22 @@ export component App inherits Window {
         }
 
         // Layer 2: Fullscreen Note Editor Sheet Overlay
-        // Starts at the mini-card position and expands to fullscreen (0px)
+        // header-gesture/body-gesture inside EditorScreen are themselves
+        // fixed-position (see editor.slint's `sheet-y-offset` doc comment);
+        // this wrapper only gates visibility during the open/close
+        // animation, it no longer carries the animated position itself.
         editor-sheet := Rectangle {
             x: 0px;
-            y: (1.0 - root.sheet-progress) * root.mini-card-resting-y;
+            y: 0px;
             width: 100%;
             height: 100%;
-            // Reach full opacity at 10% progress so background content never bleeds through
-            opacity: clamp(root.sheet-progress * 10.0, 0.0, 1.0);
             visible: root.sheet-progress > 0.01;
-            clip: true;
-            // Morph corner radii: start rounded like the mini card, flatten as sheet fills screen
-            border-top-left-radius: Metrics.radius-lg * (1.0 - root.sheet-progress);
-            border-top-right-radius: Metrics.radius-lg * (1.0 - root.sheet-progress);
-            // Same elevation as the mini card it morphs from/to (components.slint MiniNoteCard)
-            drop-shadow-blur: 10px * Metrics.ui-scale;
-            drop-shadow-offset-y: 2px * Metrics.ui-scale;
-            drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024;
 
             pane := EditorScreen {
                 width: 100%;
                 height: 100%;
+                sheet-progress: root.sheet-progress;
+                sheet-y-offset: (1.0 - root.sheet-progress) * root.mini-card-resting-y;
                 title: root.current-title;
                 has-note: root.current >= 0;
                 note-count: root.notes.length;
@@ -608,14 +608,16 @@ export component App inherits Window {
                 open-history => { root.open-history(); }
                 header-swipe-enabled: root.note-sheet-open && root.keyboard == 0px;
                 sheet-drag-moved(dy) => {
-                    if (!root.is-dragging-sheet) {
-                        root.sheet-drag-start-time = animation-tick();
-                    }
+                    // dy is the total distance since this gesture's own
+                    // start (header-gesture/body-gesture are stationary, so
+                    // this is trustworthy on its own -- no need to add back
+                    // an already-accumulated offset the way this used to,
+                    // back when it was compensating for a drifting frame).
+                    // A fresh gesture always starts from drag-sheet-progress
+                    // == 1.0 (swiped/cancelled always reset it to a clean
+                    // 0 or 1 endpoint), so this is the whole computation.
                     let travel = max(100px, root.mini-card-resting-y);
-                    let current-offset = root.is-dragging-sheet
-                        ? (1.0 - root.drag-sheet-progress) * travel
-                        : 0px;
-                    let downward = max(0px, dy + current-offset);
+                    let downward = max(0px, dy);
                     let progress = clamp(1.0 - (downward / travel), 0.0, 1.0);
                     let passed = progress <= 0.60;
                     if (passed != root.sheet-threshold-passed) {
@@ -625,15 +627,16 @@ export component App inherits Window {
                     root.is-dragging-sheet = true;
                     root.drag-sheet-progress = progress;
                 }
-                sheet-drag-swiped(dy) => {
-                    // Average downward speed over the whole gesture. A fast
-                    // flick closes the sheet even if it didn't travel past
-                    // the distance threshold -- gated on a minimum distance
-                    // so a quick tap/jitter can't trip it.
-                    let elapsed-ms = max(1.0, (animation-tick() - root.sheet-drag-start-time) / 1ms);
-                    let velocity = (dy / 1px) / elapsed-ms;
-                    let flicked-closed = dy > 24px * Metrics.ui-scale
-                        && velocity > root.fast-swipe-velocity * Metrics.ui-scale;
+                sheet-drag-swiped(dy, velocity) => {
+                    // A fast downward flick closes the sheet even if it
+                    // didn't travel past the distance threshold. No extra
+                    // minimum-distance guard here: `swiped` only fires once
+                    // SwipeGestureHandler has already recognized this as a
+                    // swipe (not a tap), so that disambiguation is already
+                    // done upstream -- and an upward (negative dy) flick
+                    // already fails this on its own, since velocity shares
+                    // dy's sign and the threshold is positive.
+                    let flicked-closed = velocity > root.fast-swipe-velocity * Metrics.ui-scale;
                     let should-close = root.drag-sheet-progress <= 0.60 || flicked-closed;
                     root.is-dragging-sheet = false;
                     root.sheet-threshold-passed = false;
@@ -668,6 +671,10 @@ export component App inherits Window {
                 enabled: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open;
                 handle-swipe-up: true;
 
+                changed pressed-position => {
+                    root.mini-drag-start-time = animation-tick();
+                }
+
                 moved => {
                     if (self.swiping) {
                         root.is-dragging-sheet = true;
@@ -681,7 +688,12 @@ export component App inherits Window {
                 swiped => {
                     root.is-dragging-sheet = false;
                     let dy = self.current-position.y - self.pressed-position.y;
-                    if (-dy > 40px * Metrics.ui-scale || root.drag-sheet-progress > 0.25) {
+                    let elapsed-ms = max(1.0, (animation-tick() - root.mini-drag-start-time) / 1ms);
+                    let velocity = (-dy / 1px) / elapsed-ms;
+                    // Same reasoning as the note sheet's close gesture: no
+                    // extra minimum-distance guard, `swiped` already means
+                    // SwipeGestureHandler recognized this as a swipe.
+                    if (velocity > root.fast-swipe-velocity * Metrics.ui-scale || root.drag-sheet-progress > 0.25) {
                         root.open-note-sheet();
                     } else {
                         root.note-sheet-open = false;
@@ -697,6 +709,15 @@ export component App inherits Window {
                 MiniNoteCard {
                     width: 100%;
                     height: 100%;
+                    // Tracks toward the sheet's open (fully-on-screen)
+                    // position as it opens, same way editor-sheet's header
+                    // does -- this is the mirror image of its offset, since
+                    // mini-card-container sits exactly where editor-sheet
+                    // rests when fully closed. A passive visual property
+                    // like any other here: mini-card-gesture (the thing
+                    // that measures the swipe-up gesture) never reads this,
+                    // so there's no feedback loop into its own coordinates.
+                    y: -root.sheet-progress * root.mini-card-resting-y;
                     opacity: max(0.0, 1.0 - root.sheet-progress * 10.0);
                     title: root.current-title;
                     preview: root.snippets.length > root.current && root.current >= 0 ? root.snippets[root.current] : "";

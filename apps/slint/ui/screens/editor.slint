@@ -11,6 +11,27 @@ import {
     PillButton,
 } from "../components.slint";
 
+// Elevation + the open/close corner-radius morph, shared by the header and
+// body halves of the note sheet so they read as one continuous card. No
+// shadow on the body half -- its own edges sit against the screen edge
+// where a shadow wouldn't be visible anyway, and the header's shadow
+// already covers the visually relevant (top) edge.
+component SheetSurface inherits Rectangle {
+    in property <bool> is-header: false;
+    in property <float> sheet-progress: 1.0;
+
+    background: Colors.page-background;
+    opacity: clamp(root.sheet-progress * 10.0, 0.0, 1.0);
+    clip: root.is-header;
+    border-top-left-radius: root.is-header ? Metrics.radius-lg * (1.0 - root.sheet-progress) : 0px;
+    border-top-right-radius: root.is-header ? Metrics.radius-lg * (1.0 - root.sheet-progress) : 0px;
+    drop-shadow-blur: root.is-header ? 10px * Metrics.ui-scale : 0px;
+    drop-shadow-offset-y: root.is-header ? 2px * Metrics.ui-scale : 0px;
+    drop-shadow-color: root.is-header
+        ? (Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024)
+        : transparent;
+}
+
 export component EditorScreen inherits Rectangle {
     in property <string> title;
     in property <bool> has-note: false;
@@ -34,9 +55,29 @@ export component EditorScreen inherits Rectangle {
     out property <bool> editor-has-focus: root.edit-mode && editor.has-focus;
     out property <bool> scroll-at-top: editor-scroll.content-y >= -1px;
     in property <bool> header-swipe-enabled: true;
+    // How far the sheet has animated open (1.0 = fully open, matches
+    // app.slint's `sheet-progress`) and the pixel offset that follows from
+    // it. Passed in rather than recomputed here because the travel
+    // distance (`mini-card-resting-y`) is app.slint's own layout geometry.
+    // header-gesture/body-gesture below are themselves always at a fixed
+    // position -- only this offset, applied to their *content*, animates --
+    // so their own pressed-position/current-position stay in a stable
+    // frame. (They used to carry the animation themselves, nested inside
+    // the thing that moved; that made `current - pressed` meaningless,
+    // since an element dragged 1:1 with the finger reports an almost
+    // constant local position throughout the whole gesture, regardless of
+    // how far it actually travelled. Chasing that with compensating math
+    // was fragile -- this is the actual fix.)
+    in property <float> sheet-progress: 1.0;
+    in property <length> sheet-y-offset: 0px;
     callback sheet-drag-moved(length);
-    callback sheet-drag-swiped(length);
+    // dy, average downward px/ms over the drag (0 if timing wasn't captured)
+    callback sheet-drag-swiped(length, float);
     callback sheet-drag-cancelled();
+    // SwipeGestureHandler gives no timestamp, so this is stamped from
+    // `changed pressed-position`, which fires once right as a new press
+    // begins.
+    property <duration> drag-start-time: 0ms;
     callback edited(string);
     callback undo();
     callback redo();
@@ -79,27 +120,43 @@ export component EditorScreen inherits Rectangle {
         }
     }
 
-    background: Colors.page-background;
+    // No background here: header-surface/body-surface each paint their own
+    // (with the open/close opacity fade), and when they've slid away from
+    // part of this area during the drag, that gap is meant to show
+    // whatever's behind the sheet, not get papered over by an opaque root.
 
-    VerticalLayout {
-        header-gesture := SwipeGestureHandler {
-            height: root.inset-top + Metrics.bar-height;
-            enabled: root.header-swipe-enabled;
-            handle-swipe-down: true;
+    header-gesture := SwipeGestureHandler {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: root.inset-top + Metrics.bar-height;
+        enabled: root.header-swipe-enabled;
+        handle-swipe-down: true;
 
-            moved => {
-                if (self.swiping) {
-                    let dy = self.current-position.y - self.pressed-position.y;
-                    root.sheet-drag-moved(dy);
-                }
-            }
-            swiped => {
+        changed pressed-position => {
+            root.drag-start-time = animation-tick();
+        }
+        moved => {
+            if (self.swiping) {
                 let dy = self.current-position.y - self.pressed-position.y;
-                root.sheet-drag-swiped(dy);
+                root.sheet-drag-moved(dy);
             }
-            cancelled => {
-                root.sheet-drag-cancelled();
-            }
+        }
+        swiped => {
+            let dy = self.current-position.y - self.pressed-position.y;
+            let elapsed-ms = max(1.0, (animation-tick() - root.drag-start-time) / 1ms);
+            root.sheet-drag-swiped(dy, (dy / 1px) / elapsed-ms);
+        }
+        cancelled => {
+            root.sheet-drag-cancelled();
+        }
+
+        header-surface := SheetSurface {
+            is-header: true;
+            sheet-progress: root.sheet-progress;
+            y: root.sheet-y-offset;
+            width: 100%;
+            height: 100%;
 
             TopBar {
                 inset-top: root.inset-top;
@@ -156,258 +213,281 @@ export component EditorScreen inherits Rectangle {
                 }
             }
         }
+    }
 
-        if root.status != "" && root.status-is-error: Rectangle {
-            height: 38px;
-            background: Colors.danger.with-alpha(0.18);
-            HorizontalLayout {
-                padding-left: Metrics.gutter;
-                padding-right: 4px;
-                spacing: 8px;
-                Text {
-                    horizontal-stretch: 1;
-                    text: root.status;
-                    font-size: 13px;
-                    color: Colors.danger;
-                    vertical-alignment: center;
-                    overflow: elide;
-                }
+    // Body area: in-body title, text editor, and whatever banners apply --
+    // this is "everything below the header", all tracking the same
+    // sheet-y-offset as one unit via body-surface, same as before the
+    // header/body split.
+    body-gesture := SwipeGestureHandler {
+        x: 0px;
+        y: root.inset-top + Metrics.bar-height;
+        width: 100%;
+        height: root.height - (root.inset-top + Metrics.bar-height) - root.inset-bottom;
+        // A note with nothing to scroll (or no note at all) has no scroll
+        // position to gate on.
+        enabled: root.header-swipe-enabled && (!root.has-note || root.scroll-at-top) && (!root.edit-mode || !root.editor-has-focus);
+        handle-swipe-down: true;
 
-                IconButton {
-                    shape: Shapes.close;
-                    tint: Colors.danger;
-                    clicked => { root.dismiss-status(); }
-                }
-            }
+        changed pressed-position => {
+            root.drag-start-time = animation-tick();
         }
-
-        if root.has-conflict: Rectangle {
-            height: 42px;
-            background: Colors.warning.with-alpha(0.18);
-            HorizontalLayout {
-                padding-left: Metrics.gutter;
-                padding-right: Metrics.gutter;
-                spacing: 6px;
-                alignment: center;
-
-                Text {
-                    text: @tr("Conflict");
-                    font-size: 13px;
-                    font-weight: 700;
-                    color: Colors.warning;
-                    vertical-alignment: center;
-                }
-
-                Rectangle {
-                    horizontal-stretch: 1;
-                }
-
-                PillButton {
-                    text: @tr("Open Resolution");
-                    fill: Colors.warning;
-                    pressed-fill: Colors.warning.darker(15%);
-                    text-color: #ffffff;
-                    bold: true;
-                    clicked => { root.open-conflict-sheet(); }
-                }
-
-                PillButton {
-                    text: @tr("Next");
-                    clicked => { root.jump-conflict(); }
-                }
-
-                PillButton {
-                    text: @tr("Keep Mine");
-                    fill: Colors.warning;
-                    pressed-fill: Colors.warning.darker(15%);
-                    text-color: #ffffff;
-                    clicked => { root.resolve-mine(); }
-                }
-
-                PillButton {
-                    text: @tr("Keep Theirs");
-                    fill: Palette.foreground.with-alpha(0.12);
-                    pressed-fill: Palette.foreground.with-alpha(0.22);
-                    clicked => { root.resolve-theirs(); }
-                }
-            }
-        }
-
-        if !root.has-note: Rectangle {
-            vertical-stretch: 1;
-            HorizontalLayout {
-                alignment: center;
-                VerticalLayout {
-                    alignment: center;
-                    spacing: 12px;
-                    padding-left: 24px;
-                    padding-right: 24px;
-                    max-width: 320px;
-
-                    Text {
-                        text: root.note-count == 0 ? @tr("No notes yet") : @tr("No note selected");
-                        font-size: 20px;
-                        font-weight: 600;
-                        horizontal-alignment: center;
-                        color: Palette.foreground;
-                    }
-
-                    Text {
-                        text: root.note-count == 0
-                            ? @tr("Create your first note to start writing.")
-                            : @tr("Choose a note from the list, or create a new one.");
-                        font-size: 14px;
-                        horizontal-alignment: center;
-                        color: Colors.muted;
-                        wrap: word-wrap;
-                    }
-
-                    Rectangle {
-                        height: 8px;
-                    }
-
-                    HorizontalLayout {
-                        alignment: center;
-                        Rectangle {
-                            width: create-btn-layout.preferred-width + 36px;
-                            height: 44px;
-                            border-radius: 22px;
-                            background: create-touch.pressed ? Palette.accent-background.darker(10%) : Palette.accent-background;
-
-                            create-btn-layout := HorizontalLayout {
-                                alignment: center;
-                                padding-left: 18px;
-                                padding-right: 18px;
-                                Text {
-                                    text: @tr("+ New Note");
-                                    font-size: 15px;
-                                    font-weight: 600;
-                                    color: Palette.accent-foreground;
-                                    vertical-alignment: center;
-                                }
-                            }
-
-                            create-touch := TouchArea {
-                                clicked => { root.new-note(); }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Body area with in-body title and text editor
-        body-gesture := SwipeGestureHandler {
-            visible: root.has-note;
-            horizontal-stretch: root.has-note ? 1 : 0;
-            vertical-stretch: root.has-note ? 1 : 0;
-            height: root.has-note ? 100% : 0%;
-            enabled: root.header-swipe-enabled && root.scroll-at-top && (!root.edit-mode || !root.editor-has-focus);
-            handle-swipe-down: true;
-
-            moved => {
-                if (self.swiping) {
-                    let dy = self.current-position.y - self.pressed-position.y;
-                    root.sheet-drag-moved(dy);
-                }
-            }
-            swiped => {
+        moved => {
+            if (self.swiping) {
                 let dy = self.current-position.y - self.pressed-position.y;
-                root.sheet-drag-swiped(dy);
+                root.sheet-drag-moved(dy);
             }
-            cancelled => {
-                root.sheet-drag-cancelled();
-            }
+        }
+        swiped => {
+            let dy = self.current-position.y - self.pressed-position.y;
+            let elapsed-ms = max(1.0, (animation-tick() - root.drag-start-time) / 1ms);
+            root.sheet-drag-swiped(dy, (dy / 1px) / elapsed-ms);
+        }
+        cancelled => {
+            root.sheet-drag-cancelled();
+        }
 
-            body-container := Rectangle {
+        body-surface := SheetSurface {
+            is-header: false;
+            sheet-progress: root.sheet-progress;
+            y: root.sheet-y-offset;
+            width: 100%;
+            height: 100%;
+
+            VerticalLayout {
                 width: 100%;
                 height: 100%;
 
-                edit-scope := FocusScope {
-                    width: 100%;
-                    height: 100%;
-                    capture-key-pressed(event) => {
-                        if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
-                            root.undo();
-                            return accept;
+                if root.status != "" && root.status-is-error: Rectangle {
+                    height: 38px;
+                    background: Colors.danger.with-alpha(0.18);
+                    HorizontalLayout {
+                        padding-left: Metrics.gutter;
+                        padding-right: 4px;
+                        spacing: 8px;
+                        Text {
+                            horizontal-stretch: 1;
+                            text: root.status;
+                            font-size: 13px;
+                            color: Colors.danger;
+                            vertical-alignment: center;
+                            overflow: elide;
                         }
-                        if (event.modifiers.control && (event.text == "y" || event.text == "Y" || ((event.text == "z" || event.text == "Z") && event.modifiers.shift))) {
-                            root.redo();
-                            return accept;
-                        }
-                        return reject;
-                    }
 
-                    editor-scroll := AppScrollView {
+                        IconButton {
+                            shape: Shapes.close;
+                            tint: Colors.danger;
+                            clicked => { root.dismiss-status(); }
+                        }
+                    }
+                }
+
+                if root.has-conflict: Rectangle {
+                    height: 42px;
+                    background: Colors.warning.with-alpha(0.18);
+                    HorizontalLayout {
+                        padding-left: Metrics.gutter;
+                        padding-right: Metrics.gutter;
+                        spacing: 6px;
+                        alignment: center;
+
+                        Text {
+                            text: @tr("Conflict");
+                            font-size: 13px;
+                            font-weight: 700;
+                            color: Colors.warning;
+                            vertical-alignment: center;
+                        }
+
+                        Rectangle {
+                            horizontal-stretch: 1;
+                        }
+
+                        PillButton {
+                            text: @tr("Open Resolution");
+                            fill: Colors.warning;
+                            pressed-fill: Colors.warning.darker(15%);
+                            text-color: #ffffff;
+                            bold: true;
+                            clicked => { root.open-conflict-sheet(); }
+                        }
+
+                        PillButton {
+                            text: @tr("Next");
+                            clicked => { root.jump-conflict(); }
+                        }
+
+                        PillButton {
+                            text: @tr("Keep Mine");
+                            fill: Colors.warning;
+                            pressed-fill: Colors.warning.darker(15%);
+                            text-color: #ffffff;
+                            clicked => { root.resolve-mine(); }
+                        }
+
+                        PillButton {
+                            text: @tr("Keep Theirs");
+                            fill: Palette.foreground.with-alpha(0.12);
+                            pressed-fill: Palette.foreground.with-alpha(0.22);
+                            clicked => { root.resolve-theirs(); }
+                        }
+                    }
+                }
+
+                if !root.has-note: Rectangle {
+                    vertical-stretch: 1;
+                    HorizontalLayout {
+                        alignment: center;
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 12px;
+                            padding-left: 24px;
+                            padding-right: 24px;
+                            max-width: 320px;
+
+                            Text {
+                                text: root.note-count == 0 ? @tr("No notes yet") : @tr("No note selected");
+                                font-size: 20px;
+                                font-weight: 600;
+                                horizontal-alignment: center;
+                                color: Palette.foreground;
+                            }
+
+                            Text {
+                                text: root.note-count == 0
+                                    ? @tr("Create your first note to start writing.")
+                                    : @tr("Choose a note from the list, or create a new one.");
+                                font-size: 14px;
+                                horizontal-alignment: center;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+
+                            Rectangle {
+                                height: 8px;
+                            }
+
+                            HorizontalLayout {
+                                alignment: center;
+                                Rectangle {
+                                    width: create-btn-layout.preferred-width + 36px;
+                                    height: 44px;
+                                    border-radius: 22px;
+                                    background: create-touch.pressed ? Palette.accent-background.darker(10%) : Palette.accent-background;
+
+                                    create-btn-layout := HorizontalLayout {
+                                        alignment: center;
+                                        padding-left: 18px;
+                                        padding-right: 18px;
+                                        Text {
+                                            text: @tr("+ New Note");
+                                            font-size: 15px;
+                                            font-weight: 600;
+                                            color: Palette.accent-foreground;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+
+                                    create-touch := TouchArea {
+                                        clicked => { root.new-note(); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                body-container := Rectangle {
+                    visible: root.has-note;
+                    vertical-stretch: root.has-note ? 1 : 0;
+                    width: 100%;
+
+                    edit-scope := FocusScope {
                         width: 100%;
                         height: 100%;
+                        capture-key-pressed(event) => {
+                            if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
+                                root.undo();
+                                return accept;
+                            }
+                            if (event.modifiers.control && (event.text == "y" || event.text == "Y" || ((event.text == "z" || event.text == "Z") && event.modifiers.shift))) {
+                                root.redo();
+                                return accept;
+                            }
+                            return reject;
+                        }
 
-                        VerticalLayout {
+                        editor-scroll := AppScrollView {
                             width: 100%;
-                            alignment: start;
-                            padding-left: Metrics.gutter;
-                            padding-right: Metrics.gutter;
-                            padding-top: Metrics.spacing-lg;
-                            padding-bottom: Metrics.spacing-3xl;
-                            spacing: Metrics.spacing-md;
-                            min-height: editor-scroll.visible-height + 1px;
+                            height: 100%;
 
-                            // In-body note title (Notion / Apple Notes style)
-                            Text {
-                                text: root.title != "" ? root.title : @tr("Untitled");
-                                font-size: Metrics.font-headline;
-                                font-weight: 700;
-                                color: Palette.foreground;
-                                wrap: word-wrap;
-                            }
+                            VerticalLayout {
+                                width: 100%;
+                                alignment: start;
+                                padding-left: Metrics.gutter;
+                                padding-right: Metrics.gutter;
+                                padding-top: Metrics.spacing-lg;
+                                padding-bottom: Metrics.spacing-3xl;
+                                spacing: Metrics.spacing-md;
+                                min-height: editor-scroll.visible-height + 1px;
 
-                            // View mode display: clean non-editing text with double-tap detector
-                            view-box := Rectangle {
-                                visible: !root.edit-mode;
-                                height: !root.edit-mode ? max(160px, max(view-text.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
+                                // In-body note title (Notion / Apple Notes style)
+                                Text {
+                                    text: root.title != "" ? root.title : @tr("Untitled");
+                                    font-size: Metrics.font-headline;
+                                    font-weight: 700;
+                                    color: Palette.foreground;
+                                    wrap: word-wrap;
+                                }
 
-                                VerticalLayout {
-                                    alignment: start;
-                                    view-text := Text {
+                                // View mode display: clean non-editing text with double-tap detector
+                                view-box := Rectangle {
+                                    visible: !root.edit-mode;
+                                    height: !root.edit-mode ? max(160px, max(view-text.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
+
+                                    VerticalLayout {
+                                        alignment: start;
+                                        view-text := Text {
+                                            width: 100%;
+                                            text: root.body != "" ? root.body : @tr("Tap Edit or double-tap here to write.");
+                                            font-size: root.font-size;
+                                            color: root.body != "" ? Palette.foreground : Colors.muted;
+                                            wrap: word-wrap;
+                                        }
+                                    }
+
+                                    TouchArea {
                                         width: 100%;
-                                        text: root.body != "" ? root.body : @tr("Tap Edit or double-tap here to write.");
-                                        font-size: root.font-size;
-                                        color: root.body != "" ? Palette.foreground : Colors.muted;
-                                        wrap: word-wrap;
+                                        height: 100%;
+                                        double-clicked => {
+                                            root.focus-editor();
+                                        }
                                     }
                                 }
 
-                                TouchArea {
-                                    width: 100%;
-                                    height: 100%;
-                                    double-clicked => {
-                                        root.focus-editor();
-                                    }
-                                }
-                            }
-
-                            editor := TextInput {
-                                visible: root.edit-mode;
-                                enabled: root.has-note && root.edit-mode;
-                                font-size: root.font-size;
-                                text <=> root.body;
-                                color: Palette.foreground;
-                                selection-background-color: Palette.accent-background.with-alpha(0.3);
-                                selection-foreground-color: Palette.foreground;
-                                single-line: false;
-                                wrap: word-wrap;
-                                height: root.edit-mode ? max(160px, max(self.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
-                                edited => { root.edited(self.text); }
-                                cursor-position-changed(cpos) => {
-                                    let cpos-screen-y = editor.y + cpos.y;
-                                    if (cpos-screen-y + editor-scroll.content-y < 0px) {
-                                        editor-scroll.content-y = min(
-                                            0px,
-                                            editor-scroll.visible-height - cpos-screen-y - 32px,
-                                            max(editor-scroll.visible-height - self.height, -cpos-screen-y),
-                                        );
-                                    } else if (cpos-screen-y + editor-scroll.content-y > editor-scroll.visible-height - 32px) {
-                                        editor-scroll.content-y = min(0px, max(editor-scroll.visible-height - self.height, editor-scroll.visible-height - cpos-screen-y - 32px));
+                                editor := TextInput {
+                                    visible: root.edit-mode;
+                                    enabled: root.has-note && root.edit-mode;
+                                    font-size: root.font-size;
+                                    text <=> root.body;
+                                    color: Palette.foreground;
+                                    selection-background-color: Palette.accent-background.with-alpha(0.3);
+                                    selection-foreground-color: Palette.foreground;
+                                    single-line: false;
+                                    wrap: word-wrap;
+                                    height: root.edit-mode ? max(160px, max(self.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
+                                    edited => { root.edited(self.text); }
+                                    cursor-position-changed(cpos) => {
+                                        let cpos-screen-y = editor.y + cpos.y;
+                                        if (cpos-screen-y + editor-scroll.content-y < 0px) {
+                                            editor-scroll.content-y = min(
+                                                0px,
+                                                editor-scroll.visible-height - cpos-screen-y - 32px,
+                                                max(editor-scroll.visible-height - self.height, -cpos-screen-y),
+                                            );
+                                        } else if (cpos-screen-y + editor-scroll.content-y > editor-scroll.visible-height - 32px) {
+                                            editor-scroll.content-y = min(0px, max(editor-scroll.visible-height - self.height, editor-scroll.visible-height - cpos-screen-y - 32px));
+                                        }
                                     }
                                 }
                             }
@@ -416,11 +496,17 @@ export component EditorScreen inherits Rectangle {
                 }
             }
         }
+    }
 
-        // Pushes content above the keyboard or system bar when present.
-        if root.inset-bottom > 0px: Rectangle {
-            height: root.inset-bottom;
-            background: Palette.background;
-        }
+    // Pushes content above the keyboard or system bar when present. Fixed
+    // at the true bottom of the screen -- not part of either gesture
+    // surface, since dragging is disabled whenever the keyboard is up
+    // anyway (app.slint gates header-swipe-enabled on keyboard == 0px).
+    if root.inset-bottom > 0px: Rectangle {
+        x: 0px;
+        y: root.height - root.inset-bottom;
+        width: 100%;
+        height: root.inset-bottom;
+        background: Palette.background;
     }
 }
