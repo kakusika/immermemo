@@ -62,14 +62,27 @@ export global Colors {
     out property <color> separator: Palette.foreground.with-alpha(0.12);
     out property <color> muted: Palette.foreground.with-alpha(0.6);
 
-    // Dynamic surface elevation colors derived adaptively from system Palette
+    // Dynamic surface elevation colors derived adaptively from system
+    // Palette. Which of background/alternate-background actually reads
+    // brighter is NOT consistent across widget styles: in dark mode,
+    // Fluent's alternate-background (#2C2C2C) is brighter than its
+    // background (#1C1C1C) -- the usual "surfaces lighten as they
+    // elevate" convention -- but Material's alternate-background
+    // (#1C1B1F) is *darker* than its background (#2a282d), the opposite
+    // direction (confirmed by comparing `.to-hsv().value` for both: this
+    // is what made Android (material style) render with a *brighter* page
+    // behind *darker* cards, inverted from desktop (fluent)). Comparing
+    // actual brightness instead of hardcoding a direction keeps the
+    // page-vs-card hierarchy correct under either style.
+    out property <bool> alternate-is-dimmer: Palette.alternate-background.to-hsv().value < Palette.background.to-hsv().value;
+    out property <brush> dimmer-surface: alternate-is-dimmer ? Palette.alternate-background : Palette.background;
+    out property <brush> brighter-surface: alternate-is-dimmer ? Palette.background : Palette.alternate-background;
+
     out property <color> page-background: Palette.color-scheme == ColorScheme.dark
-        ? Palette.background.darker(0.35)
-        : Palette.background.darker(0.04);
+        ? dimmer-surface.darker(0.35)
+        : dimmer-surface.darker(0.04);
     out property <color> surface: Palette.background;
-    out property <color> surface-elevated: Palette.color-scheme == ColorScheme.dark
-        ? Palette.alternate-background
-        : Palette.background;
+    out property <color> surface-elevated: brighter-surface;
     out property <color> card-border: Palette.foreground.with-alpha(0.08);
 }
 
