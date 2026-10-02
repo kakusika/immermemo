@@ -96,39 +96,38 @@ export component VaultHistorySheet inherits Rectangle {
                     background: Palette.alternate-background;
 
                     HorizontalLayout {
-                        padding-left: 4px;
-                        padding-right: 4px;
-                        spacing: 6px;
-                        alignment: center;
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        spacing: 8px;
 
                         VerticalLayout {
                             alignment: center;
                             Icon {
-                                shape: Shapes.sync;
-                                tint: Palette.accent-background;
+                                shape: Shapes.check;
+                                tint: Colors.success;
                                 width: 16px;
                                 height: 16px;
                             }
                         }
 
-                        VerticalLayout {
+                        // Time is what users scan for here, so it leads;
+                        // the commit hash/message is secondary detail.
+                        Text {
+                            text: root.dates[i];
+                            font-size: 13px;
+                            font-weight: 600;
+                            color: Palette.foreground;
+                            vertical-alignment: center;
+                        }
+
+                        Text {
                             horizontal-stretch: 1;
-                            spacing: 1px;
-                            alignment: center;
-
-                            Text {
-                                text: commit;
-                                font-size: 13px;
-                                font-weight: 600;
-                                color: Palette.foreground;
-                                overflow: elide;
-                            }
-
-                            Text {
-                                text: root.dates[i];
-                                font-size: 11px;
-                                color: Colors.muted;
-                            }
+                            text: commit;
+                            font-size: 11px;
+                            color: Colors.muted;
+                            horizontal-alignment: right;
+                            vertical-alignment: center;
+                            overflow: elide;
                         }
                     }
                 }
