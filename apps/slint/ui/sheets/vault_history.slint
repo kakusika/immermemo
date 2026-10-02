@@ -19,7 +19,7 @@ export component VaultHistorySheet inherits Rectangle {
 
     callback close();
 
-    background: Palette.background;
+    background: Colors.page-background;
 
     VerticalLayout {
         padding: 0px;
@@ -93,7 +93,7 @@ export component VaultHistorySheet inherits Rectangle {
                 for commit[i] in root.commits: Rectangle {
                     height: 48px;
                     border-radius: 8px;
-                    background: Palette.alternate-background;
+                    background: Colors.surface-elevated;
 
                     HorizontalLayout {
                         padding-left: 10px;

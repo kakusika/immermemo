@@ -63,7 +63,7 @@ component ModalShell inherits Rectangle {
             easing: ease-out;
         }
 
-        background: Palette.background;
+        background: Colors.surface-elevated;
         border-radius: 20px;
         drop-shadow-blur: 24px;
         drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #00000088 : #00000044;
@@ -100,7 +100,7 @@ export component TextInputDialog inherits Rectangle {
         card-max-width: 440px;
         cancel => { root.cancel(); }
 
-        if root.narrow: DragHandle {}
+        if root.narrow: DragHandle { }
 
         Text {
             text: root.title;
@@ -160,7 +160,7 @@ export component ConfirmDialog inherits Rectangle {
         card-max-width: 420px;
         cancel => { root.cancel(); }
 
-        if root.narrow: DragHandle {}
+        if root.narrow: DragHandle { }
 
         Text {
             text: root.title;
@@ -219,7 +219,7 @@ export component ActionSheet inherits Rectangle {
         content-spacing: 2px;
         cancel => { root.cancel(); }
 
-        if root.narrow: DragHandle {}
+        if root.narrow: DragHandle { }
 
         if root.title != "": HorizontalLayout {
             padding-left: 12px;

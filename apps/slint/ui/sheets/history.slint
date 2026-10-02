@@ -25,7 +25,7 @@ export component HistorySheet inherits Rectangle {
     property <bool> is-wide: root.width > 680px;
     in-out property <bool> viewing-preview: false;
 
-    background: Palette.background;
+    background: Colors.page-background;
 
     VerticalLayout {
         padding: 0px;
@@ -110,7 +110,7 @@ export component HistorySheet inherits Rectangle {
                     border-radius: 8px;
                     background: item-touch.pressed
                         ? Palette.foreground.with-alpha(0.08)
-                        : (root.selected-index == i ? Palette.accent-background.with-alpha(0.12) : Palette.alternate-background);
+                        : (root.selected-index == i ? Palette.accent-background.with-alpha(0.12) : Colors.surface-elevated);
                     border-width: root.selected-index == i ? 1px : 0px;
                     border-color: Palette.accent-background;
 
@@ -185,7 +185,7 @@ export component HistorySheet inherits Rectangle {
             Rectangle {
                 height: 38px;
                 border-radius: 6px;
-                background: Palette.alternate-background;
+                background: Colors.surface-elevated;
 
                 HorizontalLayout {
                     padding-left: 8px;
@@ -230,7 +230,7 @@ export component HistorySheet inherits Rectangle {
             Rectangle {
                 vertical-stretch: 1;
                 border-radius: 6px;
-                background: Palette.alternate-background;
+                background: Colors.surface-elevated;
                 clip: true;
 
                 AppScrollView {
@@ -294,7 +294,7 @@ export component HistorySheet inherits Rectangle {
             // Left: Commit list
             Rectangle {
                 width: 250px;
-                background: Palette.alternate-background;
+                background: Colors.surface-elevated;
                 border-radius: 10px;
                 clip: true;
 
@@ -394,7 +394,7 @@ export component HistorySheet inherits Rectangle {
 
                 Rectangle {
                     vertical-stretch: 1;
-                    background: Palette.alternate-background;
+                    background: Colors.surface-elevated;
                     border-radius: 8px;
                     border-width: 1px;
                     border-color: Colors.separator;

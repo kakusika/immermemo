@@ -21,7 +21,7 @@ component QuickActionTile inherits Rectangle {
     horizontal-stretch: 1;
     height: 76px * Metrics.ui-scale;
     border-radius: Metrics.radius-md;
-    background: touch.pressed ? Palette.foreground.with-alpha(0.12) : Palette.alternate-background;
+    background: touch.pressed ? Palette.foreground.with-alpha(0.12) : Colors.surface-elevated;
     animate background {
         duration: 150ms;
         easing: ease-out;
@@ -132,7 +132,7 @@ export component HomeScreen inherits Rectangle {
                 // ----------------------------------------------------
                 Rectangle {
                     border-radius: Metrics.radius-md;
-                    background: Palette.alternate-background;
+                    background: Colors.surface-elevated;
 
                     VerticalLayout {
                         padding: Metrics.spacing-lg;
@@ -344,7 +344,7 @@ export component HomeScreen inherits Rectangle {
                             // Error text display (selectable, word-wrapped)
                             Rectangle {
                                 border-radius: Metrics.radius-sm;
-                                background: Palette.background;
+                                background: Colors.surface;
                                 border-width: 1px;
                                 border-color: Colors.separator;
 
@@ -371,7 +371,7 @@ export component HomeScreen inherits Rectangle {
                                     border-radius: Metrics.radius-sm;
                                     background: root.sync-error-copied
                                         ? Colors.success.with-alpha(0.18)
-                                        : Palette.alternate-background;
+                                        : Colors.surface-elevated;
                                     border-width: 1px;
                                     border-color: root.sync-error-copied
                                         ? Colors.success.with-alpha(0.5)
@@ -447,7 +447,7 @@ export component HomeScreen inherits Rectangle {
                     // Card: Normal / Idle / Remote Not Configured
                     if root.last-sync-error == "": Rectangle {
                         border-radius: Metrics.radius-md;
-                        background: Palette.alternate-background;
+                        background: Colors.surface-elevated;
 
                         VerticalLayout {
                             padding: Metrics.spacing-md + 2px * Metrics.ui-scale;
@@ -673,8 +673,13 @@ export component HomeScreen inherits Rectangle {
                         }
 
                         // Reserved grid slots for upcoming quick actions.
-                        Rectangle { horizontal-stretch: 1; }
-                        Rectangle { horizontal-stretch: 1; }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                        }
+
+                        Rectangle {
+                            horizontal-stretch: 1;
+                        }
                     }
                 }
             }

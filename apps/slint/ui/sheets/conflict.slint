@@ -33,7 +33,7 @@ export component ConflictSheet inherits Rectangle {
         height: root.height > 680px ? 600px : root.height - 48px;
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        background: Palette.background;
+        background: Colors.surface-elevated;
         border-radius: 16px;
         drop-shadow-blur: 16px;
         drop-shadow-color: #000000.with-alpha(0.25);
@@ -121,7 +121,7 @@ export component ConflictSheet inherits Rectangle {
                             }
 
                             Rectangle {
-                                background: Palette.background;
+                                background: Colors.surface;
                                 border-radius: 8px;
                                 border-width: 1px;
                                 border-color: Colors.separator;
@@ -183,7 +183,7 @@ export component ConflictSheet inherits Rectangle {
                             }
 
                             Rectangle {
-                                background: Palette.background;
+                                background: Colors.surface;
                                 border-radius: 8px;
                                 border-width: 1px;
                                 border-color: Colors.separator;
