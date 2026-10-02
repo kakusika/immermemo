@@ -26,82 +26,89 @@ export component SearchScreen inherits Rectangle {
         TopBar {
             inset-top: root.inset-top;
 
-            // Search bar taking full width of top bar
-            Rectangle {
+            // Search bar taking full width of top bar. Wrapped in a
+            // VerticalLayout because it's shorter than the bar: a
+            // HorizontalLayout top-aligns fixed-height children instead of
+            // centering them (see AGENTS.md's Slint conventions).
+            VerticalLayout {
                 horizontal-stretch: 1;
-                height: Metrics.search-bar-height;
-                border-radius: self.height / 2;
-                background: Palette.alternate-background;
+                alignment: center;
 
-                HorizontalLayout {
-                    padding-left: Metrics.spacing-md;
-                    padding-right: Metrics.spacing-sm;
-                    spacing: Metrics.spacing-sm;
+                Rectangle {
+                    height: Metrics.search-bar-height;
+                    border-radius: self.height / 2;
+                    background: Palette.alternate-background;
 
-                    VerticalLayout {
-                        alignment: center;
+                    HorizontalLayout {
+                        padding-left: Metrics.spacing-md;
+                        padding-right: Metrics.spacing-sm;
+                        spacing: Metrics.spacing-sm;
 
-                        Icon {
-                            shape: Shapes.search;
-                            tint: Colors.muted;
-                            width: Metrics.icon-md;
-                            height: Metrics.icon-md;
-                        }
-                    }
-
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        clip: true;
-
-                        if root.query == "": Text {
-                            width: 100%;
-                            height: 100%;
-                            vertical-alignment: center;
-                            text: @tr("Search note titles and contents...");
-                            font-size: Metrics.font-md;
-                            color: Colors.muted;
-                            overflow: elide;
-                        }
-
-                        search_input := TextInput {
-                            width: 100%;
-                            height: 100%;
-                            vertical-alignment: center;
-                            font-size: Metrics.font-md;
-                            color: Palette.foreground;
-                            selection-background-color: Palette.accent-background.with-alpha(0.3);
-                            selection-foreground-color: Palette.foreground;
-                            single-line: true;
-                            text <=> root.query;
-                            edited => {
-                                root.query-changed(self.text);
-                            }
-                        }
-                    }
-
-                    if root.query != "": VerticalLayout {
-                        alignment: center;
-
-                        Rectangle {
-                            width: Metrics.icon-lg + 4px * Metrics.ui-scale;
-                            height: self.width;
-                            horizontal-stretch: 0;
-                            border-radius: self.width / 2;
-                            background: clear_btn.pressed ? Palette.foreground.with-alpha(0.12) : transparent;
+                        VerticalLayout {
+                            alignment: center;
 
                             Icon {
-                                shape: Shapes.close;
+                                shape: Shapes.search;
                                 tint: Colors.muted;
-                                width: Metrics.icon-sm;
-                                height: Metrics.icon-sm;
-                                x: (parent.width - self.width) / 2;
-                                y: (parent.height - self.height) / 2;
+                                width: Metrics.icon-md;
+                                height: Metrics.icon-md;
+                            }
+                        }
+
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            clip: true;
+
+                            if root.query == "": Text {
+                                width: 100%;
+                                height: 100%;
+                                vertical-alignment: center;
+                                text: @tr("Search note titles and contents...");
+                                font-size: Metrics.font-md;
+                                color: Colors.muted;
+                                overflow: elide;
                             }
 
-                            clear_btn := TouchArea {
-                                clicked => {
-                                    root.query = "";
-                                    root.query-changed("");
+                            search_input := TextInput {
+                                width: 100%;
+                                height: 100%;
+                                vertical-alignment: center;
+                                font-size: Metrics.font-md;
+                                color: Palette.foreground;
+                                selection-background-color: Palette.accent-background.with-alpha(0.3);
+                                selection-foreground-color: Palette.foreground;
+                                single-line: true;
+                                text <=> root.query;
+                                edited => {
+                                    root.query-changed(self.text);
+                                }
+                            }
+                        }
+
+                        if root.query != "": VerticalLayout {
+                            alignment: center;
+
+                            Rectangle {
+                                width: Metrics.icon-lg + 4px * Metrics.ui-scale;
+                                height: self.width;
+                                horizontal-stretch: 0;
+                                border-radius: self.width / 2;
+                                background: clear_btn.pressed ? Palette.foreground.with-alpha(0.12) : transparent;
+
+                                Icon {
+                                    shape: Shapes.close;
+                                    tint: Colors.muted;
+                                    width: Metrics.icon-sm;
+                                    height: Metrics.icon-sm;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                }
+
+                                clear_btn := TouchArea {
+                                    clicked => {
+                                        root.query = "";
+                                        root.query-changed("");
+                                    }
                                 }
                             }
                         }
