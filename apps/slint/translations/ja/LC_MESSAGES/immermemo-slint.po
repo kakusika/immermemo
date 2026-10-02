@@ -410,151 +410,126 @@ msgid "Tap + below to create your first note"
 msgstr "下の＋をタップして最初のノートを作成しましょう"
 
 #. Vault info
-#: ui/screens/home.slint:18
+#: ui/screens/home.slint:63
 msgctxt "HomeScreen"
 msgid "Default"
 msgstr "デフォルト"
 
-#: ui/screens/home.slint:51
+#: ui/screens/home.slint:91
 msgctxt "HomeScreen"
 msgid "Home"
 msgstr "ホーム"
 
-#: ui/screens/home.slint:100
+#: ui/screens/home.slint:149
 msgctxt "HomeScreen"
 msgid "Current Vault"
 msgstr "現在の保管庫"
 
-#: ui/screens/home.slint:108 ui/screens/home.slint:139
+#: ui/screens/home.slint:157 ui/screens/home.slint:188
 msgctxt "HomeScreen"
 msgid "Notes"
 msgstr "ノート数"
 
-#: ui/screens/home.slint:155
+#: ui/screens/home.slint:204
 msgctxt "HomeScreen"
 msgid "Conflicts"
 msgstr "競合"
 
-#: ui/screens/home.slint:193
+#: ui/screens/home.slint:231
 msgctxt "HomeScreen"
 msgid "Sync Status"
 msgstr "同期ステータス"
 
-#: ui/screens/home.slint:216 ui/screens/home.slint:470
+#: ui/screens/home.slint:254 ui/screens/home.slint:532
 msgctxt "HomeScreen"
 msgid "Syncing..."
 msgstr "同期中..."
 
-#: ui/screens/home.slint:250
+#: ui/screens/home.slint:312
 msgctxt "HomeScreen"
 msgid "Sync failed"
 msgstr "同期に失敗しました"
 
-#: ui/screens/home.slint:337
+#: ui/screens/home.slint:399
 msgctxt "HomeScreen"
 msgid "Copied"
 msgstr "コピーしました"
 
-#: ui/screens/home.slint:337
+#: ui/screens/home.slint:399
 msgctxt "HomeScreen"
 msgid "Copy Error"
 msgstr "エラーをコピー"
 
-#: ui/screens/home.slint:373
+#: ui/screens/home.slint:435
 msgctxt "HomeScreen"
 msgid "Retry"
 msgstr "再試行"
 
-#: ui/screens/home.slint:412
+#: ui/screens/home.slint:474
 msgctxt "HomeScreen"
 msgid "No remote configured"
 msgstr "リモート未設定"
 
-#: ui/screens/home.slint:419
+#: ui/screens/home.slint:481
 msgctxt "HomeScreen"
 msgid "Set a git remote to enable automatic sync"
 msgstr "Gitリモートを設定すると自動同期できます"
 
-#: ui/screens/home.slint:441
+#: ui/screens/home.slint:503
 msgctxt "HomeScreen"
 msgid "Settings"
 msgstr "設定"
 
-#: ui/screens/home.slint:470
+#: ui/screens/home.slint:532
 msgctxt "HomeScreen"
 msgid "Up to date"
 msgstr "同期完了"
 
-#: ui/screens/home.slint:478
+#: ui/screens/home.slint:540
 msgctxt "HomeScreen"
 msgid "Checking for changes with the remote"
 msgstr "リモートとの差分を確認しています"
 
-#: ui/screens/home.slint:479
+#: ui/screens/home.slint:541
 msgctxt "HomeScreen"
 msgid "Last synced: {}"
 msgstr "最終同期: {}"
 
-#: ui/screens/home.slint:479
+#: ui/screens/home.slint:541
 msgctxt "HomeScreen"
 msgid "Local and remote are in sync"
 msgstr "ローカルとリモートは同期済みです"
 
-#: ui/screens/home.slint:514
+#: ui/screens/home.slint:576
 msgctxt "HomeScreen"
 msgid "Sync"
 msgstr "同期"
 
-#: ui/screens/home.slint:535
+#: ui/screens/home.slint:597
 msgctxt "HomeScreen"
 msgid "Unresolved Conflicts"
 msgstr "未解決のコンフリクト"
 
-#: ui/screens/home.slint:568
+#: ui/screens/home.slint:630
 msgctxt "HomeScreen"
 msgid "{n} note has a conflict"
 msgid_plural "{n} notes have conflicts"
 msgstr[0] "{n} 件のノートに競合があります"
 
-#: ui/screens/home.slint:577
+#: ui/screens/home.slint:639
 msgctxt "HomeScreen"
 msgid "Tap to open and resolve conflicted notes →"
 msgstr "タップして競合ノートを開く・解決する →"
 
-#: ui/screens/home.slint:593
-msgctxt "HomeScreen"
-msgid "Currently Editing"
-msgstr "編集中ノート"
-
-#: ui/screens/home.slint:620
-msgctxt "HomeScreen"
-msgid "Tap to keep editing →"
-msgstr "タップして編集を続ける →"
-
-#: ui/screens/home.slint:635
+#: ui/screens/home.slint:658
 msgctxt "HomeScreen"
 msgid "Quick Actions"
 msgstr "クイックアクション"
 
-#: ui/screens/home.slint:651
+#: ui/screens/home.slint:670
 msgctxt "HomeScreen"
-msgid "+ New Note"
-msgstr "＋ 新しいノート"
-
-#: ui/screens/home.slint:657
-msgctxt "HomeScreen"
-msgid "Switch Vault..."
-msgstr "保管庫を切り替え..."
-
-#: ui/screens/home.slint:662
-msgctxt "HomeScreen"
-msgid "Settings & Sync..."
-msgstr "設定・同期..."
-
-#: ui/screens/home.slint:667
-msgctxt "HomeScreen"
-msgid "Vault History & Commits..."
-msgstr "保管庫の履歴・コミット..."
+msgid "New Note"
+msgstr "新しいノート"
 
 #: ui/screens/properties.slint:40
 msgctxt "PropertiesScreen"

@@ -6,9 +6,54 @@ import {
     Icon,
     BubbleButton,
     TopBar,
-    ActionRow,
     AppScrollView,
 } from "../components.slint";
+
+// A square icon-over-label tile for the Quick Actions grid -- tiles left
+// out for now (horizontal-stretch: 1 fillers) reserve their column so
+// adding the next action doesn't reflow the grid.
+component QuickActionTile inherits Rectangle {
+    in property <string> icon;
+    in property <string> label-text;
+    in property <color> tint: Palette.foreground;
+    callback clicked();
+
+    horizontal-stretch: 1;
+    height: 76px * Metrics.ui-scale;
+    border-radius: Metrics.radius-md;
+    background: touch.pressed ? Palette.foreground.with-alpha(0.12) : Palette.alternate-background;
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: Metrics.spacing-xs;
+
+        HorizontalLayout {
+            alignment: center;
+            Icon {
+                shape: root.icon;
+                width: Metrics.icon-lg;
+                height: Metrics.icon-lg;
+                tint: root.tint;
+            }
+        }
+
+        Text {
+            text: root.label-text;
+            font-size: Metrics.font-sm;
+            font-weight: 600;
+            color: root.tint;
+            horizontal-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
 
 export component HomeScreen inherits Rectangle {
     in property <length> inset-top: 0px;
@@ -26,16 +71,11 @@ export component HomeScreen inherits Rectangle {
     in property <bool> sync-error-copied: false;
     in property <string> last-synced-at: "";
 
-    // Currently open / recent note
-    in property <string> current-note-title: "";
-    in property <bool> has-current-note: false;
-
     callback new-note();
     callback sync();
     callback open-vaults();
     callback open-settings();
     callback open-vault-history();
-    callback open-current-note();
     callback open-conflict-note();
     callback copy-sync-error();
     callback dismiss-sync-error();
@@ -72,6 +112,15 @@ export component HomeScreen inherits Rectangle {
             vertical-stretch: 1;
 
             VerticalLayout {
+                // Without this, a VerticalLayout shorter than its Flickable
+                // dumps all the leftover space onto one section instead of
+                // leaving it below the content: sections here have no
+                // explicit vertical-stretch, so they default to a tied
+                // max-stretch, and on a tie Slint's layout solver grows the
+                // *last* one to fill the rest of the viewport. `start`
+                // packs from the top and only grows/shrinks children when
+                // the content actually overflows, same as before.
+                alignment: start;
                 padding-left: Metrics.gutter;
                 padding-right: Metrics.gutter;
                 padding-top: Metrics.spacing-lg;
@@ -164,17 +213,6 @@ export component HomeScreen inherits Rectangle {
                                     color: Colors.warning;
                                 }
                             }
-
-                            Rectangle {
-                                horizontal-stretch: 1;
-                            }
-
-                            if root.status != "": Text {
-                                text: root.status;
-                                font-size: Metrics.font-sm;
-                                color: Colors.muted;
-                                vertical-alignment: center;
-                            }
                         }
                     }
                 }
@@ -217,6 +255,30 @@ export component HomeScreen inherits Rectangle {
                                 font-size: Metrics.font-caption;
                                 font-weight: 600;
                                 color: Palette.accent-background;
+                            }
+                        }
+
+                        // Vault history & commits now lives here instead of
+                        // Quick Actions -- it's sync-related, same as this card.
+                        VerticalLayout {
+                            alignment: center;
+
+                            Rectangle {
+                                width: Metrics.touch;
+                                height: Metrics.touch;
+
+                                TouchArea {
+                                    clicked => { root.open-vault-history(); }
+                                }
+
+                                Icon {
+                                    shape: Shapes.history;
+                                    width: Metrics.icon-sm;
+                                    height: Metrics.icon-sm;
+                                    tint: Colors.muted;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                }
                             }
                         }
                     }
@@ -457,8 +519,8 @@ export component HomeScreen inherits Rectangle {
                                     Icon {
                                         width: Metrics.icon-md;
                                         height: Metrics.icon-md;
-                                        shape: Shapes.sync;
-                                        tint: root.syncing ? Palette.accent-background : Colors.muted;
+                                        shape: root.syncing ? Shapes.sync : Shapes.check;
+                                        tint: root.syncing ? Palette.accent-background : Colors.success;
                                     }
                                 }
 
@@ -584,50 +646,11 @@ export component HomeScreen inherits Rectangle {
                 }
 
                 // ----------------------------------------------------
-                // Section: Currently Open Note
-                // ----------------------------------------------------
-                if root.has-current-note: VerticalLayout {
-                    spacing: Metrics.spacing-sm;
-
-                    Text {
-                        text: @tr("Currently Editing");
-                        font-size: Metrics.font-caption;
-                        font-weight: 700;
-                        color: Colors.muted;
-                        letter-spacing: 0.5px;
-                    }
-
-                    Rectangle {
-                        border-radius: Metrics.radius-md;
-                        background: Palette.alternate-background;
-
-                        TouchArea {
-                            clicked => { root.open-current-note(); }
-                        }
-
-                        VerticalLayout {
-                            padding: Metrics.spacing-lg;
-                            spacing: Metrics.spacing-xs + 2px * Metrics.ui-scale;
-
-                            Text {
-                                text: root.current-note-title;
-                                font-size: Metrics.font-body;
-                                font-weight: 600;
-                                color: Palette.foreground;
-                            }
-
-                            Text {
-                                text: @tr("Tap to keep editing →");
-                                font-size: Metrics.font-sub;
-                                color: Palette.accent-background;
-                            }
-                        }
-                    }
-                }
-
-                // ----------------------------------------------------
                 // Section: Quick Actions
                 // ----------------------------------------------------
+                // Vault switching and Settings are already one tap away
+                // (the Vault Card's icon button, the bottom nav Settings
+                // tab) so they don't need a quick action of their own.
                 VerticalLayout {
                     spacing: Metrics.spacing-sm;
 
@@ -639,35 +662,19 @@ export component HomeScreen inherits Rectangle {
                         letter-spacing: 0.5px;
                     }
 
-                    Rectangle {
-                        border-radius: Metrics.radius-md;
-                        background: Palette.alternate-background;
+                    HorizontalLayout {
+                        spacing: Metrics.spacing-sm;
 
-                        VerticalLayout {
-                            padding: Metrics.spacing-sm;
-                            spacing: Metrics.spacing-xs;
-
-                            ActionRow {
-                                text: @tr("+ New Note");
-                                tint: Palette.accent-background;
-                                clicked => { root.new-note(); }
-                            }
-
-                            ActionRow {
-                                text: @tr("Switch Vault...");
-                                clicked => { root.open-vaults(); }
-                            }
-
-                            ActionRow {
-                                text: @tr("Settings & Sync...");
-                                clicked => { root.open-settings(); }
-                            }
-
-                            ActionRow {
-                                text: @tr("Vault History & Commits...");
-                                clicked => { root.open-vault-history(); }
-                            }
+                        QuickActionTile {
+                            icon: Shapes.note;
+                            label-text: @tr("New Note");
+                            tint: Palette.accent-background;
+                            clicked => { root.new-note(); }
                         }
+
+                        // Reserved grid slots for upcoming quick actions.
+                        Rectangle { horizontal-stretch: 1; }
+                        Rectangle { horizontal-stretch: 1; }
                     }
                 }
             }
