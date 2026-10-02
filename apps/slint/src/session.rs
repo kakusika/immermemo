@@ -612,6 +612,47 @@ pub fn resolve_conflict_step(app: &App, session: &Rc<RefCell<Session>>, choice: 
     }
 }
 
+/// Shows the note list if the vault has no notes left (clearing the
+/// remembered "last open note" and the Properties stats so neither
+/// lingers for a note that's gone), or reopens the initial/last note
+/// otherwise. Shared tail of [`finish_sync`] and `apps/slint/src/lib.rs`'s
+/// `on_confirm_delete` handler, both of which need this once whatever
+/// was open stops existing (a sync's merge rewrote it away, or the user
+/// just deleted it) -- `switch_to_files_tab` matches an explicit delete
+/// jumping the user to the list; a background sync doing the same
+/// wouldn't make sense, since the user didn't take an action here.
+pub fn show_list_or_reopen(app: &App, session: &Rc<RefCell<Session>>, switch_to_files_tab: bool) {
+    if session.borrow().notes.is_empty() {
+        let s = session.borrow();
+        s.app_data.clear_last_note(&s.vault_dir);
+        drop(s);
+        clear_note_stats(app);
+        if switch_to_files_tab {
+            app.set_active_tab(1);
+        }
+        app.set_list_open(true);
+    } else {
+        open_initial_or_last_note(app, session);
+    }
+}
+
+/// Clears the currently-open note's UI state (title, body, history) and
+/// then either shows the note list or reopens another note, via
+/// [`show_list_or_reopen`] -- the common tail [`finish_sync`] and
+/// `on_confirm_delete` both need once the note they had open stops
+/// existing.
+pub fn close_current_note_and_show_list_or_reopen(
+    app: &App,
+    session: &Rc<RefCell<Session>>,
+    switch_to_files_tab: bool,
+) {
+    session.borrow_mut().history = None;
+    app.set_current_title(SharedString::new());
+    show_history_state(app, &session.borrow());
+    app.set_body(SharedString::new());
+    show_list_or_reopen(app, session, switch_to_files_tab);
+}
+
 pub fn finish_sync(
     app: &App,
     session: &Rc<RefCell<Session>>,
@@ -654,26 +695,10 @@ pub fn finish_sync(
                 let index = session.borrow().notes.iter().position(|p| *p == path);
                 match index {
                     Some(index) => open_note(app, session, index),
-                    None => {
-                        session.borrow_mut().history = None;
-                        app.set_current_title(SharedString::new());
-                        show_history_state(app, &session.borrow());
-                        app.set_body(SharedString::new());
-                        if session.borrow().notes.is_empty() {
-                            let s = session.borrow();
-                            s.app_data.clear_last_note(&s.vault_dir);
-                            app.set_list_open(true);
-                        } else {
-                            open_initial_or_last_note(app, session);
-                        }
-                    }
+                    None => close_current_note_and_show_list_or_reopen(app, session, false),
                 }
-            } else if session.borrow().notes.is_empty() {
-                let s = session.borrow();
-                s.app_data.clear_last_note(&s.vault_dir);
-                app.set_list_open(true);
             } else {
-                open_initial_or_last_note(app, session);
+                show_list_or_reopen(app, session, false);
             }
             set_status(
                 app,

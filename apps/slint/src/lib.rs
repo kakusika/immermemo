@@ -421,25 +421,9 @@ pub fn run(
             let was_current = session.borrow().current_path() == Some(&path);
             refresh_list(&app, &session);
             if was_current {
-                session.borrow_mut().history = None;
-                app.set_current_title(SharedString::new());
-                show_history_state(&app, &session.borrow());
-                app.set_body(SharedString::new());
-                if session.borrow().notes.is_empty() {
-                    let s = session.borrow();
-                    s.app_data.clear_last_note(&s.vault_dir);
-                    session::clear_note_stats(&app);
-                    app.set_active_tab(1);
-                    app.set_list_open(true);
-                } else {
-                    open_initial_or_last_note(&app, &session);
-                }
+                session::close_current_note_and_show_list_or_reopen(&app, &session, true);
             } else if session.borrow().notes.is_empty() {
-                let s = session.borrow();
-                s.app_data.clear_last_note(&s.vault_dir);
-                session::clear_note_stats(&app);
-                app.set_active_tab(1);
-                app.set_list_open(true);
+                session::show_list_or_reopen(&app, &session, true);
             }
         }
     });
