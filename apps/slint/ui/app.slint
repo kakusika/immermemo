@@ -658,11 +658,18 @@ export component App inherits Window {
         // Mini note card container (anchored above the bottom nav bar)
         // Fixed at resting position so upward swipe gesture coordinates never shift.
         // Fades out quickly as sheet progress increases (editor sheet expands over it).
+        // The hit-test area is deliberately bigger than MiniNoteCard's own
+        // visual bounds (more room above than to the sides/below, since
+        // that's the direction being swiped, and bottom stays modest to
+        // avoid stealing taps from the nav bar ~8px below). A thumb swipe
+        // starting just outside the visible pill otherwise reaches nothing
+        // at all -- mini-card-gesture never sees the press, so it doesn't
+        // even get a chance to recognize or reject it.
         mini-card-container := Rectangle {
-            x: Metrics.spacing-sm;
-            y: root.mini-card-resting-y;
-            width: parent.width - 2 * Metrics.spacing-sm;
-            height: Metrics.mini-card-height;
+            x: Metrics.spacing-sm - 12px * Metrics.ui-scale;
+            y: root.mini-card-resting-y - 20px * Metrics.ui-scale;
+            width: parent.width - 2 * Metrics.spacing-sm + 24px * Metrics.ui-scale;
+            height: Metrics.mini-card-height + 26px * Metrics.ui-scale;
             visible: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open;
 
             mini-card-gesture := SwipeGestureHandler {
@@ -707,17 +714,20 @@ export component App inherits Window {
                 }
 
                 MiniNoteCard {
-                    width: 100%;
-                    height: 100%;
+                    x: 12px * Metrics.ui-scale;
+                    width: parent.width - 24px * Metrics.ui-scale;
+                    height: Metrics.mini-card-height;
                     // Tracks toward the sheet's open (fully-on-screen)
                     // position as it opens, same way editor-sheet's header
                     // does -- this is the mirror image of its offset, since
-                    // mini-card-container sits exactly where editor-sheet
-                    // rests when fully closed. A passive visual property
-                    // like any other here: mini-card-gesture (the thing
-                    // that measures the swipe-up gesture) never reads this,
-                    // so there's no feedback loop into its own coordinates.
-                    y: -root.sheet-progress * root.mini-card-resting-y;
+                    // mini-card-container (before its hit-area margin) sits
+                    // exactly where editor-sheet rests when fully closed. A
+                    // passive visual property like any other here:
+                    // mini-card-gesture (the thing that measures the
+                    // swipe-up gesture) never reads this, so there's no
+                    // feedback loop into its own coordinates. The leading
+                    // term re-centers it within the enlarged hit area.
+                    y: 20px * Metrics.ui-scale - root.sheet-progress * root.mini-card-resting-y;
                     opacity: max(0.0, 1.0 - root.sheet-progress * 10.0);
                     title: root.current-title;
                     preview: root.snippets.length > root.current && root.current >= 0 ? root.snippets[root.current] : "";
