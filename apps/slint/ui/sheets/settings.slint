@@ -3,6 +3,7 @@ import {
     Metrics,
     Colors,
     Shapes,
+    Icon,
     IconButton,
     TopBar,
     ActionRow,
@@ -10,8 +11,65 @@ import {
     SegmentedControl,
 } from "../components.slint";
 
-// A full-screen sheet for application settings: Sync & Remote, Vault management,
-// Editor font size and theme preferences, and application info.
+// A tappable row for the Settings list: icon, label, and a trailing
+// chevron to show it drills into its own sub-page.
+component CategoryRow inherits Rectangle {
+    in property <string> icon;
+    in property <string> label-text;
+    callback clicked();
+
+    height: Metrics.touch + 8px * Metrics.ui-scale;
+    border-radius: Metrics.radius-sm + 2px * Metrics.ui-scale;
+    background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    HorizontalLayout {
+        padding-left: Metrics.spacing-md;
+        padding-right: Metrics.spacing-md;
+        spacing: Metrics.spacing-md;
+
+        VerticalLayout {
+            alignment: center;
+            Icon {
+                shape: root.icon;
+                width: Metrics.icon-md;
+                height: Metrics.icon-md;
+                tint: Palette.accent-background;
+            }
+        }
+
+        Text {
+            horizontal-stretch: 1;
+            text: root.label-text;
+            font-size: Metrics.font-body;
+            vertical-alignment: center;
+            color: Palette.foreground;
+        }
+
+        VerticalLayout {
+            alignment: center;
+            Icon {
+                shape: Shapes.forward;
+                width: Metrics.icon-sm;
+                height: Metrics.icon-sm;
+                tint: Colors.muted;
+            }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+// A full-screen sheet for application settings: a grouped list of rows
+// (Interface; Other -- Sync & Remote, Vaults; Info -- About), each
+// drilling into its own sub-page -- the common "grouped list -> detail"
+// settings shape, chosen so new settings have an obvious home instead of
+// piling onto one long flat page.
 export component SettingsSheet inherits Rectangle {
     in property <length> inset-top: 0px;
     in property <length> inset-bottom: 0px;
@@ -44,19 +102,34 @@ export component SettingsSheet inherits Rectangle {
     callback font-size-changed(int);
     callback theme-changed(int);
 
+    // 0: list, 1: Interface, 2: Sync & Remote, 3: Vaults, 4: About.
+    // in-out so the app-level Back action (hardware button / edge-swipe
+    // gesture) can pop a sub-page back to the list -- see app.slint's
+    // handle-back().
+    in-out property <int> page: 0;
+
     background: Colors.page-background;
 
     VerticalLayout {
         TopBar {
             inset-top: root.inset-top;
-            if root.show-back: IconButton {
+
+            if root.page != 0: IconButton {
+                shape: Shapes.back;
+                clicked => { root.page = 0; }
+            }
+            if root.page == 0 && root.show-back: IconButton {
                 shape: Shapes.back;
                 clicked => { root.close(); }
             }
 
             Text {
                 horizontal-stretch: 1;
-                text: @tr("Settings");
+                text: root.page == 1 ? @tr("Interface")
+                    : root.page == 2 ? @tr("Sync & Remote")
+                    : root.page == 3 ? @tr("Vaults")
+                    : root.page == 4 ? @tr("About")
+                    : @tr("Settings");
                 font-size: 20px;
                 font-weight: 600;
                 vertical-alignment: center;
@@ -72,101 +145,41 @@ export component SettingsSheet inherits Rectangle {
         AppScrollView {
             vertical-stretch: 1;
 
-            VerticalLayout {
+            // --------------------------------------------------------
+            // List: Interface / Other (Sync & Remote, Vaults) / Info (About)
+            // --------------------------------------------------------
+            if root.page == 0: VerticalLayout {
+                // Without this, a VerticalLayout shorter than its Flickable
+                // dumps all the leftover space onto one section instead of
+                // leaving it below the content -- see home.slint's content
+                // VerticalLayout for the full explanation.
+                alignment: start;
                 padding-left: Metrics.gutter;
                 padding-right: Metrics.gutter;
                 padding-top: 16px;
                 padding-bottom: root.inset-bottom + 24px;
                 spacing: 24px;
 
-                // ----------------------------------------------------
-                // Section: Sync & Remote
-                // ----------------------------------------------------
-                VerticalLayout {
-                    spacing: 10px;
+                Rectangle {
+                    border-radius: 8px;
+                    background: Palette.alternate-background;
 
-                    Text {
-                        text: @tr("SYNC & REMOTE");
-                        font-size: 12px;
-                        font-weight: 700;
-                        color: Colors.muted;
-                        letter-spacing: 0.5px;
-                    }
+                    VerticalLayout {
+                        padding: 4px;
 
-                    Rectangle {
-                        border-radius: 8px;
-                        background: Palette.alternate-background;
-
-                        VerticalLayout {
-                            padding: 12px;
-                            spacing: 12px;
-
-                            VerticalLayout {
-                                spacing: 4px;
-                                Text {
-                                    text: @tr("Remote repository URL");
-                                    font-size: 13px;
-                                    color: Colors.muted;
-                                }
-
-                                LineEdit {
-                                    height: Metrics.touch;
-                                    placeholder-text: @tr("https://github.com/you/notes.git");
-                                    text <=> root.url-draft;
-                                }
-                            }
-
-                            VerticalLayout {
-                                spacing: 4px;
-                                Text {
-                                    text: @tr("Access token");
-                                    font-size: 13px;
-                                    color: Colors.muted;
-                                }
-
-                                LineEdit {
-                                    height: Metrics.touch;
-                                    placeholder-text: root.has-token ? @tr("Leave blank to keep the saved token") : @tr("Personal access token");
-                                    input-type: password;
-                                    text <=> root.token-draft;
-                                }
-                            }
-
-                            if root.sync-status != "": Text {
-                                text: root.sync-status;
-                                font-size: 13px;
-                                color: Colors.muted;
-                                wrap: word-wrap;
-                            }
-
-                            HorizontalLayout {
-                                spacing: 8px;
-                                alignment: end;
-
-                                Button {
-                                    text: root.syncing ? @tr("Syncing...") : @tr("Sync Now");
-                                    enabled: !root.syncing;
-                                    clicked => { root.sync(); }
-                                }
-
-                                Button {
-                                    text: @tr("Save Remote");
-                                    primary: true;
-                                    clicked => { root.save-remote(root.url-draft, root.token-draft); }
-                                }
-                            }
+                        CategoryRow {
+                            icon: Shapes.settings;
+                            label-text: @tr("Interface");
+                            clicked => { root.page = 1; }
                         }
                     }
                 }
 
-                // ----------------------------------------------------
-                // Section: Vaults
-                // ----------------------------------------------------
                 VerticalLayout {
                     spacing: 10px;
 
                     Text {
-                        text: @tr("VAULTS");
+                        text: @tr("Other");
                         font-size: 12px;
                         font-weight: 700;
                         color: Colors.muted;
@@ -178,32 +191,12 @@ export component SettingsSheet inherits Rectangle {
                         background: Palette.alternate-background;
 
                         VerticalLayout {
-                            padding: 12px;
-                            spacing: 8px;
+                            padding: 4px;
 
-                            HorizontalLayout {
-                                Text {
-                                    text: @tr("Active Vault");
-                                    font-size: 15px;
-                                    font-weight: 600;
-                                    color: Palette.foreground;
-                                    vertical-alignment: center;
-                                    horizontal-stretch: 1;
-                                }
-
-                                Text {
-                                    text: root.current-vault-name != "" ? root.current-vault-name : @tr("Default");
-                                    font-size: 15px;
-                                    color: Palette.accent-background;
-                                    vertical-alignment: center;
-                                }
-                            }
-
-                            if root.current-vault-path != "": Text {
-                                text: root.current-vault-path;
-                                font-size: 12px;
-                                color: Colors.muted;
-                                wrap: word-wrap;
+                            CategoryRow {
+                                icon: Shapes.cloud;
+                                label-text: @tr("Sync & Remote");
+                                clicked => { root.page = 2; }
                             }
 
                             Rectangle {
@@ -211,23 +204,20 @@ export component SettingsSheet inherits Rectangle {
                                 background: Colors.separator;
                             }
 
-                            ActionRow {
-                                text: @tr("Manage & Switch Vaults →");
-                                tint: Palette.accent-background;
-                                clicked => { root.open-vaults(); }
+                            CategoryRow {
+                                icon: Shapes.files;
+                                label-text: @tr("Vaults");
+                                clicked => { root.page = 3; }
                             }
                         }
                     }
                 }
 
-                // ----------------------------------------------------
-                // Section: Appearance & Editor
-                // ----------------------------------------------------
                 VerticalLayout {
                     spacing: 10px;
 
                     Text {
-                        text: @tr("APPEARANCE & EDITOR");
+                        text: @tr("Info");
                         font-size: 12px;
                         font-weight: 700;
                         color: Colors.muted;
@@ -239,127 +229,282 @@ export component SettingsSheet inherits Rectangle {
                         background: Palette.alternate-background;
 
                         VerticalLayout {
-                            padding: 12px;
-                            spacing: 16px;
+                            padding: 4px;
 
-                            // Theme Selector
-                            VerticalLayout {
-                                spacing: Metrics.spacing-sm;
-
-                                Text {
-                                    text: @tr("Theme");
-                                    font-size: Metrics.font-sub;
-                                    color: Colors.muted;
-                                }
-
-                                SegmentedControl {
-                                    options: [@tr("System"), @tr("Light"), @tr("Dark")];
-                                    selected: root.theme-choice;
-                                    changed(i) => {
-                                        root.theme-choice = i;
-                                        root.theme-changed(i);
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                height: 1px;
-                                background: Colors.separator;
-                            }
-
-                            // Font Size Selector
-                            VerticalLayout {
-                                spacing: Metrics.spacing-sm;
-
-                                Text {
-                                    text: @tr("Editor Font Size");
-                                    font-size: Metrics.font-sub;
-                                    color: Colors.muted;
-                                }
-
-                                SegmentedControl {
-                                    options: [@tr("Small (14)"), @tr("Medium (17)"), @tr("Large (20)")];
-                                    selected: root.font-size-choice;
-                                    changed(i) => {
-                                        root.font-size-choice = i;
-                                        root.font-size-changed(i);
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                height: 1px;
-                                background: Colors.separator;
-                            }
-
-                            // UI Scale Selector
-                            VerticalLayout {
-                                spacing: Metrics.spacing-sm;
-
-                                Text {
-                                    text: @tr("UI Scale");
-                                    font-size: Metrics.font-sub;
-                                    color: Colors.muted;
-                                }
-
-                                SegmentedControl {
-                                    options: ["90%", "100%", "110%", "125%"];
-                                    selected: Metrics.ui-scale < 0.95 ? 0 : (Metrics.ui-scale <= 1.05 ? 1 : (Metrics.ui-scale <= 1.18 ? 2 : 3));
-                                    changed(i) => {
-                                        Metrics.ui-scale = [0.9, 1.0, 1.1, 1.25][i];
-                                    }
-                                }
+                            CategoryRow {
+                                icon: Shapes.properties;
+                                label-text: @tr("About");
+                                clicked => { root.page = 4; }
                             }
                         }
                     }
                 }
+            }
 
-                // ----------------------------------------------------
-                // Section: About
-                // ----------------------------------------------------
-                VerticalLayout {
-                    spacing: 10px;
+            // --------------------------------------------------------
+            // Interface (theme, font size, UI scale)
+            // --------------------------------------------------------
+            if root.page == 1: VerticalLayout {
+                alignment: start;
+                padding-left: Metrics.gutter;
+                padding-right: Metrics.gutter;
+                padding-top: 16px;
+                padding-bottom: root.inset-bottom + 24px;
 
-                    Text {
-                        text: @tr("ABOUT");
-                        font-size: 12px;
-                        font-weight: 700;
-                        color: Colors.muted;
-                        letter-spacing: 0.5px;
-                    }
+                Rectangle {
+                    border-radius: 8px;
+                    background: Palette.alternate-background;
 
-                    Rectangle {
-                        border-radius: 8px;
-                        background: Palette.alternate-background;
+                    VerticalLayout {
+                        padding: 12px;
+                        spacing: 16px;
 
+                        // Theme Selector
                         VerticalLayout {
-                            padding: 16px;
-                            spacing: 8px;
+                            spacing: Metrics.spacing-sm;
 
                             Text {
-                                text: @tr("Immermemo v{}", root.app-version);
-                                font-size: 16px;
+                                text: @tr("Theme");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            SegmentedControl {
+                                options: [@tr("System"), @tr("Light"), @tr("Dark")];
+                                selected: root.theme-choice;
+                                changed(i) => {
+                                    root.theme-choice = i;
+                                    root.theme-changed(i);
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 1px;
+                            background: Colors.separator;
+                        }
+
+                        // Font Size Selector
+                        VerticalLayout {
+                            spacing: Metrics.spacing-sm;
+
+                            Text {
+                                text: @tr("Editor Font Size");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            SegmentedControl {
+                                options: [@tr("Small (14)"), @tr("Medium (17)"), @tr("Large (20)")];
+                                selected: root.font-size-choice;
+                                changed(i) => {
+                                    root.font-size-choice = i;
+                                    root.font-size-changed(i);
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 1px;
+                            background: Colors.separator;
+                        }
+
+                        // UI Scale Selector
+                        VerticalLayout {
+                            spacing: Metrics.spacing-sm;
+
+                            Text {
+                                text: @tr("UI Scale");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            SegmentedControl {
+                                options: ["90%", "100%", "110%", "125%"];
+                                selected: Metrics.ui-scale < 0.95 ? 0 : (Metrics.ui-scale <= 1.05 ? 1 : (Metrics.ui-scale <= 1.18 ? 2 : 3));
+                                changed(i) => {
+                                    Metrics.ui-scale = [0.9, 1.0, 1.1, 1.25][i];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------------------
+            // Sync & Remote
+            // --------------------------------------------------------
+            if root.page == 2: VerticalLayout {
+                alignment: start;
+                padding-left: Metrics.gutter;
+                padding-right: Metrics.gutter;
+                padding-top: 16px;
+                padding-bottom: root.inset-bottom + 24px;
+
+                Rectangle {
+                    border-radius: 8px;
+                    background: Palette.alternate-background;
+
+                    VerticalLayout {
+                        padding: 12px;
+                        spacing: 12px;
+
+                        VerticalLayout {
+                            spacing: 4px;
+                            Text {
+                                text: @tr("Remote repository URL");
+                                font-size: 13px;
+                                color: Colors.muted;
+                            }
+
+                            LineEdit {
+                                height: Metrics.touch;
+                                placeholder-text: @tr("https://github.com/you/notes.git");
+                                text <=> root.url-draft;
+                            }
+                        }
+
+                        VerticalLayout {
+                            spacing: 4px;
+                            Text {
+                                text: @tr("Access token");
+                                font-size: 13px;
+                                color: Colors.muted;
+                            }
+
+                            LineEdit {
+                                height: Metrics.touch;
+                                placeholder-text: root.has-token ? @tr("Leave blank to keep the saved token") : @tr("Personal access token");
+                                input-type: password;
+                                text <=> root.token-draft;
+                            }
+                        }
+
+                        if root.sync-status != "": Text {
+                            text: root.sync-status;
+                            font-size: 13px;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: end;
+
+                            Button {
+                                text: root.syncing ? @tr("Syncing...") : @tr("Sync Now");
+                                enabled: !root.syncing;
+                                clicked => { root.sync(); }
+                            }
+
+                            Button {
+                                text: @tr("Save Remote");
+                                primary: true;
+                                clicked => { root.save-remote(root.url-draft, root.token-draft); }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------------------
+            // Vaults
+            // --------------------------------------------------------
+            if root.page == 3: VerticalLayout {
+                alignment: start;
+                padding-left: Metrics.gutter;
+                padding-right: Metrics.gutter;
+                padding-top: 16px;
+                padding-bottom: root.inset-bottom + 24px;
+
+                Rectangle {
+                    border-radius: 8px;
+                    background: Palette.alternate-background;
+
+                    VerticalLayout {
+                        padding: 12px;
+                        spacing: 8px;
+
+                        HorizontalLayout {
+                            Text {
+                                text: @tr("Active Vault");
+                                font-size: 15px;
                                 font-weight: 600;
                                 color: Palette.foreground;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
                             }
 
                             Text {
-                                text: @tr("A mobile note app for writing Tomet (.tmt) notes, synced over git without git touching user files.");
-                                font-size: 13px;
-                                color: Colors.muted;
-                                wrap: word-wrap;
+                                text: root.current-vault-name != "" ? root.current-vault-name : @tr("Default");
+                                font-size: 15px;
+                                color: Palette.accent-background;
+                                vertical-alignment: center;
                             }
+                        }
 
-                            Rectangle {
-                                height: 4px;
-                            }
+                        if root.current-vault-path != "": Text {
+                            text: root.current-vault-path;
+                            font-size: 12px;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
 
-                            Text {
-                                text: @tr("AST-level three-way merge with conflict tracking (@mobile.conflict).");
-                                font-size: 12px;
-                                color: Colors.muted;
-                                wrap: word-wrap;
-                            }
+                        Rectangle {
+                            height: 1px;
+                            background: Colors.separator;
+                        }
+
+                        ActionRow {
+                            text: @tr("Manage & Switch Vaults →");
+                            tint: Palette.accent-background;
+                            clicked => { root.open-vaults(); }
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------------------
+            // About
+            // --------------------------------------------------------
+            if root.page == 4: VerticalLayout {
+                alignment: start;
+                padding-left: Metrics.gutter;
+                padding-right: Metrics.gutter;
+                padding-top: 16px;
+                padding-bottom: root.inset-bottom + 24px;
+
+                Rectangle {
+                    border-radius: 8px;
+                    background: Palette.alternate-background;
+
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 8px;
+
+                        Text {
+                            text: @tr("Immermemo v{}", root.app-version);
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: Palette.foreground;
+                        }
+
+                        Text {
+                            text: @tr("A mobile note app for writing Tomet (.tmt) notes, synced over git without git touching user files.");
+                            font-size: 13px;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+
+                        Rectangle {
+                            height: 4px;
+                        }
+
+                        Text {
+                            text: @tr("AST-level three-way merge with conflict tracking (@mobile.conflict).");
+                            font-size: 12px;
+                            color: Colors.muted;
+                            wrap: word-wrap;
                         }
                     }
                 }

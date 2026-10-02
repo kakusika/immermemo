@@ -227,14 +227,21 @@ export component App inherits Window {
             return true;
         }
 
-        // 4. If on any secondary tab (Files: 1, Search: 2, Properties: 3, Settings: 4), navigate back to Home (0)
+        // 4. Pop a Settings sub-page back to its category list before
+        // leaving the tab entirely.
+        if (root.active-tab == 4 && settings-screen.page != 0) {
+            settings-screen.page = 0;
+            return true;
+        }
+
+        // 5. If on any secondary tab (Files: 1, Search: 2, Properties: 3, Settings: 4), navigate back to Home (0)
         if (root.active-tab != 0) {
             root.active-tab = 0;
             root.trigger-haptic();
             return true;
         }
 
-        // 5. Already at root Home tab with nothing open:
+        // 6. Already at root Home tab with nothing open:
         // Return false to allow Android to perform the default action (minimize/close app)
         return false;
     }

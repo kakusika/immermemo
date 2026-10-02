@@ -237,144 +237,154 @@ msgctxt "VaultHistorySheet"
 msgid "Creating or syncing notes will record the vault's history here."
 msgstr "ノートを作成または同期すると、保管庫の履歴がここに表示されます。"
 
-#: ui/sheets/settings.slint:58
+#: ui/sheets/settings.slint:125
+msgctxt "SettingsSheet"
+msgid "Interface"
+msgstr "インターフェース"
+
+#: ui/sheets/settings.slint:126
+msgctxt "SettingsSheet"
+msgid "Sync & Remote"
+msgstr "同期とリモート"
+
+#: ui/sheets/settings.slint:127
+msgctxt "SettingsSheet"
+msgid "Vaults"
+msgstr "保管庫"
+
+#: ui/sheets/settings.slint:128
+msgctxt "SettingsSheet"
+msgid "About"
+msgstr "このアプリ"
+
+#: ui/sheets/settings.slint:129
 msgctxt "SettingsSheet"
 msgid "Settings"
 msgstr "設定"
 
-#: ui/sheets/settings.slint:88
+#: ui/sheets/settings.slint:179
 msgctxt "SettingsSheet"
-msgid "SYNC & REMOTE"
-msgstr "同期とリモート"
+msgid "Other"
+msgstr "その他"
 
-#: ui/sheets/settings.slint:106
+#: ui/sheets/settings.slint:217
 msgctxt "SettingsSheet"
-msgid "Remote repository URL"
-msgstr "リモートリポジトリのURL"
+msgid "Info"
+msgstr "情報"
 
-#: ui/sheets/settings.slint:113
-msgctxt "SettingsSheet"
-msgid "https://github.com/you/notes.git"
-msgstr "https://github.com/you/notes.git"
-
-#: ui/sheets/settings.slint:121
-msgctxt "SettingsSheet"
-msgid "Access token"
-msgstr "アクセストークン"
-
-#: ui/sheets/settings.slint:128
-msgctxt "SettingsSheet"
-msgid "Leave blank to keep the saved token"
-msgstr "保存済みのトークンを使う場合は空欄のまま"
-
-#: ui/sheets/settings.slint:128
-msgctxt "SettingsSheet"
-msgid "Personal access token"
-msgstr "パーソナルアクセストークン"
-
-#: ui/sheets/settings.slint:146
-msgctxt "SettingsSheet"
-msgid "Syncing..."
-msgstr "同期中..."
-
-#: ui/sheets/settings.slint:146
-msgctxt "SettingsSheet"
-msgid "Sync Now"
-msgstr "今すぐ同期"
-
-#: ui/sheets/settings.slint:152
-msgctxt "SettingsSheet"
-msgid "Save Remote"
-msgstr "リモートを保存"
-
-#: ui/sheets/settings.slint:168
-msgctxt "SettingsSheet"
-msgid "VAULTS"
-msgstr "保管庫"
-
-#: ui/sheets/settings.slint:185
-msgctxt "SettingsSheet"
-msgid "Active Vault"
-msgstr "現在の保管庫"
-
-#: ui/sheets/settings.slint:194
-msgctxt "SettingsSheet"
-msgid "Default"
-msgstr "デフォルト"
-
-#: ui/sheets/settings.slint:214
-msgctxt "SettingsSheet"
-msgid "Manage & Switch Vaults →"
-msgstr "保管庫の管理・切り替え →"
-
-#: ui/sheets/settings.slint:229
-msgctxt "SettingsSheet"
-msgid "APPEARANCE & EDITOR"
-msgstr "外観とエディタ"
-
-#: ui/sheets/settings.slint:249
+#: ui/sheets/settings.slint:264
 msgctxt "SettingsSheet"
 msgid "Theme"
 msgstr "テーマ"
 
-#: ui/sheets/settings.slint:264
+#: ui/sheets/settings.slint:270
 msgctxt "SettingsSheet"
 msgid "System"
 msgstr "システム"
 
-#: ui/sheets/settings.slint:287
+#: ui/sheets/settings.slint:270
 msgctxt "SettingsSheet"
 msgid "Light"
 msgstr "ライト"
 
-#: ui/sheets/settings.slint:310
+#: ui/sheets/settings.slint:270
 msgctxt "SettingsSheet"
 msgid "Dark"
 msgstr "ダーク"
 
-#: ui/sheets/settings.slint:338
+#: ui/sheets/settings.slint:289
 msgctxt "SettingsSheet"
 msgid "Editor Font Size"
 msgstr "エディタのフォントサイズ"
 
-#: ui/sheets/settings.slint:353
+#: ui/sheets/settings.slint:295
 msgctxt "SettingsSheet"
 msgid "Small (14)"
 msgstr "小 (14)"
 
-#: ui/sheets/settings.slint:376
+#: ui/sheets/settings.slint:295
 msgctxt "SettingsSheet"
 msgid "Medium (17)"
 msgstr "中 (17)"
 
-#: ui/sheets/settings.slint:399
+#: ui/sheets/settings.slint:295
 msgctxt "SettingsSheet"
 msgid "Large (20)"
 msgstr "大 (20)"
 
-#: ui/sheets/settings.slint:427
+#: ui/sheets/settings.slint:314
 msgctxt "SettingsSheet"
 msgid "UI Scale"
 msgstr "UIの拡大率"
 
-#: ui/sheets/settings.slint:535
+#: ui/sheets/settings.slint:352
 msgctxt "SettingsSheet"
-msgid "ABOUT"
-msgstr "このアプリについて"
+msgid "Remote repository URL"
+msgstr "リモートリポジトリのURL"
 
-#: ui/sheets/settings.slint:551
+#: ui/sheets/settings.slint:359
+msgctxt "SettingsSheet"
+msgid "https://github.com/you/notes.git"
+msgstr "https://github.com/you/notes.git"
+
+#: ui/sheets/settings.slint:367
+msgctxt "SettingsSheet"
+msgid "Access token"
+msgstr "アクセストークン"
+
+#: ui/sheets/settings.slint:374
+msgctxt "SettingsSheet"
+msgid "Leave blank to keep the saved token"
+msgstr "保存済みのトークンを使う場合は空欄のまま"
+
+#: ui/sheets/settings.slint:374
+msgctxt "SettingsSheet"
+msgid "Personal access token"
+msgstr "パーソナルアクセストークン"
+
+#: ui/sheets/settings.slint:392
+msgctxt "SettingsSheet"
+msgid "Syncing..."
+msgstr "同期中..."
+
+#: ui/sheets/settings.slint:392
+msgctxt "SettingsSheet"
+msgid "Sync Now"
+msgstr "今すぐ同期"
+
+#: ui/sheets/settings.slint:398
+msgctxt "SettingsSheet"
+msgid "Save Remote"
+msgstr "リモートを保存"
+
+#: ui/sheets/settings.slint:427
+msgctxt "SettingsSheet"
+msgid "Active Vault"
+msgstr "現在の保管庫"
+
+#: ui/sheets/settings.slint:436
+msgctxt "SettingsSheet"
+msgid "Default"
+msgstr "デフォルト"
+
+#: ui/sheets/settings.slint:456
+msgctxt "SettingsSheet"
+msgid "Manage & Switch Vaults →"
+msgstr "保管庫の管理・切り替え →"
+
+#: ui/sheets/settings.slint:483
 msgctxt "SettingsSheet"
 msgid "Immermemo v{}"
 msgstr "Immermemo v{}"
 
-#: ui/sheets/settings.slint:558
+#: ui/sheets/settings.slint:490
 msgctxt "SettingsSheet"
 msgid ""
 "A mobile note app for writing Tomet (.tmt) notes, synced over git without "
 "git touching user files."
 msgstr "Tomet (.tmt) 形式のノートを書くモバイルノートアプリ。gitがユーザーのファイルに触れることなく同期します。"
 
-#: ui/sheets/settings.slint:569
+#: ui/sheets/settings.slint:501
 msgctxt "SettingsSheet"
 msgid "AST-level three-way merge with conflict tracking (@mobile.conflict)."
 msgstr "AST単位の3-wayマージと競合追跡 (@mobile.conflict) に対応しています。"
