@@ -83,6 +83,7 @@ export component HomeScreen inherits Rectangle {
     VerticalLayout {
         TopBar {
             inset-top: root.inset-top;
+            bar-background: transparent;
 
             Text {
                 horizontal-stretch: 1;
@@ -99,11 +100,6 @@ export component HomeScreen inherits Rectangle {
                 enabled: !root.syncing;
                 clicked => { root.sync(); }
             }
-        }
-
-        Rectangle {
-            height: 1px;
-            background: Colors.separator;
         }
 
         AppScrollView {
@@ -229,31 +225,9 @@ export component HomeScreen inherits Rectangle {
                             text: @tr("Sync Status");
                             font-size: Metrics.font-caption;
                             font-weight: 700;
+                            vertical-alignment: center;
                             color: Colors.muted;
                             letter-spacing: 0.5px;
-                        }
-
-                        if root.syncing: HorizontalLayout {
-                            spacing: Metrics.spacing-xs;
-                            alignment: center;
-
-                            VerticalLayout {
-                                alignment: center;
-
-                                Icon {
-                                    width: Metrics.icon-sm;
-                                    height: Metrics.icon-sm;
-                                    source: Icons.refresh;
-                                    color: Palette.accent-background;
-                                }
-                            }
-
-                            Text {
-                                text: @tr("Syncing...");
-                                font-size: Metrics.font-caption;
-                                font-weight: 600;
-                                color: Palette.accent-background;
-                            }
                         }
 
                         // Vault history & commits now lives here instead of

@@ -453,7 +453,6 @@ export component App inherits Window {
                     inset-bottom: root.screen-inset-bottom;
                     highlight-current: true;
                     remote-configured: root.remote-configured;
-                    vault-name: root.current-vault-name;
                     select(i) => {
                         root.select(i);
                         root.open-note-sheet();
@@ -471,7 +470,6 @@ export component App inherits Window {
                     note-menu-requested(i) => { root.note-menu-index = i; }
                     trigger-haptic => { root.trigger-haptic(); }
                     trigger-heavy-haptic => { root.trigger-heavy-haptic(); }
-                    open-vault-sheet => { root.open-vault-sheet(); }
 
                     animate x {
                         duration: root.is-swiping ? 0ms : 220ms;
@@ -639,6 +637,10 @@ export component App inherits Window {
                 last-synced-at: root.last-synced-at;
                 manual-sync => { root.sync(); }
                 open-history => { root.open-history(); }
+                // Reuses the same ActionSheet (Rename/Delete) FilesScreen's
+                // long-press already opens -- the editor just means "the
+                // current note" instead of taking an index.
+                note-menu-requested => { root.note-menu-index = root.current; }
                 header-swipe-enabled: root.note-sheet-open && root.keyboard == 0px;
                 sheet-drag-moved(dy) => {
                     // dy is the total distance since this gesture's own

@@ -18,7 +18,6 @@ export component FilesScreen inherits Rectangle {
     in property <length> inset-bottom: 0px;
     in property <bool> highlight-current: false;
     in property <bool> remote-configured: false;
-    in property <string> vault-name: @tr("Notes");
 
     callback select(int);
     callback new-note();
@@ -27,42 +26,22 @@ export component FilesScreen inherits Rectangle {
     callback note-menu-requested(int);
     callback trigger-haptic();
     callback trigger-heavy-haptic();
-    callback open-vault-sheet();
 
     background: Colors.page-background;
 
     VerticalLayout {
         TopBar {
             inset-top: root.inset-top;
+            bar-background: transparent;
 
-            Rectangle {
+            Text {
                 horizontal-stretch: 1;
-                HorizontalLayout {
-                    spacing: 6px;
-                    alignment: start;
-
-                    Text {
-                        text: root.vault-name != "" ? root.vault-name : @tr("Notes");
-                        font-size: Metrics.font-title;
-                        font-weight: 700;
-                        color: Palette.foreground;
-                        vertical-alignment: center;
-                        overflow: elide;
-                    }
-
-                    Text {
-                        text: "▾";
-                        font-size: Metrics.font-body;
-                        color: Colors.muted;
-                        vertical-alignment: center;
-                    }
-                }
-
-                TouchArea {
-                    clicked => {
-                        root.open-vault-sheet();
-                    }
-                }
+                text: @tr("Library");
+                font-size: Metrics.font-title;
+                font-weight: 700;
+                color: Palette.foreground;
+                vertical-alignment: center;
+                overflow: elide;
             }
 
             BubbleButton {
@@ -71,11 +50,6 @@ export component FilesScreen inherits Rectangle {
                 tint: root.syncing ? Palette.accent-background : Palette.foreground;
                 clicked => { root.sync(); }
             }
-        }
-
-        Rectangle {
-            height: 1px;
-            background: Colors.separator;
         }
 
         // Top spacing

@@ -25,10 +25,10 @@ msgctxt "BottomNavBar"
 msgid "Home"
 msgstr "ホーム"
 
-#: ui/components.slint:641
+#: ui/components.slint:242
 msgctxt "BottomNavBar"
-msgid "Files"
-msgstr "ファイル一覧"
+msgid "Library"
+msgstr "ライブラリ"
 
 #: ui/components.slint:652
 msgctxt "BottomNavBar"
@@ -404,10 +404,10 @@ msgctxt "SearchScreen"
 msgid "Search notes by title or contents"
 msgstr "タイトルや本文でノートを検索できます"
 
-#: ui/screens/files.slint:23 ui/screens/files.slint:47
+#: ui/screens/files.slint:39
 msgctxt "FilesScreen"
-msgid "Notes"
-msgstr "ノート"
+msgid "Library"
+msgstr "ライブラリ"
 
 #: ui/screens/files.slint:102
 msgctxt "FilesScreen"

@@ -20,6 +20,7 @@ export component SearchScreen inherits Rectangle {
     VerticalLayout {
         TopBar {
             inset-top: root.inset-top;
+            bar-background: transparent;
 
             // Search bar taking full width of top bar. Wrapped in a
             // VerticalLayout because it's shorter than the bar: a
@@ -110,11 +111,6 @@ export component SearchScreen inherits Rectangle {
                     }
                 }
             }
-        }
-
-        Rectangle {
-            height: 1px;
-            background: Colors.separator;
         }
 
         // Top spacing

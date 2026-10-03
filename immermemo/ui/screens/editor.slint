@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icons } from "@origami-icons/icons.slint";
+import { Icon, Icons } from "@origami-icons/icons.slint";
 import {
     IconButton,
     BubbleButton,
@@ -107,6 +107,7 @@ export component EditorScreen inherits Rectangle {
     callback open-conflict-sheet();
     callback manual-sync();
     callback open-history();
+    callback note-menu-requested();
 
     // Moves the caret after Rust restores text from the undo history.
     public function set-cursor(offset: int) {
@@ -215,16 +216,47 @@ export component EditorScreen inherits Rectangle {
                     redo => { root.redo(); }
                 }
 
-                // Edit / Done toggle button
-                if root.has-note: BubbleButton {
-                    icon: root.edit-mode ? Icons.check : Icons.note;
-                    tint: root.edit-mode ? Palette.accent-background : Palette.foreground;
-                    clicked => {
-                        if (root.edit-mode) {
-                            root.view-mode();
-                        } else {
-                            root.focus-editor();
+                // Overflow menu (rename/delete) -- the Edit/Done toggle
+                // that used to sit here moved to a bottom-right FAB
+                // (below, in body-surface), matching FilesScreen's own
+                // note-add FAB. No dots/kebab icon exists in
+                // origami-icons (checked the full export list), so this
+                // is a plain glyph instead of an Icon -- but still built
+                // to BubbleButton's own recipe (bubble/size/press
+                // feedback, components.slint:59-104) so it reads as the
+                // same kind of header button as its neighbors, not a
+                // bare glyph floating with no background.
+                if root.has-note: Rectangle {
+                    width: Metrics.bubble-button-size;
+                    height: 100%;
+                    min-height: Metrics.touch;
+
+                    menu-bubble := Rectangle {
+                        width: Metrics.bubble-button-size;
+                        height: Metrics.bubble-button-size;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        border-radius: self.width / 2;
+                        background: menu-touch.pressed
+                            ? Palette.foreground.with-alpha(0.16)
+                            : Palette.foreground.with-alpha(0.08);
+                        animate background {
+                            duration: 120ms;
+                            easing: ease-out;
                         }
+
+                        Text {
+                            text: "⋮";
+                            font-size: Metrics.font-title;
+                            font-weight: 700;
+                            color: Palette.foreground;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    menu-touch := TouchArea {
+                        clicked => { root.note-menu-requested(); }
                     }
                 }
             }
@@ -518,6 +550,45 @@ export component EditorScreen inherits Rectangle {
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+
+            // Edit/Done FAB -- moved out of the header (see the overflow
+            // menu above). Lives inside body-surface, not as a bare
+            // child of EditorScreen, so it inherits the sheet's own
+            // opacity fade and y-offset (SheetSurface's `sheet-progress`/
+            // `root.sheet-y-offset`) -- a child outside this surface
+            // would stay fully visible even while the sheet is collapsed
+            // into the mini-card. Can't reuse origami-mobile's `Fab`
+            // directly: its icon is hardcoded to `Icons.plus`, not a
+            // parameter, so this matches its visual recipe (size,
+            // shape, color, shadow) by hand instead.
+            if root.has-note: Rectangle {
+                x: parent.width - self.width - Metrics.gutter;
+                y: parent.height - self.height - Metrics.gutter;
+                width: Metrics.fab;
+                height: Metrics.fab;
+                border-radius: self.width / 2;
+                background: Palette.accent-background;
+                drop-shadow-blur: 8px;
+                drop-shadow-offset-y: 2px;
+                drop-shadow-color: #00000055;
+
+                Icon {
+                    source: root.edit-mode ? Icons.check : Icons.note;
+                    color: Palette.accent-foreground;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                TouchArea {
+                    clicked => {
+                        if (root.edit-mode) {
+                            root.view-mode();
+                        } else {
+                            root.focus-editor();
                         }
                     }
                 }

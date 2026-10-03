@@ -32,6 +32,7 @@ export component PropertiesScreen inherits Rectangle {
     VerticalLayout {
         TopBar {
             inset-top: root.inset-top;
+            bar-background: transparent;
 
             Text {
                 horizontal-stretch: 1;
@@ -41,11 +42,6 @@ export component PropertiesScreen inherits Rectangle {
                 vertical-alignment: center;
                 color: Palette.foreground;
             }
-        }
-
-        Rectangle {
-            height: 1px;
-            background: Colors.separator;
         }
 
         if !root.has-note: Rectangle {

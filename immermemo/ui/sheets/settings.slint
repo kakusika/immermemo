@@ -111,6 +111,7 @@ export component SettingsSheet inherits Rectangle {
     VerticalLayout {
         TopBar {
             inset-top: root.inset-top;
+            bar-background: transparent;
 
             if root.page != 0: IconButton {
                 icon: Icons.chevron-left;
@@ -133,11 +134,6 @@ export component SettingsSheet inherits Rectangle {
                 vertical-alignment: center;
                 color: Palette.foreground;
             }
-        }
-
-        Rectangle {
-            height: 1px;
-            background: Colors.separator;
         }
 
         AppScrollView {
