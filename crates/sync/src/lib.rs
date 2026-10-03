@@ -102,7 +102,7 @@ const MAX_PUSH_ATTEMPTS: u32 = 5;
 
 /// Supplies credentials for a fetch or push, without this crate knowing
 /// where they actually live. Implemented once per platform (Android:
-/// `apps/slint/src/credentials.rs`, backed by the Android Keystore).
+/// `immermemo/src/credentials.rs`, backed by the Android Keystore).
 pub trait CredentialProvider {
     fn credentials(&self, remote_url: &str) -> anyhow::Result<git2::Cred>;
 }

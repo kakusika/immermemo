@@ -1,8 +1,10 @@
 //! Classifies a note body into the blocks the editor's view-mode display
-//! draws, without knowing anything about Slint -- `apps/slint/src/
-//! render.rs` (where the generated Slint types actually live) converts
-//! [`ClassifiedBlock`] into the Slint-generated `RenderedBlock` model
-//! `EditorScreen`'s `rendered-blocks` property expects.
+//! draws. Nothing here touches a Slint-generated type, even though this
+//! module lives in the Slint app crate now (folded in from
+//! `immermemo-editor` -- see `render`'s own module doc for why): the
+//! seam that actually does, `super`'s `to_rendered_block` and friends,
+//! converts [`ClassifiedBlock`] into the Slint-generated `RenderedBlock`
+//! model `EditorScreen`'s `rendered-blocks` property expects.
 //!
 //! `immermemo-tomet-render`'s `classify()` reports every named element's
 //! `(namespace, name)` identity uniformly -- `@use`'d ones and Tomet's own
@@ -50,7 +52,7 @@ pub enum BlockShape {
     Badge,
     /// A `@ruby[base](rt:"reading")` standing as an entire block by
     /// itself -- `text` is the base, `reading` the annotation. Rarer than
-    /// the inline case (`crate::flow`), which is what a ruby annotation
+    /// the inline case (`super::flow`), which is what a ruby annotation
     /// mid-sentence actually looks like. [`ruby_look`] is what gives the
     /// bare `(None, "ruby")` identity this shape.
     Ruby,
@@ -90,15 +92,15 @@ pub struct ClassifiedBlock {
     pub reading: String,
 }
 
-// `pub(crate)`: `crate::flow` also needs a recognized identity's
+// `pub(super)`: `super::flow` also needs a recognized identity's
 // shape/tone/text, for the same elements flowed inline instead of stacked.
-pub(crate) struct Look {
-    pub(crate) shape: BlockShape,
-    pub(crate) tone: Tone,
-    pub(crate) text: String,
+pub(super) struct Look {
+    pub(super) shape: BlockShape,
+    pub(super) tone: Tone,
+    pub(super) text: String,
     /// The reading annotation, meaningful only for [`BlockShape::Ruby`].
     /// Empty for every other shape.
-    pub(crate) secondary_text: String,
+    pub(super) secondary_text: String,
 }
 
 /// What a [`REGISTRY`] entry's lookup function gets to decide a [`Look`]
@@ -106,9 +108,9 @@ pub(crate) struct Look {
 /// unchanged, `content` is the same item's `content` span already
 /// resolved against the note body (so a lookup function never needs to
 /// know what a [`tomet_ast::Span`] is or where the body string lives).
-pub(crate) struct LookInput<'a> {
-    pub(crate) args: &'a ElementArgs,
-    pub(crate) content: Option<&'a str>,
+pub(super) struct LookInput<'a> {
+    pub(super) args: &'a ElementArgs,
+    pub(super) content: Option<&'a str>,
 }
 
 /// Which `(namespace, name)` pairs this app recognizes, and how each
@@ -208,9 +210,9 @@ fn link_look(input: LookInput) -> Look {
 /// fallback themselves, since it differs by whether `identity` came in
 /// through `@use` (see the module doc).
 ///
-/// `pub(crate)`: `crate::flow` calls this too, for the same lookup against
+/// `pub(super)`: `super::flow` calls this too, for the same lookup against
 /// an inline (rather than block-level) occurrence of the identity.
-pub(crate) fn look_up(identity: &ElementIdentity, input: LookInput) -> Option<Look> {
+pub(super) fn look_up(identity: &ElementIdentity, input: LookInput) -> Option<Look> {
     REGISTRY
         .iter()
         .find(|(namespace, name, _)| {
@@ -223,8 +225,8 @@ pub(crate) fn look_up(identity: &ElementIdentity, input: LookInput) -> Option<Lo
 /// [`BlockShape::Badge`]. Not meant to round-trip -- just enough to show
 /// something.
 ///
-/// `pub(crate)`: `crate::flow` reuses this for the same fallback, inline.
-pub(crate) fn fallback_label(namespace: &str, name: &str, args_summary: &str) -> String {
+/// `pub(super)`: `super::flow` reuses this for the same fallback, inline.
+pub(super) fn fallback_label(namespace: &str, name: &str, args_summary: &str) -> String {
     if args_summary.is_empty() {
         format!("{namespace}.{name}")
     } else {
@@ -240,9 +242,9 @@ pub fn classify_body(body: &str) -> Vec<ClassifiedBlock> {
         .collect()
 }
 
-// `pub(crate)`: `crate::flow::note_body_items` reuses this for the groups
+// `pub(super)`: `super::flow::note_body_items` reuses this for the groups
 // it isn't flowing (see that module's doc).
-pub(crate) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlock {
+pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlock {
     match item {
         RenderItem::Text(span, style) => ClassifiedBlock {
             shape: BlockShape::PlainText,

@@ -2428,6 +2428,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e44b0a4eaa4c82f441d50a963f2d5f05a787240aeee097597033e72accfd22f"
 
 [[package]]
+name = "immermemo"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "git2",
+ "immermemo-editor",
+ "immermemo-index",
+ "immermemo-merge",
+ "immermemo-sync",
+ "immermemo-tomet-render",
+ "immermemo-vault",
+ "jni 0.21.1",
+ "origami-icons",
+ "origami-mobile",
+ "origami-richtext",
+ "origami-richtext-flow",
+ "slint",
+ "slint-build",
+ "sys-locale",
+ "tempfile",
+ "tomet-parser",
+ "tomet-printer",
+]
+
+[[package]]
 name = "immermemo-editor"
 version = "0.1.0"
 dependencies = [
@@ -2435,9 +2460,7 @@ dependencies = [
  "immermemo-index",
  "immermemo-merge",
  "immermemo-sync",
- "immermemo-tomet-render",
  "immermemo-vault",
- "origami-richtext-flow",
  "tomet-parser",
  "tomet-printer",
  "tomet-stats",
@@ -2459,30 +2482,6 @@ name = "immermemo-merge"
 version = "0.1.0"
 dependencies = [
  "tomet-ast",
- "tomet-parser",
- "tomet-printer",
-]
-
-[[package]]
-name = "immermemo-slint"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "git2",
- "immermemo-editor",
- "immermemo-index",
- "immermemo-merge",
- "immermemo-sync",
- "immermemo-vault",
- "jni 0.21.1",
- "origami-icons",
- "origami-mobile",
- "origami-richtext",
- "origami-richtext-flow",
- "slint",
- "slint-build",
- "sys-locale",
- "tempfile",
  "tomet-parser",
  "tomet-printer",
 ]

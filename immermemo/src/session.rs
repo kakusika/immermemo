@@ -395,7 +395,11 @@ pub fn show_history_state(app: &App, session: &Session) {
     app.set_can_redo(history.is_some_and(History::can_redo));
 }
 
-pub fn apply_restored(app: &App, session: &Rc<RefCell<Session>>, restored: Option<immermemo_vault::history::Restored>) {
+pub fn apply_restored(
+    app: &App,
+    session: &Rc<RefCell<Session>>,
+    restored: Option<immermemo_vault::history::Restored>,
+) {
     let Some(restored) = restored else {
         return;
     };
@@ -440,7 +444,7 @@ pub fn apply_restored(app: &App, session: &Rc<RefCell<Session>>, restored: Optio
 /// [`resolve_conflict_step`] instead, so that a same-looking button means
 /// the same thing on every screen. Kept around (and covered by
 /// `resolving_the_conflict_clears_the_marker_and_status` in
-/// `apps/slint/src/lib.rs`'s tests) for a future bulk-resolve feature.
+/// `src/lib.rs`'s tests) for a future bulk-resolve feature.
 #[allow(dead_code)]
 pub fn resolve_active_conflict(
     app: &App,
@@ -558,7 +562,7 @@ pub fn resolve_conflict_step(app: &App, session: &Rc<RefCell<Session>>, choice: 
 /// Shows the note list if the vault has no notes left (clearing the
 /// remembered "last open note" and the Properties stats so neither
 /// lingers for a note that's gone), or reopens the initial/last note
-/// otherwise. Shared tail of [`finish_sync`] and `apps/slint/src/lib.rs`'s
+/// otherwise. Shared tail of [`finish_sync`] and `src/lib.rs`'s
 /// `on_confirm_delete` handler, both of which need this once whatever
 /// was open stops existing (a sync's merge rewrote it away, or the user
 /// just deleted it) -- `switch_to_files_tab` matches an explicit delete
@@ -795,7 +799,13 @@ pub fn restore_note_version(app: &App, session: &Rc<RefCell<Session>>, rev_idx: 
         let mut guard = session.borrow_mut();
         let s = &mut *guard;
         let vault_dir = s.vault_dir.clone();
-        immermemo_editor::restore_note_version(&mut s.editor, &vault_dir, &s.notes, &mut s.index, rev_idx)
+        immermemo_editor::restore_note_version(
+            &mut s.editor,
+            &vault_dir,
+            &s.notes,
+            &mut s.index,
+            rev_idx,
+        )
     };
     let Some(outcome) = outcome else { return };
     match outcome {

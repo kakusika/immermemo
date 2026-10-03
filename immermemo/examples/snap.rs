@@ -3,7 +3,7 @@
 //!
 //! `#![allow(deprecated)]`: this file's `to_rich_text_fragment` uses
 //! `slint::ComponentFactory`, same known, accepted risk as
-//! `apps/slint/src/render.rs`'s doc comment describes.
+//! `src/render/mod.rs`'s doc comment describes.
 #![allow(deprecated)]
 
 use std::cell::Cell;
@@ -16,7 +16,8 @@ use slint::platform::{Platform, WindowAdapter, WindowEvent};
 use slint::{ComponentFactory, ComponentHandle, ModelRc, PhysicalSize, VecModel};
 slint::include_modules!();
 
-use immermemo_editor::{BlockShape, ClassifiedBlock, FlowParagraph, NoteBodyItem, Tone};
+use immermemo::render::classify::{BlockShape, ClassifiedBlock, Tone};
+use immermemo::render::flow::{FlowParagraph, NoteBodyItem};
 use origami_richtext_flow::{Fragment, Measure, layout_block};
 
 struct Headless {
@@ -30,7 +31,7 @@ impl Platform for Headless {
         // actually renders/snapshots, so it must be `main`. A later call
         // (e.g. constructing a `ComponentFactory` product that inherits
         // `Window`, like `FlowElementWidget` -- see
-        // `apps/slint/src/render.rs`) also goes through this: its
+        // `src/render/mod.rs`) also goes through this: its
         // `ComponentHandle::new()` calls `WindowInner::set_component`,
         // which rebinds whichever adapter it's given to render *that*
         // component instead ("Further event handling and rendering, etc.
@@ -180,15 +181,15 @@ fn main() {
     // that motivated `origami-richtext`/`origami-richtext-flow` in the
     // first place -- both sides editing the same sentence, which narrows
     // to an *inline* conflict mid-paragraph rather than a whole-block one
-    // (see `crates/editor/src/classify.rs`'s
+    // (see `src/render/classify.rs`'s
     // `an_inline_merge_conflict_is_recognized_through_the_real_pipeline`).
     // That last paragraph now flows as one line instead of stacking each
     // split fragment as its own row. Goes through
     // `immermemo_editor::note_body_items` directly rather than
-    // `immermemo_slint::render::note_body_items`: this file's own
+    // `immermemo::render::note_body_items`: this file's own
     // `include_modules!()` generates its own `NoteBodyItemView`/
     // `RenderedBlock`/`RichTextLine` types, distinct from the library
-    // crate's (see `apps/slint/src/render.rs`'s doc comment for why), so
+    // crate's (see `src/render/mod.rs`'s doc comment for why), so
     // the small seam (`to_note_body_item_view` and friends, below) has to
     // be repeated here too.
     let body = "買い物リストの変更について。\n\n\
@@ -204,7 +205,7 @@ fn main() {
     app.set_body(body.into());
     let max_width = app.get_body_content_width();
     app.set_note_body_items(ModelRc::new(VecModel::from(
-        immermemo_editor::note_body_items(body)
+        immermemo::render::flow::note_body_items(body)
             .into_iter()
             .map(|item| to_note_body_item_view(item, &app, max_width))
             .collect::<Vec<_>>(),
@@ -323,7 +324,7 @@ fn main() {
     app.set_theme_choice(0);
 }
 
-// A copy of `apps/slint/src/render.rs`'s seam, targeting this file's own
+// A copy of `src/render/mod.rs`'s seam, targeting this file's own
 // `include_modules!()`-generated types instead of the library crate's (see
 // the call site above for why it can't just call that module directly).
 
@@ -342,7 +343,7 @@ fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> Note
     }
 }
 
-/// Same technique `apps/slint/src/render.rs`'s `RealMeasure` uses: the
+/// Same technique `src/render/mod.rs`'s `RealMeasure` uses: the
 /// off-screen probe elements live in `app.slint` itself, so they're
 /// available here too (this file's own compiled `App`).
 struct RealMeasure<'a> {

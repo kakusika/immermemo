@@ -1,41 +1,46 @@
-//! Converts `immermemo_editor::note_body_items`'s plain-data items into the
+//! Converts [`flow::note_body_items`]'s plain-data items into the
 //! Slint-generated `NoteBodyItemView` model `ui/screens/editor.slint`'s
 //! view-mode display draws (see `ui/screens/note_body.slint`'s
 //! `NoteBodyView`). The classification decision -- including which
-//! identity looks like what -- lives in `immermemo-editor`
-//! (`crates/editor/src/classify.rs`'s `REGISTRY`), which knows nothing
-//! about Slint; this module is just the seam between that and the
-//! generated Slint types. It has to live in `apps/slint` because those
-//! types are only real Rust types inside whichever crate's
-//! `slint::include_modules!()` call compiled a tree that imports them, and
-//! `apps/slint` is the only crate that does so (`ui/screens/` is source
-//! checked directly into this crate, same as every other screen -- see
-//! `.agents/tasks/fold-editor-slint-into-apps-slint.md` for why
-//! `crates/editor-slint` no longer exists as a separate crate).
+//! identity looks like what -- lives in [`classify`] (its own `REGISTRY`),
+//! which knows nothing about Slint; this module is just the seam between
+//! that and the generated Slint types. `classify`/`flow` are folded into
+//! this crate (not a separate shared one) because nothing else needs
+//! them: the common "add a new `@xxx`'s look" change always touches both
+//! this seam and `classify`'s `REGISTRY` together, so a crate boundary
+//! between them buys nothing for that workflow, only for a rarer
+//! logic-only refactor of `classify`/`flow` alone -- see this
+//! repository's history around the `apps/slint` -> `immermemo` move for
+//! the fuller reasoning. This module itself has to live here regardless:
+//! `NoteBodyItemView`/`RenderedBlock`/etc. are only real Rust types inside
+//! whichever crate's `slint::include_modules!()` call compiled a tree
+//! that imports them, and this crate is the only one that does
+//! (`ui/screens/` is source checked directly into it, same as every
+//! other screen).
 //!
-//! A [`NoteBodyItem::Flowed`] paragraph's content goes through
+//! A [`flow::NoteBodyItem::Flowed`] paragraph's content goes through
 //! `origami_richtext_flow::layout_block` and comes back out as
 //! `origami-richtext`'s generic `RichTextFragment`s; an element fragment's
 //! widget is a `RenderedBlockView` instantiated at runtime via
 //! `slint::ComponentFactory` -- the same component a stacked
-//! [`ClassifiedBlock`] renders as its own row, just embedded inline
-//! instead (see `.agents/tasks/richtext-flow-inline-conflict.md`).
+//! [`classify::ClassifiedBlock`] renders as its own row, just embedded
+//! inline instead.
 //!
 //! `#![allow(deprecated)]`: `ComponentFactory` is `slint`'s own escape
 //! hatch for this (`ComponentContainer`'s `component-factory` property),
 //! but the crate marks it `#[deprecated(note = "Experimental type was made
-//! public by mistake")]` and `#[doc(hidden)]`, and `apps/slint/build.rs`
-//! has to opt the compiler into treating `ComponentContainer`/
-//! `component-factory` as real `.slint` syntax at all
-//! (`SLINT_ENABLE_EXPERIMENTAL_FEATURES`, since Slint's normal compiler
-//! path removes both). Known, accepted risk, not an oversight -- see
-//! `.agents/tasks/richtext-flow-inline-conflict.md`.
+//! public by mistake")]` and `#[doc(hidden)]`, and `build.rs` has to opt
+//! the compiler into treating `ComponentContainer`/`component-factory` as
+//! real `.slint` syntax at all (`SLINT_ENABLE_EXPERIMENTAL_FEATURES`,
+//! since Slint's normal compiler path removes both). Known, accepted
+//! risk, not an oversight.
 #![allow(deprecated)]
 
-use immermemo_editor::{
-    BlockShape, ClassifiedBlock, FlowParagraph, NoteBodyItem, Tone,
-    note_body_items as classify_note_body_items,
-};
+pub mod classify;
+pub mod flow;
+
+use classify::{BlockShape, ClassifiedBlock, Tone};
+use flow::{FlowParagraph, NoteBodyItem, note_body_items as classify_note_body_items};
 use origami_richtext_flow::{Fragment, Measure, layout_block};
 use slint::{ComponentFactory, ModelRc, VecModel};
 
@@ -192,7 +197,7 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
 
 // The substantial classification-decision tests (conflict markers,
 // unrecognized elements, the real merge pipeline, inline flow grouping)
-// live in `immermemo-editor`'s own tests now. These just check the seam:
+// live in `classify`/`flow`'s own tests now. These just check the seam:
 // that converting into the generated model actually round-trips
 // shape/tone/text, and that a flowed paragraph produces lines with the
 // right fragment count.
@@ -233,7 +238,7 @@ pub(crate) mod seam_tests {
         // "The " / Mine-chip / "slow" / Theirs-chip / "lazy" / " " /
         // "fox " / "jumps." -- 8, not the paragraph's own 6 `Inline`s: the
         // "end" divider still renders as nothing inline (see
-        // `immermemo_editor::flow::to_flow_paragraph`'s doc comment), but
+        // `flow::to_flow_paragraph`'s doc comment), but
         // `layout_block` additionally splits each text run into its own
         // word tokens (`origami_richtext_flow::layout::words`), and
         // " fox jumps." is 3 words, including its own leading space (not

@@ -38,7 +38,7 @@ let
     # Only the Slint app binary -- crates/sync and crates/merge are plain libraries with
     # no runtime deps of its own, no reason to build it as a separate
     # output.
-    cargoExtraArgs = "-p immermemo-slint";
+    cargoExtraArgs = "-p immermemo";
 
     SKIA_BINARIES_URL = "file://${skiaBinaries}";
 

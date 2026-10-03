@@ -51,7 +51,7 @@ export component EditorScreen inherits Rectangle {
     in property <bool> remote-configured: false;
     in property <string> last-synced-at: "";
     in-out property <string> body;
-    // Derived from `body` (see `apps/slint/src/render.rs`); drives the
+    // Derived from `body` (see `src/render/mod.rs`); drives the
     // view-mode display below in place of the raw `body` text.
     in property <[NoteBodyItemView]> note-body-items: [];
     // The width a flowed paragraph (`NoteBodyView`'s `FlowView` items) has
@@ -458,7 +458,7 @@ export component EditorScreen inherits Rectangle {
 
                                 // View mode display: hides `@element(...)` marker
                                 // syntax behind a `NoteBodyView` (see
-                                // `apps/slint/src/render.rs`), with a double-tap
+                                // `src/render/mod.rs`), with a double-tap
                                 // detector over the whole area same as before.
                                 view-box := Rectangle {
                                     visible: !root.edit-mode;

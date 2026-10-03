@@ -46,7 +46,7 @@ pub fn desktop_app_data_dir() -> anyhow::Result<PathBuf> {
 }
 
 /// Switches the UI to whichever bundled translation (see
-/// `translations/<lang>/LC_MESSAGES/immermemo-slint.po`) matches the
+/// `translations/<lang>/LC_MESSAGES/immermemo.po`) matches the
 /// system's locale, silently keeping the English source strings if none
 /// matches -- there is no language picker yet, so this is the only way a
 /// non-English translation ever gets used. Must run after `App::new()`

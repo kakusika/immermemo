@@ -1,7 +1,7 @@
 //! Converts one paragraph's `immermemo_tomet_render::RenderItem`s (grouped
 //! by `immermemo_tomet_render::classify_blocks`) into an
 //! `origami_richtext_flow::Block`, preserving the inline positions
-//! [`crate::classify::classify_body`] discards by flattening every item
+//! [`super::classify::classify_body`] discards by flattening every item
 //! into its own stacked row (see that module's doc comment, and the test
 //! named `an_inline_merge_conflict_is_recognized_through_the_real_pipeline`
 //! for the concrete case this exists to fix). Reuses `classify.rs`'s own
@@ -20,7 +20,7 @@
 //! always holds exactly one item.
 //!
 //! [`to_flow_paragraph`] delegates every item's look entirely to
-//! [`crate::classify::to_classified_block`] rather than re-deriving it --
+//! [`super::classify::to_classified_block`] rather than re-deriving it --
 //! the only thing specific to flowing is *where the result goes*
 //! (`Inline::Text` directly, or a [`ClassifiedBlock`] parked in
 //! `elements` and referenced by `Inline::Element { id }`), not *what it
@@ -29,7 +29,7 @@
 use immermemo_tomet_render::{RenderItem, TextStyle, classify_blocks};
 use origami_richtext_flow::{Block, Inline};
 
-use crate::classify::{BlockShape, ClassifiedBlock, classify_body, to_classified_block};
+use super::classify::{BlockShape, ClassifiedBlock, classify_body, to_classified_block};
 
 /// `tomet-render`'s [`TextStyle`] (bold/italic/mark/strikeout -- the same
 /// four flags, just a separate type since `tomet-render` has no
@@ -104,7 +104,7 @@ pub struct FlowParagraph {
 
 /// Flows every paragraph or heading in `body` that contains at least one
 /// inline element. A paragraph/heading with none, and every `Element`
-/// block, is left for [`crate::classify::classify_body`] to render as
+/// block, is left for [`super::classify::classify_body`] to render as
 /// today -- only a group actually split by an inline marker needs the
 /// flow engine (see [`note_body_items`]'s doc for why `items.len() > 1`
 /// alone is enough to tell those apart).
@@ -158,8 +158,8 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
 
 #[cfg(test)]
 mod tests {
+    use super::super::classify::Tone;
     use super::*;
-    use crate::classify::Tone;
 
     #[test]
     fn note_body_items_mixes_stacked_and_flowed_items_in_source_order() {

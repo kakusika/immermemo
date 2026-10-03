@@ -5,7 +5,7 @@ use immermemo_vault::history::History;
 
 /// What the editor is currently showing, independent of which vault it's
 /// in or what that vault's note list/sync state look like -- those stay
-/// in `apps/slint`'s own `Session` (see `crates/editor`'s module doc).
+/// in `immermemo`'s own `Session` (see `crates/editor`'s module doc).
 pub struct EditorState {
     /// Index into the caller's `notes: &[PathBuf]`.
     pub current: Option<usize>,

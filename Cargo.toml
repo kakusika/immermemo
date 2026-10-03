@@ -2,7 +2,7 @@
 resolver = "3"
 
 members = [
-  "apps/slint",
+  "immermemo",
   "crates/editor",
   "crates/index",
   "crates/merge",
@@ -11,7 +11,7 @@ members = [
   "crates/vault",
 ]
 
-default-members = ["apps/slint"]
+default-members = ["immermemo"]
 
 [workspace.package]
 version = "0.1.0"
@@ -50,7 +50,7 @@ loro = "1.16"
 # verification can't work at all (see crates/sync's `tls` module doc).
 openssl = "0.10"
 rusqlite = { version = "0.33", features = ["bundled"] }
-# Desktop: Skia on Wayland (no X11, no accessibility). Android: its own backend (see apps/slint).
+# Desktop: Skia on Wayland (no X11, no accessibility). Android: its own backend (see immermemo).
 slint = { version = "1.18", default-features = false, features = [
   "backend-winit-wayland",
   "compat-1-2",

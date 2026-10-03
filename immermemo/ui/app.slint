@@ -4,7 +4,7 @@ import { ActionRow } from "@origami-mobile/components.slint";
 import { BottomNavBar, MiniNoteCard } from "components.slint";
 import { EditorScreen } from "screens/editor.slint";
 import { NoteBodyItemView } from "screens/note_body.slint";
-// `apps/slint/src/render.rs` needs to construct `FlowElementWidget`
+// `src/render/mod.rs` needs to construct `FlowElementWidget`
 // directly (it's the `ComponentFactory` product for an inline element
 // fragment), and only an exported *Window-inheriting* component gets a
 // constructible Rust type at all -- see `note_body.slint`'s own doc
@@ -83,7 +83,7 @@ export component App inherits Window {
     in property <bool> can-undo;
     in property <bool> can-redo;
     in-out property <string> body;
-    // Derived from `body` by `apps/slint/src/render.rs`, kept in step with
+    // Derived from `body` by `src/render/mod.rs`, kept in step with
     // it everywhere Rust sets `body` -- see that module's doc. Read-only
     // from Slint's side: nothing here ever writes it back.
     in property <[NoteBodyItemView]> note-body-items: [];
@@ -93,7 +93,7 @@ export component App inherits Window {
     // it changes; most recomputes of `note-body-items` happen for other
     // reasons and still need to know the width to flow against.
     out property <length> body-content-width: pane.body-content-width;
-    // Driven by `apps/slint/src/render.rs`'s `RealMeasure` -- set a probe
+    // Driven by `src/render/mod.rs`'s `RealMeasure` -- set a probe
     // property, read the matching `*-width` property right back,
     // synchronously, once per measurement. See the probe elements
     // themselves (bottom of this file) for why they exist as real
@@ -933,7 +933,7 @@ export component App inherits Window {
         }
 
         // Measurement probes for `origami_richtext_flow::Measure`
-        // (`apps/slint/src/render.rs`'s `RealMeasure`): off-screen elements
+        // (`src/render/mod.rs`'s `RealMeasure`): off-screen elements
         // Rust sets properties on and reads `preferred-width` back from,
         // same technique `screens/editor.slint`'s `LineNumberGutter` uses
         // for line-height, parameterized via properties instead of a fixed
@@ -947,6 +947,7 @@ export component App inherits Window {
             font-weight: root.measure-probe-font-weight;
             font-italic: root.measure-probe-font-italic;
         }
+
         measure-probe-block-item := RenderedBlockView {
             x: -9999px;
             block: root.measure-probe-block;

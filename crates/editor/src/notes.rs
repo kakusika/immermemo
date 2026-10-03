@@ -99,11 +99,7 @@ pub struct RestoredNote {
 /// Writes an undo/redo step's restored text back to disk and reports what
 /// changed. `restored` is `History::undo`/`redo`'s own return value --
 /// callers that got `None` from those have nothing to apply.
-pub fn apply_restored(
-    state: &EditorState,
-    notes: &[PathBuf],
-    restored: Restored,
-) -> RestoredNote {
+pub fn apply_restored(state: &EditorState, notes: &[PathBuf], restored: Restored) -> RestoredNote {
     let Restored { text, cursor } = restored;
     let write_error = current_path(state, notes).and_then(|path| {
         std::fs::write(&path, &text)

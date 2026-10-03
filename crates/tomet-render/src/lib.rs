@@ -4,7 +4,7 @@
 //!
 //! This crate only answers "what is this span of the document" -- it never
 //! renders anything. The actual cards/chips are Slint components living in
-//! `apps/slint`, the same split `crates/vault`/`crates/merge` already draw
+//! `immermemo`, the same split `crates/vault`/`crates/merge` already draw
 //! between UI-framework-agnostic domain logic and the UI that uses it: a
 //! crate with no Slint dependency can be unit-tested against `.tmt`
 //! fixtures directly, which a crate wired into a widget tree cannot.
@@ -20,7 +20,7 @@
 //! to keep coherent); the original worry about inline elements -- cursor
 //! movement and selection mixing with surrounding text runs -- is strictly
 //! an *editing* concern and doesn't apply here. Editing still shows raw
-//! source text unconditionally; that's a caller decision (apps/slint's
+//! source text unconditionally; that's a caller decision (`immermemo`'s
 //! edit-mode `TextInput`), not something this crate restricts.
 //!
 //! A [`tomet_ast::Section`]'s title walks the same as a paragraph's content
@@ -69,7 +69,7 @@
 //! it reports every element's [`ElementIdentity`] uniformly, and leaves
 //! "do I recognize this `(namespace, name)` pair, or should it fall back
 //! to something generic" to whatever renders [`RenderItem`]s (today:
-//! `immermemo-editor`'s `REGISTRY`).
+//! `immermemo`'s render::classify REGISTRY).
 //!
 //! Tomet's bare built-in elements split into two families, and only one
 //! of them is special here. `em`/`strong`/`mark`/`strikeout`
@@ -86,7 +86,7 @@
 //! `draft`/`fixme` as the same kind of either-block-or-inline built-in
 //! `link` is; nothing downstream has given any of those a look yet, so
 //! they're not in [`ATOMIC_BARE_ELEMENTS`], but adding one later is a
-//! one-line change here plus a `REGISTRY` row in `immermemo-editor`, not
+//! one-line change here plus a `REGISTRY` row in `immermemo`'s render::classify module, not
 //! a new `RenderItem` variant.) Every other bare name -- nothing
 //! downstream recognizes it yet -- stays merged into the surrounding
 //! text run, because splitting prose on every unrecognized marker would
@@ -169,7 +169,7 @@ pub enum RenderItem {
 
 /// [`RenderItem::Element::args`]'s shape -- string-valued args only, read
 /// generically off `(args)` without knowing what any key means (deciding
-/// that is `immermemo-editor`'s `REGISTRY` job, per the module doc).
+/// that is `immermemo`'s render::classify REGISTRY job, per the module doc).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum ElementArgs {
     #[default]
@@ -271,7 +271,7 @@ fn is_atomic_bare(el: &Element) -> bool {
 /// [`classify`]'s flat `Vec<RenderItem>` loses this: a `Block::Paragraph`
 /// split around inline elements and a run of independent `Block::Element`s
 /// look identical once flattened, but only the former should ever be laid
-/// out as one flowing line (see `immermemo-editor`'s `flow` module, which
+/// out as one flowing line (see `immermemo`'s render::flow module, which
 /// needs this distinction to group inline items back into one block).
 /// `Heading`'s `usize` is the section's nesting level (`=` is 1, `==` is
 /// 2, ...) -- a heading flows exactly like a paragraph (it can carry a
@@ -342,9 +342,10 @@ fn walk_inline_seq(
             }
             if is_atomic_bare(el) {
                 flush_run(items, run);
-                items.push(element_item(el).expect(
-                    "is_atomic_bare already confirmed el.sigil is Sigil::Named",
-                ));
+                items.push(
+                    element_item(el)
+                        .expect("is_atomic_bare already confirmed el.sigil is Sigil::Named"),
+                );
                 continue;
             }
             if let Some(item) = element_item(el).filter(is_namespaced) {
@@ -548,7 +549,7 @@ mod tests {
         // see the module doc. It's still reported as an `Element`, not
         // silently folded into `Text`: a caller that wants to give a bare
         // built-in its own look later needs this identity to key a lookup
-        // on, even though today's caller (`immermemo-editor`) falls back
+        // on, even though today's caller (`immermemo`'s render::classify) falls back
         // to showing it exactly as written, same as before this existed.
         let items = classify("- one\n- two\n");
         assert_eq!(items.len(), 1);
@@ -665,7 +666,7 @@ mod tests {
 
     #[test]
     fn classify_blocks_groups_inline_conflict_items_under_one_paragraph() {
-        // Same fixture `immermemo-editor`'s classify.rs proves goes through
+        // Same fixture `immermemo`'s render/classify.rs proves goes through
         // the real merge pipeline -- here just checking `classify_blocks`
         // keeps all of a paragraph's split items in one group, unlike
         // `classify`'s flat list.

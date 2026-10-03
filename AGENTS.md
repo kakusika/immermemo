@@ -29,17 +29,17 @@ accepts.
 
 Write all code comments in English. Do not use Japanese in code.
 
-**Exception:** user-facing strings in `apps/slint/ui/*.slint` go through
+**Exception:** user-facing strings in `immermemo/ui/*.slint` go through
 Slint's i18n (`@tr("...")`, English as the source string, same as any
 other code) and are translated in per-language catalogs under
-`apps/slint/translations/<lang>/LC_MESSAGES/immermemo-slint.po` (wired
-up in `apps/slint/build.rs` via `with_bundled_translations`, selected at
-startup in `apps/slint/src/lib.rs`'s `select_system_translation`). Those
+`immermemo/translations/<lang>/LC_MESSAGES/immermemo.po` (wired
+up in `immermemo/build.rs` via `with_bundled_translations`, selected at
+startup in `immermemo/src/lib.rs`'s `select_system_translation`). Those
 `.po` files are expected to hold non-English text -- that's the whole
 point of them -- and aren't covered by "no Japanese in code" above. When
 adding or changing a `@tr(...)` string, regenerate the template with
 `slint-tr-extractor` (`cargo install slint-tr-extractor`, then `find
-apps/slint/ui -name '*.slint' | xargs slint-tr-extractor -o /tmp/x.pot`)
+immermemo/ui -name '*.slint' | xargs slint-tr-extractor -o /tmp/x.pot`)
 rather than hand-editing a `.po` file out of sync with the source.
 
 `docs/design.md` is written in plain Japanese, deliberately -- it's the
@@ -79,8 +79,13 @@ cargo test --workspace
 
 There is no GUI to click through in `crates/`; verify the merge and sync
 logic with unit tests against real `.tmt` fixtures, not by hand-tracing.
-Once `apps/ios` and `apps/android` exist, their own verification story
-belongs in their own directories, not here.
+`immermemo` is the one app, built for every platform (desktop, Android)
+from the same Slint UI and switching backends per target (see its
+`Cargo.toml`); its own verification story (`cargo run --example snap`,
+`just apk`/`just run`) belongs in its own directory, not here. If iOS
+needs more than that -- a native wrapper this repository doesn't have
+yet -- its verification story will too, but nothing today decides where
+that would live.
 
 ## Task tracking
 
