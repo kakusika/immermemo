@@ -27,6 +27,7 @@ immermemo-tomet-render = { path = "crates/tomet-render" }
 immermemo-vault = { path = "crates/vault" }
 
 #= Origami
+origami-icons = { git = "https://github.com/kakusika/origami-frameworks.git" }
 origami-mobile = { git = "https://github.com/kakusika/origami-frameworks.git" }
 origami-richtext = { git = "https://github.com/kakusika/origami-frameworks.git" }
 origami-richtext-flow = { git = "https://github.com/kakusika/origami-frameworks.git" }

@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Shapes } from "@origami-mobile/icons.slint";
+import { Icons } from "@origami-icons/icons.slint";
 import { IconButton, TopBar, ActionRow } from "@origami-mobile/components.slint";
 
 import { ActionSheet } from "../dialogs.slint";
@@ -30,7 +30,7 @@ export component VaultSheet inherits Rectangle {
         TopBar {
             inset-top: root.inset-top;
             IconButton {
-                shape: Shapes.back;
+                icon: Icons.chevron-left;
                 clicked => { root.close(); }
             }
 

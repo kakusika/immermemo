@@ -20,6 +20,7 @@ immermemo-sync = { workspace = true }
 immermemo-vault = { workspace = true }
 
 #= Origami
+origami-icons = { workspace = true }
 origami-mobile = { workspace = true }
 origami-richtext = { workspace = true }
 origami-richtext-flow = { workspace = true }

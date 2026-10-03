@@ -1,13 +1,13 @@
 import { Palette, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Shapes, Icon } from "@origami-mobile/icons.slint";
+import { Icon, Icons } from "@origami-icons/icons.slint";
 import { BubbleButton, TopBar, AppScrollView } from "@origami-mobile/components.slint";
 
 // A square icon-over-label tile for the Quick Actions grid -- tiles left
 // out for now (horizontal-stretch: 1 fillers) reserve their column so
 // adding the next action doesn't reflow the grid.
 component QuickActionTile inherits Rectangle {
-    in property <string> icon;
+    in property <image> icon;
     in property <string> label-text;
     in property <color> tint: Palette.foreground;
     callback clicked();
@@ -28,10 +28,10 @@ component QuickActionTile inherits Rectangle {
         HorizontalLayout {
             alignment: center;
             Icon {
-                shape: root.icon;
+                source: root.icon;
                 width: Metrics.icon-lg;
                 height: Metrics.icon-lg;
-                tint: root.tint;
+                color: root.tint;
             }
         }
 
@@ -90,7 +90,7 @@ export component HomeScreen inherits Rectangle {
             }
 
             BubbleButton {
-                shape: Shapes.sync;
+                icon: Icons.refresh;
                 tint: root.syncing ? Palette.accent-background : Palette.foreground;
                 enabled: !root.syncing;
                 clicked => { root.sync(); }
@@ -156,7 +156,7 @@ export component HomeScreen inherits Rectangle {
                             }
 
                             BubbleButton {
-                                shape: Shapes.files;
+                                icon: Icons.files;
                                 clicked => { root.open-vaults(); }
                             }
                         }
@@ -239,8 +239,8 @@ export component HomeScreen inherits Rectangle {
                                 Icon {
                                     width: Metrics.icon-sm;
                                     height: Metrics.icon-sm;
-                                    shape: Shapes.sync;
-                                    tint: Palette.accent-background;
+                                    source: Icons.refresh;
+                                    color: Palette.accent-background;
                                 }
                             }
 
@@ -266,10 +266,10 @@ export component HomeScreen inherits Rectangle {
                                 }
 
                                 Icon {
-                                    shape: Shapes.history;
+                                    source: Icons.history;
                                     width: Metrics.icon-sm;
                                     height: Metrics.icon-sm;
-                                    tint: Colors.muted;
+                                    color: Colors.muted;
                                     x: (parent.width - self.width) / 2;
                                     y: (parent.height - self.height) / 2;
                                 }
@@ -296,8 +296,8 @@ export component HomeScreen inherits Rectangle {
                                     Icon {
                                         width: Metrics.icon-md;
                                         height: Metrics.icon-md;
-                                        shape: Shapes.close;
-                                        tint: Colors.danger;
+                                        source: Icons.x;
+                                        color: Colors.danger;
                                     }
                                 }
 
@@ -326,8 +326,8 @@ export component HomeScreen inherits Rectangle {
                                         Icon {
                                             width: Metrics.icon-sm;
                                             height: Metrics.icon-sm;
-                                            shape: Shapes.close;
-                                            tint: Colors.muted;
+                                            source: Icons.x;
+                                            color: Colors.muted;
                                             x: (parent.width - self.width) / 2;
                                             y: (parent.height - self.height) / 2;
                                         }
@@ -384,8 +384,8 @@ export component HomeScreen inherits Rectangle {
                                             Icon {
                                                 width: Metrics.icon-sm;
                                                 height: Metrics.icon-sm;
-                                                shape: root.sync-error-copied ? Shapes.check : Shapes.copy;
-                                                tint: root.sync-error-copied ? Colors.success : Palette.foreground;
+                                                source: root.sync-error-copied ? Icons.check : Icons.copy;
+                                                color: root.sync-error-copied ? Colors.success : Palette.foreground;
                                             }
                                         }
 
@@ -420,8 +420,8 @@ export component HomeScreen inherits Rectangle {
                                             Icon {
                                                 width: Metrics.icon-sm;
                                                 height: Metrics.icon-sm;
-                                                shape: Shapes.sync;
-                                                tint: #ffffff;
+                                                source: Icons.refresh;
+                                                color: #ffffff;
                                             }
                                         }
 
@@ -455,8 +455,8 @@ export component HomeScreen inherits Rectangle {
                                     Icon {
                                         width: Metrics.icon-lg;
                                         height: Metrics.icon-lg;
-                                        shape: Shapes.link;
-                                        tint: Colors.muted;
+                                        source: Icons.link;
+                                        color: Colors.muted;
                                     }
                                 }
 
@@ -513,8 +513,8 @@ export component HomeScreen inherits Rectangle {
                                     Icon {
                                         width: Metrics.icon-md;
                                         height: Metrics.icon-md;
-                                        shape: root.syncing ? Shapes.sync : Shapes.check;
-                                        tint: root.syncing ? Palette.accent-background : Colors.success;
+                                        source: root.syncing ? Icons.refresh : Icons.check;
+                                        color: root.syncing ? Palette.accent-background : Colors.success;
                                     }
                                 }
 
@@ -561,8 +561,8 @@ export component HomeScreen inherits Rectangle {
                                                 Icon {
                                                     width: Metrics.icon-sm;
                                                     height: Metrics.icon-sm;
-                                                    shape: Shapes.sync;
-                                                    tint: root.syncing ? Colors.muted : Palette.foreground;
+                                                    source: Icons.refresh;
+                                                    color: root.syncing ? Colors.muted : Palette.foreground;
                                                 }
                                             }
 
@@ -660,7 +660,7 @@ export component HomeScreen inherits Rectangle {
                         spacing: Metrics.spacing-sm;
 
                         QuickActionTile {
-                            icon: Shapes.note;
+                            icon: Icons.note;
                             label-text: @tr("New Note");
                             tint: Palette.accent-background;
                             clicked => { root.new-note(); }

@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Shapes, Icon } from "@origami-mobile/icons.slint";
+import { Icon, Icons } from "@origami-icons/icons.slint";
 import { BubbleButton, TopBar, AppScrollView } from "@origami-mobile/components.slint";
 
 export component VaultHistorySheet inherits Rectangle {
@@ -23,7 +23,7 @@ export component VaultHistorySheet inherits Rectangle {
             inset-top: root.inset-top;
 
             BubbleButton {
-                shape: Shapes.back;
+                icon: Icons.chevron-left;
                 clicked => { root.close(); }
             }
 
@@ -39,7 +39,7 @@ export component VaultHistorySheet inherits Rectangle {
             }
 
             BubbleButton {
-                shape: Shapes.close;
+                icon: Icons.x;
                 clicked => { root.close(); }
             }
         }
@@ -97,8 +97,8 @@ export component VaultHistorySheet inherits Rectangle {
                         VerticalLayout {
                             alignment: center;
                             Icon {
-                                shape: Shapes.check;
-                                tint: Colors.success;
+                                source: Icons.check;
+                                color: Colors.success;
                                 width: 16px;
                                 height: 16px;
                             }

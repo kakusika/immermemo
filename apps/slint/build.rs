@@ -29,6 +29,11 @@ fn main() {
     // `ui/screens/` directly (see
     // `.agents/tasks/fold-editor-slint-into-apps-slint.md`).
     let origami_mobile_ui_dir = std::env::var("DEP_ORIGAMI_MOBILE_UI_DIR").unwrap();
+    // `origami-mobile`'s own `.slint` now unconditionally imports
+    // `@origami-icons` (the icon set it shares with `origami-frameworks`'s
+    // desktop `origami` crate), so this app needs it wired too whenever it
+    // needs `origami-mobile`.
+    let origami_icons_ui_dir = std::env::var("DEP_ORIGAMI_ICONS_UI_DIR").unwrap();
     // `origami-richtext` (from `origami-frameworks`) reports its own `ui/`
     // the same way; this is what `@richtext/...` resolves against below.
     let richtext_ui_dir = std::env::var("DEP_ORIGAMI_RICHTEXT_UI_DIR").unwrap();
@@ -36,6 +41,10 @@ fn main() {
     library_paths.insert(
         "origami-mobile".to_string(),
         std::path::PathBuf::from(origami_mobile_ui_dir),
+    );
+    library_paths.insert(
+        "origami-icons".to_string(),
+        std::path::PathBuf::from(origami_icons_ui_dir),
     );
     library_paths.insert(
         "richtext".to_string(),

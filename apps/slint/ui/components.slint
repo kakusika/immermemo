@@ -1,10 +1,10 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, Shapes } from "@origami-mobile/icons.slint";
+import { Icon, Icons } from "@origami-icons/icons.slint";
 import { BubbleButton } from "@origami-mobile/components.slint";
 
 component NavItem inherits Rectangle {
-    in property <string> icon;
+    in property <image> icon;
     in property <string> label;
     in property <bool> active: false;
     in property <int> badge-count: 0;
@@ -43,13 +43,13 @@ component NavItem inherits Rectangle {
                 }
 
                 Icon {
-                    shape: root.icon;
-                    tint: root.active ? Palette.accent-background : Colors.muted;
+                    source: root.icon;
+                    color: root.active ? Palette.accent-background : Colors.muted;
                     width: Metrics.icon-md;
                     height: Metrics.icon-md;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;
-                    animate tint {
+                    animate color {
                         duration: 120ms;
                         easing: ease-out;
                     }
@@ -145,8 +145,8 @@ export component MiniNoteCard inherits Rectangle {
                     : Palette.accent-background.with-alpha(0.18);
 
                 Icon {
-                    shape: root.has-conflict ? Shapes.alert : Shapes.note;
-                    tint: root.has-conflict ? Colors.warning : Palette.accent-background;
+                    source: root.has-conflict ? Icons.alert-triangle : Icons.note;
+                    color: root.has-conflict ? Colors.warning : Palette.accent-background;
                     width: Metrics.icon-md;
                     height: Metrics.icon-md;
                     x: (parent.width - self.width) / 2;
@@ -189,10 +189,10 @@ export component MiniNoteCard inherits Rectangle {
             alignment: center;
 
             BubbleButton {
-                shape: root.syncing ? Shapes.sync
-                    : root.status-is-error ? Shapes.alert
-                    : root.status != "" ? Shapes.check
-                    : Shapes.cloud;
+                icon: root.syncing ? Icons.refresh
+                    : root.status-is-error ? Icons.alert-triangle
+                    : root.status != "" ? Icons.check
+                    : Icons.cloud;
                 tint: root.syncing ? Palette.accent-background
                     : root.status-is-error ? Colors.danger
                     : root.status != "" ? Colors.muted
@@ -228,7 +228,7 @@ export component BottomNavBar inherits Rectangle {
         spacing: 0px;
 
         NavItem {
-            icon: Shapes.home;
+            icon: Icons.home;
             label: @tr("Home");
             active: root.active-tab == 0;
             clicked => {
@@ -238,7 +238,7 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: Shapes.files;
+            icon: Icons.files;
             label: @tr("Files");
             active: root.active-tab == 1;
             badge-count: root.conflict-count;
@@ -249,7 +249,7 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: Shapes.search;
+            icon: Icons.search;
             label: @tr("Search");
             active: root.active-tab == 2;
             clicked => {
@@ -259,7 +259,7 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: Shapes.properties;
+            icon: Icons.info-circle;
             label: @tr("Properties");
             active: root.active-tab == 3;
             clicked => {
@@ -269,7 +269,7 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: Shapes.settings;
+            icon: Icons.settings;
             label: @tr("Settings");
             active: root.active-tab == 4;
             clicked => {
