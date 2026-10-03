@@ -174,6 +174,7 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
             BlockShape::Divider => RenderedBlockShape::Divider,
             BlockShape::Badge => RenderedBlockShape::Badge,
             BlockShape::Ruby => RenderedBlockShape::Ruby,
+            BlockShape::Link => RenderedBlockShape::Link,
         },
         tone: match block.tone {
             Tone::Accent => RenderedBlockTone::Accent,

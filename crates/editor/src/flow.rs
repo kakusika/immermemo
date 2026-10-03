@@ -9,18 +9,27 @@
 //! label/tone in both the flowing and the stacked presentation -- adding a
 //! vocabulary entry never needs touching two places.
 //!
-//! Non-paragraph blocks (a standalone `@mobile.conflict` marker between
-//! paragraphs, a `Section` heading) are not flowed here: inline flow only
-//! matters where an element sits *inside* running prose, and
-//! `classify_body`'s stacked `RenderedBlockView` path already renders a
-//! standalone block-level marker correctly.
+//! A standalone `@mobile.conflict` marker between paragraphs is not
+//! flowed here: inline flow only matters where an element sits *inside*
+//! running prose, and `classify_body`'s stacked `RenderedBlockView` path
+//! already renders a standalone block-level marker correctly. A
+//! `Heading` group *is* flowed exactly like a `Paragraph` when it has
+//! more than one item (a heading can carry a link or a bold word same as
+//! any other prose -- see `immermemo_tomet_render`'s module doc) --
+//! `RenderBlockKind::Element` is the only kind that never does, since it
+//! always holds exactly one item.
+//!
+//! [`to_flow_paragraph`] delegates every item's look entirely to
+//! [`crate::classify::to_classified_block`] rather than re-deriving it --
+//! the only thing specific to flowing is *where the result goes*
+//! (`Inline::Text` directly, or a [`ClassifiedBlock`] parked in
+//! `elements` and referenced by `Inline::Element { id }`), not *what it
+//! looks like*.
 
-use immermemo_tomet_render::{RenderBlockKind, RenderItem, TextStyle, classify_blocks};
+use immermemo_tomet_render::{RenderItem, TextStyle, classify_blocks};
 use origami_richtext_flow::{Block, Inline};
 
-use crate::classify::{
-    BlockShape, ClassifiedBlock, Tone, classify_body, fallback_label, look_up, to_classified_block,
-};
+use crate::classify::{BlockShape, ClassifiedBlock, classify_body, to_classified_block};
 
 /// `tomet-render`'s [`TextStyle`] (bold/italic/mark/strikeout -- the same
 /// four flags, just a separate type since `tomet-render` has no
@@ -65,17 +74,18 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
     };
     groups
         .into_iter()
-        .map(|(kind, items)| {
-            if kind == RenderBlockKind::Paragraph && items.len() > 1 {
+        .map(|(_kind, items)| {
+            if items.len() > 1 {
+                // Only `Paragraph`/`Heading` groups ever hold more than
+                // one item -- an `Element` group always holds exactly one
+                // (see `tomet-render`'s `classify_block_groups`) -- so
+                // this condition alone is enough to tell them apart.
                 NoteBodyItem::Flowed(to_flow_paragraph(body, items))
             } else {
-                // Every other case -- an `Element`/`Section` group, or a
-                // `Paragraph` with no inline element -- always has exactly
-                // one item (see `tomet-render`'s `classify_block`).
                 let item = items
                     .into_iter()
                     .next()
-                    .expect("classify_block always returns at least one item");
+                    .expect("classify_block_groups always returns at least one item per group");
                 NoteBodyItem::Stacked(to_classified_block(body, item))
             }
         })
@@ -92,17 +102,19 @@ pub struct FlowParagraph {
     pub elements: Vec<ClassifiedBlock>,
 }
 
-/// Flows every paragraph in `body` that contains at least one inline
-/// element. A paragraph with none, and every non-paragraph block, is left
-/// for [`crate::classify::classify_body`] to render as today -- only a
-/// paragraph actually split by an inline marker needs the flow engine.
+/// Flows every paragraph or heading in `body` that contains at least one
+/// inline element. A paragraph/heading with none, and every `Element`
+/// block, is left for [`crate::classify::classify_body`] to render as
+/// today -- only a group actually split by an inline marker needs the
+/// flow engine (see [`note_body_items`]'s doc for why `items.len() > 1`
+/// alone is enough to tell those apart).
 pub fn flow_paragraphs(body: &str) -> Vec<FlowParagraph> {
     let Ok(groups) = classify_blocks(body) else {
         return Vec::new();
     };
     groups
         .into_iter()
-        .filter(|(kind, items)| *kind == RenderBlockKind::Paragraph && items.len() > 1)
+        .filter(|(_kind, items)| items.len() > 1)
         .map(|(_, items)| to_flow_paragraph(body, items))
         .collect()
 }
@@ -116,48 +128,8 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
                 content: body[span.start.offset..span.end.offset].to_string(),
                 style: to_richtext_style(style).to_style_id(),
             }),
-            RenderItem::Ruby { base, reading } => {
-                let classified = ClassifiedBlock {
-                    shape: BlockShape::Ruby,
-                    tone: Tone::Neutral,
-                    text: body[base.start.offset..base.end.offset].to_string(),
-                    style: TextStyle::default(),
-                    reading,
-                };
-                let id = elements.len() as u64;
-                elements.push(classified);
-                content.push(Inline::Element { id });
-            }
-            RenderItem::Element {
-                identity,
-                args_summary,
-                ..
-            } => {
-                // `classify_inline_seq` (`immermemo-tomet-render`) only
-                // ever reports a *namespaced* inline element as its own
-                // `RenderItem::Element` -- a bare one stays merged into
-                // the surrounding text run -- so `identity.namespace` is
-                // always `Some` here.
-                let classified = match look_up(&identity, &args_summary) {
-                    Some(look) => ClassifiedBlock {
-                        shape: look.shape,
-                        tone: look.tone,
-                        text: look.text,
-                        style: TextStyle::default(),
-                        reading: String::new(),
-                    },
-                    None => ClassifiedBlock {
-                        shape: BlockShape::Badge,
-                        tone: Tone::Neutral,
-                        text: fallback_label(
-                            identity.namespace.as_deref().unwrap_or_default(),
-                            &identity.name,
-                            &args_summary,
-                        ),
-                        style: TextStyle::default(),
-                        reading: String::new(),
-                    },
-                };
+            item @ RenderItem::Element { .. } => {
+                let classified = to_classified_block(body, item);
                 // A divider marks where a conflict region ends -- a full-
                 // width hairline is the right cue between stacked rows
                 // (the reader is scanning top to bottom and needs an
@@ -187,6 +159,7 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::classify::Tone;
 
     #[test]
     fn note_body_items_mixes_stacked_and_flowed_items_in_source_order() {
@@ -295,5 +268,37 @@ mod tests {
         assert_eq!(paragraphs[0].elements[0].shape, BlockShape::Ruby);
         assert_eq!(paragraphs[0].elements[0].text, "漢字");
         assert_eq!(paragraphs[0].elements[0].reading, "かんじ");
+    }
+
+    #[test]
+    fn an_inline_link_element_flows_as_an_atomic_element() {
+        let src = "plain @link(\"https://example.com\")[see here] plain\n";
+        let paragraphs = flow_paragraphs(src);
+        assert_eq!(paragraphs.len(), 1);
+        assert_eq!(paragraphs[0].elements.len(), 1);
+        assert_eq!(paragraphs[0].elements[0].shape, BlockShape::Link);
+        assert_eq!(paragraphs[0].elements[0].tone, Tone::Accent);
+        assert_eq!(paragraphs[0].elements[0].text, "see here");
+    }
+
+    // Regression test for the item-dropping bug: before this fix, only
+    // `RenderBlockKind::Paragraph` groups with >1 item were flowed, so a
+    // `Heading` group split by an inline element (here, `@strong`) fell
+    // into `note_body_items`'s stacked branch and silently lost every
+    // item after the first via `items.into_iter().next()`.
+    #[test]
+    fn a_heading_split_by_an_inline_element_flows_instead_of_dropping_items() {
+        let src = "= A @strong[bold] heading\n\nBody.\n";
+        let paragraphs = flow_paragraphs(src);
+        assert_eq!(paragraphs.len(), 1);
+        assert_eq!(paragraphs[0].block.content.len(), 3);
+        match &paragraphs[0].block.content[2] {
+            Inline::Text { content, .. } => assert_eq!(content, " heading"),
+            Inline::Element { .. } => panic!("expected the trailing text run"),
+        }
+
+        let items = note_body_items(src);
+        assert_eq!(items.len(), 2);
+        assert!(matches!(items[0], NoteBodyItem::Flowed(_)));
     }
 }

@@ -6,17 +6,18 @@
 //!
 //! `immermemo-tomet-render`'s `classify()` reports every named element's
 //! `(namespace, name)` identity uniformly -- `@use`'d ones and Tomet's own
-//! bare built-ins alike (`namespace` is `None` for the latter). Deciding
-//! what a given identity *means*, visually, is left to whoever renders
-//! it. [`REGISTRY`] below is that decision for this app: it maps a
-//! recognized identity to a [`Look`] (a drawing primitive [`BlockShape`],
-//! a [`Tone`], and a label), so giving a new vocabulary -- `@use`'d or
-//! bare built-in -- its own presentation is "add one table entry," not
-//! "add a match arm in three different places." Nothing vocabulary-
-//! specific belongs in [`BlockShape`]/[`Tone`] themselves -- those are a
-//! closed set of drawing primitives (not a vocabulary registry), the same
-//! way a design system has a fixed set of component kinds that any number
-//! of use-sites can be mapped onto.
+//! bare built-ins alike (`namespace` is `None` for the latter, including
+//! `ruby`/`link` -- `tomet-render` doesn't treat those as a thing apart
+//! from any other element either). Deciding what a given identity *means*,
+//! visually, is left to whoever renders it. [`REGISTRY`] below is that
+//! decision for this app: it maps a recognized identity to a [`Look`] (a
+//! drawing primitive [`BlockShape`], a [`Tone`], and a label), so giving a
+//! new vocabulary -- `@use`'d or bare built-in -- its own presentation is
+//! "add one table entry," not "add a match arm in three different
+//! places." Nothing vocabulary-specific belongs in [`BlockShape`]/[`Tone`]
+//! themselves -- those are a closed set of drawing primitives (not a
+//! vocabulary registry), the same way a design system has a fixed set of
+//! component kinds that any number of use-sites can be mapped onto.
 //!
 //! An identity with no [`REGISTRY`] entry falls back differently depending
 //! on where it came from:
@@ -30,7 +31,7 @@
 //!   nothing this app hasn't explicitly opted into should change how it
 //!   looks.
 
-use immermemo_tomet_render::{ElementIdentity, RenderItem, TextStyle, classify};
+use immermemo_tomet_render::{ElementArgs, ElementIdentity, RenderItem, TextStyle, classify};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockShape {
@@ -50,8 +51,16 @@ pub enum BlockShape {
     /// A `@ruby[base](rt:"reading")` standing as an entire block by
     /// itself -- `text` is the base, `reading` the annotation. Rarer than
     /// the inline case (`crate::flow`), which is what a ruby annotation
-    /// mid-sentence actually looks like.
+    /// mid-sentence actually looks like. [`ruby_look`] is what gives the
+    /// bare `(None, "ruby")` identity this shape.
     Ruby,
+    /// A bare `@link`/`@std.link` standing as an entire block by itself
+    /// -- `text` is its display content, or the target itself when there
+    /// is no `[content]`. Static, same as every other shape here: this
+    /// only shows where a link sits, it doesn't make it tappable.
+    /// [`link_look`] is what gives the bare `(None, "link")` identity
+    /// this shape.
+    Link,
 }
 
 /// A small, closed palette selector -- not vocabulary-specific, just
@@ -75,7 +84,8 @@ pub struct ClassifiedBlock {
     /// Meaningful only for `PlainText` -- see that variant's doc.
     /// `Default::default()` (no style) everywhere else.
     pub style: TextStyle,
-    /// The reading annotation, meaningful only for `Ruby`. Empty
+    /// The reading annotation, meaningful only for `Ruby` -- copied
+    /// straight from the matching [`Look::secondary_text`]. Empty
     /// everywhere else.
     pub reading: String,
 }
@@ -86,30 +96,50 @@ pub(crate) struct Look {
     pub(crate) shape: BlockShape,
     pub(crate) tone: Tone,
     pub(crate) text: String,
+    /// The reading annotation, meaningful only for [`BlockShape::Ruby`].
+    /// Empty for every other shape.
+    pub(crate) secondary_text: String,
+}
+
+/// What a [`REGISTRY`] entry's lookup function gets to decide a [`Look`]
+/// from: `args` is `immermemo_tomet_render::RenderItem::Element::args`
+/// unchanged, `content` is the same item's `content` span already
+/// resolved against the note body (so a lookup function never needs to
+/// know what a [`tomet_ast::Span`] is or where the body string lives).
+pub(crate) struct LookInput<'a> {
+    pub(crate) args: &'a ElementArgs,
+    pub(crate) content: Option<&'a str>,
 }
 
 /// Which `(namespace, name)` pairs this app recognizes, and how each
 /// should look. `namespace: None` registers a look for one of Tomet's own
-/// bare built-in elements; the only entry today is `mobile.conflict`
-/// (`immermemo_merge::CONFLICT_MARKER`). A future vocabulary -- `@use`'d
-/// or bare built-in -- gets its own presentation by adding a row here,
-/// not by touching [`look_up`] or anything downstream of it.
-const REGISTRY: &[(Option<&str>, &str, fn(&str) -> Look)] =
-    &[(Some("mobile"), "conflict", mobile_conflict_look)];
+/// bare built-in elements -- `mobile.conflict` is `@use`'d
+/// (`immermemo_merge::CONFLICT_MARKER`), `ruby`/`link` are bare, but all
+/// three are ordinary entries here: `immermemo_tomet_render` doesn't
+/// treat `ruby`/`link` as a thing apart from any other element (see its
+/// module doc), and neither does this table. A future vocabulary --
+/// `@use`'d or bare built-in -- gets its own presentation by adding a row
+/// here, not by touching [`look_up`] or anything downstream of it.
+const REGISTRY: &[(Option<&str>, &str, fn(LookInput) -> Look)] = &[
+    (Some("mobile"), "conflict", mobile_conflict_look),
+    (None, "ruby", ruby_look),
+    (None, "link", link_look),
+];
 
-/// `@mobile.conflict(side)` -- `side` is the one positional arg
-/// `classify` reports as `args_summary`.
-fn mobile_conflict_look(args_summary: &str) -> Look {
-    match args_summary {
-        "mine" => Look {
+/// `@mobile.conflict(side)` -- `side` is the one positional arg.
+fn mobile_conflict_look(input: LookInput) -> Look {
+    match input.args {
+        ElementArgs::Positional(side) if side == "mine" => Look {
             shape: BlockShape::Chip,
             tone: Tone::Accent,
             text: "Mine".to_owned(),
+            secondary_text: String::new(),
         },
-        "theirs" => Look {
+        ElementArgs::Positional(side) if side == "theirs" => Look {
             shape: BlockShape::Chip,
             tone: Tone::Warning,
             text: "Theirs".to_owned(),
+            secondary_text: String::new(),
         },
         // "end", or anything else this marker might someday carry -- the
         // end marker has nothing worth labeling, just a divider, same as
@@ -118,7 +148,59 @@ fn mobile_conflict_look(args_summary: &str) -> Look {
             shape: BlockShape::Divider,
             tone: Tone::Neutral,
             text: String::new(),
+            secondary_text: String::new(),
         },
+    }
+}
+
+/// `@ruby[base](rt:"reading")` -- `base` is `input.content`, `reading` is
+/// the `rt` named arg (empty if missing or non-string, same
+/// "検証は未実装" scope decision `tomet-render` already makes).
+fn ruby_look(input: LookInput) -> Look {
+    let reading = match input.args {
+        ElementArgs::Named(pairs) => pairs
+            .iter()
+            .find(|(key, _)| key == "rt")
+            .map(|(_, value)| value.clone())
+            .unwrap_or_default(),
+        _ => String::new(),
+    };
+    Look {
+        shape: BlockShape::Ruby,
+        tone: Tone::Neutral,
+        text: input.content.unwrap_or_default().to_owned(),
+        secondary_text: reading,
+    }
+}
+
+/// `@link`/`@std.link` -- `text` is `input.content` (the display text) if
+/// present, else the target itself. The target only reads two of
+/// `@link`'s several forms correctly: the bare positional string and the
+/// explicit `target:` named arg; the typed shortcuts (`url:`/`file:`/
+/// `tm:`/`id:`/`ref:`) are normalized into a prefixed `target` string by
+/// `tomet-semantics`, which this crate deliberately does not depend on
+/// (same reasoning as `immermemo_tomet_render`'s module doc) -- so those
+/// are read back as whatever raw value sits under the key, unprefixed.
+fn link_look(input: LookInput) -> Look {
+    let target = match input.args {
+        ElementArgs::Positional(target) => target.clone(),
+        ElementArgs::Named(pairs) => pairs
+            .iter()
+            .find(|(key, _)| {
+                matches!(
+                    key.as_str(),
+                    "target" | "url" | "file" | "tm" | "id" | "ref"
+                )
+            })
+            .map(|(_, value)| value.clone())
+            .unwrap_or_default(),
+        ElementArgs::None => String::new(),
+    };
+    Look {
+        shape: BlockShape::Link,
+        tone: Tone::Accent,
+        text: input.content.map(str::to_owned).unwrap_or(target),
+        secondary_text: String::new(),
     }
 }
 
@@ -128,13 +210,13 @@ fn mobile_conflict_look(args_summary: &str) -> Look {
 ///
 /// `pub(crate)`: `crate::flow` calls this too, for the same lookup against
 /// an inline (rather than block-level) occurrence of the identity.
-pub(crate) fn look_up(identity: &ElementIdentity, args_summary: &str) -> Option<Look> {
+pub(crate) fn look_up(identity: &ElementIdentity, input: LookInput) -> Option<Look> {
     REGISTRY
         .iter()
         .find(|(namespace, name, _)| {
             *namespace == identity.namespace.as_deref() && *name == identity.name
         })
-        .map(|(_, _, look)| look(args_summary))
+        .map(|(_, _, look)| look(input))
 }
 
 /// A short description of an unrecognized `@use`'d element, for
@@ -169,49 +251,53 @@ pub(crate) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
             style,
             reading: String::new(),
         },
-        RenderItem::Ruby { base, reading } => ClassifiedBlock {
-            shape: BlockShape::Ruby,
-            tone: Tone::Neutral,
-            text: body[base.start.offset..base.end.offset].into(),
-            style: TextStyle::default(),
-            reading,
-        },
         RenderItem::Element {
             identity,
             span,
+            content,
             args_summary,
+            args,
             ..
-        } => match look_up(&identity, &args_summary) {
-            Some(look) => ClassifiedBlock {
-                shape: look.shape,
-                tone: look.tone,
-                text: look.text,
-                style: TextStyle::default(),
-                reading: String::new(),
-            },
-            None => match &identity.namespace {
-                // A `@use`'d marker nobody's given a look to yet -- show
-                // *something* rather than raw `@ns.name(...)` syntax.
-                Some(namespace) => ClassifiedBlock {
-                    shape: BlockShape::Badge,
-                    tone: Tone::Neutral,
-                    text: fallback_label(namespace, &identity.name, &args_summary),
+        } => {
+            let content_text = content.map(|span| &body[span.start.offset..span.end.offset]);
+            let input = LookInput {
+                args: &args,
+                content: content_text,
+            };
+            match look_up(&identity, input) {
+                Some(look) => ClassifiedBlock {
+                    shape: look.shape,
+                    tone: look.tone,
+                    text: look.text,
                     style: TextStyle::default(),
-                    reading: String::new(),
+                    reading: look.secondary_text,
                 },
-                // A bare built-in nobody's registered a look for -- its
-                // own syntax already reads fine unrendered (e.g. a list's
-                // `- item` lines), so show it exactly as written, same as
-                // if it had never been classified as an element at all.
-                None => ClassifiedBlock {
-                    shape: BlockShape::PlainText,
-                    tone: Tone::Neutral,
-                    text: body[span.start.offset..span.end.offset].into(),
-                    style: TextStyle::default(),
-                    reading: String::new(),
+                None => match &identity.namespace {
+                    // A `@use`'d marker nobody's given a look to yet --
+                    // show *something* rather than raw `@ns.name(...)`
+                    // syntax.
+                    Some(namespace) => ClassifiedBlock {
+                        shape: BlockShape::Badge,
+                        tone: Tone::Neutral,
+                        text: fallback_label(namespace, &identity.name, &args_summary),
+                        style: TextStyle::default(),
+                        reading: String::new(),
+                    },
+                    // A bare built-in nobody's registered a look for --
+                    // its own syntax already reads fine unrendered (e.g.
+                    // a list's `- item` lines), so show it exactly as
+                    // written, same as if it had never been classified
+                    // as an element at all.
+                    None => ClassifiedBlock {
+                        shape: BlockShape::PlainText,
+                        tone: Tone::Neutral,
+                        text: body[span.start.offset..span.end.offset].into(),
+                        style: TextStyle::default(),
+                        reading: String::new(),
+                    },
                 },
-            },
-        },
+            }
+        }
     }
 }
 
@@ -379,5 +465,22 @@ mod tests {
         assert_eq!(blocks[0].shape, BlockShape::Ruby);
         assert_eq!(blocks[0].text, "漢字");
         assert_eq!(blocks[0].reading, "かんじ");
+    }
+
+    #[test]
+    fn a_link_block_with_display_content_shows_the_display_text() {
+        let blocks = classify_body("@link(\"https://example.com\")[see here]\n");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].shape, BlockShape::Link);
+        assert_eq!(blocks[0].tone, Tone::Accent);
+        assert_eq!(blocks[0].text, "see here");
+    }
+
+    #[test]
+    fn a_link_block_with_no_display_content_falls_back_to_its_target() {
+        let blocks = classify_body("@link(target:\"ref:note\")\n");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].shape, BlockShape::Link);
+        assert_eq!(blocks[0].text, "ref:note");
     }
 }

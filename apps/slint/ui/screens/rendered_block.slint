@@ -19,6 +19,11 @@ export enum RenderedBlockShape {
     // the inline case, `@richtext/flow_view.slint`'s `FlowView` -- see
     // `immermemo_editor::classify::BlockShape::Ruby`'s doc).
     ruby,
+    // A bare `@link`/`@std.link` -- `text` is its display content, or the
+    // target itself with no `[content]` (see
+    // `immermemo_editor::classify::BlockShape::Link`'s doc). Static, same
+    // as every other shape here -- not tappable.
+    link,
 }
 
 export enum RenderedBlockTone {
@@ -159,6 +164,25 @@ export component RenderedBlockView inherits VerticalLayout {
             font-size: root.text-font-size;
             color: Palette.foreground;
             horizontal-alignment: center;
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.link: Rectangle {
+        width: 100%;
+
+        link-text-item := Text {
+            width: 100%;
+            text: root.block.text;
+            font-size: root.text-font-size;
+            color: root.tone-color;
+            wrap: word-wrap;
+        }
+
+        Rectangle {
+            y: link-text-item.height - 1px;
+            width: link-text-item.preferred-width;
+            height: 1px;
+            background: root.tone-color;
         }
     }
 }
