@@ -10,6 +10,9 @@ immermemo-sync = { workspace = true }
 immermemo-tomet-render = { workspace = true }
 immermemo-vault = { workspace = true }
 
+#= Origami
+origami-richtext-flow = { workspace = true }
+
 #= Tomet
 tomet-parser = { workspace = true }
 tomet-printer = { workspace = true }

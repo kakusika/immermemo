@@ -2,8 +2,15 @@ import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
 import { ActionRow } from "@origami-mobile/components.slint";
 import { BottomNavBar, MiniNoteCard } from "components.slint";
-import { EditorScreen } from "@editor-slint/editor.slint";
-import { RenderedBlock } from "@editor-slint/rendered_block.slint";
+import { EditorScreen } from "screens/editor.slint";
+import { NoteBodyItemView } from "screens/note_body.slint";
+// `apps/slint/src/render.rs` needs to construct `FlowElementWidget`
+// directly (it's the `ComponentFactory` product for an inline element
+// fragment), and only an exported *Window-inheriting* component gets a
+// constructible Rust type at all -- see `note_body.slint`'s own doc
+// comment on `FlowElementWidget` for why. It's only used by composition
+// elsewhere, so nothing else forces this re-export.
+export { FlowElementWidget } from "screens/note_body.slint";
 import { HomeScreen } from "screens/home.slint";
 import { FilesScreen } from "screens/files.slint";
 import { PropertiesScreen } from "screens/properties.slint";
@@ -78,7 +85,7 @@ export component App inherits Window {
     // Derived from `body` by `apps/slint/src/render.rs`, kept in step with
     // it everywhere Rust sets `body` -- see that module's doc. Read-only
     // from Slint's side: nothing here ever writes it back.
-    in property <[RenderedBlock]> rendered-blocks: [];
+    in property <[NoteBodyItemView]> note-body-items: [];
     in property <bool> remote-configured;
     in-out property <string> remote-url-draft;
     in-out property <string> remote-token-draft;
@@ -587,7 +594,7 @@ export component App inherits Window {
                 status: root.status;
                 status-is-error: root.status-is-error;
                 body <=> root.body;
-                rendered-blocks: root.rendered-blocks;
+                note-body-items: root.note-body-items;
                 edited(t) => { root.edited(t); }
                 undo => { root.undo(); }
                 redo => { root.redo(); }

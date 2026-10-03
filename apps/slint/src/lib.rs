@@ -192,8 +192,8 @@ pub fn run(
         move |text| {
             let app = weak.unwrap();
             // `body` already changed via the TextInput's own two-way
-            // binding -- only `rendered-blocks` needs recomputing here.
-            app.set_rendered_blocks(render::rendered_blocks(text.as_str()));
+            // binding -- only `note-body-items` needs recomputing here.
+            app.set_note_body_items(render::note_body_items(text.as_str()));
             session::update_note_stats(&app, text.as_str());
             {
                 let mut s = session.borrow_mut();

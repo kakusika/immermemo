@@ -22,6 +22,7 @@
 
 mod classify;
 mod conflicts;
+mod flow;
 mod note_history;
 mod notes;
 mod state;
@@ -32,6 +33,7 @@ pub use conflicts::{
     ConflictResolved, ConflictSheetState, conflict_sheet_state, resolve_active_conflict,
     resolve_conflict_step,
 };
+pub use flow::{FlowParagraph, NoteBodyItem, flow_paragraphs, note_body_items};
 pub use note_history::{RestoredVersion, load_note_history, restore_note_version};
 pub use notes::{
     OpenedNote, RestoredNote, apply_restored, first_conflicted_note_index,

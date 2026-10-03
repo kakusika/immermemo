@@ -259,16 +259,16 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     }
 }
 
-/// Sets `body` and recomputes `rendered-blocks` (editor.slint's view-mode
+/// Sets `body` and recomputes `note-body-items` (editor.slint's view-mode
 /// display) from it in the same step, so the two never drift apart. Every
 /// place `body` changes from the Rust side should go through this instead
 /// of `app.set_body` directly -- the one exception is `lib.rs`'s
 /// `on_edited` handler, where `body` has already changed via the
 /// `TextInput`'s own two-way binding before Rust ever sees the edit, and
-/// only `rendered-blocks` needs recomputing.
+/// only `note-body-items` needs recomputing.
 pub fn update_rendered_body(app: &App, text: &str) {
     app.set_body(text.into());
-    app.set_rendered_blocks(crate::render::rendered_blocks(text));
+    app.set_note_body_items(crate::render::note_body_items(text));
 }
 
 pub fn update_note_stats(app: &App, text: &str) {

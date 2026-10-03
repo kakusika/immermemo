@@ -1,0 +1,56 @@
+import { RenderedBlock, RenderedBlockView } from "rendered_block.slint";
+import { RichTextLine, FlowView } from "@richtext/flow_view.slint";
+
+// One item of the note body's view-mode display: either a classified
+// block (`RenderedBlockView`, one shape per whole block -- a plain
+// paragraph, or a standalone element between paragraphs) or a paragraph
+// that had at least one inline element and needed to flow as one line
+// (`FlowView`) instead of stacking each split fragment as its own row.
+// `immermemo_editor::note_body_items` decides which; see its doc comment
+// for why a flat `[RenderedBlock]` alone isn't enough.
+export struct NoteBodyItemView {
+    is-flow: bool,
+    block: RenderedBlock,
+    line: RichTextLine,
+}
+
+export component NoteBodyView inherits VerticalLayout {
+    in property <[NoteBodyItemView]> items;
+    in property <length> text-font-size;
+
+    alignment: start;
+
+    for item in root.items: VerticalLayout {
+        if !item.is-flow: RenderedBlockView {
+            width: 100%;
+            block: item.block;
+            text-font-size: root.text-font-size;
+        }
+
+        if item.is-flow: FlowView {
+            lines: [item.line];
+        }
+    }
+}
+
+// `ComponentFactory` products need their root component to inherit
+// `Window` for `slint_build` to generate a constructible Rust type at all
+// (`i-slint-compiler`'s default `ComponentSelection::ExportedWindows` only
+// generates Window-inheriting exported components -- a plain
+// `VerticalLayout`-rooted export like `RenderedBlockView` above produces a
+// "doesn't inherit Window, no code will be generated" warning and no Rust
+// type). `ComponentContainer` embeds a Window-rooted component without
+// opening a real OS window, binding its width/height to the container's
+// own -- which itself auto-sizes from the embedded content's
+// `layout_info()`, same as any other nested layout. `RenderedBlockView`
+// itself stays `VerticalLayout`-rooted since the stacked (non-flow) path
+// above instantiates it directly by composition, not via a factory; this
+// wrapper exists only for `apps/slint/src/render.rs`'s
+// `ComponentFactory::new` call.
+export component FlowElementWidget inherits Window {
+    in property <RenderedBlock> block;
+
+    RenderedBlockView {
+        block: root.block;
+    }
+}

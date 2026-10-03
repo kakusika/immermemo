@@ -70,7 +70,9 @@
 //! or should it fall back to something generic" to whatever renders
 //! [`RenderItem`]s (today: `immermemo-editor`'s `REGISTRY`).
 
-use tomet_ast::{Block, Document, Element, ElementValue, Entry, Inline, Position, Sigil, Span, Value};
+use tomet_ast::{
+    Block, Document, Element, ElementValue, Entry, Inline, Position, Sigil, Span, Value,
+};
 
 /// An element's identity: the `(namespace, name)` pair from its
 /// [`tomet_ast::Sigil::Named`] name. `namespace` is `None` for one of
@@ -118,6 +120,50 @@ fn classify_block(block: &Block) -> Vec<RenderItem> {
         Block::Paragraph(p) => classify_inline_seq(&p.content),
         Block::Section(_) => vec![RenderItem::Text(block.span())],
     }
+}
+
+/// Which kind of source block a [`classify_blocks`] group came from.
+/// [`classify`]'s flat `Vec<RenderItem>` loses this: a `Block::Paragraph`
+/// split around inline elements and a run of independent `Block::Element`s
+/// look identical once flattened, but only the former should ever be laid
+/// out as one flowing line (see `immermemo-editor`'s `flow` module, which
+/// needs this distinction to group inline items back into one block).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RenderBlockKind {
+    Paragraph,
+    Element,
+    Section,
+}
+
+fn block_kind(block: &Block) -> RenderBlockKind {
+    match block {
+        Block::Element(_) => RenderBlockKind::Element,
+        Block::Paragraph(_) => RenderBlockKind::Paragraph,
+        Block::Section(_) => RenderBlockKind::Section,
+    }
+}
+
+/// `src` failed to parse -- see the module doc's "Parse failures fall back
+/// to one plain-text span" section. [`classify`] absorbs this into a
+/// single [`RenderItem::Text`]; [`classify_blocks`] has no sensible single
+/// group to fall back to without lying about [`RenderBlockKind`], so it
+/// reports the failure instead and leaves the fallback decision to the
+/// caller.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ParseFailed;
+
+/// Like [`classify`], but keeps each source block's [`RenderItem`]s
+/// grouped (and tagged with [`RenderBlockKind`]) instead of flattening
+/// them into one document-wide list. A [`RenderBlockKind::Paragraph`]
+/// group may hold several items (prose split around inline elements -- see
+/// [`classify_inline_seq`]); every other kind holds exactly one.
+pub fn classify_blocks(src: &str) -> Result<Vec<(RenderBlockKind, Vec<RenderItem>)>, ParseFailed> {
+    let doc: Document = tomet_parser::parse_document(src).map_err(|_| ParseFailed)?;
+    Ok(doc
+        .blocks
+        .iter()
+        .map(|block| (block_kind(block), classify_block(block)))
+        .collect())
 }
 
 /// Splits a run of [`Inline`]s into [`RenderItem`]s: a *namespaced*
@@ -225,11 +271,7 @@ fn summarize_value(value: &Value) -> String {
             .collect::<Vec<_>>()
             .join(", "),
         Value::Call(name, args) => format!("{name}({} arg(s))", args.len()),
-        Value::Element(el) => el
-            .sigil
-            .name()
-            .map(|n| n.to_string())
-            .unwrap_or_default(),
+        Value::Element(el) => el.sigil.name().map(|n| n.to_string()).unwrap_or_default(),
     }
 }
 
@@ -336,7 +378,9 @@ mod tests {
             .collect();
         assert_eq!(
             kinds,
-            vec!["text", "element", "text", "element", "text", "element", "text"]
+            vec![
+                "text", "element", "text", "element", "text", "element", "text"
+            ]
         );
 
         let RenderItem::Text(first) = &items[0] else {
@@ -382,5 +426,29 @@ mod tests {
             }
             RenderItem::Element { .. } => panic!("expected a Text fallback item"),
         }
+    }
+
+    #[test]
+    fn classify_blocks_groups_inline_conflict_items_under_one_paragraph() {
+        // Same fixture `immermemo-editor`'s classify.rs proves goes through
+        // the real merge pipeline -- here just checking `classify_blocks`
+        // keeps all of a paragraph's split items in one group, unlike
+        // `classify`'s flat list.
+        let src = "@use(mobile)\nThe @mobile.conflict(mine)slow@mobile.conflict(theirs)lazy@mobile.conflict(end) fox jumps.\n";
+        let groups = classify_blocks(src).unwrap();
+
+        // `@use(mobile)` is its own bare `Block::Element`, then the
+        // sentence is one `Block::Paragraph` holding every inline item.
+        assert_eq!(groups.len(), 2);
+        assert_eq!(groups[0].0, RenderBlockKind::Element);
+        assert_eq!(groups[0].1.len(), 1);
+        assert_eq!(groups[1].0, RenderBlockKind::Paragraph);
+        assert_eq!(groups[1].1.len(), 7);
+    }
+
+    #[test]
+    fn classify_blocks_reports_parse_failure_instead_of_guessing_a_kind() {
+        let src = "Fine paragraph.\n\n@mobile.conflict(\n";
+        assert_eq!(classify_blocks(src), Err(ParseFailed));
     }
 }

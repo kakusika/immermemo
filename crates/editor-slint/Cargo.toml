@@ -1,6 +1,0 @@
-[package]
-name = "immermemo-editor-slint"
-version.workspace = true
-edition.workspace = true
-links = "immermemo_editor_slint"
-build = "build.rs"

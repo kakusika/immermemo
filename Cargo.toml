@@ -4,7 +4,6 @@ resolver = "3"
 members = [
   "apps/slint",
   "crates/editor",
-  "crates/editor-slint",
   "crates/index",
   "crates/merge",
   "crates/origami-mobile",
@@ -22,13 +21,16 @@ rust-version = "1.85"
 
 [workspace.dependencies]
 immermemo-editor = { path = "crates/editor" }
-immermemo-editor-slint = { path = "crates/editor-slint" }
 immermemo-index = { path = "crates/index" }
 immermemo-merge = { path = "crates/merge" }
 immermemo-origami-mobile = { path = "crates/origami-mobile" }
 immermemo-sync = { path = "crates/sync" }
 immermemo-tomet-render = { path = "crates/tomet-render" }
 immermemo-vault = { path = "crates/vault" }
+
+#= Origami
+origami-richtext = { git = "https://github.com/kakusika/origami-frameworks.git" }
+origami-richtext-flow = { git = "https://github.com/kakusika/origami-frameworks.git" }
 
 #= Tomet
 tomet-ast = { git = "https://github.com/tomet-lang/tomet.git" }

@@ -1,9 +1,8 @@
 //! Classifies a note body into the blocks the editor's view-mode display
-//! draws, without knowing anything about Slint -- `crates/editor-slint`'s
-//! `render.rs` (in `apps/slint`, where the generated Slint types actually
-//! live -- see that crate's doc comment) converts [`ClassifiedBlock`] into
-//! the Slint-generated `RenderedBlock` model `EditorScreen`'s
-//! `rendered-blocks` property expects.
+//! draws, without knowing anything about Slint -- `apps/slint/src/
+//! render.rs` (where the generated Slint types actually live) converts
+//! [`ClassifiedBlock`] into the Slint-generated `RenderedBlock` model
+//! `EditorScreen`'s `rendered-blocks` property expects.
 //!
 //! `immermemo-tomet-render`'s `classify()` reports every named element's
 //! `(namespace, name)` identity uniformly -- `@use`'d ones and Tomet's own
@@ -66,10 +65,12 @@ pub struct ClassifiedBlock {
     pub text: String,
 }
 
-struct Look {
-    shape: BlockShape,
-    tone: Tone,
-    text: String,
+// `pub(crate)`: `crate::flow` also needs a recognized identity's
+// shape/tone/text, for the same elements flowed inline instead of stacked.
+pub(crate) struct Look {
+    pub(crate) shape: BlockShape,
+    pub(crate) tone: Tone,
+    pub(crate) text: String,
 }
 
 /// Which `(namespace, name)` pairs this app recognizes, and how each
@@ -109,7 +110,10 @@ fn mobile_conflict_look(args_summary: &str) -> Look {
 /// `None` if `identity` has no [`REGISTRY`] entry -- callers decide the
 /// fallback themselves, since it differs by whether `identity` came in
 /// through `@use` (see the module doc).
-fn look_up(identity: &ElementIdentity, args_summary: &str) -> Option<Look> {
+///
+/// `pub(crate)`: `crate::flow` calls this too, for the same lookup against
+/// an inline (rather than block-level) occurrence of the identity.
+pub(crate) fn look_up(identity: &ElementIdentity, args_summary: &str) -> Option<Look> {
     REGISTRY
         .iter()
         .find(|(namespace, name, _)| {
@@ -121,7 +125,9 @@ fn look_up(identity: &ElementIdentity, args_summary: &str) -> Option<Look> {
 /// A short description of an unrecognized `@use`'d element, for
 /// [`BlockShape::Badge`]. Not meant to round-trip -- just enough to show
 /// something.
-fn fallback_label(namespace: &str, name: &str, args_summary: &str) -> String {
+///
+/// `pub(crate)`: `crate::flow` reuses this for the same fallback, inline.
+pub(crate) fn fallback_label(namespace: &str, name: &str, args_summary: &str) -> String {
     if args_summary.is_empty() {
         format!("{namespace}.{name}")
     } else {
@@ -137,7 +143,9 @@ pub fn classify_body(body: &str) -> Vec<ClassifiedBlock> {
         .collect()
 }
 
-fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlock {
+// `pub(crate)`: `crate::flow::note_body_items` reuses this for the groups
+// it isn't flowing (see that module's doc).
+pub(crate) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlock {
     match item {
         RenderItem::Text(span) => ClassifiedBlock {
             shape: BlockShape::PlainText,
@@ -219,7 +227,11 @@ mod tests {
             vec![
                 (BlockShape::PlainText, Tone::Neutral, "Before.".to_owned()),
                 (BlockShape::Chip, Tone::Accent, "Mine".to_owned()),
-                (BlockShape::PlainText, Tone::Neutral, "Mine text.".to_owned()),
+                (
+                    BlockShape::PlainText,
+                    Tone::Neutral,
+                    "Mine text.".to_owned()
+                ),
                 (BlockShape::Chip, Tone::Warning, "Theirs".to_owned()),
                 (
                     BlockShape::PlainText,

@@ -2437,14 +2437,11 @@ dependencies = [
  "immermemo-sync",
  "immermemo-tomet-render",
  "immermemo-vault",
+ "origami-richtext-flow",
  "tomet-parser",
  "tomet-printer",
  "tomet-stats",
 ]
-
-[[package]]
-name = "immermemo-editor-slint"
-version = "0.1.0"
 
 [[package]]
 name = "immermemo-index"
@@ -2477,13 +2474,14 @@ dependencies = [
  "anyhow",
  "git2",
  "immermemo-editor",
- "immermemo-editor-slint",
  "immermemo-index",
  "immermemo-merge",
  "immermemo-origami-mobile",
  "immermemo-sync",
  "immermemo-vault",
  "jni 0.21.1",
+ "origami-richtext",
+ "origami-richtext-flow",
  "slint",
  "slint-build",
  "sys-locale",
@@ -3868,6 +3866,19 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
 ]
+
+[[package]]
+name = "origami-richtext"
+version = "0.1.0"
+source = "git+https://github.com/kakusika/origami-frameworks.git#be5e5e4ddbbfa2da5ca8672549c1118c4c65caba"
+dependencies = [
+ "origami-richtext-flow",
+]
+
+[[package]]
+name = "origami-richtext-flow"
+version = "0.1.0"
+source = "git+https://github.com/kakusika/origami-frameworks.git#be5e5e4ddbbfa2da5ca8672549c1118c4c65caba"
 
 [[package]]
 name = "os_pipe"

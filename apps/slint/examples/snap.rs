@@ -1,19 +1,52 @@
 //! Renders the window headlessly at a phone's size and density, to look at the
 //! layout without a device: `snap <out-prefix> [width] [height] [scale]`.
+//!
+//! `#![allow(deprecated)]`: this file's `to_rich_text_fragment` uses
+//! `slint::ComponentFactory`, same known, accepted risk as
+//! `apps/slint/src/render.rs`'s doc comment describes.
+#![allow(deprecated)]
+
+use std::cell::Cell;
 use std::rc::Rc;
 
 use slint::platform::software_renderer::{
     MinimalSoftwareWindow, PremultipliedRgbaColor, RepaintBufferType,
 };
 use slint::platform::{Platform, WindowAdapter, WindowEvent};
-use slint::{ComponentHandle, ModelRc, PhysicalSize, VecModel};
+use slint::{ComponentFactory, ComponentHandle, ModelRc, PhysicalSize, VecModel};
 slint::include_modules!();
 
-struct Headless(Rc<MinimalSoftwareWindow>);
+use immermemo_editor::{BlockShape, ClassifiedBlock, FlowParagraph, NoteBodyItem, Tone};
+use origami_richtext_flow::{Fragment, Measure, layout_block};
+
+struct Headless {
+    main: Rc<MinimalSoftwareWindow>,
+    main_claimed: Cell<bool>,
+}
 
 impl Platform for Headless {
     fn create_window_adapter(&self) -> Result<Rc<dyn WindowAdapter>, slint::PlatformError> {
-        Ok(self.0.clone())
+        // The first call is `App`'s own window -- the one this file
+        // actually renders/snapshots, so it must be `main`. A later call
+        // (e.g. constructing a `ComponentFactory` product that inherits
+        // `Window`, like `FlowElementWidget` -- see
+        // `apps/slint/src/render.rs`) also goes through this: its
+        // `ComponentHandle::new()` calls `WindowInner::set_component`,
+        // which rebinds whichever adapter it's given to render *that*
+        // component instead ("Further event handling and rendering, etc.
+        // will be done with that component" -- i-slint-core's own doc
+        // comment). Returning `main` again there would silently steal the
+        // window away from `App` and corrupt every snapshot taken after
+        // it (discovered exactly this way while adding the first
+        // `ComponentFactory` user to this app). A real backend (winit)
+        // never has this problem -- each call creates a genuinely
+        // separate native window -- so each additional call here gets its
+        // own independent, unused `MinimalSoftwareWindow` instead.
+        if !self.main_claimed.replace(true) {
+            Ok(self.main.clone())
+        } else {
+            Ok(MinimalSoftwareWindow::new(RepaintBufferType::NewBuffer))
+        }
     }
 }
 
@@ -39,7 +72,11 @@ fn main() {
     let (w, h, scale) = (num(412.0), num(892.0), num(2.0));
 
     let window = MinimalSoftwareWindow::new(RepaintBufferType::NewBuffer);
-    slint::platform::set_platform(Box::new(Headless(window.clone()))).unwrap();
+    slint::platform::set_platform(Box::new(Headless {
+        main: window.clone(),
+        main_claimed: Cell::new(false),
+    }))
+    .unwrap();
     let size = PhysicalSize::new((w * scale) as u32, (h * scale) as u32);
     window.set_size(size);
     window.dispatch_event(WindowEvent::ScaleFactorChanged {
@@ -138,100 +175,40 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor.ppm"));
 
-    // View mode with `rendered-blocks` set: a `@mobile.conflict` triple and
-    // an unrecognized namespaced element, exercising every
-    // `RenderedBlockView` kind besides plain text (see
-    // `apps/slint/src/render.rs`). Hand-built here rather than via
-    // `immermemo_slint::render::rendered_blocks` -- this file's own
-    // `include_modules!()` generates its own `RenderedBlock` type, distinct
-    // from the one in the library crate's.
-    app.set_body(
-        "買い物リストの変更について。\n\n@deck.bookmark(label: しおり)\n\n続きはここから。".into(),
-    );
-    app.set_rendered_blocks(ModelRc::new(VecModel::from(vec![
-        RenderedBlock {
-            shape: RenderedBlockShape::PlainText,
-            tone: RenderedBlockTone::Neutral,
-            text: "買い物リストの変更について。".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::Chip,
-            tone: RenderedBlockTone::Accent,
-            text: "Mine".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::PlainText,
-            tone: RenderedBlockTone::Neutral,
-            text: "牛乳（低脂肪）".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::Chip,
-            tone: RenderedBlockTone::Warning,
-            text: "Theirs".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::PlainText,
-            tone: RenderedBlockTone::Neutral,
-            text: "牛乳（特濃）".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::Divider,
-            tone: RenderedBlockTone::Neutral,
-            text: "".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::Badge,
-            tone: RenderedBlockTone::Neutral,
-            text: "deck.bookmark: label".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::PlainText,
-            tone: RenderedBlockTone::Neutral,
-            text: "続きはここから。".into(),
-        },
-        // The common case: both sides edited the same sentence, which
-        // narrows to an *inline* conflict mid-paragraph rather than a
-        // whole-block one (see `crates/editor/src/classify.rs`'s
-        // `an_inline_merge_conflict_is_recognized_through_the_real_pipeline`,
-        // which proves this exact shape through the real merge pipeline).
-        RenderedBlock {
-            shape: RenderedBlockShape::PlainText,
-            tone: RenderedBlockTone::Neutral,
-            text: "The ".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::Chip,
-            tone: RenderedBlockTone::Accent,
-            text: "Mine".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::PlainText,
-            tone: RenderedBlockTone::Neutral,
-            text: "slow".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::Chip,
-            tone: RenderedBlockTone::Warning,
-            text: "Theirs".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::PlainText,
-            tone: RenderedBlockTone::Neutral,
-            text: "lazy".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::Divider,
-            tone: RenderedBlockTone::Neutral,
-            text: "".into(),
-        },
-        RenderedBlock {
-            shape: RenderedBlockShape::PlainText,
-            tone: RenderedBlockTone::Neutral,
-            text: " fox jumps.".into(),
-        },
-    ])));
+    // View mode via the real classify/flow pipeline: a `@mobile.conflict`
+    // triple, an unrecognized namespaced element, and -- the common case
+    // that motivated `origami-richtext`/`origami-richtext-flow` in the
+    // first place -- both sides editing the same sentence, which narrows
+    // to an *inline* conflict mid-paragraph rather than a whole-block one
+    // (see `crates/editor/src/classify.rs`'s
+    // `an_inline_merge_conflict_is_recognized_through_the_real_pipeline`).
+    // That last paragraph now flows as one line instead of stacking each
+    // split fragment as its own row. Goes through
+    // `immermemo_editor::note_body_items` directly rather than
+    // `immermemo_slint::render::note_body_items`: this file's own
+    // `include_modules!()` generates its own `NoteBodyItemView`/
+    // `RenderedBlock`/`RichTextLine` types, distinct from the library
+    // crate's (see `apps/slint/src/render.rs`'s doc comment for why), so
+    // the small seam (`to_note_body_item_view` and friends, below) has to
+    // be repeated here too.
+    let body = "買い物リストの変更について。\n\n\
+                @mobile.conflict(mine)\n\n\
+                牛乳（低脂肪）\n\n\
+                @mobile.conflict(theirs)\n\n\
+                牛乳（特濃）\n\n\
+                @mobile.conflict(end)\n\n\
+                @deck.bookmark(label: しおり)\n\n\
+                続きはここから。\n\n\
+                The @mobile.conflict(mine)slow@mobile.conflict(theirs)lazy@mobile.conflict(end) fox jumps.";
+    app.set_body(body.into());
+    app.set_note_body_items(ModelRc::new(VecModel::from(
+        immermemo_editor::note_body_items(body)
+            .into_iter()
+            .map(to_note_body_item_view)
+            .collect::<Vec<_>>(),
+    )));
     std::thread::sleep(std::time::Duration::from_millis(300));
-    render(&window, size, &format!("{prefix}-editor-rendered-blocks.ppm"));
+    render(&window, size, &format!("{prefix}-editor-note-body.ppm"));
 
     // Note Editor Sheet (Edit Mode)
     app.set_editor_edit_mode(true);
@@ -342,4 +319,91 @@ fn main() {
     app.set_note_sheet_open(false);
     app.set_active_tab(0);
     app.set_theme_choice(0);
+}
+
+// A copy of `apps/slint/src/render.rs`'s seam, targeting this file's own
+// `include_modules!()`-generated types instead of the library crate's (see
+// the call site above for why it can't just call that module directly).
+
+fn to_note_body_item_view(item: NoteBodyItem) -> NoteBodyItemView {
+    match item {
+        NoteBodyItem::Stacked(block) => NoteBodyItemView {
+            is_flow: false,
+            block: to_rendered_block(&block),
+            line: RichTextLine::default(),
+        },
+        NoteBodyItem::Flowed(paragraph) => NoteBodyItemView {
+            is_flow: true,
+            block: RenderedBlock::default(),
+            line: to_rich_text_line(&paragraph),
+        },
+    }
+}
+
+struct NoMeasure;
+
+impl Measure for NoMeasure {
+    fn text_width(&self, _content: &str, _style: u32) -> f32 {
+        0.0
+    }
+
+    fn element_width(&self, _id: u64) -> f32 {
+        0.0
+    }
+}
+
+fn to_rich_text_line(paragraph: &FlowParagraph) -> RichTextLine {
+    let fragments: Vec<RichTextFragment> = layout_block(&paragraph.block, f32::MAX, &NoMeasure)
+        .into_iter()
+        .next()
+        .map(|line| {
+            line.fragments
+                .into_iter()
+                .map(|fragment| to_rich_text_fragment(fragment, &paragraph.elements))
+                .collect()
+        })
+        .unwrap_or_default();
+    RichTextLine {
+        fragments: ModelRc::new(VecModel::from(fragments)),
+    }
+}
+
+fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> RichTextFragment {
+    match fragment {
+        Fragment::Text { content, .. } => RichTextFragment {
+            is_element: false,
+            text: content.into(),
+            factory: ComponentFactory::default(),
+        },
+        Fragment::Element { id, .. } => {
+            let rendered = to_rendered_block(&elements[id as usize]);
+            let factory = ComponentFactory::new(move |_| {
+                let widget = FlowElementWidget::new().ok()?;
+                widget.set_block(rendered.clone());
+                Some(widget)
+            });
+            RichTextFragment {
+                is_element: true,
+                text: Default::default(),
+                factory,
+            }
+        }
+    }
+}
+
+fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
+    RenderedBlock {
+        shape: match block.shape {
+            BlockShape::PlainText => RenderedBlockShape::PlainText,
+            BlockShape::Chip => RenderedBlockShape::Chip,
+            BlockShape::Divider => RenderedBlockShape::Divider,
+            BlockShape::Badge => RenderedBlockShape::Badge,
+        },
+        tone: match block.tone {
+            Tone::Accent => RenderedBlockTone::Accent,
+            Tone::Warning => RenderedBlockTone::Warning,
+            Tone::Neutral => RenderedBlockTone::Neutral,
+        },
+        text: block.text.clone().into(),
+    }
 }
