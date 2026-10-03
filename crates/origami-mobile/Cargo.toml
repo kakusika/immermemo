@@ -1,0 +1,6 @@
+[package]
+name = "immermemo-origami-mobile"
+version.workspace = true
+edition.workspace = true
+links = "immermemo_origami_mobile"
+build = "build.rs"

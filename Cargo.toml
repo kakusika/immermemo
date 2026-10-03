@@ -5,7 +5,9 @@ members = [
   "apps/slint",
   "crates/index",
   "crates/merge",
+  "crates/origami-mobile",
   "crates/sync",
+  "crates/tomet-render",
   "crates/vault",
 ]
 
@@ -19,7 +21,9 @@ rust-version = "1.85"
 [workspace.dependencies]
 immermemo-index = { path = "crates/index" }
 immermemo-merge = { path = "crates/merge" }
+immermemo-origami-mobile = { path = "crates/origami-mobile" }
 immermemo-sync = { path = "crates/sync" }
+immermemo-tomet-render = { path = "crates/tomet-render" }
 immermemo-vault = { path = "crates/vault" }
 
 #= Tomet

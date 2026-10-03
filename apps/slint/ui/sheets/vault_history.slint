@@ -1,13 +1,7 @@
 import { Palette } from "std-widgets.slint";
-import {
-    Metrics,
-    Colors,
-    Shapes,
-    Icon,
-    BubbleButton,
-    TopBar,
-    AppScrollView,
-} from "../components.slint";
+import { Metrics, Colors } from "@origami-mobile/tokens.slint";
+import { Shapes, Icon } from "@origami-mobile/icons.slint";
+import { BubbleButton, TopBar, AppScrollView } from "@origami-mobile/components.slint";
 
 export component VaultHistorySheet inherits Rectangle {
     in property <bool> open: false;

@@ -1,0 +1,401 @@
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "tokens.slint";
+import { Icon, Shapes } from "icons.slint";
+
+export component IconButton inherits Rectangle {
+    in property <string> shape;
+    in property <bool> enabled: true;
+    in property <color> tint: Palette.foreground;
+    callback clicked();
+
+    width: Metrics.touch;
+    height: 100%;
+    min-height: Metrics.touch;
+
+    circle := Rectangle {
+        width: Metrics.touch;
+        height: Metrics.touch;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: self.width / 2;
+        background: touch.pressed && root.enabled ? Palette.foreground.with-alpha(0.14) : transparent;
+
+        Icon {
+            shape: root.shape;
+            tint: root.enabled ? root.tint : Colors.muted.with-alpha(0.35);
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component TopBar inherits Rectangle {
+    in property <length> inset-top: 0px;
+    in property <string> title;
+    in property <string> subtitle;
+    in property <brush> bar-background: Colors.surface;
+    // Slots for the buttons at either end.
+    height: root.inset-top + Metrics.bar-height;
+    background: root.bar-background;
+
+    VerticalLayout {
+        padding-top: root.inset-top;
+        HorizontalLayout {
+            height: Metrics.bar-height;
+            padding-left: Metrics.spacing-md;
+            padding-right: Metrics.spacing-md;
+            spacing: Metrics.spacing-sm;
+            @children
+        }
+    }
+}
+
+// Circular bubble button for headers
+export component BubbleButton inherits Rectangle {
+    in property <string> shape;
+    in property <bool> enabled: true;
+    in property <color> tint: Palette.foreground;
+    in property <bool> spinning: false;
+    callback clicked();
+
+    property <angle> spin-angle: root.spinning ? mod(animation-tick(), 1s) / 1s * 360deg : 0deg;
+
+    width: Metrics.bubble-button-size;
+    height: 100%;
+    min-height: Metrics.touch;
+
+    bubble := Rectangle {
+        width: Metrics.bubble-button-size;
+        height: Metrics.bubble-button-size;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: self.width / 2;
+        background: touch.pressed && root.enabled
+            ? Palette.foreground.with-alpha(0.16)
+            : Palette.foreground.with-alpha(0.08);
+        animate background {
+            duration: 120ms;
+            easing: ease-out;
+        }
+
+        Icon {
+            shape: root.shape;
+            tint: root.enabled ? root.tint : Colors.muted.with-alpha(0.35);
+            width: Metrics.icon-md;
+            height: Metrics.icon-md;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            transform-rotation: root.spin-angle;
+            animate tint {
+                duration: 120ms;
+                easing: ease-out;
+            }
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Pill-shaped bubble button with text (e.g. Vault switcher, actions)
+export component BubbleChip inherits Rectangle {
+    in property <string> text;
+    in property <string> icon: "";
+    in property <bool> enabled: true;
+    in property <color> tint: Palette.foreground;
+    callback clicked();
+
+    preferred-height: Metrics.touch;
+
+    chip := Rectangle {
+        height: Metrics.bubble-chip-height;
+        y: (parent.height - self.height) / 2;
+        border-radius: self.height / 2;
+        background: touch.pressed && root.enabled
+            ? Palette.foreground.with-alpha(0.16)
+            : Palette.foreground.with-alpha(0.08);
+        animate background {
+            duration: 120ms;
+            easing: ease-out;
+        }
+
+        HorizontalLayout {
+            padding-left: Metrics.spacing-md;
+            padding-right: Metrics.spacing-md;
+            spacing: Metrics.spacing-xs + 2px * Metrics.ui-scale;
+            alignment: center;
+
+            if root.icon != "": Icon {
+                shape: root.icon;
+                tint: root.enabled ? root.tint : Colors.muted.with-alpha(0.35);
+                width: Metrics.icon-sm;
+                height: Metrics.icon-sm;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: root.text;
+                font-size: Metrics.font-md;
+                font-weight: 600;
+                color: root.enabled ? root.tint : Colors.muted.with-alpha(0.35);
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
+
+// A small text-only pill button with a caller-chosen color (the editor's
+// conflict bar needs "Keep Mine" in warning-orange next to "Next" in a
+// neutral tone, which BubbleChip's fixed neutral background can't do).
+export component PillButton inherits Rectangle {
+    in property <string> text;
+    in property <color> fill: Palette.foreground.with-alpha(0.08);
+    in property <color> pressed-fill: Palette.foreground.with-alpha(0.18);
+    in property <color> text-color: Palette.foreground;
+    in property <bool> bold: false;
+    callback clicked();
+
+    height: 28px * Metrics.ui-scale;
+    width: label.preferred-width + 16px * Metrics.ui-scale;
+    border-radius: self.height / 2;
+    background: touch.pressed ? root.pressed-fill : root.fill;
+
+    label := HorizontalLayout {
+        padding-left: 8px * Metrics.ui-scale;
+        padding-right: 8px * Metrics.ui-scale;
+        Text {
+            text: root.text;
+            font-size: Metrics.font-sm;
+            font-weight: root.bold ? 700 : 600;
+            color: root.text-color;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+// Capsule-grouped undo/redo bubble
+export component UndoRedoBubble inherits Rectangle {
+    in property <bool> can-undo: false;
+    in property <bool> can-redo: false;
+    callback undo();
+    callback redo();
+
+    width: Metrics.bubble-button-size * 2 + 2px * Metrics.ui-scale;
+    height: 100%;
+    min-height: Metrics.touch;
+
+    capsule := Rectangle {
+        width: Metrics.bubble-button-size * 2 + 2px * Metrics.ui-scale;
+        height: Metrics.bubble-button-size;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: self.height / 2;
+        background: Palette.foreground.with-alpha(0.08);
+
+        HorizontalLayout {
+            padding: 0px;
+            spacing: 0px;
+
+            undo-box := Rectangle {
+                width: (parent.width - 1px) / 2;
+                height: Metrics.bubble-button-size;
+                border-top-left-radius: self.height / 2;
+                border-bottom-left-radius: self.height / 2;
+                background: undo-touch.pressed && root.can-undo ? Palette.foreground.with-alpha(0.14) : transparent;
+
+                Icon {
+                    shape: Shapes.undo;
+                    tint: root.can-undo ? Palette.foreground : Colors.muted.with-alpha(0.3);
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                undo-touch := TouchArea {
+                    enabled: root.can-undo;
+                    clicked => { root.undo(); }
+                }
+            }
+
+            // Divider line between undo and redo
+            Rectangle {
+                width: 1px;
+                height: Metrics.icon-md;
+                y: (parent.height - self.height) / 2;
+                background: Colors.separator;
+            }
+
+            redo-box := Rectangle {
+                width: (parent.width - 1px) / 2;
+                height: Metrics.bubble-button-size;
+                border-top-right-radius: self.height / 2;
+                border-bottom-right-radius: self.height / 2;
+                background: redo-touch.pressed && root.can-redo ? Palette.foreground.with-alpha(0.14) : transparent;
+
+                Icon {
+                    shape: Shapes.redo;
+                    tint: root.can-redo ? Palette.foreground : Colors.muted.with-alpha(0.3);
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                redo-touch := TouchArea {
+                    enabled: root.can-redo;
+                    clicked => { root.redo(); }
+                }
+            }
+        }
+    }
+}
+
+// A tappable text row for an action sheet or menu -- not a list row (no
+// separator, no selection highlight of its own).
+export component ActionRow inherits Rectangle {
+    in property <string> text;
+    in property <color> tint: Palette.foreground;
+    callback clicked();
+
+    height: Metrics.touch;
+    border-radius: Metrics.radius-sm + 2px * Metrics.ui-scale;
+    background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    Text {
+        x: Metrics.gutter;
+        text: root.text;
+        color: root.tint;
+        font-size: Metrics.font-body + 1px * Metrics.ui-scale;
+        vertical-alignment: center;
+        height: 100%;
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+// A row of equal-width pill segments, exactly one selected at a time
+// (Settings' Theme/Font Size/UI Scale pickers all share this shape).
+// A controlled component, like a radio group: `selected` is owned by the
+// caller (an index for Theme/Font Size, a range-derived index for UI
+// Scale) and only ever read here -- clicking a segment doesn't set
+// `selected` itself, it reports the click via `changed` and waits for
+// the caller to feed the new value back in, so callers whose index
+// isn't a simple stored int (UI Scale's is derived from a continuous
+// `Metrics.ui-scale`) work the same way as ones where it is.
+export component SegmentedControl inherits HorizontalLayout {
+    in property <[string]> options;
+    in property <int> selected: 0;
+    callback changed(int);
+
+    spacing: Metrics.spacing-sm;
+
+    for opt[i] in root.options: Rectangle {
+        horizontal-stretch: 1;
+        height: Metrics.bubble-chip-height;
+        border-radius: self.height / 2;
+        background: i == root.selected ? Palette.accent-background : Palette.foreground.with-alpha(0.08);
+
+        Text {
+            text: opt;
+            font-size: Metrics.font-sub;
+            font-weight: i == root.selected ? 600 : 400;
+            color: i == root.selected ? Palette.accent-foreground : Palette.foreground;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        TouchArea {
+            clicked => {
+                root.changed(i);
+            }
+        }
+    }
+}
+
+export component Fab inherits Rectangle {
+    in property <bool> enabled: true;
+    callback clicked();
+
+    width: Metrics.fab;
+    height: Metrics.fab;
+    border-radius: self.width / 2;
+    background: Palette.accent-background;
+    drop-shadow-blur: 8px;
+    drop-shadow-offset-y: 2px;
+    drop-shadow-color: #00000055;
+
+    Icon {
+        shape: Shapes.plus;
+        tint: Palette.accent-foreground;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+// Clean mobile scroll view with a modern floating translucent pill scroll indicator,
+// replacing the wireframe outline scrollbar in standard widgets.
+export component AppScrollView inherits Rectangle {
+    in property <bool> enabled: true;
+    out property <length> visible-width <=> flickable.width;
+    out property <length> visible-height <=> flickable.height;
+    in-out property <length> content-width <=> flickable.content-width;
+    in-out property <length> content-height <=> flickable.content-height;
+    in-out property <length> content-x <=> flickable.content-x;
+    in-out property <length> content-y <=> flickable.content-y;
+    callback scrolled <=> flickable.flicked;
+
+    clip: true;
+
+    flickable := Flickable {
+        width: 100%;
+        height: 100%;
+        content-width: flickable.width;
+        interactive: root.enabled;
+        mouse-drag-pan-enabled: true;
+
+        @children
+    }
+
+    // Modern mobile floating pill scrollbar (solid semi-transparent, no wireframe box)
+    property <bool> show-scrollbar: flickable.content-height > flickable.height + 2px;
+    property <length> track-height: flickable.height;
+    property <length> thumb-height: max(28px, flickable.height * min(1.0, flickable.height / max(1px, flickable.content-height)));
+    property <length> max-scroll: max(1px, flickable.content-height - flickable.height);
+    property <length> thumb-y: (-flickable.content-y / root.max-scroll) * (root.track-height - root.thumb-height);
+
+    if root.show-scrollbar: Rectangle {
+        x: parent.width - 5px;
+        y: min(max(2px, root.thumb-y), root.track-height - root.thumb-height - 2px);
+        width: 3px;
+        height: root.thumb-height;
+        border-radius: 1.5px;
+        background: Palette.foreground.with-alpha(0.28);
+    }
+}

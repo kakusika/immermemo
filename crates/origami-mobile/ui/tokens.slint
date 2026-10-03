@@ -1,0 +1,87 @@
+import { Palette } from "std-widgets.slint";
+
+// Touch targets are at least 48px: `px` here is a logical pixel, which the
+// backend scales to the phone's density, so 48px is about 48dp.
+// Scalable design tokens (Kirigami / Tailwind inspired).
+// All derivative tokens scale reactively with `ui-scale`.
+export global Metrics {
+    // Base scale multiplier for runtime UI scaling (default 1.0)
+    in-out property <float> ui-scale: 1.0;
+
+    // Base grid unit (16px default)
+    out property <length> unit: 16px * root.ui-scale;
+
+    // Spacing scale
+    out property <length> spacing-xs: 4px * root.ui-scale;
+    out property <length> spacing-sm: 8px * root.ui-scale;
+    out property <length> spacing-md: 12px * root.ui-scale;
+    out property <length> spacing-lg: 16px * root.ui-scale;
+    out property <length> spacing-xl: 20px * root.ui-scale;
+    out property <length> spacing-2xl: 24px * root.ui-scale;
+    out property <length> spacing-3xl: 32px * root.ui-scale;
+
+    // Typography scale
+    out property <length> font-badge: 10px * root.ui-scale;
+    out property <length> font-caption: 11px * root.ui-scale;
+    out property <length> font-sm: 12px * root.ui-scale;
+    out property <length> font-sub: 13px * root.ui-scale;
+    out property <length> font-md: 14px * root.ui-scale;
+    out property <length> font-body: 16px * root.ui-scale;
+    out property <length> font-subtitle: 18px * root.ui-scale;
+    out property <length> font-title: 22px * root.ui-scale;
+    out property <length> font-headline: 28px * root.ui-scale;
+
+    // Touch targets & standard component sizing (Material 3 / Apple HIG standards)
+    out property <length> touch: 48px * root.ui-scale;
+    out property <length> top-bar-height: 56px * root.ui-scale;
+    out property <length> bar-height: root.top-bar-height;
+    out property <length> bottom-bar-height: 64px * root.ui-scale;
+    out property <length> row-height: 56px * root.ui-scale;
+    out property <length> fab: 56px * root.ui-scale;
+    out property <length> gutter: 16px * root.ui-scale;
+
+    // Component-specific tokens
+    out property <length> bubble-button-size: 40px * root.ui-scale;
+    out property <length> bubble-chip-height: 36px * root.ui-scale;
+    out property <length> search-bar-height: 46px * root.ui-scale;
+    out property <length> icon-sm: 16px * root.ui-scale;
+    out property <length> icon-md: 20px * root.ui-scale;
+    out property <length> icon-lg: 24px * root.ui-scale;
+    out property <length> icon-xl: 40px * root.ui-scale;
+    out property <length> radius-sm: 8px * root.ui-scale;
+    out property <length> radius-md: 14px * root.ui-scale;
+    out property <length> radius-lg: 16px * root.ui-scale;
+    out property <length> radius-pill: 9999px;
+    out property <length> mini-card-height: 56px * root.ui-scale;
+}
+
+export global Colors {
+    out property <color> warning: #d9822b;
+    out property <color> danger: #d9302f;
+    out property <color> success: #2e7d32;
+    out property <color> separator: Palette.foreground.with-alpha(0.12);
+    out property <color> muted: Palette.foreground.with-alpha(0.6);
+
+    // Dynamic surface elevation colors derived adaptively from system
+    // Palette. Which of background/alternate-background actually reads
+    // brighter is NOT consistent across widget styles: in dark mode,
+    // Fluent's alternate-background (#2C2C2C) is brighter than its
+    // background (#1C1C1C) -- the usual "surfaces lighten as they
+    // elevate" convention -- but Material's alternate-background
+    // (#1C1B1F) is *darker* than its background (#2a282d), the opposite
+    // direction (confirmed by comparing `.to-hsv().value` for both: this
+    // is what made Android (material style) render with a *brighter* page
+    // behind *darker* cards, inverted from desktop (fluent)). Comparing
+    // actual brightness instead of hardcoding a direction keeps the
+    // page-vs-card hierarchy correct under either style.
+    out property <bool> alternate-is-dimmer: Palette.alternate-background.to-hsv().value < Palette.background.to-hsv().value;
+    out property <brush> dimmer-surface: alternate-is-dimmer ? Palette.alternate-background : Palette.background;
+    out property <brush> brighter-surface: alternate-is-dimmer ? Palette.background : Palette.alternate-background;
+
+    out property <color> page-background: Palette.color-scheme == ColorScheme.dark
+        ? dimmer-surface.darker(0.35)
+        : dimmer-surface.darker(0.04);
+    out property <color> surface: Palette.background;
+    out property <color> surface-elevated: brighter-surface;
+    out property <color> card-border: Palette.foreground.with-alpha(0.08);
+}
