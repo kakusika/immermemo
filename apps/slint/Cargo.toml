@@ -19,13 +19,7 @@ immermemo-index = { workspace = true }
 immermemo-merge = { workspace = true }
 immermemo-origami-mobile = { workspace = true }
 immermemo-sync = { workspace = true }
-immermemo-tomet-render = { workspace = true }
 immermemo-vault = { workspace = true }
-
-#= Tomet
-tomet-parser = { workspace = true }
-tomet-printer = { workspace = true }
-tomet-stats = { workspace = true }
 
 #= Crates.io
 anyhow = { workspace = true }
@@ -51,6 +45,14 @@ slint = { version = "1.18", default-features = false, features = [
 slint-build = { workspace = true }
 
 [dev-dependencies]
+#= Tomet
+# Only used to build `.tmt` fixtures in `#[cfg(test)]` -- production code
+# goes through `immermemo-editor` instead (see its own `tomet-parser`/
+# `tomet-printer` dependency).
+tomet-parser = { workspace = true }
+tomet-printer = { workspace = true }
+
+#= Crates.io
 # Only for `examples/snap.rs`, which renders the window headlessly at a chosen
 # size: the software renderer needs this to find system (Japanese) fonts.
 slint = { workspace = true, features = ["software-renderer-systemfonts"] }

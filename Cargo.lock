@@ -2482,7 +2482,6 @@ dependencies = [
  "immermemo-merge",
  "immermemo-origami-mobile",
  "immermemo-sync",
- "immermemo-tomet-render",
  "immermemo-vault",
  "jni 0.21.1",
  "slint",
@@ -2491,7 +2490,6 @@ dependencies = [
  "tempfile",
  "tomet-parser",
  "tomet-printer",
- "tomet-stats",
 ]
 
 [[package]]
