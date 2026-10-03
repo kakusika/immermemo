@@ -2464,10 +2464,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "immermemo-origami-mobile"
-version = "0.1.0"
-
-[[package]]
 name = "immermemo-slint"
 version = "0.1.0"
 dependencies = [
@@ -2476,10 +2472,10 @@ dependencies = [
  "immermemo-editor",
  "immermemo-index",
  "immermemo-merge",
- "immermemo-origami-mobile",
  "immermemo-sync",
  "immermemo-vault",
  "jni 0.21.1",
+ "origami-mobile",
  "origami-richtext",
  "origami-richtext-flow",
  "slint",
@@ -3868,9 +3864,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "origami-mobile"
+version = "0.1.0"
+source = "git+https://github.com/kakusika/origami-frameworks.git#7a354d3824adde285744e51fb70d5f0f99945d08"
+
+[[package]]
 name = "origami-richtext"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#be5e5e4ddbbfa2da5ca8672549c1118c4c65caba"
+source = "git+https://github.com/kakusika/origami-frameworks.git#7a354d3824adde285744e51fb70d5f0f99945d08"
 dependencies = [
  "origami-richtext-flow",
 ]
@@ -3878,7 +3879,7 @@ dependencies = [
 [[package]]
 name = "origami-richtext-flow"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#be5e5e4ddbbfa2da5ca8672549c1118c4c65caba"
+source = "git+https://github.com/kakusika/origami-frameworks.git#7a354d3824adde285744e51fb70d5f0f99945d08"
 
 [[package]]
 name = "os_pipe"

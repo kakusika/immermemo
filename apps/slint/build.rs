@@ -19,15 +19,16 @@ fn main() {
     let default_style = if is_android { "material" } else { "fluent" };
     let style = std::env::var("SLINT_STYLE").unwrap_or_else(|_| default_style.to_string());
 
-    // `crates/origami-mobile` reports its own `ui/` directory through this
-    // `links`-propagated env var (see its `build.rs`); this is what
-    // `@origami-mobile/...` resolves against below. `editor.slint`/
+    // `origami-mobile` (from `origami-frameworks`, migrated out of this
+    // repo's own `crates/origami-mobile`) reports its own `ui/` directory
+    // through this `links`-propagated env var (see its `build.rs`); this is
+    // what `@origami-mobile/...` resolves against below. `editor.slint`/
     // `rendered_block.slint` used to come from a separate `crates/
     // editor-slint` the same way, but that crate had no other consumer and
     // no Rust code of its own, so its `ui/` moved into this crate's own
     // `ui/screens/` directly (see
     // `.agents/tasks/fold-editor-slint-into-apps-slint.md`).
-    let origami_mobile_ui_dir = std::env::var("DEP_IMMERMEMO_ORIGAMI_MOBILE_UI_DIR").unwrap();
+    let origami_mobile_ui_dir = std::env::var("DEP_ORIGAMI_MOBILE_UI_DIR").unwrap();
     // `origami-richtext` (from `origami-frameworks`) reports its own `ui/`
     // the same way; this is what `@richtext/...` resolves against below.
     let richtext_ui_dir = std::env::var("DEP_ORIGAMI_RICHTEXT_UI_DIR").unwrap();
