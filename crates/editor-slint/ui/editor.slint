@@ -1,15 +1,15 @@
 import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origami-mobile/tokens.slint";
+import { Shapes } from "@origami-mobile/icons.slint";
 import {
-    Metrics,
-    Colors,
-    Shapes,
     IconButton,
     BubbleButton,
     UndoRedoBubble,
     TopBar,
     AppScrollView,
     PillButton,
-} from "../components.slint";
+} from "@origami-mobile/components.slint";
+import { RenderedBlock, RenderedBlockView } from "rendered_block.slint";
 
 // Elevation + the open/close corner-radius morph, shared by the header and
 // body halves of the note sheet so they read as one continuous card. No
@@ -51,6 +51,9 @@ export component EditorScreen inherits Rectangle {
     in property <bool> remote-configured: false;
     in property <string> last-synced-at: "";
     in-out property <string> body;
+    // Derived from `body` (see `apps/slint/src/render.rs`); drives the
+    // view-mode display below in place of the raw `body` text.
+    in property <[RenderedBlock]> rendered-blocks: [];
     in-out property <bool> edit-mode: false;
     out property <bool> editor-has-focus: root.edit-mode && editor.has-focus;
     out property <bool> scroll-at-top: editor-scroll.content-y >= -1px;
@@ -440,19 +443,30 @@ export component EditorScreen inherits Rectangle {
                                     wrap: word-wrap;
                                 }
 
-                                // View mode display: clean non-editing text with double-tap detector
+                                // View mode display: hides `@element(...)` marker
+                                // syntax behind `RenderedBlockView`s (see
+                                // `apps/slint/src/render.rs`), with a double-tap
+                                // detector over the whole area same as before.
                                 view-box := Rectangle {
                                     visible: !root.edit-mode;
-                                    height: !root.edit-mode ? max(160px, max(view-text.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
+                                    height: !root.edit-mode ? max(160px, max(view-layout.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
 
-                                    VerticalLayout {
+                                    view-layout := VerticalLayout {
                                         alignment: start;
-                                        view-text := Text {
+                                        spacing: Metrics.spacing-sm;
+
+                                        if root.body == "": Text {
                                             width: 100%;
-                                            text: root.body != "" ? root.body : @tr("Tap Edit or double-tap here to write.");
+                                            text: @tr("Tap Edit or double-tap here to write.");
                                             font-size: root.font-size;
-                                            color: root.body != "" ? Palette.foreground : Colors.muted;
+                                            color: Colors.muted;
                                             wrap: word-wrap;
+                                        }
+
+                                        for item in root.rendered-blocks: RenderedBlockView {
+                                            width: 100%;
+                                            block: item;
+                                            text-font-size: root.font-size;
                                         }
                                     }
 

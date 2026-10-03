@@ -1,5 +1,6 @@
 pub mod credentials;
 mod haptic;
+pub mod render;
 mod session;
 mod sync;
 
@@ -19,9 +20,9 @@ use immermemo_vault::notes;
 
 use session::{
     SESSION, Session, apply_restored, open_first_conflicted_note, open_initial_or_last_note,
-    open_note, refresh_list, refresh_vault_list, resolve_active_conflict, resolve_conflict_step,
-    set_status, show_history_state, start_sync, switch_vault, sync_conflict_sheet_state,
-    update_filtered_list, vault_display_name, vault_path_from_input,
+    open_note, refresh_list, refresh_vault_list, resolve_conflict_step, set_status,
+    show_history_state, start_sync, switch_vault, sync_conflict_sheet_state, update_filtered_list,
+    vault_display_name, vault_path_from_input,
 };
 
 slint::include_modules!();
@@ -127,14 +128,12 @@ pub fn run(
         conflicted: Vec::new(),
         search_query: String::new(),
         filtered_results: Vec::new(),
-        current: None,
-        history: None,
+        editor: immermemo_editor::EditorState::default(),
         rename_target: None,
         delete_target: None,
         delete_vault_target: None,
         pending_auto_sync: false,
         last_synced_at: None,
-        note_history_revisions: Vec::new(),
     }));
 
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
@@ -192,17 +191,20 @@ pub fn run(
         let (weak, session) = (app.as_weak(), session.clone());
         move |text| {
             let app = weak.unwrap();
+            // `body` already changed via the TextInput's own two-way
+            // binding -- only `rendered-blocks` needs recomputing here.
+            app.set_rendered_blocks(render::rendered_blocks(text.as_str()));
             session::update_note_stats(&app, text.as_str());
             {
                 let mut s = session.borrow_mut();
-                if let Some(history) = s.history.as_mut() {
+                if let Some(history) = s.editor.history.as_mut() {
                     history.edit(&text);
                 }
                 show_history_state(&app, &s);
                 let has_conflict = text.contains(immermemo_merge::CONFLICT_MARKER);
                 if app.get_current_has_conflict() != has_conflict {
                     app.set_current_has_conflict(has_conflict);
-                    if let Some(idx) = s.current
+                    if let Some(idx) = s.editor.current
                         && idx < s.conflicted.len()
                     {
                         s.conflicted[idx] = has_conflict;
@@ -216,7 +218,7 @@ pub fn run(
                         app.set_conflict_count(conflict_count as i32);
                     }
                 }
-                if let Some(path) = s.current_path().cloned() {
+                if let Some(path) = s.current_path() {
                     match std::fs::write(&path, text.as_str()) {
                         Ok(_) => {
                             let vault_dir = s.vault_dir.clone();
@@ -242,6 +244,7 @@ pub fn run(
         move || {
             let restored = session
                 .borrow_mut()
+                .editor
                 .history
                 .as_mut()
                 .and_then(History::undo);
@@ -253,6 +256,7 @@ pub fn run(
         move || {
             let restored = session
                 .borrow_mut()
+                .editor
                 .history
                 .as_mut()
                 .and_then(History::redo);
@@ -360,7 +364,7 @@ pub fn run(
             let Some(path) = session.borrow().notes.get(index).cloned() else {
                 return;
             };
-            let was_current = session.borrow().current_path() == Some(&path);
+            let was_current = session.borrow().current_path() == Some(path.clone());
             match notes::rename(&path, &new_name) {
                 Ok(new_path) => {
                     let vault_dir = session.borrow().vault_dir.clone();
@@ -418,7 +422,7 @@ pub fn run(
             if let Ok(rel) = path.strip_prefix(&vault_dir) {
                 let _ = session.borrow_mut().index.record_delete(rel);
             }
-            let was_current = session.borrow().current_path() == Some(&path);
+            let was_current = session.borrow().current_path() == Some(path.clone());
             refresh_list(&app, &session);
             if was_current {
                 session::close_current_note_and_show_list_or_reopen(&app, &session, true);
@@ -601,7 +605,7 @@ pub fn run(
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
             let app = weak.unwrap();
-            resolve_active_conflict(&app, &session, immermemo_merge::ConflictResolution::Mine);
+            resolve_conflict_step(&app, &session, 0);
         }
     });
 
@@ -609,7 +613,7 @@ pub fn run(
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
             let app = weak.unwrap();
-            resolve_active_conflict(&app, &session, immermemo_merge::ConflictResolution::Theirs);
+            resolve_conflict_step(&app, &session, 1);
         }
     });
 
@@ -725,7 +729,7 @@ pub fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::session::{copy_to_clipboard, finish_sync};
+    use crate::session::{copy_to_clipboard, finish_sync, resolve_active_conflict};
     use slint::Model;
     use std::sync::Arc;
 
@@ -749,6 +753,7 @@ mod tests {
             conflict_sheet_steps_through_and_resolves_every_conflict(&app, &session, &vault_dir);
         sync_error_is_tracked_copied_and_dismissed(&app, &session);
         version_history_restore_and_auto_sync_queueing(&app, &session, &multi_note_path);
+        editor_quick_resolve_buttons_walk_conflicts_one_at_a_time(&app, &session, &vault_dir);
         editing_while_a_sync_is_running_does_not_panic_on_reentrant_borrow(&app, &session);
         bundled_japanese_translation_is_discoverable_at_runtime();
     }
@@ -802,14 +807,16 @@ mod tests {
                 note_index: 0,
                 snippet: None,
             }],
-            current: Some(0),
-            history: Some(History::new(&conflicted_text)),
+            editor: immermemo_editor::EditorState {
+                current: Some(0),
+                history: Some(History::new(&conflicted_text)),
+                note_history_revisions: Vec::new(),
+            },
             rename_target: None,
             delete_target: None,
             delete_vault_target: None,
             pending_auto_sync: false,
             last_synced_at: None,
-            note_history_revisions: Vec::new(),
         }));
 
         app.set_current_has_conflict(true);
@@ -889,8 +896,8 @@ mod tests {
         let mut s = session.borrow_mut();
         s.notes.push(multi_note_path.clone());
         s.conflicted.push(true);
-        s.current = Some(new_idx);
-        s.history = Some(History::new(&conflicted_text));
+        s.editor.current = Some(new_idx);
+        s.editor.history = Some(History::new(&conflicted_text));
         drop(s);
         app.set_current_has_conflict(true);
         app.set_body(conflicted_text.clone().into());
@@ -943,6 +950,61 @@ mod tests {
         multi_note_path
     }
 
+    /// Editor/properties' "Keep Mine"/"Keep Theirs" bar wires to
+    /// `resolve_conflict_step`, not `resolve_active_conflict` (see
+    /// `app.on_resolve_mine`/`app.on_resolve_theirs` in `lib.rs`) -- it must
+    /// resolve only the conflict at `active-conflict-index`, one at a time,
+    /// even when the full ConflictSheet was never opened.
+    fn editor_quick_resolve_buttons_walk_conflicts_one_at_a_time(
+        app: &App,
+        session: &Rc<RefCell<Session>>,
+        vault_dir: &Path,
+    ) {
+        let note_path = vault_dir.join("editor_quick_resolve.tmt");
+        let base_doc =
+            tomet_parser::parse_document("Alpha base.\n\nMiddle untouched.\n\nBeta base.\n")
+                .unwrap();
+        let local_doc =
+            tomet_parser::parse_document("Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n")
+                .unwrap();
+        let remote_doc =
+            tomet_parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n")
+                .unwrap();
+        let merged_doc = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc).document;
+        let conflicted_text = tomet_printer::document_to_tm(&merged_doc);
+        std::fs::write(&note_path, &conflicted_text).unwrap();
+
+        let new_idx = session.borrow().notes.len();
+        let mut s = session.borrow_mut();
+        s.notes.push(note_path.clone());
+        s.conflicted.push(true);
+        s.editor.current = Some(new_idx);
+        s.editor.history = Some(History::new(&conflicted_text));
+        drop(s);
+        app.set_current_has_conflict(true);
+        app.set_body(conflicted_text.clone().into());
+
+        // Never opened the ConflictSheet -- `active-conflict-index` sits at
+        // its default, pointing at the first conflict in the note.
+        app.set_active_conflict_index(0);
+
+        resolve_conflict_step(app, session, 0);
+        assert!(app.get_current_has_conflict());
+        let disk_text = std::fs::read_to_string(&note_path).unwrap();
+        assert!(disk_text.contains(immermemo_merge::CONFLICT_MARKER));
+        assert!(disk_text.contains("Alpha min."));
+
+        // `resolve_conflict_step` re-clamps `active-conflict-index` to the
+        // first remaining conflict, so pressing the same button again walks
+        // to the next conflict instead of repeating the first.
+        resolve_conflict_step(app, session, 0);
+        assert!(!app.get_current_has_conflict());
+        let disk_text = std::fs::read_to_string(&note_path).unwrap();
+        assert!(!disk_text.contains(immermemo_merge::CONFLICT_MARKER));
+        assert!(disk_text.contains("Alpha min."));
+        assert!(disk_text.contains("Beta min."));
+    }
+
     fn sync_error_is_tracked_copied_and_dismissed(app: &App, session: &Rc<RefCell<Session>>) {
         let err_text = "Sync failed: no merge base found; class=Merge (22)";
         finish_sync(
@@ -993,7 +1055,7 @@ mod tests {
             summary: "Initial commit".to_string(),
             content: "Historical content v1.\n".to_string(),
         };
-        session.borrow_mut().note_history_revisions = vec![rev1];
+        session.borrow_mut().editor.note_history_revisions = vec![rev1];
 
         session::restore_note_version(app, session, 0);
         assert_eq!(app.get_body(), "Historical content v1.\n");

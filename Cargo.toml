@@ -3,6 +3,8 @@ resolver = "3"
 
 members = [
   "apps/slint",
+  "crates/editor",
+  "crates/editor-slint",
   "crates/index",
   "crates/merge",
   "crates/origami-mobile",
@@ -19,6 +21,8 @@ edition = "2024"
 rust-version = "1.85"
 
 [workspace.dependencies]
+immermemo-editor = { path = "crates/editor" }
+immermemo-editor-slint = { path = "crates/editor-slint" }
 immermemo-index = { path = "crates/index" }
 immermemo-merge = { path = "crates/merge" }
 immermemo-origami-mobile = { path = "crates/origami-mobile" }

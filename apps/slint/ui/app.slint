@@ -1,14 +1,11 @@
 import { Palette } from "std-widgets.slint";
-import {
-    Metrics,
-    ActionRow,
-    Colors,
-    BottomNavBar,
-    MiniNoteCard,
-} from "components.slint";
+import { Metrics, Colors } from "@origami-mobile/tokens.slint";
+import { ActionRow } from "@origami-mobile/components.slint";
+import { BottomNavBar, MiniNoteCard } from "components.slint";
+import { EditorScreen } from "@editor-slint/editor.slint";
+import { RenderedBlock } from "@editor-slint/rendered_block.slint";
 import { HomeScreen } from "screens/home.slint";
 import { FilesScreen } from "screens/files.slint";
-import { EditorScreen } from "screens/editor.slint";
 import { PropertiesScreen } from "screens/properties.slint";
 import { SearchScreen } from "screens/search.slint";
 import { VaultSheet } from "sheets/vault.slint";
@@ -78,6 +75,10 @@ export component App inherits Window {
     in property <bool> can-undo;
     in property <bool> can-redo;
     in-out property <string> body;
+    // Derived from `body` by `apps/slint/src/render.rs`, kept in step with
+    // it everywhere Rust sets `body` -- see that module's doc. Read-only
+    // from Slint's side: nothing here ever writes it back.
+    in property <[RenderedBlock]> rendered-blocks: [];
     in property <bool> remote-configured;
     in-out property <string> remote-url-draft;
     in-out property <string> remote-token-draft;
@@ -586,6 +587,7 @@ export component App inherits Window {
                 status: root.status;
                 status-is-error: root.status-is-error;
                 body <=> root.body;
+                rendered-blocks: root.rendered-blocks;
                 edited(t) => { root.edited(t); }
                 undo => { root.undo(); }
                 redo => { root.redo(); }

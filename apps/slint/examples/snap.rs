@@ -138,6 +138,101 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor.ppm"));
 
+    // View mode with `rendered-blocks` set: a `@mobile.conflict` triple and
+    // an unrecognized namespaced element, exercising every
+    // `RenderedBlockView` kind besides plain text (see
+    // `apps/slint/src/render.rs`). Hand-built here rather than via
+    // `immermemo_slint::render::rendered_blocks` -- this file's own
+    // `include_modules!()` generates its own `RenderedBlock` type, distinct
+    // from the one in the library crate's.
+    app.set_body(
+        "買い物リストの変更について。\n\n@deck.bookmark(label: しおり)\n\n続きはここから。".into(),
+    );
+    app.set_rendered_blocks(ModelRc::new(VecModel::from(vec![
+        RenderedBlock {
+            shape: RenderedBlockShape::PlainText,
+            tone: RenderedBlockTone::Neutral,
+            text: "買い物リストの変更について。".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::Chip,
+            tone: RenderedBlockTone::Accent,
+            text: "Mine".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::PlainText,
+            tone: RenderedBlockTone::Neutral,
+            text: "牛乳（低脂肪）".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::Chip,
+            tone: RenderedBlockTone::Warning,
+            text: "Theirs".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::PlainText,
+            tone: RenderedBlockTone::Neutral,
+            text: "牛乳（特濃）".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::Divider,
+            tone: RenderedBlockTone::Neutral,
+            text: "".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::Badge,
+            tone: RenderedBlockTone::Neutral,
+            text: "deck.bookmark: label".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::PlainText,
+            tone: RenderedBlockTone::Neutral,
+            text: "続きはここから。".into(),
+        },
+        // The common case: both sides edited the same sentence, which
+        // narrows to an *inline* conflict mid-paragraph rather than a
+        // whole-block one (see `crates/editor/src/classify.rs`'s
+        // `an_inline_merge_conflict_is_recognized_through_the_real_pipeline`,
+        // which proves this exact shape through the real merge pipeline).
+        RenderedBlock {
+            shape: RenderedBlockShape::PlainText,
+            tone: RenderedBlockTone::Neutral,
+            text: "The ".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::Chip,
+            tone: RenderedBlockTone::Accent,
+            text: "Mine".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::PlainText,
+            tone: RenderedBlockTone::Neutral,
+            text: "slow".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::Chip,
+            tone: RenderedBlockTone::Warning,
+            text: "Theirs".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::PlainText,
+            tone: RenderedBlockTone::Neutral,
+            text: "lazy".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::Divider,
+            tone: RenderedBlockTone::Neutral,
+            text: "".into(),
+        },
+        RenderedBlock {
+            shape: RenderedBlockShape::PlainText,
+            tone: RenderedBlockTone::Neutral,
+            text: " fox jumps.".into(),
+        },
+    ])));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-editor-rendered-blocks.ppm"));
+
     // Note Editor Sheet (Edit Mode)
     app.set_editor_edit_mode(true);
     std::thread::sleep(std::time::Duration::from_millis(300));

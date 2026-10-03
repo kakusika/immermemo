@@ -1,0 +1,103 @@
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origami-mobile/tokens.slint";
+
+// What `immermemo-editor`'s `classify_body()` found in one top-level
+// block of the note body, as the editor's view-mode display (see
+// `RenderedBlockView` below) wants it. `shape` is a closed set of drawing
+// primitives, not a vocabulary registry -- which `(namespace, name)`
+// identity maps to which `shape`/`tone`/`text` is decided entirely on the
+// Rust side, in `immermemo_editor::classify::REGISTRY` (see that module's
+// doc). This component never branches on a vocabulary name; giving a new
+// `@use`'d vocabulary its own presentation never requires touching this
+// file.
+export enum RenderedBlockShape {
+    plain-text,
+    chip,
+    divider,
+    badge,
+}
+
+export enum RenderedBlockTone {
+    accent,
+    warning,
+    neutral,
+}
+
+export struct RenderedBlock {
+    shape: RenderedBlockShape,
+    tone: RenderedBlockTone,
+    // The paragraph text for `plain-text`, or a label for `chip`/`badge`.
+    // Unused (empty) for `divider` -- its look comes entirely from `shape`.
+    text: string,
+}
+
+// Renders one `RenderedBlock` in the editor's view-mode display: plain
+// text as-is, or a small label standing in for a recognized element's raw
+// `@element(...)` syntax. Static, not a button -- resolving a conflict
+// still goes through the warning bar/ConflictSheet (`editor.slint`,
+// `conflict.slint`); this only hides the marker syntax, it doesn't take
+// on their job too.
+export component RenderedBlockView inherits VerticalLayout {
+    in property <RenderedBlock> block;
+    in property <length> text-font-size: Metrics.font-body;
+
+    property <color> tone-color: root.block.tone == RenderedBlockTone.accent ? Palette.accent-background
+        : root.block.tone == RenderedBlockTone.warning ? Colors.warning
+        : Colors.muted;
+
+    if root.block.shape == RenderedBlockShape.plain-text: Text {
+        text: root.block.text;
+        font-size: root.text-font-size;
+        color: Palette.foreground;
+        wrap: word-wrap;
+    }
+
+    if root.block.shape == RenderedBlockShape.chip: HorizontalLayout {
+        alignment: start;
+
+        Rectangle {
+            height: Metrics.bubble-chip-height * 0.75;
+            border-radius: self.height / 2;
+            background: root.tone-color.with-alpha(0.14);
+
+            HorizontalLayout {
+                padding-left: Metrics.spacing-sm;
+                padding-right: Metrics.spacing-sm;
+                Text {
+                    text: root.block.text;
+                    font-size: Metrics.font-sm;
+                    font-weight: 700;
+                    color: root.tone-color;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.divider: Rectangle {
+        height: 1px;
+        background: Colors.separator;
+    }
+
+    if root.block.shape == RenderedBlockShape.badge: HorizontalLayout {
+        alignment: start;
+
+        Rectangle {
+            height: Metrics.bubble-chip-height * 0.75;
+            border-radius: self.height / 2;
+            background: Palette.foreground.with-alpha(0.08);
+
+            HorizontalLayout {
+                padding-left: Metrics.spacing-sm;
+                padding-right: Metrics.spacing-sm;
+                Text {
+                    text: root.block.text;
+                    font-size: Metrics.font-sm;
+                    font-weight: 600;
+                    color: Colors.muted;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}
