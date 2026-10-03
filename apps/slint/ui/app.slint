@@ -11,6 +11,7 @@ import { NoteBodyItemView } from "screens/note_body.slint";
 // comment on `FlowElementWidget` for why. It's only used by composition
 // elsewhere, so nothing else forces this re-export.
 export { FlowElementWidget } from "screens/note_body.slint";
+import { RenderedBlock, RenderedBlockView } from "screens/rendered_block.slint";
 import { HomeScreen } from "screens/home.slint";
 import { FilesScreen } from "screens/files.slint";
 import { PropertiesScreen } from "screens/properties.slint";
@@ -86,6 +87,22 @@ export component App inherits Window {
     // it everywhere Rust sets `body` -- see that module's doc. Read-only
     // from Slint's side: nothing here ever writes it back.
     in property <[NoteBodyItemView]> note-body-items: [];
+    // Mirrors `pane`'s own `body-content-width` so Rust can read the
+    // current value on demand (`body`/font-size changes, not just a resize)
+    // -- `reflow-note-body` below only *pushes* a new value reactively when
+    // it changes; most recomputes of `note-body-items` happen for other
+    // reasons and still need to know the width to flow against.
+    out property <length> body-content-width: pane.body-content-width;
+    // Driven by `apps/slint/src/render.rs`'s `RealMeasure` -- set a probe
+    // property, read the matching `*-width` property right back,
+    // synchronously, once per measurement. See the probe elements
+    // themselves (bottom of this file) for why they exist as real
+    // elements instead of a pure computation.
+    in property <string> measure-probe-text;
+    in property <length> measure-probe-font-size: 16px;
+    out property <length> measure-probe-text-width: measure-probe-text-item.preferred-width;
+    in property <RenderedBlock> measure-probe-block;
+    out property <length> measure-probe-block-width: measure-probe-block-item.preferred-width;
     in property <bool> remote-configured;
     in-out property <string> remote-url-draft;
     in-out property <string> remote-token-draft;
@@ -146,6 +163,7 @@ export component App inherits Window {
 
     callback select(int);
     callback edited(string);
+    callback reflow-note-body(length);
     callback undo();
     callback redo();
     callback sync();
@@ -596,6 +614,7 @@ export component App inherits Window {
                 body <=> root.body;
                 note-body-items: root.note-body-items;
                 edited(t) => { root.edited(t); }
+                reflow-note-body(w) => { root.reflow-note-body(w); }
                 undo => { root.undo(); }
                 redo => { root.redo(); }
                 dismiss-status => {
@@ -906,6 +925,24 @@ export component App inherits Window {
             inset-top: root.inset-top;
             inset-bottom: root.inset-bottom;
             close => { root.vault-history-open = false; }
+        }
+
+        // Measurement probes for `origami_richtext_flow::Measure`
+        // (`apps/slint/src/render.rs`'s `RealMeasure`): off-screen elements
+        // Rust sets properties on and reads `preferred-width` back from,
+        // same technique `screens/editor.slint`'s `LineNumberGutter` uses
+        // for line-height, parameterized via properties instead of a fixed
+        // probe string so Rust can ask about arbitrary text/elements.
+        // Always present (not behind an `if`) so they're never torn down
+        // between measurements.
+        measure-probe-text-item := Text {
+            x: -9999px;
+            text: root.measure-probe-text;
+            font-size: root.measure-probe-font-size;
+        }
+        measure-probe-block-item := RenderedBlockView {
+            x: -9999px;
+            block: root.measure-probe-block;
         }
     }
 }

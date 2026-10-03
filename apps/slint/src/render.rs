@@ -40,69 +40,92 @@ use origami_richtext_flow::{Fragment, Measure, layout_block};
 use slint::{ComponentFactory, ModelRc, VecModel};
 
 use crate::{
-    FlowElementWidget, NoteBodyItemView, RenderedBlock, RenderedBlockShape, RenderedBlockTone,
+    App, FlowElementWidget, NoteBodyItemView, RenderedBlock, RenderedBlockShape, RenderedBlockTone,
     RichTextFragment, RichTextLine,
 };
 
 /// Classifies/flows `body` and converts the result into the model
-/// `App`/`EditorScreen`'s `note-body-items` property expects. Callers
-/// should set this alongside `body` every time `body` changes -- see
-/// `session::update_rendered_body` and `lib.rs`'s `on_edited` handler,
-/// the two places that happens.
-pub fn note_body_items(body: &str) -> ModelRc<NoteBodyItemView> {
+/// `App`/`EditorScreen`'s `note-body-items` property expects, wrapping
+/// each [`NoteBodyItem::Flowed`] paragraph against `max_width` (logical
+/// pixels -- `App`'s own `body-content-width`, see `editor.slint`'s doc
+/// comment on it). Callers should set the result alongside `body` every
+/// time `body` *or* `max_width` changes -- see `session::update_rendered_body`,
+/// `lib.rs`'s `on_edited` handler, and `lib.rs`'s `reflow-note-body`
+/// handler, the three places that happens.
+pub fn note_body_items(body: &str, app: &App, max_width: f32) -> ModelRc<NoteBodyItemView> {
     let items: Vec<NoteBodyItemView> = classify_note_body_items(body)
         .into_iter()
-        .map(to_note_body_item_view)
+        .map(|item| to_note_body_item_view(item, app, max_width))
         .collect();
     ModelRc::new(VecModel::from(items))
 }
 
-fn to_note_body_item_view(item: NoteBodyItem) -> NoteBodyItemView {
+fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> NoteBodyItemView {
     match item {
         NoteBodyItem::Stacked(block) => NoteBodyItemView {
             is_flow: false,
             block: to_rendered_block(&block),
-            line: RichTextLine::default(),
+            lines: ModelRc::default(),
         },
         NoteBodyItem::Flowed(paragraph) => NoteBodyItemView {
             is_flow: true,
             block: RenderedBlock::default(),
-            line: to_rich_text_line(&paragraph),
+            lines: to_rich_text_lines(&paragraph, app, max_width),
         },
     }
 }
 
-/// `layout_block`'s wrap decision needs real font-metrics measurement (see
-/// `origami-richtext-flow`'s README); `FlowView` positions a resolved
-/// line's fragments with its own `HorizontalLayout`, not `Fragment::x`, so
-/// nothing downstream actually reads what this reports yet. A real
-/// `Measure` only matters once `layout_block` does more than one line.
-struct NoMeasure;
+/// Measures against `app`'s hidden probe elements (`app.slint`'s
+/// `measure-probe-text-item`/`measure-probe-block-item`): set a probe
+/// property, read the matching `preferred-width`-derived property right
+/// back, synchronously. Same technique `screens/editor.slint`'s
+/// `LineNumberGutter` uses for line-height, just parameterized via
+/// properties instead of a fixed probe string. `font_size` and `elements`
+/// are fixed for the lifetime of one `layout_block` call (one paragraph,
+/// one font size), so they're captured once at construction rather than
+/// threaded through every `Measure` call.
+struct RealMeasure<'a> {
+    app: &'a App,
+    font_size: f32,
+    elements: &'a [ClassifiedBlock],
+}
 
-impl Measure for NoMeasure {
-    fn text_width(&self, _content: &str, _style: u32) -> f32 {
-        0.0
+impl Measure for RealMeasure<'_> {
+    fn text_width(&self, content: &str, _style: u32) -> f32 {
+        self.app.set_measure_probe_text(content.into());
+        self.app.set_measure_probe_font_size(self.font_size);
+        self.app.get_measure_probe_text_width()
     }
 
-    fn element_width(&self, _id: u64) -> f32 {
-        0.0
+    fn element_width(&self, id: u64) -> f32 {
+        let rendered = to_rendered_block(&self.elements[id as usize]);
+        self.app.set_measure_probe_block(rendered);
+        self.app.get_measure_probe_block_width()
     }
 }
 
-fn to_rich_text_line(paragraph: &FlowParagraph) -> RichTextLine {
-    let fragments: Vec<RichTextFragment> = layout_block(&paragraph.block, f32::MAX, &NoMeasure)
+fn to_rich_text_lines(
+    paragraph: &FlowParagraph,
+    app: &App,
+    max_width: f32,
+) -> ModelRc<RichTextLine> {
+    let measure = RealMeasure {
+        app,
+        font_size: app.get_editor_font_size(),
+        elements: &paragraph.elements,
+    };
+    let lines: Vec<RichTextLine> = layout_block(&paragraph.block, max_width, &measure)
         .into_iter()
-        .next()
-        .map(|line| {
-            line.fragments
-                .into_iter()
-                .map(|fragment| to_rich_text_fragment(fragment, &paragraph.elements))
-                .collect()
+        .map(|line| RichTextLine {
+            fragments: ModelRc::new(VecModel::from(
+                line.fragments
+                    .into_iter()
+                    .map(|fragment| to_rich_text_fragment(fragment, &paragraph.elements))
+                    .collect::<Vec<_>>(),
+            )),
         })
-        .unwrap_or_default();
-    RichTextLine {
-        fragments: ModelRc::new(VecModel::from(fragments)),
-    }
+        .collect();
+    ModelRc::new(VecModel::from(lines))
 }
 
 fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> RichTextFragment {
@@ -145,20 +168,27 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
     }
 }
 
+// The substantial classification-decision tests (conflict markers,
+// unrecognized elements, the real merge pipeline, inline flow grouping)
+// live in `immermemo-editor`'s own tests now. These just check the seam:
+// that converting into the generated model actually round-trips
+// shape/tone/text, and that a flowed paragraph produces lines with the
+// right fragment count.
+//
+// Plain functions, not `#[test]`s: winit only allows one event loop per
+// process, and `cargo test` runs every `#[test]` fn in a package's `lib`
+// target in one process (by default, concurrently), so a second
+// independent `App::new()` call anywhere in this crate's test binary
+// fails with "EventLoop can't be recreated" the moment it races the
+// first. `lib.rs`'s `tests::ui_helpers_and_conflict_resolution` already
+// owns the one `App::new()` this whole binary gets; it calls these.
 #[cfg(test)]
-mod tests {
+pub(crate) mod seam_tests {
     use super::*;
     use slint::Model;
 
-    // The substantial classification-decision tests (conflict markers,
-    // unrecognized elements, the real merge pipeline, inline flow
-    // grouping) live in `immermemo-editor`'s own tests now. This just
-    // checks the seam: that converting into the generated model actually
-    // round-trips shape/tone/text, and that a flowed paragraph produces a
-    // line with the right fragment count.
-    #[test]
-    fn stacked_items_convert_into_the_generated_model() {
-        let model = note_body_items("Before.\n\n@mobile.conflict(mine)\n\nMine.\n");
+    pub(crate) fn stacked_items_convert_into_the_generated_model(app: &App) {
+        let model = note_body_items("Before.\n\n@mobile.conflict(mine)\n\nMine.\n", app, 1000.0);
         assert_eq!(model.row_count(), 3);
         let first = model.row_data(0).unwrap();
         assert!(!first.is_flow);
@@ -170,17 +200,40 @@ mod tests {
         assert_eq!(second.block.text, "Mine");
     }
 
-    #[test]
-    fn an_inline_conflict_paragraph_flows_with_text_and_element_fragments() {
+    pub(crate) fn a_wide_inline_conflict_paragraph_flows_onto_one_line(app: &App) {
         let src = "The @mobile.conflict(mine)slow@mobile.conflict(theirs)lazy@mobile.conflict(end) fox jumps.\n";
-        let model = note_body_items(src);
+        let model = note_body_items(src, app, 10_000.0);
         assert_eq!(model.row_count(), 1);
         let item = model.row_data(0).unwrap();
         assert!(item.is_flow);
-        // 6, not 7: the "end" divider renders as nothing inline (see
-        // `immermemo_editor::flow::to_flow_paragraph`'s doc comment).
-        assert_eq!(item.line.fragments.row_count(), 6);
-        assert!(!item.line.fragments.row_data(0).unwrap().is_element);
-        assert!(item.line.fragments.row_data(1).unwrap().is_element);
+        assert_eq!(item.lines.row_count(), 1);
+        let line = item.lines.row_data(0).unwrap();
+        // "The " / Mine-chip / "slow" / Theirs-chip / "lazy" / " " /
+        // "fox " / "jumps." -- 8, not the paragraph's own 6 `Inline`s: the
+        // "end" divider still renders as nothing inline (see
+        // `immermemo_editor::flow::to_flow_paragraph`'s doc comment), but
+        // `layout_block` additionally splits each text run into its own
+        // word tokens (`origami_richtext_flow::layout::words`), and
+        // " fox jumps." is 3 words, including its own leading space (not
+        // dropped here -- that only happens at an actual line start, and
+        // this whole paragraph fits on one line).
+        assert_eq!(line.fragments.row_count(), 8);
+        assert!(!line.fragments.row_data(0).unwrap().is_element);
+        assert!(line.fragments.row_data(1).unwrap().is_element);
+        assert!(line.fragments.row_data(3).unwrap().is_element);
+    }
+
+    pub(crate) fn a_narrow_width_wraps_an_inline_conflict_paragraph_onto_several_lines(app: &App) {
+        let src = "The @mobile.conflict(mine)slow@mobile.conflict(theirs)lazy@mobile.conflict(end) fox jumps.\n";
+        // Real font metrics, not a fake fixed-width measure -- too narrow
+        // for the whole sentence (and its two chips) to fit on one line.
+        let model = note_body_items(src, app, 80.0);
+        let item = model.row_data(0).unwrap();
+        assert!(item.is_flow);
+        assert!(
+            item.lines.row_count() > 1,
+            "expected a narrow width to wrap onto more than one line, got {}",
+            item.lines.row_count()
+        );
     }
 }

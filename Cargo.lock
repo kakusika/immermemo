@@ -3866,12 +3866,12 @@ dependencies = [
 [[package]]
 name = "origami-mobile"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#7a354d3824adde285744e51fb70d5f0f99945d08"
+source = "git+https://github.com/kakusika/origami-frameworks.git#c97ebd7aa3673f415d4edaad3d5b33f7be966903"
 
 [[package]]
 name = "origami-richtext"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#7a354d3824adde285744e51fb70d5f0f99945d08"
+source = "git+https://github.com/kakusika/origami-frameworks.git#c97ebd7aa3673f415d4edaad3d5b33f7be966903"
 dependencies = [
  "origami-richtext-flow",
 ]
@@ -3879,7 +3879,7 @@ dependencies = [
 [[package]]
 name = "origami-richtext-flow"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#7a354d3824adde285744e51fb70d5f0f99945d08"
+source = "git+https://github.com/kakusika/origami-frameworks.git#c97ebd7aa3673f415d4edaad3d5b33f7be966903"
 
 [[package]]
 name = "os_pipe"

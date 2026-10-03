@@ -193,7 +193,8 @@ pub fn run(
             let app = weak.unwrap();
             // `body` already changed via the TextInput's own two-way
             // binding -- only `note-body-items` needs recomputing here.
-            app.set_note_body_items(render::note_body_items(text.as_str()));
+            let max_width = app.get_body_content_width();
+            app.set_note_body_items(render::note_body_items(text.as_str(), &app, max_width));
             session::update_note_stats(&app, text.as_str());
             {
                 let mut s = session.borrow_mut();
@@ -236,6 +237,18 @@ pub fn run(
                 }
             }
             session::schedule_auto_sync(&app, std::time::Duration::from_secs(5));
+        }
+    });
+
+    app.on_reflow_note_body({
+        let weak = app.as_weak();
+        move |max_width: f32| {
+            let app = weak.unwrap();
+            // The view-mode width changed (window resize, UI-scale
+            // change, sidebar toggle, ...) -- `body` itself didn't, but a
+            // flowed paragraph's line breaks depend on both.
+            let body = app.get_body();
+            app.set_note_body_items(render::note_body_items(body.as_str(), &app, max_width));
         }
     });
 
@@ -756,6 +769,14 @@ mod tests {
         editor_quick_resolve_buttons_walk_conflicts_one_at_a_time(&app, &session, &vault_dir);
         editing_while_a_sync_is_running_does_not_panic_on_reentrant_borrow(&app, &session);
         bundled_japanese_translation_is_discoverable_at_runtime();
+
+        // `render::seam_tests` needs the same shared `app` for the same
+        // one-event-loop-per-process reason -- see that module's doc.
+        render::seam_tests::stacked_items_convert_into_the_generated_model(&app);
+        render::seam_tests::a_wide_inline_conflict_paragraph_flows_onto_one_line(&app);
+        render::seam_tests::a_narrow_width_wraps_an_inline_conflict_paragraph_onto_several_lines(
+            &app,
+        );
     }
 
     fn status_classification_tracks_is_error(app: &App) {

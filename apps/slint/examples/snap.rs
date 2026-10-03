@@ -201,10 +201,11 @@ fn main() {
                 続きはここから。\n\n\
                 The @mobile.conflict(mine)slow@mobile.conflict(theirs)lazy@mobile.conflict(end) fox jumps.";
     app.set_body(body.into());
+    let max_width = app.get_body_content_width();
     app.set_note_body_items(ModelRc::new(VecModel::from(
         immermemo_editor::note_body_items(body)
             .into_iter()
-            .map(to_note_body_item_view)
+            .map(|item| to_note_body_item_view(item, &app, max_width))
             .collect::<Vec<_>>(),
     )));
     std::thread::sleep(std::time::Duration::from_millis(300));
@@ -325,47 +326,66 @@ fn main() {
 // `include_modules!()`-generated types instead of the library crate's (see
 // the call site above for why it can't just call that module directly).
 
-fn to_note_body_item_view(item: NoteBodyItem) -> NoteBodyItemView {
+fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> NoteBodyItemView {
     match item {
         NoteBodyItem::Stacked(block) => NoteBodyItemView {
             is_flow: false,
             block: to_rendered_block(&block),
-            line: RichTextLine::default(),
+            lines: ModelRc::default(),
         },
         NoteBodyItem::Flowed(paragraph) => NoteBodyItemView {
             is_flow: true,
             block: RenderedBlock::default(),
-            line: to_rich_text_line(&paragraph),
+            lines: to_rich_text_lines(&paragraph, app, max_width),
         },
     }
 }
 
-struct NoMeasure;
+/// Same technique `apps/slint/src/render.rs`'s `RealMeasure` uses: the
+/// off-screen probe elements live in `app.slint` itself, so they're
+/// available here too (this file's own compiled `App`).
+struct RealMeasure<'a> {
+    app: &'a App,
+    font_size: f32,
+    elements: &'a [ClassifiedBlock],
+}
 
-impl Measure for NoMeasure {
-    fn text_width(&self, _content: &str, _style: u32) -> f32 {
-        0.0
+impl Measure for RealMeasure<'_> {
+    fn text_width(&self, content: &str, _style: u32) -> f32 {
+        self.app.set_measure_probe_text(content.into());
+        self.app.set_measure_probe_font_size(self.font_size);
+        self.app.get_measure_probe_text_width()
     }
 
-    fn element_width(&self, _id: u64) -> f32 {
-        0.0
+    fn element_width(&self, id: u64) -> f32 {
+        let rendered = to_rendered_block(&self.elements[id as usize]);
+        self.app.set_measure_probe_block(rendered);
+        self.app.get_measure_probe_block_width()
     }
 }
 
-fn to_rich_text_line(paragraph: &FlowParagraph) -> RichTextLine {
-    let fragments: Vec<RichTextFragment> = layout_block(&paragraph.block, f32::MAX, &NoMeasure)
+fn to_rich_text_lines(
+    paragraph: &FlowParagraph,
+    app: &App,
+    max_width: f32,
+) -> ModelRc<RichTextLine> {
+    let measure = RealMeasure {
+        app,
+        font_size: app.get_editor_font_size(),
+        elements: &paragraph.elements,
+    };
+    let lines: Vec<RichTextLine> = layout_block(&paragraph.block, max_width, &measure)
         .into_iter()
-        .next()
-        .map(|line| {
-            line.fragments
-                .into_iter()
-                .map(|fragment| to_rich_text_fragment(fragment, &paragraph.elements))
-                .collect()
+        .map(|line| RichTextLine {
+            fragments: ModelRc::new(VecModel::from(
+                line.fragments
+                    .into_iter()
+                    .map(|fragment| to_rich_text_fragment(fragment, &paragraph.elements))
+                    .collect::<Vec<_>>(),
+            )),
         })
-        .unwrap_or_default();
-    RichTextLine {
-        fragments: ModelRc::new(VecModel::from(fragments)),
-    }
+        .collect();
+    ModelRc::new(VecModel::from(lines))
 }
 
 fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> RichTextFragment {

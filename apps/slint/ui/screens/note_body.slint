@@ -4,14 +4,14 @@ import { RichTextLine, FlowView } from "@richtext/flow_view.slint";
 // One item of the note body's view-mode display: either a classified
 // block (`RenderedBlockView`, one shape per whole block -- a plain
 // paragraph, or a standalone element between paragraphs) or a paragraph
-// that had at least one inline element and needed to flow as one line
-// (`FlowView`) instead of stacking each split fragment as its own row.
-// `immermemo_editor::note_body_items` decides which; see its doc comment
-// for why a flat `[RenderedBlock]` alone isn't enough.
+// that had at least one inline element and needed to flow as one or more
+// lines (`FlowView`) instead of stacking each split fragment as its own
+// row. `immermemo_editor::note_body_items` decides which; see its doc
+// comment for why a flat `[RenderedBlock]` alone isn't enough.
 export struct NoteBodyItemView {
     is-flow: bool,
     block: RenderedBlock,
-    line: RichTextLine,
+    lines: [RichTextLine],
 }
 
 export component NoteBodyView inherits VerticalLayout {
@@ -28,7 +28,8 @@ export component NoteBodyView inherits VerticalLayout {
         }
 
         if item.is-flow: FlowView {
-            lines: [item.line];
+            lines: item.lines;
+            font-size: root.text-font-size;
         }
     }
 }

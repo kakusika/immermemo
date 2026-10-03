@@ -268,7 +268,8 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
 /// only `note-body-items` needs recomputing.
 pub fn update_rendered_body(app: &App, text: &str) {
     app.set_body(text.into());
-    app.set_note_body_items(crate::render::note_body_items(text));
+    let max_width = app.get_body_content_width();
+    app.set_note_body_items(crate::render::note_body_items(text, app, max_width));
 }
 
 pub fn update_note_stats(app: &App, text: &str) {

@@ -54,6 +54,19 @@ export component EditorScreen inherits Rectangle {
     // Derived from `body` (see `apps/slint/src/render.rs`); drives the
     // view-mode display below in place of the raw `body` text.
     in property <[NoteBodyItemView]> note-body-items: [];
+    // The width a flowed paragraph (`NoteBodyView`'s `FlowView` items) has
+    // to wrap against: `editor-scroll`'s own viewport width minus the
+    // gutter padding `view-layout`'s parent `VerticalLayout` applies on
+    // both sides. Exposed so Rust can read it when (re-)computing
+    // `note-body-items`, and so `reflow-note-body` below fires whenever it
+    // changes (window resize, UI-scale change, sidebar toggle, ...) --
+    // `note-body-items` only gets *set* from Rust, so nothing re-flows it
+    // on its own just because the available width moved.
+    out property <length> body-content-width: editor-scroll.visible-width - 2 * Metrics.gutter;
+    callback reflow-note-body(length);
+    changed body-content-width => {
+        root.reflow-note-body(root.body-content-width);
+    }
     in-out property <bool> edit-mode: false;
     out property <bool> editor-has-focus: root.edit-mode && editor.has-focus;
     out property <bool> scroll-at-top: editor-scroll.content-y >= -1px;
