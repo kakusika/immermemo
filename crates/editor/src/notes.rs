@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use immermemo_vault::appdata::AppData;
-use immermemo_vault::history::{History, Restored};
 use immermemo_vault::notes::{self, SearchResult};
 
+use crate::history::{History, Restored};
 use crate::state::{EditorState, current_path};
 
 pub struct OpenedNote {

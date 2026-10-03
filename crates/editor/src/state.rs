@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use immermemo_sync::FileRevision;
-use immermemo_vault::history::History;
+use crate::history::History;
 
 /// What the editor is currently showing, independent of which vault it's
 /// in or what that vault's note list/sync state look like -- those stay

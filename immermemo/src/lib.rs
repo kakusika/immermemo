@@ -13,9 +13,9 @@ use std::rc::Rc;
 
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
+use immermemo_editor::History;
 use immermemo_vault::appdata::AppData;
 pub use immermemo_vault::credentials::{TokenStore, TokenStoreFactory};
-use immermemo_vault::history::History;
 use immermemo_vault::notes;
 
 use session::{

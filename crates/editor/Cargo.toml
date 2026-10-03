@@ -16,3 +16,4 @@ tomet-stats = { workspace = true }
 
 #= Crates.io
 anyhow = { workspace = true }
+loro = { workspace = true }

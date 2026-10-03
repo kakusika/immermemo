@@ -11,11 +11,11 @@ use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use crate::credentials::TokenCredentials;
 use crate::sync;
 use crate::{App, TokenStoreFactory};
+use immermemo_editor::History;
 use immermemo_index::NoteIndex;
 use immermemo_sync::Vault;
 use immermemo_vault::appdata::AppData;
 use immermemo_vault::credentials::TokenStore;
-use immermemo_vault::history::History;
 use immermemo_vault::notes;
 
 #[cfg(target_os = "android")]
@@ -398,7 +398,7 @@ pub fn show_history_state(app: &App, session: &Session) {
 pub fn apply_restored(
     app: &App,
     session: &Rc<RefCell<Session>>,
-    restored: Option<immermemo_vault::history::Restored>,
+    restored: Option<immermemo_editor::Restored>,
 ) {
     let Some(restored) = restored else {
         return;

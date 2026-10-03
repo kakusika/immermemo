@@ -26,6 +26,7 @@
 //! as plain borrowed data.
 
 mod conflicts;
+mod history;
 mod note_history;
 mod notes;
 mod state;
@@ -35,6 +36,7 @@ pub use conflicts::{
     ConflictResolved, ConflictSheetState, conflict_sheet_state, resolve_active_conflict,
     resolve_conflict_step,
 };
+pub use history::{History, Restored};
 pub use note_history::{RestoredVersion, load_note_history, restore_note_version};
 pub use notes::{
     OpenedNote, RestoredNote, apply_restored, first_conflicted_note_index,

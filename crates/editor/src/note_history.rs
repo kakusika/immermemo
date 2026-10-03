@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use immermemo_index::NoteIndex;
 use immermemo_sync::{FileRevision, Vault};
 use immermemo_vault::appdata::AppData;
-use immermemo_vault::history::History;
 
+use crate::history::History;
 use crate::state::{EditorState, current_path};
 
 /// The current note's revision history (newest-first, up to `limit`

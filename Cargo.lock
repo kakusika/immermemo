@@ -2461,6 +2461,7 @@ dependencies = [
  "immermemo-merge",
  "immermemo-sync",
  "immermemo-vault",
+ "loro",
  "tomet-parser",
  "tomet-printer",
  "tomet-stats",
@@ -2516,7 +2517,6 @@ dependencies = [
  "anyhow",
  "git2",
  "immermemo-merge",
- "loro",
  "tempfile",
 ]
 
