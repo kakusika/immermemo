@@ -30,11 +30,15 @@
 //!   nothing this app hasn't explicitly opted into should change how it
 //!   looks.
 
-use immermemo_tomet_render::{ElementIdentity, RenderItem, classify};
+use immermemo_tomet_render::{ElementIdentity, RenderItem, TextStyle, classify};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockShape {
-    /// A paragraph's plain content, shown as-is.
+    /// A paragraph's plain content, shown as-is -- `style` may still mark
+    /// the whole thing bold/italic/mark/strikeout if it was a single
+    /// `em`/`strong`/`mark`/`strikeout`-wrapped block with nothing else
+    /// sharing its line (see `immermemo_tomet_render`'s
+    /// `classify_bare_character_element`).
     PlainText,
     /// A small colored pill with a label (a `mobile.conflict` side marker).
     Chip,
@@ -43,6 +47,11 @@ pub enum BlockShape {
     /// A neutral pill with a label -- the fallback for anything
     /// namespaced that [`REGISTRY`] doesn't recognize.
     Badge,
+    /// A `@ruby[base](rt:"reading")` standing as an entire block by
+    /// itself -- `text` is the base, `reading` the annotation. Rarer than
+    /// the inline case (`crate::flow`), which is what a ruby annotation
+    /// mid-sentence actually looks like.
+    Ruby,
 }
 
 /// A small, closed palette selector -- not vocabulary-specific, just
@@ -59,10 +68,16 @@ pub enum Tone {
 pub struct ClassifiedBlock {
     pub shape: BlockShape,
     pub tone: Tone,
-    /// The paragraph text for `PlainText`, or a label for `Chip`/`Badge`.
-    /// Unused (empty) for `Divider` -- its look comes entirely from
-    /// `shape`.
+    /// The paragraph text for `PlainText`, the base for `Ruby`, or a label
+    /// for `Chip`/`Badge`. Unused (empty) for `Divider` -- its look comes
+    /// entirely from `shape`.
     pub text: String,
+    /// Meaningful only for `PlainText` -- see that variant's doc.
+    /// `Default::default()` (no style) everywhere else.
+    pub style: TextStyle,
+    /// The reading annotation, meaningful only for `Ruby`. Empty
+    /// everywhere else.
+    pub reading: String,
 }
 
 // `pub(crate)`: `crate::flow` also needs a recognized identity's
@@ -147,10 +162,19 @@ pub fn classify_body(body: &str) -> Vec<ClassifiedBlock> {
 // it isn't flowing (see that module's doc).
 pub(crate) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlock {
     match item {
-        RenderItem::Text(span) => ClassifiedBlock {
+        RenderItem::Text(span, style) => ClassifiedBlock {
             shape: BlockShape::PlainText,
             tone: Tone::Neutral,
             text: body[span.start.offset..span.end.offset].into(),
+            style,
+            reading: String::new(),
+        },
+        RenderItem::Ruby { base, reading } => ClassifiedBlock {
+            shape: BlockShape::Ruby,
+            tone: Tone::Neutral,
+            text: body[base.start.offset..base.end.offset].into(),
+            style: TextStyle::default(),
+            reading,
         },
         RenderItem::Element {
             identity,
@@ -162,6 +186,8 @@ pub(crate) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                 shape: look.shape,
                 tone: look.tone,
                 text: look.text,
+                style: TextStyle::default(),
+                reading: String::new(),
             },
             None => match &identity.namespace {
                 // A `@use`'d marker nobody's given a look to yet -- show
@@ -170,6 +196,8 @@ pub(crate) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                     shape: BlockShape::Badge,
                     tone: Tone::Neutral,
                     text: fallback_label(namespace, &identity.name, &args_summary),
+                    style: TextStyle::default(),
+                    reading: String::new(),
                 },
                 // A bare built-in nobody's registered a look for -- its
                 // own syntax already reads fine unrendered (e.g. a list's
@@ -179,6 +207,8 @@ pub(crate) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                     shape: BlockShape::PlainText,
                     tone: Tone::Neutral,
                     text: body[span.start.offset..span.end.offset].into(),
+                    style: TextStyle::default(),
+                    reading: String::new(),
                 },
             },
         },
@@ -328,5 +358,26 @@ mod tests {
                 BlockShape::Divider,
             ]
         );
+    }
+
+    #[test]
+    fn a_whole_paragraph_wrapped_in_strong_is_plain_text_tagged_bold() {
+        // Nothing else shares this line, so it's its own `Block::Element`
+        // -- the rarer path, still handled (see `classify_block`'s own
+        // test coverage in `immermemo-tomet-render`).
+        let blocks = classify_body("@strong[whole line]\n");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].shape, BlockShape::PlainText);
+        assert_eq!(blocks[0].text, "whole line");
+        assert!(blocks[0].style.bold);
+    }
+
+    #[test]
+    fn a_ruby_block_becomes_its_own_shape_with_base_and_reading() {
+        let blocks = classify_body("@ruby[漢字](rt:\"かんじ\")\n");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].shape, BlockShape::Ruby);
+        assert_eq!(blocks[0].text, "漢字");
+        assert_eq!(blocks[0].reading, "かんじ");
     }
 }

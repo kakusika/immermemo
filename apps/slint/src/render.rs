@@ -91,9 +91,13 @@ struct RealMeasure<'a> {
 }
 
 impl Measure for RealMeasure<'_> {
-    fn text_width(&self, content: &str, _style: u32) -> f32 {
+    fn text_width(&self, content: &str, style: u32) -> f32 {
+        let style = origami_richtext_flow::TextStyle::from_style_id(style);
         self.app.set_measure_probe_text(content.into());
         self.app.set_measure_probe_font_size(self.font_size);
+        self.app
+            .set_measure_probe_font_weight(if style.bold { 700 } else { 400 });
+        self.app.set_measure_probe_font_italic(style.italic);
         self.app.get_measure_probe_text_width()
     }
 
@@ -130,11 +134,18 @@ fn to_rich_text_lines(
 
 fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> RichTextFragment {
     match fragment {
-        Fragment::Text { content, .. } => RichTextFragment {
-            is_element: false,
-            text: content.into(),
-            factory: ComponentFactory::default(),
-        },
+        Fragment::Text { content, style, .. } => {
+            let style = origami_richtext_flow::TextStyle::from_style_id(style);
+            RichTextFragment {
+                is_element: false,
+                text: content.into(),
+                factory: ComponentFactory::default(),
+                bold: style.bold,
+                italic: style.italic,
+                mark: style.mark,
+                strikeout: style.strikeout,
+            }
+        }
         Fragment::Element { id, .. } => {
             let rendered = to_rendered_block(&elements[id as usize]);
             let factory = ComponentFactory::new(move |_| {
@@ -146,6 +157,10 @@ fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> Ri
                 is_element: true,
                 text: Default::default(),
                 factory,
+                bold: false,
+                italic: false,
+                mark: false,
+                strikeout: false,
             }
         }
     }
@@ -158,6 +173,7 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
             BlockShape::Chip => RenderedBlockShape::Chip,
             BlockShape::Divider => RenderedBlockShape::Divider,
             BlockShape::Badge => RenderedBlockShape::Badge,
+            BlockShape::Ruby => RenderedBlockShape::Ruby,
         },
         tone: match block.tone {
             Tone::Accent => RenderedBlockTone::Accent,
@@ -165,6 +181,11 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
             Tone::Neutral => RenderedBlockTone::Neutral,
         },
         text: block.text.clone().into(),
+        bold: block.style.bold,
+        italic: block.style.italic,
+        mark: block.style.mark,
+        strikeout: block.style.strikeout,
+        reading: block.reading.clone().into(),
     }
 }
 

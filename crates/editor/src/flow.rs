@@ -15,12 +15,25 @@
 //! `classify_body`'s stacked `RenderedBlockView` path already renders a
 //! standalone block-level marker correctly.
 
-use immermemo_tomet_render::{RenderBlockKind, RenderItem, classify_blocks};
+use immermemo_tomet_render::{RenderBlockKind, RenderItem, TextStyle, classify_blocks};
 use origami_richtext_flow::{Block, Inline};
 
 use crate::classify::{
     BlockShape, ClassifiedBlock, Tone, classify_body, fallback_label, look_up, to_classified_block,
 };
+
+/// `tomet-render`'s [`TextStyle`] (bold/italic/mark/strikeout -- the same
+/// four flags, just a separate type since `tomet-render` has no
+/// `origami-richtext-flow` dependency to share one with) packed into the
+/// `origami_richtext_flow::TextStyle` convention `FlowView` decodes.
+fn to_richtext_style(style: TextStyle) -> origami_richtext_flow::TextStyle {
+    origami_richtext_flow::TextStyle {
+        bold: style.bold,
+        italic: style.italic,
+        mark: style.mark,
+        strikeout: style.strikeout,
+    }
+}
 
 /// One item of the note body's view-mode display, in source order: either
 /// a classified block ([`ClassifiedBlock`], one shape per whole block --
@@ -99,10 +112,22 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
     let mut elements = Vec::new();
     for item in items {
         match item {
-            RenderItem::Text(span) => content.push(Inline::Text {
+            RenderItem::Text(span, style) => content.push(Inline::Text {
                 content: body[span.start.offset..span.end.offset].to_string(),
-                style: 0,
+                style: to_richtext_style(style).to_style_id(),
             }),
+            RenderItem::Ruby { base, reading } => {
+                let classified = ClassifiedBlock {
+                    shape: BlockShape::Ruby,
+                    tone: Tone::Neutral,
+                    text: body[base.start.offset..base.end.offset].to_string(),
+                    style: TextStyle::default(),
+                    reading,
+                };
+                let id = elements.len() as u64;
+                elements.push(classified);
+                content.push(Inline::Element { id });
+            }
             RenderItem::Element {
                 identity,
                 args_summary,
@@ -118,6 +143,8 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
                         shape: look.shape,
                         tone: look.tone,
                         text: look.text,
+                        style: TextStyle::default(),
+                        reading: String::new(),
                     },
                     None => ClassifiedBlock {
                         shape: BlockShape::Badge,
@@ -127,6 +154,8 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
                             &identity.name,
                             &args_summary,
                         ),
+                        style: TextStyle::default(),
+                        reading: String::new(),
                     },
                 };
                 // A divider marks where a conflict region ends -- a full-
@@ -238,5 +267,33 @@ mod tests {
         assert_eq!(paragraphs[0].elements.len(), 1);
         assert_eq!(paragraphs[0].elements[0].shape, BlockShape::Badge);
         assert_eq!(paragraphs[0].elements[0].text, "deck.bookmark: label");
+    }
+
+    #[test]
+    fn an_inline_strong_run_carries_a_real_style_id_not_zero() {
+        let paragraphs = flow_paragraphs("plain @strong[bold] plain\n");
+        assert_eq!(paragraphs.len(), 1);
+        let Inline::Text { style, .. } = paragraphs[0].block.content[1] else {
+            panic!("expected the bold run at index 1");
+        };
+        assert_eq!(
+            style,
+            origami_richtext_flow::TextStyle {
+                bold: true,
+                ..Default::default()
+            }
+            .to_style_id()
+        );
+    }
+
+    #[test]
+    fn an_inline_ruby_element_flows_as_an_atomic_element() {
+        let src = "plain @ruby[漢字](rt:\"かんじ\") plain\n";
+        let paragraphs = flow_paragraphs(src);
+        assert_eq!(paragraphs.len(), 1);
+        assert_eq!(paragraphs[0].elements.len(), 1);
+        assert_eq!(paragraphs[0].elements[0].shape, BlockShape::Ruby);
+        assert_eq!(paragraphs[0].elements[0].text, "漢字");
+        assert_eq!(paragraphs[0].elements[0].reading, "かんじ");
     }
 }

@@ -59,16 +59,27 @@
 //! block-level element is always its own top-level item regardless of its
 //! identity (blocks were never merged with their neighbors to begin
 //! with), but inline splitting only pulls a *namespaced* element out of
-//! its surrounding prose -- a bare inline element (if Tomet's vocabulary
-//! ever has one) stays merged into the running text span around it,
-//! because splitting prose on every lightweight inline marker would
-//! fragment a sentence a reader expects to flow as one run. The first and
-//! only namespaced element this crate's caller currently cares about is
-//! `immermemo_merge`'s `@mobile.conflict` marker, but [`classify`] does
-//! not special-case it: it reports every element's [`ElementIdentity`]
-//! uniformly, and leaves "do I recognize this `(namespace, name)` pair,
-//! or should it fall back to something generic" to whatever renders
-//! [`RenderItem`]s (today: `immermemo-editor`'s `REGISTRY`).
+//! its surrounding prose -- an unrecognized bare inline element stays
+//! merged into the running text span around it, because splitting prose
+//! on every lightweight inline marker would fragment a sentence a reader
+//! expects to flow as one run. The first and only namespaced element this
+//! crate's caller currently cares about is `immermemo_merge`'s
+//! `@mobile.conflict` marker, but [`classify`] does not special-case it:
+//! it reports every element's [`ElementIdentity`] uniformly, and leaves
+//! "do I recognize this `(namespace, name)` pair, or should it fall back
+//! to something generic" to whatever renders [`RenderItem`]s (today:
+//! `immermemo-editor`'s `REGISTRY`).
+//!
+//! Tomet's five bare built-in "character" elements (`em`/`strong`/`mark`/
+//! `strikeout`/`ruby` -- `docs/spec/builtin-elements.tmt`'s `[ 文字 ]`
+//! section) are the exception to "bare stays merged": `em`/`strong`/
+//! `mark`/`strikeout` recurse into their own `content` and tag the
+//! [`RenderItem::Text`] runs inside with a [`TextStyle`] flag instead of
+//! splitting them out -- they're a style on surrounding prose, not an
+//! atomic thing of their own, and nesting composes (`@strong[@em[x]]` is
+//! bold *and* italic). `ruby` is different again: a reading annotation
+//! can't be expressed as a style flag on a text run, so it becomes its own
+//! [`RenderItem::Ruby`], the same way a namespaced element splits out.
 
 use tomet_ast::{
     Block, Document, Element, ElementValue, Entry, Inline, Position, Sigil, Span, Value,
@@ -84,11 +95,38 @@ pub struct ElementIdentity {
     pub name: String,
 }
 
+/// Which of Tomet's four bare inline style wrappers (`em`/`strong`/`mark`/
+/// `strikeout`) are active over a [`RenderItem::Text`] run. More than one
+/// bit can be set -- the wrappers nest (`@strong[@em[x]]`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TextStyle {
+    pub bold: bool,
+    pub italic: bool,
+    pub mark: bool,
+    pub strikeout: bool,
+}
+
+impl TextStyle {
+    /// The style with every flag `self` or `other` sets -- how nested
+    /// wrappers combine (`@strong[@em[x]]` is `self.bold || other.italic`
+    /// and vice versa, applied as the walk descends).
+    fn union(self, other: TextStyle) -> TextStyle {
+        TextStyle {
+            bold: self.bold || other.bold,
+            italic: self.italic || other.italic,
+            mark: self.mark || other.mark,
+            strikeout: self.strikeout || other.strikeout,
+        }
+    }
+}
+
 /// One classified region of a document's top-level blocks.
 #[derive(Debug, Clone, PartialEq)]
 pub enum RenderItem {
-    /// Plain text -- display exactly as encountered in the source.
-    Text(Span),
+    /// Plain text -- display exactly as encountered in the source, with
+    /// whatever `em`/`strong`/`mark`/`strikeout` wrappers it was nested
+    /// inside flattened into `style`.
+    Text(Span, TextStyle),
     /// A named element, identified at the source-text level only.
     /// `args_summary`/`data_summary` are a generic fallback description of
     /// its `(args)`/`{value}` (see [`summarize_args`]/[`summarize_data`])
@@ -100,6 +138,12 @@ pub enum RenderItem {
         args_summary: String,
         data_summary: String,
     },
+    /// A bare `@ruby[base](rt:"reading")` -- `base` is `content`'s own
+    /// span (not the whole element's, which would include the `(rt:...)`
+    /// part too). `reading` is empty if `rt` was missing or not a string
+    /// (`docs/spec/builtin-elements.tmt`: "検証は未実装", not validated,
+    /// same scope decision as elsewhere in this crate).
+    Ruby { base: Span, reading: String },
 }
 
 /// Classifies `src`'s top-level blocks (and, for a [`Block::Paragraph`],
@@ -109,17 +153,46 @@ pub enum RenderItem {
 pub fn classify(src: &str) -> Vec<RenderItem> {
     let doc: Document = match tomet_parser::parse_document(src) {
         Ok(doc) => doc,
-        Err(_) => return vec![RenderItem::Text(whole_source_span(src))],
+        Err(_) => {
+            return vec![RenderItem::Text(
+                whole_source_span(src),
+                TextStyle::default(),
+            )];
+        }
     };
     doc.blocks.iter().flat_map(classify_block).collect()
 }
 
 fn classify_block(block: &Block) -> Vec<RenderItem> {
     match block {
-        Block::Element(el) => vec![element_item(el).unwrap_or_else(|| RenderItem::Text(el.span))],
+        Block::Element(el) => classify_bare_character_element(el).unwrap_or_else(|| {
+            vec![
+                element_item(el).unwrap_or_else(|| RenderItem::Text(el.span, TextStyle::default())),
+            ]
+        }),
         Block::Paragraph(p) => classify_inline_seq(&p.content),
-        Block::Section(_) => vec![RenderItem::Text(block.span())],
+        Block::Section(_) => vec![RenderItem::Text(block.span(), TextStyle::default())],
     }
+}
+
+/// `el`'s items if it's a bare `em`/`strong`/`mark`/`strikeout`/`ruby` --
+/// the same five characters [`classify_inline_seq`] recognizes inline, for
+/// the rarer case where one stands as an entire paragraph-less block by
+/// itself (nothing else shares its line, so it parses as `Block::Element`
+/// rather than `Block::Paragraph` -- see the module doc).
+fn classify_bare_character_element(el: &Element) -> Option<Vec<RenderItem>> {
+    if is_bare_named(el, "ruby") {
+        return Some(vec![ruby_item(el)]);
+    }
+    let wrapper = style_wrapper(el)?;
+    let content = el.content.as_ref()?;
+    let mut items = Vec::new();
+    let mut run = None;
+    walk_inline_seq(content, wrapper, &mut items, &mut run);
+    if let Some((span, style)) = run {
+        items.push(RenderItem::Text(span, style));
+    }
+    Some(items)
 }
 
 /// Which kind of source block a [`classify_blocks`] group came from.
@@ -167,39 +240,132 @@ pub fn classify_blocks(src: &str) -> Result<Vec<(RenderBlockKind, Vec<RenderItem
 }
 
 /// Splits a run of [`Inline`]s into [`RenderItem`]s: a *namespaced*
-/// element becomes its own [`RenderItem::Element`], and everything else
-/// (plain prose, and a bare inline element if Tomet's vocabulary ever has
-/// one -- see the module doc) is coalesced into one [`RenderItem::Text`]
-/// run via [`Span::union`], the same way adjacent prose reads as one run
-/// rather than one item per word.
+/// element becomes its own [`RenderItem::Element`], a bare `ruby` becomes
+/// its own [`RenderItem::Ruby`], a bare `em`/`strong`/`mark`/`strikeout`
+/// recurses into its own content with that style flag added (see the
+/// module doc), and everything else (plain prose, and any other
+/// unrecognized bare inline element) is coalesced into one
+/// [`RenderItem::Text`] run per contiguous same-[`TextStyle`] stretch via
+/// [`Span::union`], the same way adjacent prose reads as one run rather
+/// than one item per word.
 fn classify_inline_seq(content: &[Inline]) -> Vec<RenderItem> {
     let mut items = Vec::new();
-    let mut run: Option<Span> = None;
-    for inline in content {
-        let element = match inline {
-            Inline::Element(el) => element_item(el).filter(is_namespaced),
-            Inline::Text(_) | Inline::SoftBreak(_) | Inline::LineBreak(_) | Inline::Raw(_) => None,
-        };
-        match element {
-            Some(item) => {
-                if let Some(span) = run.take() {
-                    items.push(RenderItem::Text(span));
-                }
-                items.push(item);
-            }
-            None => {
-                let span = inline.span();
-                run = Some(match run {
-                    Some(existing) => existing.union(&span),
-                    None => span,
-                });
-            }
-        }
-    }
-    if let Some(span) = run {
-        items.push(RenderItem::Text(span));
+    let mut run: Option<(Span, TextStyle)> = None;
+    walk_inline_seq(content, TextStyle::default(), &mut items, &mut run);
+    if let Some((span, style)) = run {
+        items.push(RenderItem::Text(span, style));
     }
     items
+}
+
+fn walk_inline_seq(
+    content: &[Inline],
+    style: TextStyle,
+    items: &mut Vec<RenderItem>,
+    run: &mut Option<(Span, TextStyle)>,
+) {
+    for inline in content {
+        if let Inline::Element(el) = inline {
+            if let Some(wrapper) = style_wrapper(el) {
+                if let Some(nested) = &el.content {
+                    walk_inline_seq(nested, style.union(wrapper), items, run);
+                }
+                continue;
+            }
+            if is_bare_named(el, "ruby") {
+                flush_run(items, run);
+                items.push(ruby_item(el));
+                continue;
+            }
+            if let Some(item) = element_item(el).filter(is_namespaced) {
+                flush_run(items, run);
+                items.push(item);
+                continue;
+            }
+        }
+        extend_run(items, run, inline.span(), style);
+    }
+}
+
+/// Appends `span` to `run`, flushing it first if it was accumulating under
+/// a different [`TextStyle`] -- a style change always starts a new
+/// [`RenderItem::Text`], the same way splitting out an element does.
+fn extend_run(
+    items: &mut Vec<RenderItem>,
+    run: &mut Option<(Span, TextStyle)>,
+    span: Span,
+    style: TextStyle,
+) {
+    match run {
+        Some((existing_span, existing_style)) if *existing_style == style => {
+            *existing_span = existing_span.union(&span);
+        }
+        _ => {
+            flush_run(items, run);
+            *run = Some((span, style));
+        }
+    }
+}
+
+fn flush_run(items: &mut Vec<RenderItem>, run: &mut Option<(Span, TextStyle)>) {
+    if let Some((span, style)) = run.take() {
+        items.push(RenderItem::Text(span, style));
+    }
+}
+
+/// `el`'s [`TextStyle`] flag if it's a bare (non-`@use`'d) `em`/`strong`/
+/// `mark`/`strikeout` wrapper, else `None`.
+fn style_wrapper(el: &Element) -> Option<TextStyle> {
+    let Sigil::Named(name) = &el.sigil else {
+        return None;
+    };
+    if name.namespace.is_some() {
+        return None;
+    }
+    match name.name.as_str() {
+        "em" => Some(TextStyle {
+            italic: true,
+            ..TextStyle::default()
+        }),
+        "strong" => Some(TextStyle {
+            bold: true,
+            ..TextStyle::default()
+        }),
+        "mark" => Some(TextStyle {
+            mark: true,
+            ..TextStyle::default()
+        }),
+        "strikeout" => Some(TextStyle {
+            strikeout: true,
+            ..TextStyle::default()
+        }),
+        _ => None,
+    }
+}
+
+/// Whether `el`'s sigil is the bare (non-`@use`'d) built-in named `name`.
+fn is_bare_named(el: &Element, name: &str) -> bool {
+    matches!(&el.sigil, Sigil::Named(n) if n.namespace.is_none() && n.name == name)
+}
+
+/// `el`'s [`RenderItem::Ruby`] -- see that variant's doc for `base`/`reading`.
+fn ruby_item(el: &Element) -> RenderItem {
+    let base = el
+        .content
+        .as_ref()
+        .and_then(|inlines| inlines.iter().map(Inline::span).reduce(|a, b| a.union(&b)))
+        .unwrap_or(el.span);
+    let reading = match &el.args {
+        Some(Value::Map(entries)) => entries
+            .iter()
+            .find_map(|(key, value)| match (key.as_str(), value) {
+                ("rt", Value::String(s)) => Some(s.clone()),
+                _ => None,
+            })
+            .unwrap_or_default(),
+        _ => String::new(),
+    };
+    RenderItem::Ruby { base, reading }
 }
 
 /// `el`'s [`RenderItem::Element`], for any named element -- `None` only
@@ -304,7 +470,7 @@ mod tests {
     fn a_plain_paragraph_is_one_text_item() {
         let items = classify("Just a plain paragraph.\n");
         assert_eq!(items.len(), 1);
-        assert!(matches!(items[0], RenderItem::Text(_)));
+        assert!(matches!(items[0], RenderItem::Text(_, _)));
     }
 
     #[test]
@@ -321,7 +487,7 @@ mod tests {
             RenderItem::Element { identity, .. } => {
                 assert_eq!(identity.namespace, None);
             }
-            RenderItem::Text(_) => panic!("expected an Element item"),
+            _ => panic!("expected an Element item"),
         }
     }
 
@@ -340,7 +506,7 @@ mod tests {
             .iter()
             .filter_map(|item| match item {
                 RenderItem::Element { identity, .. } => Some(identity),
-                RenderItem::Text(_) => None,
+                _ => None,
             })
             .collect();
         assert_eq!(identities.len(), 3);
@@ -353,7 +519,7 @@ mod tests {
             .iter()
             .filter_map(|item| match item {
                 RenderItem::Element { args_summary, .. } => Some(args_summary.as_str()),
-                RenderItem::Text(_) => None,
+                _ => None,
             })
             .collect();
         assert_eq!(args_summaries, vec!["mine", "theirs", "end"]);
@@ -372,8 +538,9 @@ mod tests {
         let kinds: Vec<&str> = items
             .iter()
             .map(|item| match item {
-                RenderItem::Text(_) => "text",
+                RenderItem::Text(_, _) => "text",
                 RenderItem::Element { .. } => "element",
+                RenderItem::Ruby { .. } => "ruby",
             })
             .collect();
         assert_eq!(
@@ -383,12 +550,12 @@ mod tests {
             ]
         );
 
-        let RenderItem::Text(first) = &items[0] else {
+        let RenderItem::Text(first, _) = &items[0] else {
             unreachable!()
         };
         assert_eq!(&src[first.start.offset..first.end.offset], "Before ");
 
-        let RenderItem::Text(last) = items.last().unwrap() else {
+        let RenderItem::Text(last, _) = items.last().unwrap() else {
             unreachable!()
         };
         assert_eq!(&src[last.start.offset..last.end.offset], " after.");
@@ -410,7 +577,7 @@ mod tests {
                 assert_eq!(args_summary, "label");
                 assert_eq!(data_summary, "");
             }
-            RenderItem::Text(_) => panic!("expected an Element item"),
+            _ => panic!("expected an Element item"),
         }
     }
 
@@ -420,11 +587,11 @@ mod tests {
         let items = classify(src);
         assert_eq!(items.len(), 1);
         match &items[0] {
-            RenderItem::Text(span) => {
+            RenderItem::Text(span, _) => {
                 assert_eq!(span.start.offset, 0);
                 assert_eq!(span.end.offset, src.len());
             }
-            RenderItem::Element { .. } => panic!("expected a Text fallback item"),
+            _ => panic!("expected a Text fallback item"),
         }
     }
 
@@ -450,5 +617,137 @@ mod tests {
     fn classify_blocks_reports_parse_failure_instead_of_guessing_a_kind() {
         let src = "Fine paragraph.\n\n@mobile.conflict(\n";
         assert_eq!(classify_blocks(src), Err(ParseFailed));
+    }
+
+    fn text_items(src: &str) -> Vec<(String, TextStyle)> {
+        classify(src)
+            .into_iter()
+            .map(|item| match item {
+                RenderItem::Text(span, style) => {
+                    (src[span.start.offset..span.end.offset].to_owned(), style)
+                }
+                other => panic!("expected only Text items, got {other:?}"),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_bare_strong_wrapper_tags_its_content_bold_without_splitting_it_out() {
+        let items = text_items("plain @strong[bold] plain\n");
+        assert_eq!(
+            items,
+            vec![
+                ("plain ".to_owned(), TextStyle::default()),
+                (
+                    "bold".to_owned(),
+                    TextStyle {
+                        bold: true,
+                        ..TextStyle::default()
+                    }
+                ),
+                (" plain".to_owned(), TextStyle::default()),
+            ]
+        );
+    }
+
+    #[test]
+    fn nested_style_wrappers_combine_their_flags() {
+        // A line that's *only* `@element[...]` parses as its own
+        // top-level `Block::Element`, not a `Paragraph` -- same rule a
+        // standalone `@mobile.conflict(...)` marker line follows (see the
+        // module doc). Surrounding prose on the same line is what forces
+        // `Block::Paragraph` and so the inline-walk path this test means
+        // to exercise.
+        let items = text_items("plain @strong[@em[both]] plain\n");
+        assert_eq!(
+            items,
+            vec![
+                ("plain ".to_owned(), TextStyle::default()),
+                (
+                    "both".to_owned(),
+                    TextStyle {
+                        bold: true,
+                        italic: true,
+                        ..TextStyle::default()
+                    }
+                ),
+                (" plain".to_owned(), TextStyle::default()),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_namespaced_element_nested_inside_a_style_wrapper_still_splits_out() {
+        let src = "plain @strong[before @deck.bookmark(label: x) after] plain\n";
+        let items = classify(src);
+        let kinds: Vec<&str> = items
+            .iter()
+            .map(|item| match item {
+                RenderItem::Text(_, _) => "text",
+                RenderItem::Element { .. } => "element",
+                RenderItem::Ruby { .. } => "ruby",
+            })
+            .collect();
+        assert_eq!(kinds, vec!["text", "text", "element", "text", "text"]);
+        let RenderItem::Text(inside, inside_style) = &items[1] else {
+            unreachable!()
+        };
+        assert_eq!(&src[inside.start.offset..inside.end.offset], "before ");
+        assert!(inside_style.bold);
+    }
+
+    #[test]
+    fn a_bare_ruby_element_splits_out_with_its_base_and_reading() {
+        let src = "plain @ruby[漢字](rt:\"かんじ\") plain\n";
+        let items = classify(src);
+        assert_eq!(items.len(), 3);
+        match &items[1] {
+            RenderItem::Ruby { base, reading } => {
+                assert_eq!(&src[base.start.offset..base.end.offset], "漢字");
+                assert_eq!(reading, "かんじ");
+            }
+            other => panic!("expected a Ruby item, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_ruby_element_with_a_missing_or_non_string_reading_falls_back_to_empty() {
+        let items = classify("plain @ruby[漢字] plain\n");
+        match &items[1] {
+            RenderItem::Ruby { reading, .. } => assert_eq!(reading, ""),
+            other => panic!("expected a Ruby item, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_style_wrapper_alone_on_its_own_line_is_still_tagged_not_just_shown_raw() {
+        // Nothing else shares this line, so it parses as its own
+        // `Block::Element`, not a `Block::Paragraph` -- the rarer path
+        // `classify_bare_character_element` exists for.
+        let items = text_items("@strong[whole line]\n");
+        assert_eq!(
+            items,
+            vec![(
+                "whole line".to_owned(),
+                TextStyle {
+                    bold: true,
+                    ..TextStyle::default()
+                }
+            )]
+        );
+    }
+
+    #[test]
+    fn a_ruby_element_alone_on_its_own_line_still_splits_out() {
+        let src = "@ruby[漢字](rt:\"かんじ\")\n";
+        let items = classify(src);
+        assert_eq!(items.len(), 1);
+        match &items[0] {
+            RenderItem::Ruby { base, reading } => {
+                assert_eq!(&src[base.start.offset..base.end.offset], "漢字");
+                assert_eq!(reading, "かんじ");
+            }
+            other => panic!("expected a Ruby item, got {other:?}"),
+        }
     }
 }

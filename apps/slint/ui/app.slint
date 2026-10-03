@@ -100,6 +100,11 @@ export component App inherits Window {
     // elements instead of a pure computation.
     in property <string> measure-probe-text;
     in property <length> measure-probe-font-size: 16px;
+    // Bold/italic measure wider/narrower than regular text -- matching
+    // these to whatever `FlowView` will actually render the run at is
+    // what makes the wrap decision correct, not just the font size.
+    in property <int> measure-probe-font-weight: 400;
+    in property <bool> measure-probe-font-italic: false;
     out property <length> measure-probe-text-width: measure-probe-text-item.preferred-width;
     in property <RenderedBlock> measure-probe-block;
     out property <length> measure-probe-block-width: measure-probe-block-item.preferred-width;
@@ -939,6 +944,8 @@ export component App inherits Window {
             x: -9999px;
             text: root.measure-probe-text;
             font-size: root.measure-probe-font-size;
+            font-weight: root.measure-probe-font-weight;
+            font-italic: root.measure-probe-font-italic;
         }
         measure-probe-block-item := RenderedBlockView {
             x: -9999px;

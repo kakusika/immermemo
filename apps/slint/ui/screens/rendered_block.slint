@@ -15,6 +15,10 @@ export enum RenderedBlockShape {
     chip,
     divider,
     badge,
+    // A `@ruby[base](rt:"reading")` standing as its own block (rarer than
+    // the inline case, `@richtext/flow_view.slint`'s `FlowView` -- see
+    // `immermemo_editor::classify::BlockShape::Ruby`'s doc).
+    ruby,
 }
 
 export enum RenderedBlockTone {
@@ -26,9 +30,20 @@ export enum RenderedBlockTone {
 export struct RenderedBlock {
     shape: RenderedBlockShape,
     tone: RenderedBlockTone,
-    // The paragraph text for `plain-text`, or a label for `chip`/`badge`.
-    // Unused (empty) for `divider` -- its look comes entirely from `shape`.
+    // The paragraph text for `plain-text`, the base for `ruby`, or a label
+    // for `chip`/`badge`. Unused (empty) for `divider` -- its look comes
+    // entirely from `shape`.
     text: string,
+    // Meaningful only for `plain-text` -- `em`/`strong`/`mark`/`strikeout`
+    // tagging a whole block with nothing else sharing its line (see
+    // `immermemo_tomet_render`'s `classify_bare_character_element`).
+    // `false` everywhere else.
+    bold: bool,
+    italic: bool,
+    mark: bool,
+    strikeout: bool,
+    // The reading annotation, meaningful only for `ruby`. Empty elsewhere.
+    reading: string,
 }
 
 // Renders one `RenderedBlock` in the editor's view-mode display: plain
@@ -45,11 +60,37 @@ export component RenderedBlockView inherits VerticalLayout {
         : root.block.tone == RenderedBlockTone.warning ? Colors.warning
         : Colors.muted;
 
-    if root.block.shape == RenderedBlockShape.plain-text: Text {
-        text: root.block.text;
-        font-size: root.text-font-size;
-        color: Palette.foreground;
-        wrap: word-wrap;
+    if root.block.shape == RenderedBlockShape.plain-text: Rectangle {
+        // Explicit `width: 100%` on both this wrapper and the `Text`
+        // inside it -- a bare `Rectangle` placed directly in the
+        // surrounding `VerticalLayout` does not reliably inherit the
+        // full-width stretch a `Text` got for free as a direct child
+        // (discovered the hard way: it silently shrank to the text's own
+        // natural width and the `VerticalLayout` centered it instead of
+        // word-wrapping at the real available width).
+        width: 100%;
+        background: root.block.mark ? Colors.warning.with-alpha(0.25) : transparent;
+
+        plain-text-item := Text {
+            width: 100%;
+            text: root.block.text;
+            font-size: root.text-font-size;
+            font-weight: root.block.bold ? 700 : 400;
+            font-italic: root.block.italic;
+            color: Palette.foreground;
+            wrap: word-wrap;
+        }
+
+        // A single overlay line through vertical-center: exact for the
+        // common case (a short, single-line block), an approximation for
+        // a `word-wrap`-wrapped multi-line one (there's no per-line
+        // strike this draws against today).
+        if root.block.strikeout: Rectangle {
+            y: plain-text-item.height / 2;
+            width: plain-text-item.preferred-width;
+            height: 1px;
+            background: plain-text-item.color;
+        }
     }
 
     if root.block.shape == RenderedBlockShape.chip: HorizontalLayout {
@@ -98,6 +139,26 @@ export component RenderedBlockView inherits VerticalLayout {
                     vertical-alignment: center;
                 }
             }
+        }
+    }
+
+    // Reading above base, centered -- the usual horizontal-text ruby
+    // layout (furigana sits above the kanji it annotates, not beside it).
+    if root.block.shape == RenderedBlockShape.ruby: VerticalLayout {
+        alignment: start;
+
+        Text {
+            text: root.block.reading;
+            font-size: root.text-font-size * 0.5;
+            color: Colors.muted;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.block.text;
+            font-size: root.text-font-size;
+            color: Palette.foreground;
+            horizontal-alignment: center;
         }
     }
 }
