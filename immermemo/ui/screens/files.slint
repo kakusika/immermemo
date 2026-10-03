@@ -7,7 +7,29 @@ import {
     TopBar,
     Fab,
     AppScrollView,
+    SegmentedControl,
 } from "@origami-mobile/components.slint";
+
+// One row of the Directory page's List view, or one tile of its Grid
+// view -- both are the direct contents of whichever folder is currently
+// browsed (see `immermemo/src/directory.rs`'s `build_folder_entries`).
+// `note-index` is `-1` for a folder row/tile (folders have no index of
+// their own, only a `key` derived from splitting titles on `/`).
+export struct DirectoryEntry {
+    is-folder: bool,
+    key: string,
+    display: string,
+    note-index: int,
+    has-conflict: bool,
+}
+
+// One tappable segment of the breadcrumb trail above the browsed folder's
+// contents -- `key` is what a tap navigates to, `display` is just that
+// segment's own name. See `DirectoryBreadcrumb` below.
+export struct BreadcrumbSegment {
+    key: string,
+    display: string,
+}
 
 // A square icon-over-label tile for the Library hub's 2-column section
 // grid -- same recipe as home.slint's QuickActionTile (kept as its own
@@ -72,9 +94,149 @@ component LibrarySectionTile inherits Rectangle {
     }
 }
 
+// An icon-over-label tile for the Directory page's Grid view -- same
+// recipe as `LibrarySectionTile`, minus its `enabled`-muting (every grid
+// entry is a real folder or note, never a placeholder), plus a long-press
+// timer on note tiles so Grid gets the same rename/delete menu List
+// already has. Folders have no such menu: they're derived from paths,
+// not an entity of their own to rename or delete.
+component DirectoryGridTile inherits Rectangle {
+    in property <image> icon;
+    in property <string> label-text;
+    in property <bool> is-folder;
+    in property <bool> has-conflict;
+    in property <bool> highlighted;
+    callback clicked();
+    callback long-pressed();
+
+    horizontal-stretch: 1;
+    height: 96px * Metrics.ui-scale;
+    border-radius: Metrics.radius-md;
+    background: touch.pressed
+        ? Palette.foreground.with-alpha(0.12)
+        : (root.highlighted ? Palette.accent-background.with-alpha(0.20) : Colors.surface-elevated);
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: Metrics.spacing-xs;
+
+        HorizontalLayout {
+            alignment: center;
+            Icon {
+                source: root.icon;
+                width: Metrics.icon-lg;
+                height: Metrics.icon-lg;
+                color: root.highlighted ? Palette.accent-background : Palette.foreground;
+            }
+        }
+
+        HorizontalLayout {
+            alignment: center;
+            spacing: Metrics.spacing-xs;
+
+            Text {
+                text: root.label-text;
+                font-size: Metrics.font-sm;
+                font-weight: 600;
+                color: root.highlighted ? Palette.accent-background : Palette.foreground;
+                horizontal-alignment: center;
+                overflow: elide;
+            }
+
+            if root.has-conflict: Rectangle {
+                width: Metrics.spacing-sm;
+                height: Metrics.spacing-sm;
+                border-radius: Metrics.spacing-sm / 2;
+                background: Colors.warning;
+            }
+        }
+    }
+
+    property <bool> long-pressed-flag: false;
+
+    touch := TouchArea {
+        clicked => {
+            if (long-pressed-flag) {
+                long-pressed-flag = false;
+            } else {
+                root.clicked();
+            }
+        }
+    }
+
+    Timer {
+        interval: 400ms;
+        running: touch.pressed && !root.is-folder && !long-pressed-flag;
+        triggered => {
+            long-pressed-flag = true;
+            root.long-pressed();
+        }
+    }
+}
+
+// The folder-browsing context above List/Grid's contents: a breadcrumb
+// trail that jumps to any specific ancestor folder, its first entry
+// always the vault root itself (shown as a home icon, `seg.key == ""` --
+// the only way back to it now that there's no separate always-present
+// root button). Shared by both view modes -- they browse the same
+// folder-at-a-time state, just render its contents differently.
+// `alignment: start` keeps the trail packed to the left at its own
+// natural width -- without it, `HorizontalLayout`'s default `stretch`
+// alignment spreads its children across the whole row instead of packing
+// them together.
+component DirectoryBreadcrumb inherits HorizontalLayout {
+    in property <[BreadcrumbSegment]> segments;
+    callback go-to(string);
+
+    alignment: start;
+    spacing: Metrics.spacing-xs;
+
+    for seg[i] in root.segments: HorizontalLayout {
+        spacing: Metrics.spacing-xs;
+
+        if i > 0: VerticalLayout {
+            alignment: center;
+            Icon {
+                source: Icons.chevron-right;
+                width: Metrics.icon-sm;
+                height: Metrics.icon-sm;
+                color: Colors.muted;
+            }
+        }
+
+        Rectangle {
+            crumb-touch := TouchArea {
+                clicked => { root.go-to(seg.key); }
+            }
+
+            VerticalLayout {
+                alignment: center;
+
+                if seg.key == "": Icon {
+                    source: Icons.home;
+                    width: Metrics.icon-sm;
+                    height: Metrics.icon-sm;
+                    color: crumb-touch.pressed ? Palette.foreground : Colors.muted;
+                }
+
+                if seg.key != "": Text {
+                    text: seg.display;
+                    font-size: Metrics.font-sub;
+                    font-weight: i == root.segments.length - 1 ? 700 : 600;
+                    color: i == root.segments.length - 1
+                        ? Palette.foreground
+                        : (crumb-touch.pressed ? Palette.foreground : Colors.muted);
+                }
+            }
+        }
+    }
+}
+
 export component FilesScreen inherits Rectangle {
-    in property <[string]> notes;
-    in property <[bool]> conflicted;
     in property <int> current: -1;
     in property <string> status;
     in property <bool> syncing;
@@ -82,17 +244,26 @@ export component FilesScreen inherits Rectangle {
     in property <length> inset-bottom: 0px;
     in property <bool> highlight-current: false;
     in property <bool> remote-configured: false;
-    // 0: section hub (Directory/List/Diary tiles), 1: Directory (today's
-    // flat note list). in-out so the app-level Back action can pop it,
-    // same shape as sheets/settings.slint's own `page` -- see
-    // app.slint's handle-back().
+    // 0: section hub (Directory/List/Diary tiles), 1: Directory. in-out
+    // so the app-level Back action can pop it, same shape as
+    // sheets/settings.slint's own `page` -- see app.slint's handle-back().
     in-out property <int> page: 0;
+    // Directory's own view-mode switch: 0 = List, 1 = Grid. Both browse
+    // the same folder-at-a-time state (`folder-entries`/`breadcrumb`, see
+    // `immermemo/src/directory.rs`'s `build_folder_entries`/
+    // `build_breadcrumb`) and only ever carry a `note-index` into the
+    // same flat note list every other action already indexes by -- they
+    // differ purely in how they render one folder's contents.
+    in-out property <int> directory-mode: 0;
+    in property <[DirectoryEntry]> folder-entries: [];
+    in property <[BreadcrumbSegment]> breadcrumb: [];
 
     callback select(int);
     callback new-note();
     callback sync();
     callback open-settings();
     callback note-menu-requested(int);
+    callback navigate-folder(string);
     callback trigger-haptic();
     callback trigger-heavy-haptic();
 
@@ -104,7 +275,7 @@ export component FilesScreen inherits Rectangle {
             bar-background: transparent;
 
             if root.page != 0: IconButton {
-                icon: Icons.chevron-left;
+                icon: Icons.x;
                 clicked => { root.page = 0; }
             }
 
@@ -174,7 +345,27 @@ export component FilesScreen inherits Rectangle {
             }
         }
 
-        if root.page == 1 && root.notes.length == 0: Rectangle {
+        if root.page == 1 && root.breadcrumb.length > 0: DirectoryBreadcrumb {
+            padding-left: Metrics.gutter;
+            padding-right: Metrics.gutter;
+            padding-bottom: Metrics.spacing-sm;
+            segments: root.breadcrumb;
+            go-to(key) => { root.navigate-folder(key); }
+        }
+
+        if root.page == 1: HorizontalLayout {
+            padding-left: Metrics.gutter;
+            padding-right: Metrics.gutter;
+            padding-bottom: Metrics.spacing-sm;
+
+            SegmentedControl {
+                options: [@tr("List"), @tr("Grid")];
+                selected: root.directory-mode;
+                changed(i) => { root.directory-mode = i; }
+            }
+        }
+
+        if root.page == 1 && root.folder-entries.length == 0: Rectangle {
             vertical-stretch: 1;
             VerticalLayout {
                 alignment: center;
@@ -188,14 +379,14 @@ export component FilesScreen inherits Rectangle {
                 }
 
                 Text {
-                    text: @tr("No notes yet");
+                    text: root.breadcrumb.length > 0 ? @tr("This folder is empty") : @tr("No notes yet");
                     font-size: Metrics.font-body;
                     font-weight: 600;
                     color: Colors.muted;
                     horizontal-alignment: center;
                 }
 
-                Text {
+                if root.breadcrumb.length == 0: Text {
                     text: @tr("Tap + below to create your first note");
                     font-size: Metrics.font-sub;
                     color: Colors.muted;
@@ -204,13 +395,14 @@ export component FilesScreen inherits Rectangle {
             }
         }
 
-        if root.page == 1 && root.notes.length > 0: AppScrollView {
+        // List view
+        if root.page == 1 && root.directory-mode == 0 && root.folder-entries.length > 0: AppScrollView {
             vertical-stretch: 1;
 
             VerticalLayout {
                 padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
 
-                for name[i] in root.notes: Rectangle {
+                for entry[i] in root.folder-entries: Rectangle {
                     height: Metrics.row-height;
 
                     item-container := Rectangle {
@@ -219,7 +411,7 @@ export component FilesScreen inherits Rectangle {
                         width: parent.width - Metrics.spacing-lg;
                         height: parent.height - Metrics.spacing-xs;
                         border-radius: Metrics.radius-lg;
-                        background: (root.highlight-current && i == root.current)
+                        background: (!entry.is-folder && root.highlight-current && entry.note-index == root.current)
                             ? Palette.accent-background.with-alpha(0.20)
                             : (touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent);
 
@@ -231,17 +423,29 @@ export component FilesScreen inherits Rectangle {
                         HorizontalLayout {
                             padding-left: Metrics.spacing-lg;
                             padding-right: Metrics.spacing-lg;
-                            spacing: Metrics.spacing-md;
+                            spacing: Metrics.spacing-sm;
+
+                            if entry.is-folder: VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    source: Icons.folder;
+                                    width: Metrics.icon-sm;
+                                    height: Metrics.icon-sm;
+                                    color: Colors.muted;
+                                }
+                            }
 
                             VerticalLayout {
                                 horizontal-stretch: 1;
                                 alignment: center;
 
                                 Text {
-                                    text: name;
+                                    text: entry.display;
                                     font-size: Metrics.font-body;
-                                    font-weight: (root.highlight-current && i == root.current) ? 600 : 400;
-                                    color: (root.highlight-current && i == root.current)
+                                    font-weight: entry.is-folder
+                                        ? 600
+                                        : ((root.highlight-current && entry.note-index == root.current) ? 600 : 400);
+                                    color: (!entry.is-folder && root.highlight-current && entry.note-index == root.current)
                                         ? Palette.accent-background
                                         : Palette.foreground;
                                     vertical-alignment: center;
@@ -249,12 +453,22 @@ export component FilesScreen inherits Rectangle {
                                 }
                             }
 
-                            if root.conflicted[i]: Rectangle {
+                            if !entry.is-folder && entry.has-conflict: Rectangle {
                                 width: Metrics.spacing-sm;
                                 height: Metrics.spacing-sm;
                                 y: (parent.height - self.height) / 2;
                                 border-radius: Metrics.spacing-sm / 2;
                                 background: Colors.warning;
+                            }
+
+                            if entry.is-folder: VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    source: Icons.chevron-right;
+                                    width: Metrics.icon-sm;
+                                    height: Metrics.icon-sm;
+                                    color: Colors.muted;
+                                }
                             }
                         }
                     }
@@ -265,19 +479,58 @@ export component FilesScreen inherits Rectangle {
                         clicked => {
                             if (long-pressed) {
                                 long-pressed = false;
+                            } else if (entry.is-folder) {
+                                root.navigate-folder(entry.key);
                             } else {
-                                root.select(i);
+                                root.select(entry.note-index);
                             }
                         }
                     }
 
                     Timer {
                         interval: 400ms;
-                        running: touch.pressed && !long-pressed;
+                        running: touch.pressed && !entry.is-folder && !long-pressed;
                         triggered => {
                             long-pressed = true;
                             root.trigger-heavy-haptic();
-                            root.note-menu-requested(i);
+                            root.note-menu-requested(entry.note-index);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Grid view
+        if root.page == 1 && root.directory-mode == 1 && root.folder-entries.length > 0: AppScrollView {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding-left: Metrics.gutter;
+                padding-right: Metrics.gutter;
+                padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
+                spacing: Metrics.spacing-sm;
+
+                GridLayout {
+                    spacing: Metrics.spacing-sm;
+
+                    for entry[i] in root.folder-entries: DirectoryGridTile {
+                        row: i / 3;
+                        col: Math.mod(i, 3);
+                        icon: entry.is-folder ? Icons.folder : Icons.file;
+                        label-text: entry.display;
+                        is-folder: entry.is-folder;
+                        has-conflict: entry.has-conflict;
+                        highlighted: !entry.is-folder && root.highlight-current && entry.note-index == root.current;
+                        clicked => {
+                            if (entry.is-folder) {
+                                root.navigate-folder(entry.key);
+                            } else {
+                                root.select(entry.note-index);
+                            }
+                        }
+                        long-pressed => {
+                            root.trigger-heavy-haptic();
+                            root.note-menu-requested(entry.note-index);
                         }
                     }
                 }

@@ -13,7 +13,7 @@ import { NoteBodyItemView } from "screens/note_body.slint";
 export { FlowElementWidget } from "screens/note_body.slint";
 import { RenderedBlock, RenderedBlockView } from "screens/rendered_block.slint";
 import { HomeScreen } from "screens/home.slint";
-import { FilesScreen } from "screens/files.slint";
+import { FilesScreen, DirectoryEntry, BreadcrumbSegment } from "screens/files.slint";
 import { PropertiesScreen } from "screens/properties.slint";
 import { SearchScreen } from "screens/search.slint";
 import { VaultSheet } from "sheets/vault.slint";
@@ -113,6 +113,12 @@ export component App inherits Window {
     in-out property <string> remote-token-draft;
     in property <bool> remote-has-token;
     in-out property <int> note-menu-index: -1;
+    // Library Directory's List/Grid views -- see `files.slint`'s
+    // `DirectoryEntry`/`BreadcrumbSegment` and
+    // `immermemo/src/directory.rs`'s module doc.
+    in property <[DirectoryEntry]> directory-folder-entries: [];
+    in property <[BreadcrumbSegment]> directory-breadcrumb: [];
+    callback navigate-directory-folder(string);
     in-out property <bool> rename-open: false;
     in-out property <string> rename-draft;
     in-out property <bool> delete-confirm-open: false;
@@ -128,6 +134,8 @@ export component App inherits Window {
     in-out property <int> theme-choice: 0;
     in-out property <float> ui-scale <=> Metrics.ui-scale;
     in-out property <bool> editor-edit-mode <=> pane.edit-mode;
+    in-out property <int> directory-mode <=> files-screen.directory-mode;
+    in-out property <int> files-page <=> files-screen.page;
 
     function apply-theme-choice() {
         if (root.theme-choice == 1) {
@@ -264,8 +272,18 @@ export component App inherits Window {
             settings-screen.page = 0;
             return true;
         }
-        // 4b. Same for the Library tab's Directory page, back to its hub.
+        // 4b. Same for the Library tab's Directory page: pop one folder
+        // level (List and Grid both browse folder-at-a-time) before
+        // falling back to the hub, same nested shape as 4's Settings pop
+        // above. The parent is the breadcrumb's second-to-last segment,
+        // or the vault root if there isn't one.
         if (root.active-tab == 1 && files-screen.page != 0) {
+            if (root.directory-breadcrumb.length > 0) {
+                root.navigate-directory-folder(root.directory-breadcrumb.length >= 2
+                    ? root.directory-breadcrumb[root.directory-breadcrumb.length - 2].key
+                    : "");
+                return true;
+            }
             files-screen.page = 0;
             return true;
         }
@@ -449,8 +467,6 @@ export component App inherits Window {
                     y: 0px;
                     width: parent.width;
                     height: parent.height;
-                    notes: root.notes;
-                    conflicted: root.conflicted;
                     current: root.current;
                     status: root.status;
                     syncing: root.syncing;
@@ -458,6 +474,8 @@ export component App inherits Window {
                     inset-bottom: root.screen-inset-bottom;
                     highlight-current: true;
                     remote-configured: root.remote-configured;
+                    folder-entries: root.directory-folder-entries;
+                    breadcrumb: root.directory-breadcrumb;
                     select(i) => {
                         root.select(i);
                         root.open-note-sheet();
@@ -473,6 +491,7 @@ export component App inherits Window {
                         root.trigger-haptic();
                     }
                     note-menu-requested(i) => { root.note-menu-index = i; }
+                    navigate-folder(key) => { root.navigate-directory-folder(key); }
                     trigger-haptic => { root.trigger-haptic(); }
                     trigger-heavy-haptic => { root.trigger-heavy-haptic(); }
 

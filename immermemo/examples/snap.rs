@@ -129,10 +129,134 @@ fn main() {
     render(&window, size, &format!("{prefix}-home-sync-error.ppm"));
     app.set_last_sync_error("".into());
 
-    // Tab 1: Files / List
+    // Tab 1: Files / Directory -- List view (default mode) at the vault
+    // root: a folder, a second folder, and two root-level notes.
     app.set_active_tab(1);
+    app.set_files_page(1);
+    let root_entries = || {
+        ModelRc::new(VecModel::from(vec![
+            DirectoryEntry {
+                is_folder: true,
+                key: "meeting".into(),
+                display: "meeting".into(),
+                note_index: -1,
+                has_conflict: false,
+            },
+            DirectoryEntry {
+                is_folder: true,
+                key: "ideas".into(),
+                display: "ideas".into(),
+                note_index: -1,
+                has_conflict: false,
+            },
+            DirectoryEntry {
+                is_folder: false,
+                key: "".into(),
+                display: "買い物リスト".into(),
+                note_index: 0,
+                has_conflict: false,
+            },
+            DirectoryEntry {
+                is_folder: false,
+                key: "".into(),
+                display: "untitled-1".into(),
+                note_index: 4,
+                has_conflict: false,
+            },
+        ]))
+    };
+    app.set_directory_folder_entries(root_entries());
     std::thread::sleep(std::time::Duration::from_millis(300));
-    render(&window, size, &format!("{prefix}-list.ppm"));
+    render(&window, size, &format!("{prefix}-directory-list.ppm"));
+
+    // Directory -- List view, descended into "meeting" (breadcrumb shown,
+    // one conflicted note). The root crumb (empty key/display, rendered
+    // as a home icon) is always first -- it's the only way back to the
+    // vault root now that there's no separate always-present root button.
+    let root_crumb = || BreadcrumbSegment {
+        key: "".into(),
+        display: "".into(),
+    };
+    app.set_directory_breadcrumb(ModelRc::new(VecModel::from(vec![
+        root_crumb(),
+        BreadcrumbSegment {
+            key: "meeting".into(),
+            display: "meeting".into(),
+        },
+    ])));
+    app.set_directory_folder_entries(ModelRc::new(VecModel::from(vec![DirectoryEntry {
+        is_folder: false,
+        key: "".into(),
+        display: "2026-09-27".into(),
+        note_index: 1,
+        has_conflict: true,
+    }])));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(
+        &window,
+        size,
+        &format!("{prefix}-directory-list-inside-folder.ppm"),
+    );
+
+    // Directory -- List view, two levels deep (multi-segment breadcrumb
+    // -- the case that exposed the "spread across the row instead of
+    // packed to the left" layout bug).
+    app.set_directory_breadcrumb(ModelRc::new(VecModel::from(vec![
+        root_crumb(),
+        BreadcrumbSegment {
+            key: "meeting".into(),
+            display: "meeting".into(),
+        },
+        BreadcrumbSegment {
+            key: "meeting/2026".into(),
+            display: "2026".into(),
+        },
+    ])));
+    app.set_directory_folder_entries(ModelRc::new(VecModel::from(vec![DirectoryEntry {
+        is_folder: false,
+        key: "".into(),
+        display: "09-27".into(),
+        note_index: 1,
+        has_conflict: true,
+    }])));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(
+        &window,
+        size,
+        &format!("{prefix}-directory-list-breadcrumb-deep.ppm"),
+    );
+
+    // Directory -- Grid view, back at the vault root.
+    app.set_directory_mode(1);
+    app.set_directory_breadcrumb(ModelRc::new(VecModel::default()));
+    app.set_directory_folder_entries(root_entries());
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-directory-grid.ppm"));
+
+    // Directory -- Grid view, descended into "meeting" too.
+    app.set_directory_breadcrumb(ModelRc::new(VecModel::from(vec![
+        root_crumb(),
+        BreadcrumbSegment {
+            key: "meeting".into(),
+            display: "meeting".into(),
+        },
+    ])));
+    app.set_directory_folder_entries(ModelRc::new(VecModel::from(vec![DirectoryEntry {
+        is_folder: false,
+        key: "".into(),
+        display: "2026-09-27".into(),
+        note_index: 1,
+        has_conflict: true,
+    }])));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(
+        &window,
+        size,
+        &format!("{prefix}-directory-grid-inside-folder.ppm"),
+    );
+    app.set_directory_mode(0);
+    app.set_directory_folder_entries(ModelRc::new(VecModel::default()));
+    app.set_directory_breadcrumb(ModelRc::new(VecModel::default()));
 
     // Tab 2: Search query with snippet preview
     app.set_active_tab(2);
@@ -314,8 +438,10 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-home-dark.ppm"));
     app.set_active_tab(1);
+    app.set_directory_folder_entries(root_entries());
     std::thread::sleep(std::time::Duration::from_millis(300));
-    render(&window, size, &format!("{prefix}-list-dark.ppm"));
+    render(&window, size, &format!("{prefix}-directory-dark.ppm"));
+    app.set_directory_folder_entries(ModelRc::new(VecModel::default()));
     app.set_note_sheet_open(true);
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor-dark.ppm"));

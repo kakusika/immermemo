@@ -9,8 +9,9 @@ use immermemo_editor::EditorState;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::credentials::TokenCredentials;
+use crate::directory;
 use crate::sync;
-use crate::{App, TokenStoreFactory};
+use crate::{App, BreadcrumbSegment, DirectoryEntry, TokenStoreFactory};
 use immermemo_editor::History;
 use immermemo_index::NoteIndex;
 use immermemo_sync::Vault;
@@ -53,6 +54,16 @@ pub struct Session {
     pub delete_vault_target: Option<usize>,
     pub pending_auto_sync: bool,
     pub last_synced_at: Option<std::time::SystemTime>,
+    /// The folder the Directory page (List and Grid alike) is currently
+    /// browsing, keyed by its full slash-joined title (e.g. `work/sub`).
+    /// `""` means the vault root. Ephemeral UI state, not persisted.
+    pub current_folder: String,
+    /// `(display title, index into notes/conflicted, has_conflict)` for
+    /// whatever's currently filtered into view, sorted alphabetically by
+    /// title -- the cache [`refresh_directory_views`] rebuilds
+    /// `tree_rows`/`grid_entries` from on every toggle/navigate, without
+    /// re-running `index.search`.
+    pub directory_source: Vec<(String, i32, bool)>,
 }
 
 thread_local! {
@@ -149,10 +160,16 @@ pub fn update_filtered_list(app: &App, session: &Rc<RefCell<Session>>) {
     let mut names = Vec::with_capacity(hits.len());
     let mut conflicted = Vec::with_capacity(hits.len());
     let mut snippets = Vec::with_capacity(hits.len());
+    // Mirrors `names`/`filtered_results`/`conflicted` above but sorted by
+    // title -- `hits` is ranked by search relevance, not path, while the
+    // Directory Tree/Grid views need a folder's notes to appear as a
+    // contiguous run. See [`refresh_directory_views`].
+    let mut directory_source = Vec::with_capacity(hits.len());
 
     for hit in hits {
         let abs_path = vault_dir.join(&hit.path);
         if let Some(index) = s.notes.iter().position(|p| *p == abs_path) {
+            directory_source.push((hit.title.clone(), index as i32, hit.has_conflict));
             filtered_results.push(notes::SearchResult {
                 note_index: index,
                 snippet: hit.snippet.clone(),
@@ -162,8 +179,10 @@ pub fn update_filtered_list(app: &App, session: &Rc<RefCell<Session>>) {
             snippets.push(SharedString::from(hit.snippet.unwrap_or_default()));
         }
     }
+    directory_source.sort_by(|a: &(String, i32, bool), b| a.0.cmp(&b.0));
 
     s.filtered_results = filtered_results;
+    s.directory_source = directory_source;
     let ui_current = s
         .editor
         .current
@@ -174,6 +193,55 @@ pub fn update_filtered_list(app: &App, session: &Rc<RefCell<Session>>) {
     app.set_conflicted(ModelRc::new(VecModel::from(conflicted)));
     app.set_snippets(ModelRc::new(VecModel::from(snippets)));
     app.set_current(ui_current.map_or(-1, |i| i as i32));
+    refresh_directory_views(app, session);
+}
+
+/// Rebuilds the Directory page's List/Grid contents from `Session`'s
+/// cached `directory_source` plus whichever folder is currently browsed --
+/// called after [`update_filtered_list`] rebuilds that cache, and again
+/// (cheaply, with no new `index.search`) from [`navigate_directory_folder`]
+/// below.
+pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
+    let s = session.borrow();
+    let source: Vec<directory::TitledNote> = s
+        .directory_source
+        .iter()
+        .map(|(title, idx, conflict)| (title.as_str(), *idx, *conflict))
+        .collect();
+    let folder_entries: Vec<DirectoryEntry> =
+        directory::build_folder_entries(&source, &s.current_folder)
+            .into_iter()
+            .map(to_entry_view)
+            .collect();
+    let breadcrumb: Vec<BreadcrumbSegment> = directory::build_breadcrumb(&s.current_folder)
+        .into_iter()
+        .map(|(key, display)| BreadcrumbSegment {
+            key: key.into(),
+            display: display.into(),
+        })
+        .collect();
+    drop(s);
+    app.set_directory_folder_entries(ModelRc::new(VecModel::from(folder_entries)));
+    app.set_directory_breadcrumb(ModelRc::new(VecModel::from(breadcrumb)));
+}
+
+fn to_entry_view(e: directory::DirectoryEntry) -> DirectoryEntry {
+    DirectoryEntry {
+        is_folder: e.is_folder,
+        key: e.key.into(),
+        display: e.display.into(),
+        note_index: e.note_index,
+        has_conflict: e.has_conflict,
+    }
+}
+
+/// Navigates the Directory page (List and Grid alike) to `key` (a folder's
+/// full slash-joined title, or `""` for the vault root) -- driven by a
+/// folder tile/row, a breadcrumb segment, the × root-reset, or the
+/// hardware back action popping one level.
+pub fn navigate_directory_folder(app: &App, session: &Rc<RefCell<Session>>, key: &str) {
+    session.borrow_mut().current_folder = key.to_string();
+    refresh_directory_views(app, session);
 }
 
 pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {

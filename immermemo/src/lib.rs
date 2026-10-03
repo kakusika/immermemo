@@ -1,4 +1,5 @@
 pub mod credentials;
+mod directory;
 mod haptic;
 pub mod render;
 mod session;
@@ -134,6 +135,8 @@ pub fn run(
         delete_vault_target: None,
         pending_auto_sync: false,
         last_synced_at: None,
+        current_folder: String::new(),
+        directory_source: Vec::new(),
     }));
 
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
@@ -184,6 +187,14 @@ pub fn run(
                 }
                 Err(e) => set_status(&app, format!("Could not create a note: {e}")),
             }
+        }
+    });
+
+    app.on_navigate_directory_folder({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |key| {
+            let app = weak.unwrap();
+            session::navigate_directory_folder(&app, &session, key.as_str());
         }
     });
 
@@ -838,6 +849,8 @@ mod tests {
             delete_vault_target: None,
             pending_auto_sync: false,
             last_synced_at: None,
+            current_folder: String::new(),
+            directory_source: Vec::new(),
         }));
 
         app.set_current_has_conflict(true);

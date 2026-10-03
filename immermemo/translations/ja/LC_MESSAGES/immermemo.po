@@ -414,7 +414,7 @@ msgctxt "FilesScreen"
 msgid "Directory"
 msgstr "ディレクトリ"
 
-#: ui/screens/files.slint:142
+#: ui/screens/files.slint:317 ui/screens/files.slint:346
 msgctxt "FilesScreen"
 msgid "List"
 msgstr "リスト"
@@ -433,6 +433,16 @@ msgstr "ノートがありません"
 msgctxt "FilesScreen"
 msgid "Tap + below to create your first note"
 msgstr "下の＋をタップして最初のノートを作成しましょう"
+
+#: ui/screens/files.slint:375
+msgctxt "FilesScreen"
+msgid "This folder is empty"
+msgstr "このフォルダは空です"
+
+#: ui/screens/files.slint:346
+msgctxt "FilesScreen"
+msgid "Grid"
+msgstr "グリッド"
 
 #. Vault info
 #: ui/screens/home.slint:63
