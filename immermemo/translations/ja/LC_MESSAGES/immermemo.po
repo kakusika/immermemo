@@ -404,10 +404,25 @@ msgctxt "SearchScreen"
 msgid "Search notes by title or contents"
 msgstr "タイトルや本文でノートを検索できます"
 
-#: ui/screens/files.slint:39
+#: ui/screens/files.slint:101
 msgctxt "FilesScreen"
 msgid "Library"
 msgstr "ライブラリ"
+
+#: ui/screens/files.slint:101 ui/screens/files.slint:133
+msgctxt "FilesScreen"
+msgid "Directory"
+msgstr "ディレクトリ"
+
+#: ui/screens/files.slint:142
+msgctxt "FilesScreen"
+msgid "List"
+msgstr "リスト"
+
+#: ui/screens/files.slint:154
+msgctxt "FilesScreen"
+msgid "Diary"
+msgstr "日記"
 
 #: ui/screens/files.slint:102
 msgctxt "FilesScreen"

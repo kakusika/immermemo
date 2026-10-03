@@ -3,10 +3,74 @@ import { Metrics, Colors } from "@origami-mobile/tokens.slint";
 import { Icon, Icons } from "@origami-icons/icons.slint";
 import {
     BubbleButton,
+    IconButton,
     TopBar,
     Fab,
     AppScrollView,
 } from "@origami-mobile/components.slint";
+
+// A square icon-over-label tile for the Library hub's 2-column section
+// grid -- same recipe as home.slint's QuickActionTile (kept as its own
+// copy here since the two screens have no shared import point for it),
+// plus an `enabled` flag: a section with no implementation yet still
+// gets a tile (muted, inert) rather than being left out, so the grid
+// doesn't need reshaping once List/Diary gain real content.
+component LibrarySectionTile inherits Rectangle {
+    in property <image> icon;
+    in property <string> label-text;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    horizontal-stretch: 1;
+    // Without both of these, each tile's own preferred-width comes from
+    // its label Text's natural single-line width -- "Directory" is
+    // wider than "List"/"Diary" -- and stretch only distributes
+    // *leftover* space past that preferred-width equally; it does not
+    // equalize the preferred-width itself. (min-width alone, tried
+    // first, wasn't enough -- confirmed by measuring actual rendered
+    // pixel widths: 410px vs 334px, still off. preferred-width is the
+    // real basis stretch starts from.) Zeroing both makes the row's
+    // split purely stretch-driven, confirmed equal by the same
+    // pixel measurement after this change.
+    min-width: 0px;
+    preferred-width: 0px;
+    height: 88px * Metrics.ui-scale;
+    border-radius: Metrics.radius-md;
+    background: touch.pressed && root.enabled ? Palette.foreground.with-alpha(0.12) : Colors.surface-elevated;
+    opacity: root.enabled ? 1.0 : 0.5;
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: Metrics.spacing-xs;
+
+        HorizontalLayout {
+            alignment: center;
+            Icon {
+                source: root.icon;
+                width: Metrics.icon-lg;
+                height: Metrics.icon-lg;
+                color: root.enabled ? Palette.foreground : Colors.muted;
+            }
+        }
+
+        Text {
+            text: root.label-text;
+            font-size: Metrics.font-sm;
+            font-weight: 600;
+            color: root.enabled ? Palette.foreground : Colors.muted;
+            horizontal-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
 
 export component FilesScreen inherits Rectangle {
     in property <[string]> notes;
@@ -18,6 +82,11 @@ export component FilesScreen inherits Rectangle {
     in property <length> inset-bottom: 0px;
     in property <bool> highlight-current: false;
     in property <bool> remote-configured: false;
+    // 0: section hub (Directory/List/Diary tiles), 1: Directory (today's
+    // flat note list). in-out so the app-level Back action can pop it,
+    // same shape as sheets/settings.slint's own `page` -- see
+    // app.slint's handle-back().
+    in-out property <int> page: 0;
 
     callback select(int);
     callback new-note();
@@ -34,9 +103,14 @@ export component FilesScreen inherits Rectangle {
             inset-top: root.inset-top;
             bar-background: transparent;
 
+            if root.page != 0: IconButton {
+                icon: Icons.chevron-left;
+                clicked => { root.page = 0; }
+            }
+
             Text {
                 horizontal-stretch: 1;
-                text: @tr("Library");
+                text: root.page == 1 ? @tr("Directory") : @tr("Library");
                 font-size: Metrics.font-title;
                 font-weight: 700;
                 color: Palette.foreground;
@@ -57,7 +131,50 @@ export component FilesScreen inherits Rectangle {
             height: Metrics.spacing-xs + 2px * Metrics.ui-scale;
         }
 
-        if root.notes.length == 0: Rectangle {
+        if root.page == 0: VerticalLayout {
+            padding-left: Metrics.gutter;
+            padding-right: Metrics.gutter;
+            padding-top: Metrics.spacing-sm;
+            spacing: Metrics.spacing-sm;
+
+            HorizontalLayout {
+                spacing: Metrics.spacing-sm;
+
+                LibrarySectionTile {
+                    icon: Icons.folder;
+                    label-text: @tr("Directory");
+                    clicked => { root.page = 1; }
+                }
+
+                // No list icon exists in origami-icons -- menu-2
+                // (hamburger) stands in until this has a real
+                // implementation to design a look for.
+                LibrarySectionTile {
+                    icon: Icons.menu-2;
+                    label-text: @tr("List");
+                    enabled: false;
+                }
+            }
+
+            HorizontalLayout {
+                spacing: Metrics.spacing-sm;
+
+                // No diary/calendar icon exists either -- same
+                // placeholder situation as List, above.
+                LibrarySectionTile {
+                    icon: Icons.file;
+                    label-text: @tr("Diary");
+                    enabled: false;
+                }
+
+                // Reserved grid slot for a future section.
+                Rectangle {
+                    horizontal-stretch: 1;
+                }
+            }
+        }
+
+        if root.page == 1 && root.notes.length == 0: Rectangle {
             vertical-stretch: 1;
             VerticalLayout {
                 alignment: center;
@@ -87,7 +204,7 @@ export component FilesScreen inherits Rectangle {
             }
         }
 
-        if root.notes.length > 0: AppScrollView {
+        if root.page == 1 && root.notes.length > 0: AppScrollView {
             vertical-stretch: 1;
 
             VerticalLayout {
@@ -168,7 +285,7 @@ export component FilesScreen inherits Rectangle {
         }
     }
 
-    Fab {
+    if root.page == 1: Fab {
         x: parent.width - self.width - Metrics.gutter;
         y: parent.height - self.height - Metrics.gutter - root.inset-bottom;
         clicked => { root.new-note(); }

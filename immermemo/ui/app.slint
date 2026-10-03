@@ -264,6 +264,11 @@ export component App inherits Window {
             settings-screen.page = 0;
             return true;
         }
+        // 4b. Same for the Library tab's Directory page, back to its hub.
+        if (root.active-tab == 1 && files-screen.page != 0) {
+            files-screen.page = 0;
+            return true;
+        }
 
         // 5. If on any secondary tab (Files: 1, Search: 2, Properties: 3, Settings: 4), navigate back to Home (0)
         if (root.active-tab != 0) {
