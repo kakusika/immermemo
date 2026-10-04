@@ -1,5 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import { ActionRow } from "@origami-mobile/components.slint";
 import { BottomNavBar, MiniNoteCard } from "components.slint";
 import { EditorScreen } from "screens/editor.slint";
@@ -142,6 +143,21 @@ export component App inherits Window {
     in property <string> active-conflict-theirs: "";
     in property <bool> can-undo;
     in property <bool> can-redo;
+    // Back/forward stack of previously-opened notes (`session.rs`'s
+    // `BackForwardStack`) -- distinct from `can-undo`/`can-redo` above
+    // (per-note text edits) and from the git-commit "history" sheets.
+    in property <bool> can-navigate-back;
+    in property <bool> can-navigate-forward;
+    // Lightweight preview of the adjacent history notes (title + first
+    // non-empty line, not the fully-rendered body) -- refreshed whenever
+    // the back/forward stack changes, not per drag frame. Empty when
+    // `can-navigate-back`/`-forward` is false.
+    in property <string> history-back-title;
+    in property <string> history-back-preview;
+    in property <string> history-forward-title;
+    in property <string> history-forward-preview;
+    callback navigate-back();
+    callback navigate-forward();
     in-out property <string> body;
     // Derived from `body` by `src/render/mod.rs`, kept in step with
     // it everywhere Rust sets `body` -- see that module's doc. Read-only
@@ -416,6 +432,64 @@ export component App inherits Window {
     // trustworthy here -- unlike the note sheet's header/body gestures,
     // this one only needs a timestamp for velocity.
     property <duration> mini-drag-start-time: 0ms;
+    // Which axis `mini-card-gesture`'s current drag locked onto, decided
+    // once at the first `moved` call of a gesture (by then `swiping` is
+    // already true, so 8px past the threshold in whichever direction won
+    // -- comparing dx/dy at that moment is reliable and doesn't need to
+    // be re-decided every frame). `handle-swipe-up` (open the note sheet)
+    // and `handle-swipe-left`/`-right` (reveal back/forward, below) share
+    // one `SwipeGestureHandler`, so `moved`/`swiped` need this to know
+    // which behavior the drag in progress means.
+    property <bool> mini-drag-locked: false;
+    property <bool> mini-drag-horizontal: false;
+    // How far `MiniNoteCard` has been dragged off its resting position to
+    // reveal the back/forward affordance fixed underneath it (see
+    // `mini-card-container`'s own doc comment). Rubber-banded (iOS
+    // overscroll's own formula: `limit * ratio / (1 + ratio)`, `ratio`
+    // being the raw drag scaled by a 0.55 resistance coefficient) rather
+    // than hard-clamped, so the drag visibly slows down the further past
+    // `mini-card-reveal-max` it goes instead of tracking the finger 1:1
+    // up to a wall -- never actually reaches `mini-card-reveal-max`
+    // itself (asymptotic), which is why the progress/committable
+    // properties below normalize against the *commit* threshold instead.
+    property <length> mini-card-reveal-dx: 0px;
+    property <length> mini-card-reveal-max: Metrics.touch;
+    property <bool> is-dragging-mini-reveal: false;
+    animate mini-card-reveal-dx {
+        duration: root.is-dragging-mini-reveal ? 0ms : 200ms;
+        easing: ease-out;
+    }
+    pure function mini-reveal-rubber-band(dx: length, limit: length) -> length {
+        let coefficient = 0.55;
+        let ratio = (abs(dx) / limit) * coefficient;
+        let eased = limit * (ratio / (1.0 + ratio));
+        return dx < 0px ? -eased : eased;
+    }
+    // 0 at rest, 1.0 right at the release point that commits the
+    // navigation (`mini-card-reveal-threshold` below) -- what the
+    // revealed icon's opacity/highlight below actually reads, so "fully
+    // lit up" and "letting go commits" are the same moment.
+    property <float> mini-card-reveal-threshold: 0.6;
+    property <float> mini-reveal-back-progress: (root.can-navigate-back && root.mini-card-reveal-dx > 0px)
+        ? clamp((root.mini-card-reveal-dx / root.mini-card-reveal-max) / root.mini-card-reveal-threshold, 0.0, 1.0)
+        : 0.0;
+    property <float> mini-reveal-forward-progress: (root.can-navigate-forward && root.mini-card-reveal-dx < 0px)
+        ? clamp((-root.mini-card-reveal-dx / root.mini-card-reveal-max) / root.mini-card-reveal-threshold, 0.0, 1.0)
+        : 0.0;
+    property <bool> mini-reveal-back-committable: root.mini-reveal-back-progress >= 1.0;
+    property <bool> mini-reveal-forward-committable: root.mini-reveal-forward-progress >= 1.0;
+    // A discrete tick right as a drag crosses into "letting go now acts",
+    // same idea as `SheetDragState`'s own `threshold-passed` haptic.
+    changed mini-reveal-back-committable => {
+        if (root.mini-reveal-back-committable) {
+            root.trigger-haptic();
+        }
+    }
+    changed mini-reveal-forward-committable => {
+        if (root.mini-reveal-forward-committable) {
+            root.trigger-haptic();
+        }
+    }
     property <float> sheet-progress: root.is-dragging-sheet
         ? root.drag-sheet-progress
         : (root.note-sheet-open ? 1.0 : 0.0);
@@ -835,44 +909,82 @@ export component App inherits Window {
                 height: 100%;
                 enabled: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open;
                 handle-swipe-up: true;
+                // Revealing a direction history can't actually go is
+                // pointless, so the gesture simply isn't recognized that
+                // way -- same as the tab swiper disabling whichever edge
+                // is already at its end.
+                handle-swipe-right: root.can-navigate-back;
+                handle-swipe-left: root.can-navigate-forward;
 
                 changed pressed-position => {
                     root.mini-drag-start-time = animation-tick();
+                    root.mini-drag-locked = false;
                 }
 
                 moved => {
                     if (self.swiping) {
-                        root.is-dragging-sheet = true;
+                        let dx = self.current-position.x - self.pressed-position.x;
                         let dy = self.current-position.y - self.pressed-position.y;
-                        let upward = max(0px, -dy);
-                        let travel = max(100px, root.mini-card-resting-y);
-                        root.drag-sheet-progress = clamp(upward / travel, 0.0, 1.0);
+                        if (!root.mini-drag-locked) {
+                            root.mini-drag-locked = true;
+                            root.mini-drag-horizontal = abs(dx) > abs(dy);
+                        }
+                        if (root.mini-drag-horizontal) {
+                            root.is-dragging-mini-reveal = true;
+                            root.mini-card-reveal-dx = root.mini-reveal-rubber-band(dx, root.mini-card-reveal-max);
+                        } else {
+                            root.is-dragging-sheet = true;
+                            let upward = max(0px, -dy);
+                            let travel = max(100px, root.mini-card-resting-y);
+                            root.drag-sheet-progress = clamp(upward / travel, 0.0, 1.0);
+                        }
                     }
                 }
 
                 swiped => {
-                    root.is-dragging-sheet = false;
-                    let dy = self.current-position.y - self.pressed-position.y;
-                    let elapsed-ms = max(1.0, (animation-tick() - root.mini-drag-start-time) / 1ms);
-                    let velocity = (-dy / 1px) / elapsed-ms;
-                    // Same reasoning as the note sheet's close gesture: no
-                    // extra minimum-distance guard, `swiped` already means
-                    // SwipeGestureHandler recognized this as a swipe.
-                    if (velocity > root.fast-swipe-velocity * Metrics.ui-scale || root.drag-sheet-progress > 0.25) {
-                        root.open-note-sheet();
+                    if (root.mini-drag-horizontal) {
+                        let dx = self.current-position.x - self.pressed-position.x;
+                        let elapsed-ms = max(1.0, (animation-tick() - root.mini-drag-start-time) / 1ms);
+                        let velocity = (dx / 1px) / elapsed-ms;
+                        let fast = abs(velocity) > root.fast-swipe-velocity * Metrics.ui-scale;
+                        if (dx > 0 && root.can-navigate-back && (root.mini-reveal-back-committable || fast)) {
+                            root.trigger-haptic();
+                            root.navigate-back();
+                        } else if (dx < 0 && root.can-navigate-forward && (root.mini-reveal-forward-committable || fast)) {
+                            root.trigger-haptic();
+                            root.navigate-forward();
+                        }
+                        root.is-dragging-mini-reveal = false;
+                        root.mini-card-reveal-dx = 0px;
                     } else {
-                        root.note-sheet-open = false;
-                        root.drag-sheet-progress = 0.0;
+                        root.is-dragging-sheet = false;
+                        let dy = self.current-position.y - self.pressed-position.y;
+                        let elapsed-ms = max(1.0, (animation-tick() - root.mini-drag-start-time) / 1ms);
+                        let velocity = (-dy / 1px) / elapsed-ms;
+                        // Same reasoning as the note sheet's close gesture: no
+                        // extra minimum-distance guard, `swiped` already means
+                        // SwipeGestureHandler recognized this as a swipe.
+                        if (velocity > root.fast-swipe-velocity * Metrics.ui-scale || root.drag-sheet-progress > 0.25) {
+                            root.open-note-sheet();
+                        } else {
+                            root.note-sheet-open = false;
+                            root.drag-sheet-progress = 0.0;
+                        }
                     }
                 }
 
                 cancelled => {
-                    root.is-dragging-sheet = false;
-                    root.drag-sheet-progress = 0.0;
+                    if (root.mini-drag-horizontal) {
+                        root.is-dragging-mini-reveal = false;
+                        root.mini-card-reveal-dx = 0px;
+                    } else {
+                        root.is-dragging-sheet = false;
+                        root.drag-sheet-progress = 0.0;
+                    }
                 }
 
                 MiniNoteCard {
-                    x: 12px * Metrics.ui-scale;
+                    x: 12px * Metrics.ui-scale + root.mini-card-reveal-dx;
                     width: parent.width - 24px * Metrics.ui-scale;
                     height: Metrics.mini-card-height;
                     // Tracks toward the sheet's open (fully-on-screen)
@@ -896,6 +1008,77 @@ export component App inherits Window {
                     status-is-error: root.status-is-error;
                     clicked => { root.open-note-sheet(); }
                     sync => { root.sync(); }
+                }
+
+                // Fixed-position back/forward affordances for the
+                // history swipe above: never move, and aren't themselves
+                // tappable (the swipe commits directly on release, same
+                // as the note sheet's own close gesture). Drawn after
+                // (so on top of) `MiniNoteCard` above and shown purely
+                // through `opacity` -- `MiniNoteCard`'s own `x` sliding
+                // by `mini-card-reveal-dx` is a complementary "something
+                // is happening" motion, not what hides/reveals these: an
+                // opaque sibling drawn *under* an icon would clip it
+                // wherever it still happened to overlap, fighting the
+                // fade instead of just letting it fade. `y`/`height`
+                // match `MiniNoteCard`'s own *resting* span (not this
+                // whole gesture area's 100%, which has extra margin above
+                // than below for its own touch target -- centering
+                // against that taller box would visibly sit off-center
+                // from the card itself); sheet-progress-driven movement
+                // doesn't need accounting for here since both this
+                // gesture and `mini-card-container` itself are only
+                // enabled/visible while the note sheet is closed, i.e.
+                // sheet-progress 0.
+                VerticalLayout {
+                    x: 12px * Metrics.ui-scale;
+                    y: 20px * Metrics.ui-scale;
+                    width: root.mini-card-reveal-max;
+                    height: Metrics.mini-card-height;
+                    alignment: center;
+
+                    Rectangle {
+                        width: Metrics.icon-md + 16px * Metrics.ui-scale;
+                        height: self.width;
+                        border-radius: self.width / 2;
+                        background: Palette.accent-background.with-alpha(0.18 * root.mini-reveal-back-progress);
+
+                        Icon {
+                            source: TablerIcons.chevron-left;
+                            color: root.can-navigate-back ? Palette.accent-background : Colors.muted;
+                            width: Metrics.icon-md * (1.0 + 0.15 * root.mini-reveal-back-progress);
+                            height: self.width;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            opacity: root.mini-reveal-back-progress;
+                            animate width, height { duration: 150ms; easing: ease-out; }
+                        }
+                    }
+                }
+                VerticalLayout {
+                    x: parent.width - 12px * Metrics.ui-scale - root.mini-card-reveal-max;
+                    y: 20px * Metrics.ui-scale;
+                    width: root.mini-card-reveal-max;
+                    height: Metrics.mini-card-height;
+                    alignment: center;
+
+                    Rectangle {
+                        width: Metrics.icon-md + 16px * Metrics.ui-scale;
+                        height: self.width;
+                        border-radius: self.width / 2;
+                        background: Palette.accent-background.with-alpha(0.18 * root.mini-reveal-forward-progress);
+
+                        Icon {
+                            source: TablerIcons.chevron-right;
+                            color: root.can-navigate-forward ? Palette.accent-background : Colors.muted;
+                            width: Metrics.icon-md * (1.0 + 0.15 * root.mini-reveal-forward-progress);
+                            height: self.width;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            opacity: root.mini-reveal-forward-progress;
+                            animate width, height { duration: 150ms; easing: ease-out; }
+                        }
+                    }
                 }
             }
         }

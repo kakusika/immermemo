@@ -22,6 +22,89 @@ use immermemo_vault::notes;
 #[cfg(target_os = "android")]
 use crate::android::cert as android_cert;
 
+/// Back/forward navigation between previously-opened notes -- distinct
+/// from `EditorState.history` (per-note text undo/redo) and the
+/// git-commit "history" sheets (`HistorySheet`/`VaultHistorySheet`).
+/// Holds vault-relative paths (the same shape `OpenedNote::note_rel_path`
+/// and `open_note_by_rel_path` already use), not `notes` indices, since
+/// those shift under rename/create/delete/filtering. `entries[cursor]`
+/// is always "the note open right now".
+#[derive(Default)]
+pub struct BackForwardStack {
+    entries: Vec<String>,
+    cursor: Option<usize>,
+}
+
+impl BackForwardStack {
+    /// Records a newly-opened note as "here", discarding any forward
+    /// entries past the cursor (browser semantics: navigating to a new
+    /// note after going back drops the abandoned forward branch). A
+    /// no-op if `rel_path` is already "here" (re-opening the same note
+    /// doesn't duplicate it).
+    pub fn visit(&mut self, rel_path: String) {
+        if self.cursor.is_some_and(|c| self.entries[c] == rel_path) {
+            return;
+        }
+        let next = self.cursor.map_or(0, |c| c + 1);
+        self.entries.truncate(next);
+        self.entries.push(rel_path);
+        self.cursor = Some(next);
+    }
+
+    pub fn can_back(&self) -> bool {
+        self.cursor.is_some_and(|c| c > 0)
+    }
+
+    pub fn can_forward(&self) -> bool {
+        self.cursor.is_some_and(|c| c + 1 < self.entries.len())
+    }
+
+    /// The note one step back/forward from "here", for a lightweight
+    /// preview -- doesn't move the cursor.
+    pub fn peek_back(&self) -> Option<&str> {
+        let c = self.cursor?;
+        (c > 0).then(|| self.entries[c - 1].as_str())
+    }
+
+    pub fn peek_forward(&self) -> Option<&str> {
+        self.entries.get(self.cursor? + 1).map(String::as_str)
+    }
+
+    /// Moves back one step, dropping entries `is_live` rejects (renamed
+    /// or deleted since they were visited) before landing on one that's
+    /// still real. Returns the path now "here", if any.
+    pub fn step_back(&mut self, is_live: impl Fn(&str) -> bool) -> Option<String> {
+        while self.can_back() {
+            let c = self.cursor.unwrap();
+            if is_live(&self.entries[c - 1]) {
+                self.cursor = Some(c - 1);
+                return Some(self.entries[c - 1].clone());
+            }
+            self.entries.remove(c - 1);
+            self.cursor = Some(c - 1);
+        }
+        None
+    }
+
+    /// Mirrors `step_back`, moving forward instead.
+    pub fn step_forward(&mut self, is_live: impl Fn(&str) -> bool) -> Option<String> {
+        while self.can_forward() {
+            let c = self.cursor.unwrap();
+            if is_live(&self.entries[c + 1]) {
+                self.cursor = Some(c + 1);
+                return Some(self.entries[c + 1].clone());
+            }
+            self.entries.remove(c + 1);
+        }
+        None
+    }
+
+    pub fn clear(&mut self) {
+        self.entries.clear();
+        self.cursor = None;
+    }
+}
+
 /// What the window is currently editing. Lives on the UI thread only.
 pub struct Session {
     pub vault_dir: PathBuf,
@@ -68,6 +151,8 @@ pub struct Session {
     /// `tree_rows`/`grid_entries` from on every toggle/navigate, without
     /// re-running `index.search`.
     pub directory_source: Vec<(String, i32, bool)>,
+    /// Back/forward stack of previously-opened notes in this vault.
+    pub note_nav: BackForwardStack,
 }
 
 thread_local! {
@@ -336,10 +421,12 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     s.index = index;
     s.search_query.clear();
     s.editor = EditorState::default();
+    s.note_nav.clear();
     s.pending_auto_sync = false;
     s.last_synced_at = None;
     drop(s);
 
+    sync_nav_state(app, &session.borrow());
     app.set_search_query(SharedString::new());
     app.set_remote_configured(remote.is_some());
     app.set_current_title(SharedString::new());
@@ -413,7 +500,21 @@ pub fn vault_path_from_input(_base: &std::path::Path, input: &str) -> anyhow::Re
     Ok(PathBuf::from(input))
 }
 
+/// Opens `notes[index]` and records it in the back/forward stack --
+/// the normal entry point for "the user picked a note" (list/search/new
+/// note/widget tap/...). `navigate_back`/`navigate_forward` call
+/// `open_note_inner` directly instead, since moving through history
+/// shouldn't re-record the note it lands on as a brand new visit.
 pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
+    if let Some(rel_path) = open_note_inner(app, session, index) {
+        session.borrow_mut().note_nav.visit(rel_path);
+        sync_nav_state(app, &session.borrow());
+    }
+}
+
+/// Does the actual work of switching the editor to `notes[index]`.
+/// Returns the opened note's vault-relative path on success.
+fn open_note_inner(app: &App, session: &Rc<RefCell<Session>>, index: usize) -> Option<String> {
     let outcome = {
         let mut guard = session.borrow_mut();
         let s = &mut *guard;
@@ -428,13 +529,16 @@ pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
             index,
         )
     };
-    let Some(outcome) = outcome else { return };
+    let outcome = outcome?;
     match outcome {
-        Err(msg) => set_status(app, msg),
+        Err(msg) => {
+            set_status(app, msg);
+            None
+        }
         Ok(opened) => {
             app.set_current(opened.ui_current.map_or(-1, |i| i as i32));
             app.set_current_title(opened.title.into());
-            app.set_current_note_path(opened.note_rel_path.into());
+            app.set_current_note_path(opened.note_rel_path.clone().into());
             app.set_current_has_conflict(opened.has_conflict);
             app.set_can_undo(opened.can_undo);
             app.set_can_redo(opened.can_redo);
@@ -450,7 +554,105 @@ pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
                 app.set_active_conflict_mine(SharedString::new());
                 app.set_active_conflict_theirs(SharedString::new());
             }
+            Some(opened.note_rel_path)
         }
+    }
+}
+
+/// Steps one note back in the open-note history, skipping over (and
+/// dropping) any entries that no longer resolve to a live note. Does
+/// nothing if there's nowhere left to go back to.
+pub fn navigate_back(app: &App, session: &Rc<RefCell<Session>>) {
+    let rel_path = {
+        let mut s = session.borrow_mut();
+        // Owned clones, not borrows of `s` -- `s.note_nav.step_back`
+        // below already holds `s` mutably for the call, so the `is_live`
+        // closure can't also borrow `s` itself to check them.
+        let vault_dir = s.vault_dir.clone();
+        let notes = s.notes.clone();
+        s.note_nav
+            .step_back(move |p| notes.iter().any(|n| *n == vault_dir.join(p)))
+    };
+    navigate_to(app, session, rel_path);
+}
+
+/// Mirrors `navigate_back`, stepping forward instead.
+pub fn navigate_forward(app: &App, session: &Rc<RefCell<Session>>) {
+    let rel_path = {
+        let mut s = session.borrow_mut();
+        let vault_dir = s.vault_dir.clone();
+        let notes = s.notes.clone();
+        s.note_nav
+            .step_forward(move |p| notes.iter().any(|n| *n == vault_dir.join(p)))
+    };
+    navigate_to(app, session, rel_path);
+}
+
+fn navigate_to(app: &App, session: &Rc<RefCell<Session>>, rel_path: Option<String>) {
+    let Some(rel_path) = rel_path else { return };
+    let index = {
+        let s = session.borrow();
+        let abs_path = s.vault_dir.join(&rel_path);
+        s.notes.iter().position(|p| *p == abs_path)
+    };
+    if let Some(index) = index {
+        open_note_inner(app, session, index);
+    }
+    sync_nav_state(app, &session.borrow());
+}
+
+/// Pushes `can-navigate-back`/`-forward` and the adjacent notes' preview
+/// text to the UI -- called after every change to `note_nav` (a visit, or
+/// a step in either direction), not per animation frame: the swipe
+/// gesture just reads whatever was last pushed here while dragging.
+fn sync_nav_state(app: &App, session: &Session) {
+    app.set_can_navigate_back(session.note_nav.can_back());
+    app.set_can_navigate_forward(session.note_nav.can_forward());
+    let (back_title, back_preview) = session
+        .note_nav
+        .peek_back()
+        .and_then(|p| note_preview(&session.vault_dir, p))
+        .unwrap_or_default();
+    let (forward_title, forward_preview) = session
+        .note_nav
+        .peek_forward()
+        .and_then(|p| note_preview(&session.vault_dir, p))
+        .unwrap_or_default();
+    app.set_history_back_title(back_title.into());
+    app.set_history_back_preview(back_preview.into());
+    app.set_history_forward_title(forward_title.into());
+    app.set_history_forward_preview(forward_preview.into());
+}
+
+/// Title + a short preview line for `rel_path`, read directly from disk.
+/// `None` if the file can't be read (e.g. deleted a moment ago -- callers
+/// already prune genuinely dead history entries via `note_is_live`-style
+/// checks before getting here, so this is only a last-moment race, not
+/// the normal path).
+fn note_preview(vault_dir: &Path, rel_path: &str) -> Option<(String, String)> {
+    let abs_path = vault_dir.join(rel_path);
+    let text = std::fs::read_to_string(&abs_path).ok()?;
+    Some((notes::display_name(vault_dir, &abs_path), preview_line(&text)))
+}
+
+/// A short, query-less preview of a note's own first non-empty line --
+/// unlike `immermemo_index::extract_snippet`, which needs a search query
+/// to find context around (so outside of an active search it comes back
+/// empty; see `BackForwardStack`'s own doc for why that isn't reusable
+/// here). Used for the lightweight preview shown while swiping through
+/// back/forward history.
+fn preview_line(body: &str) -> String {
+    const MAX_CHARS: usize = 80;
+    let Some(line) = body.lines().map(str::trim).find(|l| !l.is_empty()) else {
+        return String::new();
+    };
+    let chars: Vec<char> = line.chars().collect();
+    if chars.len() <= MAX_CHARS {
+        line.to_string()
+    } else {
+        let mut truncated: String = chars[..MAX_CHARS].iter().collect();
+        truncated.push_str("...");
+        truncated
     }
 }
 
@@ -1070,5 +1272,123 @@ pub fn apply_icon_selection(app: &App, session: &Rc<RefCell<Session>>, name: &st
             schedule_auto_sync(app, std::time::Duration::from_secs(5));
         }
         Err(e) => set_status(app, format!("Could not save this note's icon: {e}")),
+    }
+}
+
+#[cfg(test)]
+mod back_forward_stack_tests {
+    use super::BackForwardStack;
+
+    #[test]
+    fn a_fresh_stack_has_nowhere_to_go() {
+        let stack = BackForwardStack::default();
+        assert!(!stack.can_back());
+        assert!(!stack.can_forward());
+        assert_eq!(stack.peek_back(), None);
+        assert_eq!(stack.peek_forward(), None);
+    }
+
+    #[test]
+    fn visiting_notes_in_turn_only_allows_going_back() {
+        let mut stack = BackForwardStack::default();
+        stack.visit("a.tmt".into());
+        stack.visit("b.tmt".into());
+        stack.visit("c.tmt".into());
+
+        assert!(stack.can_back());
+        assert!(!stack.can_forward());
+        assert_eq!(stack.peek_back(), Some("b.tmt"));
+    }
+
+    #[test]
+    fn revisiting_the_current_note_does_not_duplicate_it() {
+        let mut stack = BackForwardStack::default();
+        stack.visit("a.tmt".into());
+        stack.visit("a.tmt".into());
+
+        assert!(!stack.can_back());
+    }
+
+    #[test]
+    fn stepping_back_then_forward_returns_to_where_it_started() {
+        let mut stack = BackForwardStack::default();
+        stack.visit("a.tmt".into());
+        stack.visit("b.tmt".into());
+
+        assert_eq!(stack.step_back(|_| true), Some("a.tmt".to_string()));
+        assert!(!stack.can_back());
+        assert!(stack.can_forward());
+        assert_eq!(stack.peek_forward(), Some("b.tmt"));
+
+        assert_eq!(stack.step_forward(|_| true), Some("b.tmt".to_string()));
+        assert!(stack.can_back());
+        assert!(!stack.can_forward());
+    }
+
+    #[test]
+    fn visiting_a_new_note_after_going_back_drops_the_abandoned_forward_branch() {
+        let mut stack = BackForwardStack::default();
+        stack.visit("a.tmt".into());
+        stack.visit("b.tmt".into());
+        stack.step_back(|_| true); // back to a.tmt, b.tmt still reachable forward
+
+        stack.visit("c.tmt".into());
+
+        assert!(!stack.can_forward());
+        assert_eq!(stack.step_back(|_| true), Some("a.tmt".to_string()));
+    }
+
+    #[test]
+    fn stepping_back_skips_and_drops_entries_that_are_no_longer_live() {
+        let mut stack = BackForwardStack::default();
+        stack.visit("a.tmt".into());
+        stack.visit("b.tmt".into()); // renamed/deleted by the time we step back
+        stack.visit("c.tmt".into());
+
+        let is_live = |p: &str| p != "b.tmt";
+        assert_eq!(stack.step_back(is_live), Some("a.tmt".to_string()));
+        // b.tmt was pruned on the way past (not just skipped) -- c.tmt is
+        // still a legitimately-visited note, so it's still reachable
+        // going forward from here, just one slot closer now.
+        assert!(stack.can_forward());
+        assert_eq!(stack.peek_forward(), Some("c.tmt"));
+    }
+
+    #[test]
+    fn stepping_forward_skips_and_drops_entries_that_are_no_longer_live() {
+        let mut stack = BackForwardStack::default();
+        stack.visit("a.tmt".into());
+        stack.visit("b.tmt".into());
+        stack.visit("c.tmt".into());
+        stack.step_back(|_| true);
+        stack.step_back(|_| true); // now at a.tmt, b.tmt and c.tmt ahead
+
+        let is_live = |p: &str| p != "b.tmt";
+        assert_eq!(stack.step_forward(is_live), Some("c.tmt".to_string()));
+        assert!(!stack.can_forward());
+    }
+
+    #[test]
+    fn stepping_back_with_nothing_live_leaves_the_stack_empty() {
+        let mut stack = BackForwardStack::default();
+        stack.visit("a.tmt".into());
+        stack.visit("b.tmt".into());
+
+        assert_eq!(stack.step_back(|_| false), None);
+        assert!(!stack.can_back());
+        assert!(!stack.can_forward());
+    }
+
+    #[test]
+    fn clear_resets_to_a_fresh_stack() {
+        let mut stack = BackForwardStack::default();
+        stack.visit("a.tmt".into());
+        stack.visit("b.tmt".into());
+
+        stack.clear();
+
+        assert!(!stack.can_back());
+        assert!(!stack.can_forward());
+        assert_eq!(stack.peek_back(), None);
     }
 }

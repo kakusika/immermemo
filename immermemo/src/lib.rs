@@ -141,6 +141,7 @@ pub fn run(
         last_synced_at: None,
         current_folder: String::new(),
         directory_source: Vec::new(),
+        note_nav: session::BackForwardStack::default(),
     }));
 
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
@@ -295,6 +296,15 @@ pub fn run(
                 .and_then(History::redo);
             apply_restored(&weak.unwrap(), &session, restored);
         }
+    });
+
+    app.on_navigate_back({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || session::navigate_back(&weak.unwrap(), &session)
+    });
+    app.on_navigate_forward({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || session::navigate_forward(&weak.unwrap(), &session)
     });
 
     app.on_open_settings({
@@ -892,6 +902,7 @@ mod tests {
             last_synced_at: None,
             current_folder: String::new(),
             directory_source: Vec::new(),
+            note_nav: session::BackForwardStack::default(),
         }));
 
         app.set_current_has_conflict(true);
