@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, Icons } from "@origami-icons/icons.slint";
+import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import {
     BubbleButton,
     TopBar,
@@ -27,7 +27,7 @@ export component VaultHistorySheet inherits Rectangle {
             inset-top: root.inset-top;
 
             BubbleButton {
-                icon: Icons.chevron-left;
+                icon: TablerIcons.chevron-left;
                 clicked => { root.close(); }
             }
 
@@ -43,7 +43,7 @@ export component VaultHistorySheet inherits Rectangle {
             }
 
             BubbleButton {
-                icon: Icons.x;
+                icon: TablerIcons.x;
                 clicked => { root.close(); }
             }
         }
@@ -101,7 +101,7 @@ export component VaultHistorySheet inherits Rectangle {
                         VerticalLayout {
                             alignment: center;
                             Icon {
-                                source: Icons.check;
+                                source: TablerIcons.check;
                                 color: Colors.success;
                                 width: 16px;
                                 height: 16px;

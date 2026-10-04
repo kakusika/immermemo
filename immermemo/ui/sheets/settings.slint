@@ -1,6 +1,6 @@
 import { Palette, LineEdit, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, Icons } from "@origami-icons/icons.slint";
+import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import {
     IconButton,
     TopBar,
@@ -50,7 +50,7 @@ component CategoryRow inherits Rectangle {
         VerticalLayout {
             alignment: center;
             Icon {
-                source: Icons.chevron-right;
+                source: TablerIcons.chevron-right;
                 width: Metrics.icon-sm;
                 height: Metrics.icon-sm;
                 color: Colors.muted;
@@ -114,11 +114,11 @@ export component SettingsSheet inherits Rectangle {
             bar-background: transparent;
 
             if root.page != 0: IconButton {
-                icon: Icons.chevron-left;
+                icon: TablerIcons.chevron-left;
                 clicked => { root.page = 0; }
             }
             if root.page == 0 && root.show-back: IconButton {
-                icon: Icons.chevron-left;
+                icon: TablerIcons.chevron-left;
                 clicked => { root.close(); }
             }
 
@@ -162,7 +162,7 @@ export component SettingsSheet inherits Rectangle {
                         padding: 4px;
 
                         CategoryRow {
-                            icon: Icons.settings;
+                            icon: TablerIcons.settings;
                             label-text: @tr("Interface");
                             clicked => { root.page = 1; }
                         }
@@ -188,7 +188,7 @@ export component SettingsSheet inherits Rectangle {
                             padding: 4px;
 
                             CategoryRow {
-                                icon: Icons.cloud;
+                                icon: TablerIcons.cloud;
                                 label-text: @tr("Sync & Remote");
                                 clicked => { root.page = 2; }
                             }
@@ -199,7 +199,7 @@ export component SettingsSheet inherits Rectangle {
                             }
 
                             CategoryRow {
-                                icon: Icons.files;
+                                icon: TablerIcons.files;
                                 label-text: @tr("Vaults");
                                 clicked => { root.page = 3; }
                             }
@@ -226,7 +226,7 @@ export component SettingsSheet inherits Rectangle {
                             padding: 4px;
 
                             CategoryRow {
-                                icon: Icons.info-circle;
+                                icon: TablerIcons.info-circle;
                                 label-text: @tr("About");
                                 clicked => { root.page = 4; }
                             }

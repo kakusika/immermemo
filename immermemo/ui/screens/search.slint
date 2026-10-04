@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, Icons } from "@origami-icons/icons.slint";
+import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import { TopBar, AppScrollView } from "@origami-mobile/components.slint";
 
 export component SearchScreen inherits Rectangle {
@@ -44,7 +44,7 @@ export component SearchScreen inherits Rectangle {
                             alignment: center;
 
                             Icon {
-                                source: Icons.search;
+                                source: TablerIcons.search;
                                 color: Colors.muted;
                                 width: Metrics.icon-md;
                                 height: Metrics.icon-md;
@@ -92,7 +92,7 @@ export component SearchScreen inherits Rectangle {
                                 background: clear_btn.pressed ? Palette.foreground.with-alpha(0.12) : transparent;
 
                                 Icon {
-                                    source: Icons.x;
+                                    source: TablerIcons.x;
                                     color: Colors.muted;
                                     width: Metrics.icon-sm;
                                     height: Metrics.icon-sm;
@@ -126,7 +126,7 @@ export component SearchScreen inherits Rectangle {
                 spacing: Metrics.spacing-md;
 
                 Icon {
-                    source: Icons.search;
+                    source: TablerIcons.search;
                     color: Colors.muted;
                     width: Metrics.icon-xl;
                     height: Metrics.icon-xl;
@@ -150,7 +150,7 @@ export component SearchScreen inherits Rectangle {
                 spacing: Metrics.spacing-sm;
 
                 Icon {
-                    source: Icons.search;
+                    source: TablerIcons.search;
                     color: Colors.muted.with-alpha(0.4);
                     width: Metrics.icon-xl;
                     height: Metrics.icon-xl;

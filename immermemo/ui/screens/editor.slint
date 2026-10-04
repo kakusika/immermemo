@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, Icons } from "@origami-icons/icons.slint";
+import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import {
     IconButton,
     BubbleButton,
@@ -181,7 +181,7 @@ export component EditorScreen inherits Rectangle {
 
                 // Down chevron button to collapse sheet into mini-player
                 BubbleButton {
-                    icon: Icons.chevron-down;
+                    icon: TablerIcons.chevron-down;
                     clicked => { root.collapse(); }
                 }
 
@@ -191,10 +191,10 @@ export component EditorScreen inherits Rectangle {
 
                 // Sync status button: check when synced, alert on error, spinner while syncing, cloud when idle
                 if root.remote-configured: BubbleButton {
-                    icon: root.syncing ? Icons.refresh
-                        : root.status-is-error ? Icons.alert-triangle
-                        : root.status != "" ? Icons.check
-                        : Icons.cloud;
+                    icon: root.syncing ? TablerIcons.refresh
+                        : root.status-is-error ? TablerIcons.alert-triangle
+                        : root.status != "" ? TablerIcons.check
+                        : TablerIcons.cloud;
                     tint: root.syncing ? Palette.accent-background
                         : root.status-is-error ? Colors.danger
                         : root.status != "" ? Colors.muted
@@ -205,7 +205,7 @@ export component EditorScreen inherits Rectangle {
 
                 // Version history button
                 if root.has-note: BubbleButton {
-                    icon: Icons.history;
+                    icon: TablerIcons.history;
                     clicked => { root.open-history(); }
                 }
 
@@ -323,7 +323,7 @@ export component EditorScreen inherits Rectangle {
                         }
 
                         IconButton {
-                            icon: Icons.x;
+                            icon: TablerIcons.x;
                             tint: Colors.danger;
                             clicked => { root.dismiss-status(); }
                         }
@@ -562,7 +562,7 @@ export component EditorScreen inherits Rectangle {
             // `root.sheet-y-offset`) -- a child outside this surface
             // would stay fully visible even while the sheet is collapsed
             // into the mini-card. Can't reuse origami-mobile's `Fab`
-            // directly: its icon is hardcoded to `Icons.plus`, not a
+            // directly: its icon is hardcoded to `TablerIcons.plus`, not a
             // parameter, so this matches its visual recipe (size,
             // shape, color, shadow) by hand instead.
             if root.has-note: Rectangle {
@@ -577,7 +577,7 @@ export component EditorScreen inherits Rectangle {
                 drop-shadow-color: #00000055;
 
                 Icon {
-                    source: root.edit-mode ? Icons.check : Icons.note;
+                    source: root.edit-mode ? TablerIcons.check : TablerIcons.note;
                     color: Palette.accent-foreground;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;

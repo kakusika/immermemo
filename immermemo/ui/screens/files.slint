@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, Icons } from "@origami-icons/icons.slint";
+import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import {
     BubbleButton,
     IconButton,
@@ -201,7 +201,7 @@ component DirectoryBreadcrumb inherits HorizontalLayout {
         if i > 0: VerticalLayout {
             alignment: center;
             Icon {
-                source: Icons.chevron-right;
+                source: TablerIcons.chevron-right;
                 width: Metrics.icon-sm;
                 height: Metrics.icon-sm;
                 color: Colors.muted;
@@ -217,7 +217,7 @@ component DirectoryBreadcrumb inherits HorizontalLayout {
                 alignment: center;
 
                 if seg.key == "": Icon {
-                    source: Icons.home;
+                    source: TablerIcons.home;
                     width: Metrics.icon-sm;
                     height: Metrics.icon-sm;
                     color: crumb-touch.pressed ? Palette.foreground : Colors.muted;
@@ -275,7 +275,7 @@ export component FilesScreen inherits Rectangle {
             bar-background: transparent;
 
             if root.page != 0: IconButton {
-                icon: Icons.x;
+                icon: TablerIcons.x;
                 clicked => { root.page = 0; }
             }
 
@@ -290,7 +290,7 @@ export component FilesScreen inherits Rectangle {
             }
 
             BubbleButton {
-                icon: Icons.refresh;
+                icon: TablerIcons.refresh;
                 enabled: !root.syncing;
                 tint: root.syncing ? Palette.accent-background : Palette.foreground;
                 clicked => { root.sync(); }
@@ -312,7 +312,7 @@ export component FilesScreen inherits Rectangle {
                 spacing: Metrics.spacing-sm;
 
                 LibrarySectionTile {
-                    icon: Icons.folder;
+                    icon: TablerIcons.folder;
                     label-text: @tr("Directory");
                     clicked => { root.page = 1; }
                 }
@@ -321,7 +321,7 @@ export component FilesScreen inherits Rectangle {
                 // (hamburger) stands in until this has a real
                 // implementation to design a look for.
                 LibrarySectionTile {
-                    icon: Icons.menu-2;
+                    icon: TablerIcons.menu-2;
                     label-text: @tr("List");
                     enabled: false;
                 }
@@ -333,7 +333,7 @@ export component FilesScreen inherits Rectangle {
                 // No diary/calendar icon exists either -- same
                 // placeholder situation as List, above.
                 LibrarySectionTile {
-                    icon: Icons.file;
+                    icon: TablerIcons.file;
                     label-text: @tr("Diary");
                     enabled: false;
                 }
@@ -371,7 +371,7 @@ export component FilesScreen inherits Rectangle {
                 alignment: center;
                 spacing: Metrics.spacing-md;
                 Icon {
-                    source: Icons.files;
+                    source: TablerIcons.files;
                     color: Colors.muted.with-alpha(0.5);
                     width: Metrics.icon-xl;
                     height: Metrics.icon-xl;
@@ -428,7 +428,7 @@ export component FilesScreen inherits Rectangle {
                             if entry.is-folder: VerticalLayout {
                                 alignment: center;
                                 Icon {
-                                    source: Icons.folder;
+                                    source: TablerIcons.folder;
                                     width: Metrics.icon-sm;
                                     height: Metrics.icon-sm;
                                     color: Colors.muted;
@@ -464,7 +464,7 @@ export component FilesScreen inherits Rectangle {
                             if entry.is-folder: VerticalLayout {
                                 alignment: center;
                                 Icon {
-                                    source: Icons.chevron-right;
+                                    source: TablerIcons.chevron-right;
                                     width: Metrics.icon-sm;
                                     height: Metrics.icon-sm;
                                     color: Colors.muted;
@@ -516,7 +516,7 @@ export component FilesScreen inherits Rectangle {
                     for entry[i] in root.folder-entries: DirectoryGridTile {
                         row: i / 3;
                         col: Math.mod(i, 3);
-                        icon: entry.is-folder ? Icons.folder : Icons.file;
+                        icon: entry.is-folder ? TablerIcons.folder : TablerIcons.file;
                         label-text: entry.display;
                         is-folder: entry.is-folder;
                         has-conflict: entry.has-conflict;

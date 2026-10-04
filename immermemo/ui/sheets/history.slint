@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, Icons } from "@origami-icons/icons.slint";
+import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import {
     BubbleButton,
     TopBar,
@@ -33,12 +33,12 @@ export component HistorySheet inherits Rectangle {
             inset-top: root.inset-top;
 
             if root.viewing-preview && !root.is-wide: BubbleButton {
-                icon: Icons.chevron-left;
+                icon: TablerIcons.chevron-left;
                 clicked => { root.viewing-preview = false; }
             }
 
             if !root.viewing-preview || root.is-wide: BubbleButton {
-                icon: Icons.chevron-left;
+                icon: TablerIcons.chevron-left;
                 clicked => { root.close(); }
             }
 
@@ -56,7 +56,7 @@ export component HistorySheet inherits Rectangle {
             }
 
             BubbleButton {
-                icon: Icons.x;
+                icon: TablerIcons.x;
                 clicked => { root.close(); }
             }
         }
@@ -128,7 +128,7 @@ export component HistorySheet inherits Rectangle {
                         VerticalLayout {
                             alignment: center;
                             Icon {
-                                source: Icons.history;
+                                source: TablerIcons.history;
                                 color: root.selected-index == i ? Palette.accent-background : Colors.muted;
                                 width: 16px;
                                 height: 16px;
@@ -159,7 +159,7 @@ export component HistorySheet inherits Rectangle {
                         VerticalLayout {
                             alignment: center;
                             Icon {
-                                source: Icons.chevron-right;
+                                source: TablerIcons.chevron-right;
                                 color: Colors.muted.with-alpha(0.5);
                                 width: 12px;
                                 height: 12px;
@@ -194,7 +194,7 @@ export component HistorySheet inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         Icon {
-                            source: Icons.history;
+                            source: TablerIcons.history;
                             color: Palette.accent-background;
                             width: 16px;
                             height: 16px;
@@ -265,7 +265,7 @@ export component HistorySheet inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         Icon {
-                            source: Icons.arrow-back-up;
+                            source: TablerIcons.arrow-back-up;
                             color: Palette.accent-foreground;
                             width: 18px;
                             height: 18px;
@@ -372,7 +372,7 @@ export component HistorySheet inherits Rectangle {
                             VerticalLayout {
                                 alignment: center;
                                 Icon {
-                                    source: Icons.arrow-back-up;
+                                    source: TablerIcons.arrow-back-up;
                                     color: Palette.accent-foreground;
                                     width: 16px;
                                     height: 16px;

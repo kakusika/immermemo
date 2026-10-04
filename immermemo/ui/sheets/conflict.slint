@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, Icons } from "@origami-icons/icons.slint";
+import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import {
     IconButton,
     BubbleButton,
@@ -84,7 +84,7 @@ export component ConflictSheet inherits Rectangle {
                 }
 
                 IconButton {
-                    icon: Icons.x;
+                    icon: TablerIcons.x;
                     tint: Palette.foreground.with-alpha(0.6);
                     clicked => { root.close(); }
                 }

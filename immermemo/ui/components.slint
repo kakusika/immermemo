@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, Icons } from "@origami-icons/icons.slint";
+import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import { BubbleButton } from "@origami-mobile/components.slint";
 
 component NavItem inherits Rectangle {
@@ -145,7 +145,7 @@ export component MiniNoteCard inherits Rectangle {
                     : Palette.accent-background.with-alpha(0.18);
 
                 Icon {
-                    source: root.has-conflict ? Icons.alert-triangle : Icons.note;
+                    source: root.has-conflict ? TablerIcons.alert-triangle : TablerIcons.note;
                     color: root.has-conflict ? Colors.warning : Palette.accent-background;
                     width: Metrics.icon-md;
                     height: Metrics.icon-md;
@@ -189,10 +189,10 @@ export component MiniNoteCard inherits Rectangle {
             alignment: center;
 
             BubbleButton {
-                icon: root.syncing ? Icons.refresh
-                    : root.status-is-error ? Icons.alert-triangle
-                    : root.status != "" ? Icons.check
-                    : Icons.cloud;
+                icon: root.syncing ? TablerIcons.refresh
+                    : root.status-is-error ? TablerIcons.alert-triangle
+                    : root.status != "" ? TablerIcons.check
+                    : TablerIcons.cloud;
                 tint: root.syncing ? Palette.accent-background
                     : root.status-is-error ? Colors.danger
                     : root.status != "" ? Colors.muted
@@ -228,7 +228,7 @@ export component BottomNavBar inherits Rectangle {
         spacing: 0px;
 
         NavItem {
-            icon: Icons.home;
+            icon: TablerIcons.home;
             label: @tr("Home");
             active: root.active-tab == 0;
             clicked => {
@@ -238,7 +238,7 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: Icons.files;
+            icon: TablerIcons.files;
             label: @tr("Library");
             active: root.active-tab == 1;
             badge-count: root.conflict-count;
@@ -249,7 +249,7 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: Icons.search;
+            icon: TablerIcons.search;
             label: @tr("Search");
             active: root.active-tab == 2;
             clicked => {
@@ -259,7 +259,7 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: Icons.info-circle;
+            icon: TablerIcons.info-circle;
             label: @tr("Properties");
             active: root.active-tab == 3;
             clicked => {
@@ -269,7 +269,7 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: Icons.settings;
+            icon: TablerIcons.settings;
             label: @tr("Settings");
             active: root.active-tab == 4;
             clicked => {

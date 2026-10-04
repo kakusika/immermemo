@@ -1,6 +1,6 @@
 import { Palette, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, Icons } from "@origami-icons/icons.slint";
+import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import {
     BubbleButton,
     TopBar,
@@ -95,7 +95,7 @@ export component HomeScreen inherits Rectangle {
             }
 
             BubbleButton {
-                icon: Icons.refresh;
+                icon: TablerIcons.refresh;
                 tint: root.syncing ? Palette.accent-background : Palette.foreground;
                 enabled: !root.syncing;
                 clicked => { root.sync(); }
@@ -156,7 +156,7 @@ export component HomeScreen inherits Rectangle {
                             }
 
                             BubbleButton {
-                                icon: Icons.files;
+                                icon: TablerIcons.files;
                                 clicked => { root.open-vaults(); }
                             }
                         }
@@ -244,7 +244,7 @@ export component HomeScreen inherits Rectangle {
                                 }
 
                                 Icon {
-                                    source: Icons.history;
+                                    source: TablerIcons.history;
                                     width: Metrics.icon-sm;
                                     height: Metrics.icon-sm;
                                     color: Colors.muted;
@@ -274,7 +274,7 @@ export component HomeScreen inherits Rectangle {
                                     Icon {
                                         width: Metrics.icon-md;
                                         height: Metrics.icon-md;
-                                        source: Icons.x;
+                                        source: TablerIcons.x;
                                         color: Colors.danger;
                                     }
                                 }
@@ -304,7 +304,7 @@ export component HomeScreen inherits Rectangle {
                                         Icon {
                                             width: Metrics.icon-sm;
                                             height: Metrics.icon-sm;
-                                            source: Icons.x;
+                                            source: TablerIcons.x;
                                             color: Colors.muted;
                                             x: (parent.width - self.width) / 2;
                                             y: (parent.height - self.height) / 2;
@@ -362,7 +362,7 @@ export component HomeScreen inherits Rectangle {
                                             Icon {
                                                 width: Metrics.icon-sm;
                                                 height: Metrics.icon-sm;
-                                                source: root.sync-error-copied ? Icons.check : Icons.copy;
+                                                source: root.sync-error-copied ? TablerIcons.check : TablerIcons.copy;
                                                 color: root.sync-error-copied ? Colors.success : Palette.foreground;
                                             }
                                         }
@@ -398,7 +398,7 @@ export component HomeScreen inherits Rectangle {
                                             Icon {
                                                 width: Metrics.icon-sm;
                                                 height: Metrics.icon-sm;
-                                                source: Icons.refresh;
+                                                source: TablerIcons.refresh;
                                                 color: #ffffff;
                                             }
                                         }
@@ -433,7 +433,7 @@ export component HomeScreen inherits Rectangle {
                                     Icon {
                                         width: Metrics.icon-lg;
                                         height: Metrics.icon-lg;
-                                        source: Icons.link;
+                                        source: TablerIcons.link;
                                         color: Colors.muted;
                                     }
                                 }
@@ -491,7 +491,7 @@ export component HomeScreen inherits Rectangle {
                                     Icon {
                                         width: Metrics.icon-md;
                                         height: Metrics.icon-md;
-                                        source: root.syncing ? Icons.refresh : Icons.check;
+                                        source: root.syncing ? TablerIcons.refresh : TablerIcons.check;
                                         color: root.syncing ? Palette.accent-background : Colors.success;
                                     }
                                 }
@@ -539,7 +539,7 @@ export component HomeScreen inherits Rectangle {
                                                 Icon {
                                                     width: Metrics.icon-sm;
                                                     height: Metrics.icon-sm;
-                                                    source: Icons.refresh;
+                                                    source: TablerIcons.refresh;
                                                     color: root.syncing ? Colors.muted : Palette.foreground;
                                                 }
                                             }
@@ -638,7 +638,7 @@ export component HomeScreen inherits Rectangle {
                         spacing: Metrics.spacing-sm;
 
                         QuickActionTile {
-                            icon: Icons.note;
+                            icon: TablerIcons.note;
                             label-text: @tr("New Note");
                             tint: Palette.accent-background;
                             clicked => { root.new-note(); }
