@@ -219,45 +219,10 @@ export component EditorScreen inherits Rectangle {
                 // Overflow menu (rename/delete) -- the Edit/Done toggle
                 // that used to sit here moved to a bottom-right FAB
                 // (below, in body-surface), matching FilesScreen's own
-                // note-add FAB. No dots/kebab icon exists in
-                // origami-icons (checked the full export list), so this
-                // is a plain glyph instead of an Icon -- but still built
-                // to BubbleButton's own recipe (bubble/size/press
-                // feedback, components.slint:59-104) so it reads as the
-                // same kind of header button as its neighbors, not a
-                // bare glyph floating with no background.
-                if root.has-note: Rectangle {
-                    width: Metrics.bubble-button-size;
-                    height: 100%;
-                    min-height: Metrics.touch;
-
-                    menu-bubble := Rectangle {
-                        width: Metrics.bubble-button-size;
-                        height: Metrics.bubble-button-size;
-                        x: (parent.width - self.width) / 2;
-                        y: (parent.height - self.height) / 2;
-                        border-radius: self.width / 2;
-                        background: menu-touch.pressed
-                            ? Palette.foreground.with-alpha(0.16)
-                            : Palette.foreground.with-alpha(0.08);
-                        animate background {
-                            duration: 120ms;
-                            easing: ease-out;
-                        }
-
-                        Text {
-                            text: "⋮";
-                            font-size: Metrics.font-title;
-                            font-weight: 700;
-                            color: Palette.foreground;
-                            x: (parent.width - self.width) / 2;
-                            y: (parent.height - self.height) / 2;
-                        }
-                    }
-
-                    menu-touch := TouchArea {
-                        clicked => { root.note-menu-requested(); }
-                    }
+                // note-add FAB.
+                if root.has-note: BubbleButton {
+                    icon: TablerIcons.dots-vertical;
+                    clicked => { root.note-menu-requested(); }
                 }
             }
         }
@@ -577,7 +542,7 @@ export component EditorScreen inherits Rectangle {
                 drop-shadow-color: #00000055;
 
                 Icon {
-                    source: root.edit-mode ? TablerIcons.check : TablerIcons.note;
+                    source: root.edit-mode ? TablerIcons.check : TablerIcons.pencil;
                     color: Palette.accent-foreground;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;

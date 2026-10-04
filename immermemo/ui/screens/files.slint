@@ -178,12 +178,9 @@ export component FilesScreen inherits Rectangle {
                     clicked => { root.page = 1; }
                 }
 
-                // No list icon exists in origami-icons -- menu-2
-                // (hamburger) stands in until this has a real
-                // implementation to design a look for.
                 IconTile {
                     tile-height: 88px * Metrics.ui-scale;
-                    icon: TablerIcons.menu-2;
+                    icon: TablerIcons.list;
                     label-text: @tr("List");
                     enabled: false;
                 }
@@ -192,11 +189,9 @@ export component FilesScreen inherits Rectangle {
             HorizontalLayout {
                 spacing: Metrics.spacing-sm;
 
-                // No diary/calendar icon exists either -- same
-                // placeholder situation as List, above.
                 IconTile {
                     tile-height: 88px * Metrics.ui-scale;
-                    icon: TablerIcons.file;
+                    icon: TablerIcons.calendar;
                     label-text: @tr("Diary");
                     enabled: false;
                 }
