@@ -40,10 +40,11 @@ android {
             // Same local debug keystore cargo-apk used (see nix/dev.nix's
             // shellHook) -- sideloading onto one's own phone, not for
             // distribution.
-            storeFile = file(
-                System.getenv("CARGO_APK_RELEASE_KEYSTORE")
-                    ?: "${System.getProperty("user.home")}/.android/debug.keystore"
-            )
+            storeFile =
+                file(
+                    System.getenv("CARGO_APK_RELEASE_KEYSTORE")
+                        ?: "${System.getProperty("user.home")}/.android/debug.keystore",
+                )
             storePassword = System.getenv("CARGO_APK_RELEASE_KEYSTORE_PASSWORD") ?: "android"
             keyAlias = "androiddebugkey"
             keyPassword = System.getenv("CARGO_APK_RELEASE_KEYSTORE_PASSWORD") ?: "android"

@@ -22,7 +22,6 @@ const val EXTRA_NOTE_PATH = "note_path"
  * layout can't show a variable-length list.
  */
 class NoteWidgetProvider : AppWidgetProvider() {
-
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -34,9 +33,10 @@ class NoteWidgetProvider : AppWidgetProvider() {
             // `data` must be unique per widget instance -- otherwise Android
             // treats every instance's adapter-connecting Intent as the same
             // one and they'd all end up sharing one `RemoteViewsFactory`.
-            val serviceIntent = Intent(context, NoteWidgetService::class.java).apply {
-                data = Uri.parse("widget://dev.immermemo.app/$appWidgetId")
-            }
+            val serviceIntent =
+                Intent(context, NoteWidgetService::class.java).apply {
+                    data = Uri.parse("widget://dev.immermemo.app/$appWidgetId")
+                }
             views.setRemoteAdapter(R.id.widget_list, serviceIntent)
             views.setEmptyView(R.id.widget_list, R.id.widget_empty)
 
@@ -54,16 +54,18 @@ class NoteWidgetProvider : AppWidgetProvider() {
             // the running app to the foreground as-is -- the stock
             // `NativeActivity` has no `onNewIntent` override to relay a
             // second tap into, and nothing here attempts to fake one.
-            val launchIntent = Intent(Intent.ACTION_VIEW).apply {
-                setClassName(context, "android.app.NativeActivity")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            val launchPendingIntent = PendingIntent.getActivity(
-                context,
-                0,
-                launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
-            )
+            val launchIntent =
+                Intent(Intent.ACTION_VIEW).apply {
+                    setClassName(context, "android.app.NativeActivity")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+            val launchPendingIntent =
+                PendingIntent.getActivity(
+                    context,
+                    0,
+                    launchIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+                )
             views.setPendingIntentTemplate(R.id.widget_list, launchPendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)

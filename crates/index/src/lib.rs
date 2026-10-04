@@ -706,7 +706,10 @@ mod tests {
         for (path, age_secs) in [(&oldest, 2000), (&middle, 1000), (&newest, 0)] {
             std::fs::write(path, "content").unwrap();
             let mtime = SystemTime::now() - std::time::Duration::from_secs(age_secs);
-            std::fs::File::open(path).unwrap().set_modified(mtime).unwrap();
+            std::fs::File::open(path)
+                .unwrap()
+                .set_modified(mtime)
+                .unwrap();
         }
 
         let mut index = NoteIndex::open_in_memory().unwrap();

@@ -46,7 +46,9 @@ pub unsafe fn init_android_widget_bridge(
     let Ok((activity_ref, class_loader_ref)) = (|| -> jni::errors::Result<_> {
         let mut env = vm.attach_current_thread()?;
         let activity = unsafe { jni::objects::JObject::from_raw(activity_ptr.cast()) };
-        let class = env.call_method(&activity, "getClass", "()Ljava/lang/Class;", &[])?.l()?;
+        let class = env
+            .call_method(&activity, "getClass", "()Ljava/lang/Class;", &[])?
+            .l()?;
         let loader = env
             .call_method(&class, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])?
             .l()?;
@@ -69,8 +71,7 @@ pub fn export_recent_notes(_index: &NoteIndex) {
     #[cfg(target_os = "android")]
     {
         let index = _index;
-        let Some((vm, activity_ref, class_loader_ref, snapshot_path)) = ANDROID_APP_VM.get()
-        else {
+        let Some((vm, activity_ref, class_loader_ref, snapshot_path)) = ANDROID_APP_VM.get() else {
             return;
         };
         let notes = match index.list_recent(10) {

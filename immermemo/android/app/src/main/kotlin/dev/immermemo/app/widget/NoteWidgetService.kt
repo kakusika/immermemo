@@ -5,12 +5,11 @@ import android.content.Intent
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import dev.immermemo.app.R
-import java.io.File
 import org.json.JSONArray
+import java.io.File
 
 class NoteWidgetService : RemoteViewsService() {
-    override fun onGetViewFactory(intent: Intent): RemoteViewsFactory =
-        NoteWidgetFactory(applicationContext)
+    override fun onGetViewFactory(intent: Intent): RemoteViewsFactory = NoteWidgetFactory(applicationContext)
 }
 
 /**
@@ -21,8 +20,13 @@ class NoteWidgetService : RemoteViewsService() {
  * re-reading the (small) file each time keeps this honest rather than
  * chasing a staleness bug.
  */
-private class NoteWidgetFactory(private val context: Context) : RemoteViewsService.RemoteViewsFactory {
-    private data class Note(val path: String, val title: String)
+private class NoteWidgetFactory(
+    private val context: Context,
+) : RemoteViewsService.RemoteViewsFactory {
+    private data class Note(
+        val path: String,
+        val title: String,
+    )
 
     private var notes: List<Note> = emptyList()
 
