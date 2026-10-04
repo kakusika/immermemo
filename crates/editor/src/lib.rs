@@ -27,6 +27,7 @@
 
 mod conflicts;
 mod history;
+mod meta_icon;
 mod note_history;
 mod notes;
 mod state;
@@ -37,6 +38,7 @@ pub use conflicts::{
     resolve_conflict_step,
 };
 pub use history::{History, Restored};
+pub use meta_icon::set_note_icon;
 pub use note_history::{RestoredVersion, load_note_history, restore_note_version};
 pub use notes::{
     OpenedNote, RestoredNote, apply_restored, first_conflicted_note_index,

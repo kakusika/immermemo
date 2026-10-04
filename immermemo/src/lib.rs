@@ -21,10 +21,11 @@ pub use immermemo_vault::credentials::{TokenStore, TokenStoreFactory};
 use immermemo_vault::notes;
 
 use session::{
-    SESSION, Session, apply_restored, open_first_conflicted_note, open_initial_or_last_note,
-    open_note, open_note_by_rel_path, refresh_list, refresh_vault_list, resolve_conflict_step,
-    set_status, show_history_state, start_sync, switch_vault, sync_conflict_sheet_state,
-    update_filtered_list, vault_display_name, vault_path_from_input,
+    SESSION, Session, apply_icon_selection, apply_restored, filter_icon_picker,
+    open_first_conflicted_note, open_icon_picker, open_initial_or_last_note, open_note,
+    open_note_by_rel_path, refresh_list, refresh_vault_list, resolve_conflict_step, set_status,
+    show_history_state, start_sync, switch_vault, sync_conflict_sheet_state, update_filtered_list,
+    vault_display_name, vault_path_from_input,
 };
 
 slint::include_modules!();
@@ -133,6 +134,7 @@ pub fn run(
         filtered_results: Vec::new(),
         editor: immermemo_editor::EditorState::default(),
         rename_target: None,
+        icon_picker_target: None,
         delete_target: None,
         delete_vault_target: None,
         pending_auto_sync: false,
@@ -415,6 +417,34 @@ pub fn run(
                 }
                 Err(e) => set_status(&app, format!("Could not rename the note: {e}")),
             }
+        }
+    });
+
+    app.on_icon_requested({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |ui_index| {
+            let app = weak.unwrap();
+            let s = session.borrow();
+            let Some(res) = s.filtered_results.get(ui_index as usize) else {
+                return;
+            };
+            let note_index = res.note_index;
+            drop(s);
+            open_icon_picker(&app, &session, note_index);
+        }
+    });
+    app.on_icon_picker_query_changed({
+        let weak = app.as_weak();
+        move |query| {
+            let app = weak.unwrap();
+            filter_icon_picker(&app, &query);
+        }
+    });
+    app.on_icon_picker_select({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |name| {
+            let app = weak.unwrap();
+            apply_icon_selection(&app, &session, &name);
         }
     });
 
@@ -781,6 +811,7 @@ mod tests {
         resolving_the_conflict_clears_the_marker_and_status(&app, &session, &note_path);
         search_filtering_updates_the_notes_and_snippets_models(&app, &session, &vault_dir);
         a_note_s_meta_icon_reaches_its_directory_entry(&app, &session, &vault_dir);
+        icon_picker_selection_saves_and_is_reflected_in_the_note_list(&app, &session, &vault_dir);
         let multi_note_path =
             conflict_sheet_steps_through_and_resolves_every_conflict(&app, &session, &vault_dir);
         sync_error_is_tracked_copied_and_dismissed(&app, &session);
@@ -854,6 +885,7 @@ mod tests {
                 note_history_revisions: Vec::new(),
             },
             rename_target: None,
+        icon_picker_target: None,
             delete_target: None,
             delete_vault_target: None,
             pending_auto_sync: false,
@@ -945,6 +977,71 @@ mod tests {
             .find(|e| e.display == "test")
             .expect("test.tmt (no meta icon) is also in the root folder's entries");
         assert_eq!(unstarred.icon_image.size().width, 0);
+    }
+
+    /// The icon picker's *write* side -- `open_icon_picker` ->
+    /// `filter_icon_picker` -> `apply_icon_selection` -- saves a real
+    /// `@meta{ icon: ... }` onto disk and the index picks it up on the next
+    /// `refresh_list` the same save already triggers. The *read* side
+    /// (`a_note_s_meta_icon_reaches_its_directory_entry` above) only ever
+    /// exercised a hand-written fixture; this is the one place proving a
+    /// picker selection actually produces a body `meta_element` can read
+    /// back, not just that `immermemo_editor::set_note_icon` can in
+    /// isolation (that's `crates/editor`'s own unit tests' job).
+    fn icon_picker_selection_saves_and_is_reflected_in_the_note_list(
+        app: &App,
+        session: &Rc<RefCell<Session>>,
+        vault_dir: &Path,
+    ) {
+        let plain = vault_dir.join("plain.tmt");
+        std::fs::write(&plain, "No icon yet.\n").unwrap();
+        session.borrow_mut().search_query = String::new();
+        refresh_list(app, session);
+
+        let note_index = session
+            .borrow()
+            .notes
+            .iter()
+            .position(|p| *p == plain)
+            .expect("plain.tmt is in Session.notes after refresh_list");
+
+        open_icon_picker(app, session, note_index);
+        assert!(app.get_icon_picker_open());
+        assert!(
+            app.get_icon_picker_results().row_count() > 0,
+            "opening with an empty query should still show a first page of results"
+        );
+
+        filter_icon_picker(app, "star");
+        let results = app.get_icon_picker_results();
+        assert!(results.row_count() > 0, "\"star\" should match at least tabler's own star icon");
+        let star = (0..results.row_count())
+            .map(|i| results.row_data(i).unwrap())
+            .find(|r| r.name == "star")
+            .expect("tabler vendors a plain \"star\" icon");
+        assert!(star.image.size().width > 0);
+
+        apply_icon_selection(app, session, "star");
+        assert!(
+            session.borrow().icon_picker_target.is_none(),
+            "apply_icon_selection should clear the target it consumed"
+        );
+
+        let saved = std::fs::read_to_string(&plain).unwrap();
+        let (identity, _) = immermemo_tomet_render::meta_element(&saved, "icon")
+            .expect("the saved note now has a meta icon entry");
+        assert_eq!(identity.namespace.as_deref(), Some("doc"));
+        assert_eq!(identity.name, "icon");
+
+        // refresh_list already ran inside apply_icon_selection -- the
+        // Directory entries should already reflect it without a further
+        // manual refresh here.
+        let entries = app.get_directory_folder_entries();
+        let row = (0..entries.row_count())
+            .map(|i| entries.row_data(i).unwrap())
+            .find(|e| e.display == "plain")
+            .expect("plain.tmt is still in the root folder's entries");
+        assert!(row.icon_image.size().width > 0);
     }
 
     fn conflict_sheet_steps_through_and_resolves_every_conflict(

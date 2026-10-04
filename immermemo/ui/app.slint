@@ -25,6 +25,8 @@ import { SettingsSheet } from "sheets/settings.slint";
 import { ConflictSheet } from "sheets/conflict.slint";
 import { HistorySheet } from "sheets/history.slint";
 import { VaultHistorySheet } from "sheets/vault_history.slint";
+import { IconPickerSheet, PickerIconEntry } from "sheets/icon_picker.slint";
+export { PickerIconEntry } from "sheets/icon_picker.slint";
 import { TextInputDialog, ConfirmDialog, ActionSheet } from "dialogs.slint";
 
 export component App inherits Window {
@@ -125,6 +127,13 @@ export component App inherits Window {
     callback navigate-directory-folder(string);
     in-out property <bool> rename-open: false;
     in-out property <string> rename-draft;
+    // Sets a note's own `@meta{ icon: @doc.icon(...) }` -- see
+    // `sheets/icon_picker.slint`'s own doc comment and
+    // `immermemo::session::open_icon_picker`. `icon-picker-results` is
+    // Rust-filtered/capped, never all 5000+ vendored icons at once.
+    in-out property <bool> icon-picker-open: false;
+    in-out property <string> icon-picker-query;
+    in property <[PickerIconEntry]> icon-picker-results: [];
     in-out property <bool> delete-confirm-open: false;
     in-out property <bool> delete-vault-confirm-open: false;
     in-out property <bool> vault-sheet-open: false;
@@ -195,6 +204,9 @@ export component App inherits Window {
     callback delete-requested(int);
     callback confirm-rename(string);
     callback confirm-delete();
+    callback icon-requested(int);
+    callback icon-picker-query-changed(string);
+    callback icon-picker-select(string);
     callback open-vault-sheet();
     callback switch-vault(int);
     callback add-vault-requested();
@@ -840,6 +852,15 @@ export component App inherits Window {
             }
 
             ActionRow {
+                text: @tr("Set Icon");
+                clicked => {
+                    let idx = root.note-menu-index;
+                    root.note-menu-index = -1;
+                    root.icon-requested(idx);
+                }
+            }
+
+            ActionRow {
                 text: @tr("Delete");
                 tint: Colors.danger;
                 clicked => {
@@ -892,6 +913,21 @@ export component App inherits Window {
             close => { root.vault-sheet-open = false; }
             delete-requested(i) => { root.delete-vault-requested(i); }
             trigger-haptic => { root.trigger-haptic(); }
+        }
+
+        if root.icon-picker-open: IconPickerSheet {
+            width: 100%;
+            height: 100%;
+            query <=> root.icon-picker-query;
+            results: root.icon-picker-results;
+            inset-top: root.inset-top;
+            inset-bottom: root.inset-bottom;
+            query-changed(text) => { root.icon-picker-query-changed(text); }
+            select(name) => {
+                root.icon-picker-open = false;
+                root.icon-picker-select(name);
+            }
+            close => { root.icon-picker-open = false; }
         }
 
         if root.delete-vault-confirm-open: ConfirmDialog {

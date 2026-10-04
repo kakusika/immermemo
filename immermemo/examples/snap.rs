@@ -418,6 +418,29 @@ fn main() {
     render(&window, size, &format!("{prefix}-rename.ppm"));
     app.set_rename_open(false);
 
+    // Icon picker -- real resolved images (origami_icons::icon_svg), not
+    // blank placeholders, so a layout bug in the grid itself would
+    // actually show up here.
+    let picker_names = ["star", "flag", "heart", "home", "bell", "bookmark"];
+    app.set_icon_picker_results(ModelRc::new(VecModel::from(
+        picker_names
+            .iter()
+            .map(|&name| {
+                let image = origami_icons::icon_svg("tabler", name)
+                    .and_then(|svg| slint::Image::load_from_svg_data(&svg).ok())
+                    .unwrap_or_default();
+                PickerIconEntry {
+                    name: name.into(),
+                    image,
+                }
+            })
+            .collect::<Vec<_>>(),
+    )));
+    app.set_icon_picker_open(true);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-icon-picker.ppm"));
+    app.set_icon_picker_open(false);
+
     app.set_delete_confirm_open(true);
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-delete-confirm.ppm"));
