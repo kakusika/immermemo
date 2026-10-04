@@ -325,7 +325,8 @@ fn main() {
                 @deck.bookmark(label: しおり)\n\n\
                 続きはここから。\n\n\
                 The @mobile.conflict(mine)slow@mobile.conflict(theirs)lazy@mobile.conflict(end) fox jumps.\n\n\
-                Some @strong[bold] and @em[italic] and @mark[marked] and @strikeout[struck] text, with @ruby[漢字](rt:\"かんじ\") inline.";
+                Some @strong[bold] and @em[italic] and @mark[marked] and @strikeout[struck] text, with @ruby[漢字](rt:\"かんじ\") inline.\n\n\
+                Starred @doc.icon(\"star\") and flagged @doc.icon(\"flag\", pkg:\"tabler\") inline.";
     app.set_body(body.into());
     let max_width = app.get_body_content_width();
     app.set_note_body_items(ModelRc::new(VecModel::from(
@@ -563,6 +564,7 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
             BlockShape::Badge => RenderedBlockShape::Badge,
             BlockShape::Ruby => RenderedBlockShape::Ruby,
             BlockShape::Link => RenderedBlockShape::Link,
+            BlockShape::Icon => RenderedBlockShape::Icon,
         },
         tone: match block.tone {
             Tone::Accent => RenderedBlockTone::Accent,
@@ -575,5 +577,12 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
         mark: block.style.mark,
         strikeout: block.style.strikeout,
         reading: block.reading.clone().into(),
+        icon_image: if block.shape == BlockShape::Icon {
+            origami_icons::icon_svg(&block.reading, &block.text)
+                .and_then(|svg| slint::Image::load_from_svg_data(&svg).ok())
+                .unwrap_or_default()
+        } else {
+            slint::Image::default()
+        },
     }
 }

@@ -63,6 +63,14 @@ pub enum BlockShape {
     /// [`link_look`] is what gives the bare `(None, "link")` identity
     /// this shape.
     Link,
+    /// A `@doc.icon(name, pkg)` -- `text` is `name` (the icon slug within
+    /// its package, e.g. `"star"`), `reading` is `pkg` (e.g. `"tabler"`,
+    /// defaulting to it when absent). Resolving that pair into an actual
+    /// image is a Slint concern ([`crate::render::to_rendered_block`]),
+    /// not this crate's -- this module stays free of `slint`/`origami_icons`
+    /// the same way it stays free of every other UI-framework type.
+    /// [`icon_look`] is what gives `(Some("doc"), "icon")` this shape.
+    Icon,
 }
 
 /// A small, closed palette selector -- not vocabulary-specific, just
@@ -126,7 +134,14 @@ const REGISTRY: &[(Option<&str>, &str, fn(LookInput) -> Look)] = &[
     (Some("mobile"), "conflict", mobile_conflict_look),
     (None, "ruby", ruby_look),
     (None, "link", link_look),
+    (Some("doc"), "icon", icon_look),
 ];
+
+/// The icon package `@doc.icon(name)` resolves against when it omits
+/// `pkg` -- the only one `origami-icons` vendors today (see that crate's
+/// `ui/icons/` -- one subdirectory per package, `tabler` the only one so
+/// far).
+const DEFAULT_ICON_PKG: &str = "tabler";
 
 /// `@mobile.conflict(side)` -- `side` is the one positional arg.
 fn mobile_conflict_look(input: LookInput) -> Look {
@@ -203,6 +218,38 @@ fn link_look(input: LookInput) -> Look {
         tone: Tone::Accent,
         text: input.content.map(str::to_owned).unwrap_or(target),
         secondary_text: String::new(),
+    }
+}
+
+/// `@doc.icon(name, pkg)` -- `name` is positional and required, `pkg` named
+/// and optional (`tomet-semantics`' own `doc.icon` declaration). A
+/// positional arg mixed with named ones lands under the empty-string key
+/// in `tomet`'s AST (confirmed against the real parser, not assumed), so
+/// `@doc.icon("star", pkg: "tabler")` and the `pkg`-less `@doc.icon("star")`
+/// take different [`ElementArgs`] shapes and both need handling here.
+fn icon_look(input: LookInput) -> Look {
+    let (name, pkg) = match input.args {
+        ElementArgs::Positional(name) => (name.clone(), DEFAULT_ICON_PKG.to_owned()),
+        ElementArgs::Named(pairs) => {
+            let name = pairs
+                .iter()
+                .find(|(key, _)| key.is_empty())
+                .map(|(_, value)| value.clone())
+                .unwrap_or_default();
+            let pkg = pairs
+                .iter()
+                .find(|(key, _)| key == "pkg")
+                .map(|(_, value)| value.clone())
+                .unwrap_or_else(|| DEFAULT_ICON_PKG.to_owned());
+            (name, pkg)
+        }
+        ElementArgs::None => (String::new(), DEFAULT_ICON_PKG.to_owned()),
+    };
+    Look {
+        shape: BlockShape::Icon,
+        tone: Tone::Neutral,
+        text: name,
+        secondary_text: pkg,
     }
 }
 
@@ -484,5 +531,23 @@ mod tests {
         assert_eq!(blocks.len(), 1);
         assert_eq!(blocks[0].shape, BlockShape::Link);
         assert_eq!(blocks[0].text, "ref:note");
+    }
+
+    #[test]
+    fn a_doc_icon_block_with_pkg_carries_name_and_pkg() {
+        let blocks = classify_body("@doc.icon(\"star\", pkg: \"tabler\")\n");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].shape, BlockShape::Icon);
+        assert_eq!(blocks[0].text, "star");
+        assert_eq!(blocks[0].reading, "tabler");
+    }
+
+    #[test]
+    fn a_doc_icon_block_without_pkg_defaults_to_tabler() {
+        let blocks = classify_body("@doc.icon(\"star\")\n");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].shape, BlockShape::Icon);
+        assert_eq!(blocks[0].text, "star");
+        assert_eq!(blocks[0].reading, "tabler");
     }
 }

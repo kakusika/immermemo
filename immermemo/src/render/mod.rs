@@ -180,6 +180,7 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
             BlockShape::Badge => RenderedBlockShape::Badge,
             BlockShape::Ruby => RenderedBlockShape::Ruby,
             BlockShape::Link => RenderedBlockShape::Link,
+            BlockShape::Icon => RenderedBlockShape::Icon,
         },
         tone: match block.tone {
             Tone::Accent => RenderedBlockTone::Accent,
@@ -192,7 +193,22 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
         mark: block.style.mark,
         strikeout: block.style.strikeout,
         reading: block.reading.clone().into(),
+        icon_image: if block.shape == BlockShape::Icon {
+            icon_image(&block.text, &block.reading)
+        } else {
+            slint::Image::default()
+        },
     }
+}
+
+/// `pkg`'s `slug` icon as a Slint image, or a blank one if `origami_icons`
+/// doesn't vendor that pair (an unknown/typo'd icon name -- nothing in
+/// `tomet-semantics` validates `@doc.icon`'s `name` against what's actually
+/// vendored, so this has to degrade quietly rather than panic).
+fn icon_image(slug: &str, pkg: &str) -> slint::Image {
+    origami_icons::icon_svg(pkg, slug)
+        .and_then(|svg| slint::Image::load_from_svg_data(&svg).ok())
+        .unwrap_or_default()
 }
 
 // The substantial classification-decision tests (conflict markers,
@@ -225,6 +241,25 @@ pub(crate) mod seam_tests {
         assert_eq!(second.block.shape, RenderedBlockShape::Chip);
         assert_eq!(second.block.tone, RenderedBlockTone::Accent);
         assert_eq!(second.block.text, "Mine");
+    }
+
+    /// `icon_image` is the one field `to_rendered_block` computes instead
+    /// of just converting -- the only thing this needs to prove beyond
+    /// `classify`'s own `icon_look` tests (which stop at the plain-data
+    /// `name`/`pkg`) is that a *vendored* pair actually resolves to a
+    /// non-empty image, and an unvendored one degrades to an empty one
+    /// instead of panicking.
+    pub(crate) fn a_doc_icon_resolves_to_a_real_image_and_an_unknown_one_to_empty(app: &App) {
+        let model = note_body_items("@doc.icon(\"star\")\n", app, 1000.0);
+        assert_eq!(model.row_count(), 1);
+        let item = model.row_data(0).unwrap();
+        assert_eq!(item.block.shape, RenderedBlockShape::Icon);
+        assert!(item.block.icon_image.size().width > 0);
+
+        let model = note_body_items("@doc.icon(\"not-a-real-icon-slug\")\n", app, 1000.0);
+        assert_eq!(model.row_count(), 1);
+        let item = model.row_data(0).unwrap();
+        assert_eq!(item.block.icon_image.size().width, 0);
     }
 
     pub(crate) fn a_wide_inline_conflict_paragraph_flows_onto_one_line(app: &App) {

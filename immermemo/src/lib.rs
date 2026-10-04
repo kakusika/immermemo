@@ -795,6 +795,7 @@ mod tests {
         render::seam_tests::a_narrow_width_wraps_an_inline_conflict_paragraph_onto_several_lines(
             &app,
         );
+        render::seam_tests::a_doc_icon_resolves_to_a_real_image_and_an_unknown_one_to_empty(&app);
     }
 
     fn status_classification_tracks_is_error(app: &App) {

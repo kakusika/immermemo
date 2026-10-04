@@ -1,5 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
+import { Icon } from "@origami-icons/icons.slint";
 
 // What `immermemo-editor`'s `classify_body()` found in one top-level
 // block of the note body, as the editor's view-mode display (see
@@ -24,6 +25,9 @@ export enum RenderedBlockShape {
     // `immermemo_editor::classify::BlockShape::Link`'s doc). Static, same
     // as every other shape here -- not tappable.
     link,
+    // A `@doc.icon(name, pkg)` -- `icon-image` is the resolved image (see
+    // `RenderedBlock.icon-image`'s doc).
+    icon,
 }
 
 export enum RenderedBlockTone {
@@ -49,6 +53,12 @@ export struct RenderedBlock {
     strikeout: bool,
     // The reading annotation, meaningful only for `ruby`. Empty elsewhere.
     reading: string,
+    // The resolved icon, meaningful only for `icon`
+    // (`immermemo::render::to_rendered_block` resolves `@doc.icon`'s
+    // `(name, pkg)` into this via `origami_icons::icon_svg`, since Slint's
+    // own `@image-url()` can only ever resolve a fixed literal per call
+    // site, never a runtime string). Empty elsewhere.
+    icon-image: image,
 }
 
 // Renders one `RenderedBlock` in the editor's view-mode display: plain
@@ -183,6 +193,17 @@ export component RenderedBlockView inherits VerticalLayout {
             width: link-text-item.preferred-width;
             height: 1px;
             background: root.tone-color;
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.icon: HorizontalLayout {
+        alignment: start;
+
+        Icon {
+            source: root.block.icon-image;
+            width: root.text-font-size;
+            height: root.text-font-size;
+            color: Palette.foreground;
         }
     }
 }
