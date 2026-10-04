@@ -221,14 +221,19 @@ fn link_look(input: LookInput) -> Look {
     }
 }
 
-/// `@doc.icon(name, pkg)` -- `name` is positional and required, `pkg` named
-/// and optional (`tomet-semantics`' own `doc.icon` declaration). A
+/// `@doc.icon(name, pkg)`'s `(name, pkg)` -- `name` is positional and
+/// required, `pkg` named and optional (`tomet-semantics`' own `doc.icon`
+/// declaration), defaulting to [`DEFAULT_ICON_PKG`] when absent. A
 /// positional arg mixed with named ones lands under the empty-string key
 /// in `tomet`'s AST (confirmed against the real parser, not assumed), so
 /// `@doc.icon("star", pkg: "tabler")` and the `pkg`-less `@doc.icon("star")`
 /// take different [`ElementArgs`] shapes and both need handling here.
-fn icon_look(input: LookInput) -> Look {
-    let (name, pkg) = match input.args {
+///
+/// `pub(crate)`: `directory`'s note-list icon (`@meta{ icon: @doc.icon(...)
+/// }`) shares this with [`icon_look`]'s body-inline one rather than
+/// re-deriving the same `(name, pkg)` reading twice.
+pub(crate) fn icon_name_pkg(args: &ElementArgs) -> (String, String) {
+    match args {
         ElementArgs::Positional(name) => (name.clone(), DEFAULT_ICON_PKG.to_owned()),
         ElementArgs::Named(pairs) => {
             let name = pairs
@@ -244,13 +249,31 @@ fn icon_look(input: LookInput) -> Look {
             (name, pkg)
         }
         ElementArgs::None => (String::new(), DEFAULT_ICON_PKG.to_owned()),
-    };
+    }
+}
+
+fn icon_look(input: LookInput) -> Look {
+    let (name, pkg) = icon_name_pkg(input.args);
     Look {
         shape: BlockShape::Icon,
         tone: Tone::Neutral,
         text: name,
         secondary_text: pkg,
     }
+}
+
+/// `body`'s `@meta{ icon: @doc.icon(name, pkg) }`, if present -- the same
+/// `(name, pkg)` shape [`icon_name_pkg`] returns for a body-inline
+/// occurrence, so a note's list-row icon and an inline `@doc.icon` in its
+/// own body resolve through the same path downstream
+/// (`super::icon_image`). `None` for no such meta entry, or one whose
+/// value isn't specifically a `(doc, icon)` element (`meta_element`
+/// already filters to "is the value an element at all"; this narrows
+/// further).
+pub(crate) fn note_icon(body: &str) -> Option<(String, String)> {
+    let (identity, args) = immermemo_tomet_render::meta_element(body, "icon")?;
+    (identity.namespace.as_deref() == Some("doc") && identity.name == "icon")
+        .then(|| icon_name_pkg(&args))
 }
 
 /// `None` if `identity` has no [`REGISTRY`] entry -- callers decide the

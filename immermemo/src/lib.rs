@@ -780,6 +780,7 @@ mod tests {
         let (_tmp, session, vault_dir, note_path) = set_up_session_with_one_conflicted_note(&app);
         resolving_the_conflict_clears_the_marker_and_status(&app, &session, &note_path);
         search_filtering_updates_the_notes_and_snippets_models(&app, &session, &vault_dir);
+        a_note_s_meta_icon_reaches_its_directory_entry(&app, &session, &vault_dir);
         let multi_note_path =
             conflict_sheet_steps_through_and_resolves_every_conflict(&app, &session, &vault_dir);
         sync_error_is_tracked_copied_and_dismissed(&app, &session);
@@ -913,6 +914,37 @@ mod tests {
         session.borrow_mut().search_query = "nonexistent".to_string();
         update_filtered_list(app, session);
         assert_eq!(app.get_notes().row_count(), 0);
+    }
+
+    /// `refresh_list` -> `update_filtered_list` -> `refresh_directory_views`
+    /// is the real, full path a note's `@meta{ icon: @doc.icon(...) }`
+    /// travels to reach `app.directory_folder_entries` -- `render::
+    /// seam_tests`' own icon test stops at `to_rendered_block` (a body-
+    /// inline occurrence), so this is the one place proving the *note-list*
+    /// path (`session::to_entry_view`, `NoteIndex::bodies`) actually wires
+    /// up end to end, not just each piece in isolation.
+    fn a_note_s_meta_icon_reaches_its_directory_entry(
+        app: &App,
+        session: &Rc<RefCell<Session>>,
+        vault_dir: &Path,
+    ) {
+        let iconed = vault_dir.join("starred.tmt");
+        std::fs::write(&iconed, "@meta{ icon: @doc.icon(\"star\") }\n\nStarred note.\n").unwrap();
+        session.borrow_mut().search_query = String::new();
+        refresh_list(app, session);
+
+        let entries = app.get_directory_folder_entries();
+        let starred = (0..entries.row_count())
+            .map(|i| entries.row_data(i).unwrap())
+            .find(|e| e.display == "starred")
+            .expect("starred.tmt is in the root folder's entries");
+        assert!(starred.icon_image.size().width > 0);
+
+        let unstarred = (0..entries.row_count())
+            .map(|i| entries.row_data(i).unwrap())
+            .find(|e| e.display == "test")
+            .expect("test.tmt (no meta icon) is also in the root folder's entries");
+        assert_eq!(unstarred.icon_image.size().width, 0);
     }
 
     fn conflict_sheet_steps_through_and_resolves_every_conflict(

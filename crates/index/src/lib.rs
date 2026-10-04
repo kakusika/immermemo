@@ -380,6 +380,29 @@ impl NoteIndex {
         Ok(notes)
     }
 
+    /// Every indexed note's relative path alongside its cached body (the
+    /// same text already stored for FTS search, not a fresh disk read) --
+    /// for a caller that needs to derive something from a note's content
+    /// without paying for a full `reconcile_filesystem` walk. The only
+    /// caller today is `immermemo`'s note-list icon (`@meta{ icon:
+    /// @doc.icon(...) }`): this crate stays a plain path/title/mtime
+    /// cache, so the `.tmt` parsing that reads lives in `immermemo-tomet-render`
+    /// instead, downstream of this.
+    pub fn bodies(&self) -> anyhow::Result<Vec<(PathBuf, String)>> {
+        let mut stmt = self.conn.prepare("SELECT path, body FROM notes")?;
+        let rows = stmt.query_map([], |row| {
+            let path_str: String = row.get(0)?;
+            let body: String = row.get(1)?;
+            Ok((PathBuf::from(path_str), body))
+        })?;
+
+        let mut out = Vec::new();
+        for r in rows {
+            out.push(r?);
+        }
+        Ok(out)
+    }
+
     /// Returns up to `limit` most recently modified notes, newest first.
     pub fn list_recent(&self, limit: usize) -> anyhow::Result<Vec<IndexedNote>> {
         let mut stmt = self.conn.prepare(
@@ -694,6 +717,17 @@ mod tests {
         let notes_after = index.list_all().unwrap();
         assert_eq!(notes_after.len(), 1);
         assert_eq!(notes_after[0].path, PathBuf::from("sub/b.tmt"));
+    }
+
+    #[test]
+    fn bodies_returns_every_note_s_cached_content_by_path() {
+        let vault = TempDir::new().unwrap();
+        std::fs::write(vault.path().join("a.tmt"), "Alpha content").unwrap();
+        let mut index = NoteIndex::open_in_memory().unwrap();
+        index.reconcile_filesystem(vault.path()).unwrap();
+
+        let bodies = index.bodies().unwrap();
+        assert_eq!(bodies, vec![(PathBuf::from("a.tmt"), "Alpha content".to_owned())]);
     }
 
     #[test]

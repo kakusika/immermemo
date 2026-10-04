@@ -21,6 +21,11 @@ export struct DirectoryEntry {
     display: string,
     note-index: int,
     has-conflict: bool,
+    // A note's `@meta{ icon: @doc.icon(...) }`, resolved (see
+    // `immermemo::session::to_entry_view`). Empty for a folder entry, or a
+    // note with no such meta -- `file`/`folder` (TablerIcons) stand in for
+    // either below, same as before this field existed.
+    icon-image: image,
 }
 
 // One tappable segment of the breadcrumb trail above the browsed folder's
@@ -435,6 +440,22 @@ export component FilesScreen inherits Rectangle {
                                 }
                             }
 
+                            // Only when the note actually has a
+                            // `@meta{ icon: @doc.icon(...) }` -- a note
+                            // without one keeps the plain title-only row
+                            // this had before `icon-image` existed, not a
+                            // generic file icon suddenly appearing on
+                            // every row.
+                            if !entry.is-folder && entry.icon-image.width > 0: VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    source: entry.icon-image;
+                                    width: Metrics.icon-sm;
+                                    height: Metrics.icon-sm;
+                                    color: Colors.muted;
+                                }
+                            }
+
                             VerticalLayout {
                                 horizontal-stretch: 1;
                                 alignment: center;
@@ -516,7 +537,9 @@ export component FilesScreen inherits Rectangle {
                     for entry[i] in root.folder-entries: DirectoryGridTile {
                         row: i / 3;
                         col: Math.mod(i, 3);
-                        icon: entry.is-folder ? TablerIcons.folder : TablerIcons.file;
+                        icon: entry.is-folder
+                            ? TablerIcons.folder
+                            : (entry.icon-image.width > 0 ? entry.icon-image : TablerIcons.file);
                         label-text: entry.display;
                         is-folder: entry.is-folder;
                         has-conflict: entry.has-conflict;

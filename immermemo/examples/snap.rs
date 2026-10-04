@@ -141,6 +141,7 @@ fn main() {
                 display: "meeting".into(),
                 note_index: -1,
                 has_conflict: false,
+                icon_image: slint::Image::default(),
             },
             DirectoryEntry {
                 is_folder: true,
@@ -148,6 +149,7 @@ fn main() {
                 display: "ideas".into(),
                 note_index: -1,
                 has_conflict: false,
+                icon_image: slint::Image::default(),
             },
             DirectoryEntry {
                 is_folder: false,
@@ -155,6 +157,7 @@ fn main() {
                 display: "買い物リスト".into(),
                 note_index: 0,
                 has_conflict: false,
+                icon_image: slint::Image::default(),
             },
             DirectoryEntry {
                 is_folder: false,
@@ -162,6 +165,7 @@ fn main() {
                 display: "untitled-1".into(),
                 note_index: 4,
                 has_conflict: false,
+                icon_image: slint::Image::default(),
             },
         ]))
     };
@@ -190,6 +194,7 @@ fn main() {
         display: "2026-09-27".into(),
         note_index: 1,
         has_conflict: true,
+                icon_image: slint::Image::default(),
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(
@@ -218,6 +223,7 @@ fn main() {
         display: "09-27".into(),
         note_index: 1,
         has_conflict: true,
+                icon_image: slint::Image::default(),
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(
@@ -247,6 +253,7 @@ fn main() {
         display: "2026-09-27".into(),
         note_index: 1,
         has_conflict: true,
+                icon_image: slint::Image::default(),
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(

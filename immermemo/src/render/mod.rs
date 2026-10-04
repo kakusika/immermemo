@@ -205,7 +205,12 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
 /// doesn't vendor that pair (an unknown/typo'd icon name -- nothing in
 /// `tomet-semantics` validates `@doc.icon`'s `name` against what's actually
 /// vendored, so this has to degrade quietly rather than panic).
-fn icon_image(slug: &str, pkg: &str) -> slint::Image {
+///
+/// `pub(crate)`: `session`'s note-list icon (`@meta{ icon: @doc.icon(...)
+/// }`, resolved via `classify::note_icon`) shares this with a body-inline
+/// `@doc.icon`'s resolution above, rather than re-deriving the same
+/// svg-bytes-to-`slint::Image` conversion twice.
+pub(crate) fn icon_image(slug: &str, pkg: &str) -> slint::Image {
     origami_icons::icon_svg(pkg, slug)
         .and_then(|svg| slint::Image::load_from_svg_data(&svg).ok())
         .unwrap_or_default()

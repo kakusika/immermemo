@@ -209,10 +209,23 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
         .iter()
         .map(|(title, idx, conflict)| (title.as_str(), *idx, *conflict))
         .collect();
+    // Keyed by absolute path (matching `s.notes`, not the index's own
+    // relative ones) so `to_entry_view` can look a note's icon up by its
+    // `note_index` alone -- see that function's doc.
+    let icon_by_path: std::collections::HashMap<PathBuf, slint::Image> = s
+        .index
+        .bodies()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|(rel_path, body)| {
+            let (name, pkg) = crate::render::classify::note_icon(&body)?;
+            Some((s.vault_dir.join(rel_path), crate::render::icon_image(&name, &pkg)))
+        })
+        .collect();
     let folder_entries: Vec<DirectoryEntry> =
         directory::build_folder_entries(&source, &s.current_folder)
             .into_iter()
-            .map(to_entry_view)
+            .map(|e| to_entry_view(e, &s.notes, &icon_by_path))
             .collect();
     let breadcrumb: Vec<BreadcrumbSegment> = directory::build_breadcrumb(&s.current_folder)
         .into_iter()
@@ -226,13 +239,30 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
     app.set_directory_breadcrumb(ModelRc::new(VecModel::from(breadcrumb)));
 }
 
-fn to_entry_view(e: directory::DirectoryEntry) -> DirectoryEntry {
+/// `notes`/`icon_by_path` resolve `e.note_index` (`-1` for a folder entry)
+/// to its note's `@meta{ icon: @doc.icon(...) }` image, if it has one --
+/// `directory::DirectoryEntry` itself carries no icon (it's
+/// UI-framework-agnostic, same reasoning as `render::classify` staying
+/// free of `slint`/`origami_icons` types), so this seam resolves it the
+/// same way `render::to_rendered_block` resolves a body-inline occurrence.
+fn to_entry_view(
+    e: directory::DirectoryEntry,
+    notes: &[PathBuf],
+    icon_by_path: &std::collections::HashMap<PathBuf, slint::Image>,
+) -> DirectoryEntry {
+    let icon_image = usize::try_from(e.note_index)
+        .ok()
+        .and_then(|i| notes.get(i))
+        .and_then(|path| icon_by_path.get(path))
+        .cloned()
+        .unwrap_or_default();
     DirectoryEntry {
         is_folder: e.is_folder,
         key: e.key.into(),
         display: e.display.into(),
         note_index: e.note_index,
         has_conflict: e.has_conflict,
+        icon_image,
     }
 }
 

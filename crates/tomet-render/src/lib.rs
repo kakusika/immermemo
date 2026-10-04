@@ -307,6 +307,50 @@ pub fn classify_blocks(src: &str) -> Result<Vec<(RenderBlockKind, Vec<RenderItem
     Ok(doc.blocks.iter().flat_map(classify_block_groups).collect())
 }
 
+/// Reads `src`'s top-level `@meta{ ... }` group's `key` entry, if present
+/// *and* its value is itself an element (e.g. `@meta{ icon: @doc.icon(...) }`
+/// -- `tomet`'s `{...}`/`(...)` groups parse uniformly regardless of which
+/// element they belong to, so this isn't `@meta`-specific syntax, just the
+/// one shape a caller resolving a meta value the same way it resolves a
+/// body one needs). Returns the same `(identity, args)` shape
+/// [`RenderItem::Element`] carries, so e.g. an icon-resolving `REGISTRY`
+/// lookup (`immermemo`'s `render::classify`) can share its args-reading
+/// logic between a body occurrence and a meta one instead of duplicating
+/// it. `None` on a parse failure, no top-level `@meta`, no `key` entry, or
+/// a `key` entry whose value isn't an element (a plain string/number/etc.
+/// meta value has no `(namespace, name)` identity to resolve against
+/// anything).
+pub fn meta_element(src: &str, key: &str) -> Option<(ElementIdentity, ElementArgs)> {
+    let doc: Document = tomet_parser::parse_document(src).ok()?;
+    let meta = doc.blocks.iter().find_map(|block| match block {
+        Block::Element(el) => {
+            let Sigil::Named(name) = &el.sigil else {
+                return None;
+            };
+            (name.namespace.is_none() && name.name == "meta").then_some(el)
+        }
+        _ => None,
+    })?;
+    let ElementValue::Group(entries) = meta.value.as_ref()? else {
+        return None;
+    };
+    entries.iter().find_map(|entry| match entry {
+        Entry::Pair(entry_key, Value::Element(el)) if entry_key == key => {
+            let Sigil::Named(name) = &el.sigil else {
+                return None;
+            };
+            Some((
+                ElementIdentity {
+                    namespace: name.namespace.clone(),
+                    name: name.name.clone(),
+                },
+                element_args(el.args.as_ref()),
+            ))
+        }
+        _ => None,
+    })
+}
+
 /// Splits a run of [`Inline`]s into [`RenderItem`]s: a *namespaced*
 /// element or one of [`ATOMIC_BARE_ELEMENTS`] becomes its own
 /// [`RenderItem::Element`], a bare `em`/`strong`/`mark`/`strikeout`
@@ -541,6 +585,28 @@ mod tests {
         let items = classify("Just a plain paragraph.\n");
         assert_eq!(items.len(), 1);
         assert!(matches!(items[0], RenderItem::Text(_, _)));
+    }
+
+    #[test]
+    fn meta_element_reads_an_element_valued_key() {
+        let src = "@meta{ icon: @doc.icon(\"star\", pkg: \"tabler\") }\n\nBody.\n";
+        let (identity, args) = meta_element(src, "icon").expect("icon is a meta entry");
+        assert_eq!(identity.namespace.as_deref(), Some("doc"));
+        assert_eq!(identity.name, "icon");
+        assert_eq!(
+            args,
+            ElementArgs::Named(vec![
+                (String::new(), "star".to_owned()),
+                ("pkg".to_owned(), "tabler".to_owned()),
+            ])
+        );
+    }
+
+    #[test]
+    fn meta_element_is_none_for_a_missing_key_a_non_element_value_or_no_meta_at_all() {
+        assert!(meta_element("@meta{ title: \"x\" }\n", "icon").is_none());
+        assert!(meta_element("@meta{}\n", "icon").is_none());
+        assert!(meta_element("Just a paragraph.\n", "icon").is_none());
     }
 
     #[test]
