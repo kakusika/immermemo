@@ -6,6 +6,7 @@ import {
     TopBar,
     AppScrollView,
 } from "@origami-mobile/components.slint";
+import { SheetDragArea } from "../components.slint";
 
 export component HistorySheet inherits Rectangle {
     in property <bool> open: false;
@@ -22,23 +23,65 @@ export component HistorySheet inherits Rectangle {
 
     property <bool> is-wide: root.width > 680px;
     in-out property <bool> viewing-preview: false;
+    // How far the sheet has animated open and the pixel offset that
+    // follows from it -- same contract as `EditorScreen`'s own
+    // `sheet-progress`/`sheet-y-offset` (see that file's doc comment);
+    // app.slint owns the travel distance and drag state machine.
+    in property <float> sheet-progress: 1.0;
+    in property <length> sheet-y-offset: 0px;
+    callback sheet-drag-moved(length);
+    // dy, average downward px/ms over the drag (0 if timing wasn't captured)
+    callback sheet-drag-swiped(length, float);
+    callback sheet-drag-cancelled();
+    // Each visible AppScrollView mirrors its own `content-y` into one of
+    // these via a two-way alias declared at its own (conditional) site --
+    // a sibling id inside another `if` branch isn't reachable from here,
+    // so the scroll views report through root instead. `mobile-content-y`
+    // is shared because the mobile list/preview branches are mutually
+    // exclusive; wide mode shows both panels at once, so each gets its
+    // own.
+    property <length> mobile-content-y: 0px;
+    property <length> wide-list-content-y: 0px;
+    property <length> wide-preview-content-y: 0px;
+    // Whichever scroll view(s) are actually on screen right now must be
+    // at their own top before a downward drag means "dismiss the sheet"
+    // rather than "scroll up" -- same reasoning as `EditorScreen`'s
+    // `scroll-at-top`. Wide mode shows list and preview side by side, so
+    // both have to agree.
+    property <bool> scroll-at-top: root.commits.length == 0
+        || (!root.is-wide && root.mobile-content-y >= -1px)
+        || (root.is-wide && root.wide-list-content-y >= -1px && root.wide-preview-content-y >= -1px);
 
     background: Colors.page-background;
 
-    VerticalLayout {
-        padding: 0px;
-        spacing: 0px;
+    header-gesture := SheetDragArea {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: root.inset-top + Metrics.bar-height;
+        sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
+        sheet-drag-swiped(dy, v) => { root.sheet-drag-swiped(dy, v); }
+        sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
 
         TopBar {
+            y: root.sheet-y-offset;
+            width: 100%;
+            height: 100%;
             inset-top: root.inset-top;
 
+            // Narrow mode's preview sub-page pops back to the list (one
+            // step), distinct from closing the sheet entirely -- kept as
+            // chevron-left so it doesn't read the same as the close
+            // button below. The swipe-down gesture and this button are
+            // now the only two ways to dismiss the sheet, so there's no
+            // longer a separate close button on the opposite side.
             if root.viewing-preview && !root.is-wide: BubbleButton {
                 icon: TablerIcons.chevron-left;
                 clicked => { root.viewing-preview = false; }
             }
 
             if !root.viewing-preview || root.is-wide: BubbleButton {
-                icon: TablerIcons.chevron-left;
+                icon: TablerIcons.x;
                 clicked => { root.close(); }
             }
 
@@ -54,12 +97,25 @@ export component HistorySheet inherits Rectangle {
                 overflow: elide;
                 color: Palette.foreground;
             }
-
-            BubbleButton {
-                icon: TablerIcons.x;
-                clicked => { root.close(); }
-            }
         }
+    }
+
+    body-gesture := SheetDragArea {
+        x: 0px;
+        y: root.inset-top + Metrics.bar-height;
+        width: 100%;
+        height: root.height - (root.inset-top + Metrics.bar-height) - root.inset-bottom;
+        enabled: root.scroll-at-top;
+        sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
+        sheet-drag-swiped(dy, v) => { root.sheet-drag-swiped(dy, v); }
+        sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
+
+        VerticalLayout {
+        y: root.sheet-y-offset;
+        width: 100%;
+        height: 100%;
+        padding: 0px;
+        spacing: 0px;
 
         Rectangle {
             height: 1px;
@@ -95,6 +151,7 @@ export component HistorySheet inherits Rectangle {
         // Mobile portrait mode: Commit list view
         if root.commits.length > 0 && !root.is-wide && !root.viewing-preview: AppScrollView {
             vertical-stretch: 1;
+            content-y <=> root.mobile-content-y;
 
             VerticalLayout {
                 padding-left: 4px;
@@ -232,6 +289,7 @@ export component HistorySheet inherits Rectangle {
                 clip: true;
 
                 AppScrollView {
+                    content-y <=> root.mobile-content-y;
                     VerticalLayout {
                         padding-left: 6px;
                         padding-right: 6px;
@@ -297,6 +355,7 @@ export component HistorySheet inherits Rectangle {
                 clip: true;
 
                 AppScrollView {
+                    content-y <=> root.wide-list-content-y;
                     VerticalLayout {
                         padding: 6px;
                         spacing: 4px;
@@ -399,6 +458,7 @@ export component HistorySheet inherits Rectangle {
                     clip: true;
 
                     AppScrollView {
+                        content-y <=> root.wide-preview-content-y;
                         VerticalLayout {
                             padding: 8px;
                             Text {
@@ -411,6 +471,7 @@ export component HistorySheet inherits Rectangle {
                     }
                 }
             }
+        }
         }
     }
 }

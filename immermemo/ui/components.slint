@@ -3,6 +3,45 @@ import { Metrics, Colors } from "@origami-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import { BubbleButton } from "@origami-mobile/components.slint";
 
+// A `SwipeGestureHandler` that only recognizes a downward drag and turns
+// its raw `moved`/`swiped`/`cancelled` signals into the (dy,
+// average-downward-px/ms) shape a note-sheet-style "drag down to
+// dismiss" surface wants -- the same conversion `EditorScreen`'s own
+// header/body gesture areas need, and what each full-screen sheet
+// (`VaultSheet`, `HistorySheet`, `VaultHistorySheet`, `IconPickerSheet`)
+// needs too. Wrap whatever should react to the drag as this component's
+// child, same as wrapping it in a plain `SwipeGestureHandler` directly;
+// the caller still owns `x`/`y`/`width`/`height`/`enabled` and decides
+// what `sheet-drag-moved`/`-swiped`/`-cancelled` mean (forward them to
+// the sheet-wide drag/progress state, same as `App`'s
+// `SheetDragState`/`is-dragging-sheet` consumers already do).
+export component SheetDragArea inherits SwipeGestureHandler {
+    handle-swipe-down: true;
+    property <duration> drag-start-time: 0ms;
+    callback sheet-drag-moved(length);
+    // dy, average downward px/ms over the drag (0 if timing wasn't captured)
+    callback sheet-drag-swiped(length, float);
+    callback sheet-drag-cancelled();
+
+    changed pressed-position => {
+        root.drag-start-time = animation-tick();
+    }
+    moved => {
+        if (self.swiping) {
+            let dy = self.current-position.y - self.pressed-position.y;
+            root.sheet-drag-moved(dy);
+        }
+    }
+    swiped => {
+        let dy = self.current-position.y - self.pressed-position.y;
+        let elapsed-ms = max(1.0, (animation-tick() - root.drag-start-time) / 1ms);
+        root.sheet-drag-swiped(dy, (dy / 1px) / elapsed-ms);
+    }
+    cancelled => {
+        root.sheet-drag-cancelled();
+    }
+}
+
 component NavItem inherits Rectangle {
     in property <image> icon;
     in property <string> label;

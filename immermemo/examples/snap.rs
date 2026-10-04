@@ -454,6 +454,7 @@ fn main() {
     )));
     app.set_current_vault(0);
     app.set_vault_sheet_open(true);
+    std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-vaults.ppm"));
     app.set_vault_sheet_open(false);
 

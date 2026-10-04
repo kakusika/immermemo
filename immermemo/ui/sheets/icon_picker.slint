@@ -2,6 +2,7 @@ import { Palette, LineEdit } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origami-icons/icons.slint";
 import { IconButton, TopBar, AppScrollView } from "@origami-mobile/components.slint";
+import { SheetDragArea } from "../components.slint";
 
 // One candidate in the picker's (already filtered, already capped) result
 // list -- `image` is resolved in Rust (`immermemo::render::icon_image`,
@@ -29,14 +30,35 @@ export component IconPickerSheet inherits Rectangle {
     in property <[PickerIconEntry]> results: [];
     in property <length> inset-top: 0px;
     in property <length> inset-bottom: 0px;
+    // How far the sheet has animated open and the pixel offset that
+    // follows from it -- same contract as `EditorScreen`'s own
+    // `sheet-progress`/`sheet-y-offset` (see that file's doc comment);
+    // app.slint owns the travel distance and drag state machine.
+    in property <float> sheet-progress: 1.0;
+    in property <length> sheet-y-offset: 0px;
+    callback sheet-drag-moved(length);
+    // dy, average downward px/ms over the drag (0 if timing wasn't captured)
+    callback sheet-drag-swiped(length, float);
+    callback sheet-drag-cancelled();
     callback query-changed(string);
     callback select(string);
     callback close();
 
     background: Colors.page-background;
 
-    VerticalLayout {
+    header-gesture := SheetDragArea {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: root.inset-top + Metrics.bar-height;
+        sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
+        sheet-drag-swiped(dy, v) => { root.sheet-drag-swiped(dy, v); }
+        sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
+
         TopBar {
+            y: root.sheet-y-offset;
+            width: 100%;
+            height: 100%;
             inset-top: root.inset-top;
             IconButton {
                 icon: TablerIcons.chevron-left;
@@ -51,61 +73,81 @@ export component IconPickerSheet inherits Rectangle {
                 vertical-alignment: center;
             }
         }
+    }
 
-        Rectangle {
-            height: 1px;
-            background: Colors.separator;
-        }
+    body-gesture := SheetDragArea {
+        x: 0px;
+        y: root.inset-top + Metrics.bar-height;
+        width: 100%;
+        height: root.height - (root.inset-top + Metrics.bar-height) - root.inset-bottom;
+        // A search field mid-edit shouldn't have a downward drag misread
+        // as "dismiss the sheet"; same for scrolling away from the top of
+        // the grid (handled below like EditorScreen's `scroll-at-top`).
+        enabled: !search-field.has-focus && results-scroll.content-y >= -1px;
+        sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
+        sheet-drag-swiped(dy, v) => { root.sheet-drag-swiped(dy, v); }
+        sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
 
-        HorizontalLayout {
-            padding: Metrics.gutter;
-            search-field := LineEdit {
-                height: Metrics.touch;
-                placeholder-text: @tr("Search icons");
-                text <=> root.query;
-                edited(text) => { root.query-changed(text); }
+        VerticalLayout {
+            y: root.sheet-y-offset;
+            width: 100%;
+            height: 100%;
+
+            Rectangle {
+                height: 1px;
+                background: Colors.separator;
             }
-        }
 
-        AppScrollView {
-            vertical-stretch: 1;
+            HorizontalLayout {
+                padding: Metrics.gutter;
+                search-field := LineEdit {
+                    height: Metrics.touch;
+                    placeholder-text: @tr("Search icons");
+                    text <=> root.query;
+                    edited(text) => { root.query-changed(text); }
+                }
+            }
 
-            VerticalLayout {
-                padding-left: Metrics.gutter;
-                padding-right: Metrics.gutter;
-                padding-bottom: root.inset-bottom + Metrics.spacing-lg;
+            results-scroll := AppScrollView {
+                vertical-stretch: 1;
 
-                GridLayout {
-                    spacing: Metrics.spacing-sm;
+                VerticalLayout {
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-bottom: root.inset-bottom + Metrics.spacing-lg;
 
-                    for entry[i] in root.results: Rectangle {
-                        row: i / 5;
-                        col: Math.mod(i, 5);
-                        height: Metrics.touch * 1.2;
-                        border-radius: Metrics.radius-lg;
-                        background: icon-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+                    GridLayout {
+                        spacing: Metrics.spacing-sm;
 
-                        VerticalLayout {
-                            alignment: center;
-                            Icon {
-                                source: entry.image;
-                                width: Metrics.icon-md;
-                                height: Metrics.icon-md;
-                                color: Palette.foreground;
+                        for entry[i] in root.results: Rectangle {
+                            row: i / 5;
+                            col: Math.mod(i, 5);
+                            height: Metrics.touch * 1.2;
+                            border-radius: Metrics.radius-lg;
+                            background: icon-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    source: entry.image;
+                                    width: Metrics.icon-md;
+                                    height: Metrics.icon-md;
+                                    color: Palette.foreground;
+                                }
+                            }
+
+                            icon-touch := TouchArea {
+                                clicked => { root.select(entry.name); }
                             }
                         }
-
-                        icon-touch := TouchArea {
-                            clicked => { root.select(entry.name); }
-                        }
                     }
-                }
 
-                if root.results.length == 0: Text {
-                    text: @tr("No icons match");
-                    font-size: Metrics.font-body;
-                    color: Colors.muted;
-                    horizontal-alignment: center;
+                    if root.results.length == 0: Text {
+                        text: @tr("No icons match");
+                        font-size: Metrics.font-body;
+                        color: Colors.muted;
+                        horizontal-alignment: center;
+                    }
                 }
             }
         }

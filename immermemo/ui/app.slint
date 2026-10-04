@@ -29,6 +29,60 @@ import { IconPickerSheet, PickerIconEntry } from "sheets/icon_picker.slint";
 import { TextInputDialog, ConfirmDialog, ActionSheet } from "@origami-mobile/dialogs.slint";
 export { PickerIconEntry } from "sheets/icon_picker.slint";
 
+// Drives one full-screen sheet's "hop up from the bottom, swipe down to
+// dismiss" animation -- the same drag math `App` already runs for the
+// note editor sheet (see its `sheet-drag-moved`/`-swiped`/`-cancelled`
+// handlers below), factored out so each of `VaultSheet`/`HistorySheet`/
+// `VaultHistorySheet`/`IconPickerSheet` can own an independent instance
+// instead of sharing `App`'s own `is-dragging-sheet`/`drag-sheet-progress`
+// (which stay dedicated to the note editor sheet/mini-card, untouched by
+// this). `progress <= 0.60` and the velocity threshold mirror the note
+// sheet's own close/stay-open split exactly.
+component SheetDragState {
+    in property <bool> open: false;
+    in-out property <bool> dragging: false;
+    in-out property <float> progress: 0.0;
+    property <bool> threshold-passed: false;
+    out property <float> sheet-progress: root.dragging
+        ? root.progress
+        : (root.open ? 1.0 : 0.0);
+    animate sheet-progress {
+        duration: root.dragging ? 0ms : 240ms;
+        easing: ease-out;
+    }
+
+    callback close();
+    callback haptic();
+
+    public function moved(dy: length, travel: length) {
+        let downward = max(0px, dy);
+        let p = clamp(1.0 - (downward / travel), 0.0, 1.0);
+        let passed = p <= 0.60;
+        if (passed != root.threshold-passed) {
+            root.threshold-passed = passed;
+            root.haptic();
+        }
+        root.dragging = true;
+        root.progress = p;
+    }
+    public function swiped(dy: length, velocity: float) {
+        let flicked-closed = velocity > 0.6 * Metrics.ui-scale;
+        let should-close = root.progress <= 0.60 || flicked-closed;
+        root.dragging = false;
+        root.threshold-passed = false;
+        if (should-close) {
+            root.close();
+        } else {
+            root.progress = 1.0;
+        }
+    }
+    public function cancelled() {
+        root.dragging = false;
+        root.threshold-passed = false;
+        root.progress = 1.0;
+    }
+}
+
 export component App inherits Window {
     title: "immermemo";
     preferred-width: 960px;
@@ -375,6 +429,30 @@ export component App inherits Window {
     property <bool> is-swiping: false;
     property <length> swipe-dx: 0px;
 
+    // One `SheetDragState` per note-sheet-style full-screen sheet (see
+    // that component's own doc comment) -- independent from each other
+    // and from the note editor sheet's own drag state above.
+    vault-sheet-drag := SheetDragState {
+        open: root.vault-sheet-open;
+        close => { root.vault-sheet-open = false; }
+        haptic => { root.trigger-haptic(); }
+    }
+    icon-picker-drag := SheetDragState {
+        open: root.icon-picker-open;
+        close => { root.icon-picker-open = false; }
+        haptic => { root.trigger-haptic(); }
+    }
+    history-sheet-drag := SheetDragState {
+        open: root.history-sheet-open;
+        close => { root.history-sheet-open = false; }
+        haptic => { root.trigger-haptic(); }
+    }
+    vault-history-drag := SheetDragState {
+        open: root.vault-history-open;
+        close => { root.vault-history-open = false; }
+        haptic => { root.trigger-haptic(); }
+    }
+
     // Main App Layout wrapped in FocusScope for Back gesture & Escape key handling
     root-focus-scope := FocusScope {
         width: 100%;
@@ -619,8 +697,13 @@ export component App inherits Window {
             y: 0px;
             width: 100%;
             height: 100%;
-            background: #000000.with-alpha(0.35 * root.sheet-progress);
-            visible: root.sheet-progress > 0.01;
+            property <float> combined-progress: max(root.sheet-progress, max(
+                vault-sheet-drag.sheet-progress, max(
+                    icon-picker-drag.sheet-progress, max(
+                        history-sheet-drag.sheet-progress,
+                        vault-history-drag.sheet-progress))));
+            background: #000000.with-alpha(0.35 * self.combined-progress);
+            visible: self.combined-progress > 0.01;
         }
 
         // Layer 2: Fullscreen Note Editor Sheet Overlay
@@ -898,36 +981,58 @@ export component App inherits Window {
             cancel => { root.delete-confirm-open = false; }
         }
 
-        if root.vault-sheet-open: VaultSheet {
+        Rectangle {
             width: 100%;
             height: 100%;
-            vaults: root.vaults;
-            current: root.current-vault;
-            inset-top: root.inset-top;
-            inset-bottom: root.inset-bottom;
-            select(i) => {
-                root.vault-sheet-open = false;
-                root.switch-vault(i);
+            visible: vault-sheet-drag.sheet-progress > 0.01;
+
+            VaultSheet {
+                width: 100%;
+                height: 100%;
+                sheet-progress: vault-sheet-drag.sheet-progress;
+                sheet-y-offset: (1.0 - vault-sheet-drag.sheet-progress) * root.height;
+                sheet-drag-moved(dy) => { vault-sheet-drag.moved(dy, max(100px, root.height)); }
+                sheet-drag-swiped(dy, v) => { vault-sheet-drag.swiped(dy, v); }
+                sheet-drag-cancelled => { vault-sheet-drag.cancelled(); }
+                vaults: root.vaults;
+                current: root.current-vault;
+                inset-top: root.inset-top;
+                inset-bottom: root.inset-bottom;
+                select(i) => {
+                    root.vault-sheet-open = false;
+                    root.switch-vault(i);
+                }
+                add => { root.add-vault-requested(); }
+                close => { root.vault-sheet-open = false; }
+                delete-requested(i) => { root.delete-vault-requested(i); }
+                trigger-haptic => { root.trigger-haptic(); }
             }
-            add => { root.add-vault-requested(); }
-            close => { root.vault-sheet-open = false; }
-            delete-requested(i) => { root.delete-vault-requested(i); }
-            trigger-haptic => { root.trigger-haptic(); }
         }
 
-        if root.icon-picker-open: IconPickerSheet {
+        Rectangle {
             width: 100%;
             height: 100%;
-            query <=> root.icon-picker-query;
-            results: root.icon-picker-results;
-            inset-top: root.inset-top;
-            inset-bottom: root.inset-bottom;
-            query-changed(text) => { root.icon-picker-query-changed(text); }
-            select(name) => {
-                root.icon-picker-open = false;
-                root.icon-picker-select(name);
+            visible: icon-picker-drag.sheet-progress > 0.01;
+
+            IconPickerSheet {
+                width: 100%;
+                height: 100%;
+                sheet-progress: icon-picker-drag.sheet-progress;
+                sheet-y-offset: (1.0 - icon-picker-drag.sheet-progress) * root.height;
+                sheet-drag-moved(dy) => { icon-picker-drag.moved(dy, max(100px, root.height)); }
+                sheet-drag-swiped(dy, v) => { icon-picker-drag.swiped(dy, v); }
+                sheet-drag-cancelled => { icon-picker-drag.cancelled(); }
+                query <=> root.icon-picker-query;
+                results: root.icon-picker-results;
+                inset-top: root.inset-top;
+                inset-bottom: root.inset-bottom;
+                query-changed(text) => { root.icon-picker-query-changed(text); }
+                select(name) => {
+                    root.icon-picker-open = false;
+                    root.icon-picker-select(name);
+                }
+                close => { root.icon-picker-open = false; }
             }
-            close => { root.icon-picker-open = false; }
         }
 
         if root.delete-vault-confirm-open: ConfirmDialog {
@@ -971,31 +1076,53 @@ export component App inherits Window {
             next-conflict => { root.next-conflict-step(); }
         }
 
-        if root.history-sheet-open: HistorySheet {
+        Rectangle {
             width: 100%;
             height: 100%;
-            open: true;
-            note-title: root.current-title;
-            commits: root.history-commits;
-            dates: root.history-dates;
-            previews: root.history-previews;
-            selected-index <=> root.history-selected-index;
-            inset-top: root.inset-top;
-            inset-bottom: root.inset-bottom;
-            close => { root.history-sheet-open = false; }
-            restore(idx) => { root.restore-history-version(idx); }
+            visible: history-sheet-drag.sheet-progress > 0.01;
+
+            HistorySheet {
+                width: 100%;
+                height: 100%;
+                open: true;
+                sheet-progress: history-sheet-drag.sheet-progress;
+                sheet-y-offset: (1.0 - history-sheet-drag.sheet-progress) * root.height;
+                sheet-drag-moved(dy) => { history-sheet-drag.moved(dy, max(100px, root.height)); }
+                sheet-drag-swiped(dy, v) => { history-sheet-drag.swiped(dy, v); }
+                sheet-drag-cancelled => { history-sheet-drag.cancelled(); }
+                note-title: root.current-title;
+                commits: root.history-commits;
+                dates: root.history-dates;
+                previews: root.history-previews;
+                selected-index <=> root.history-selected-index;
+                inset-top: root.inset-top;
+                inset-bottom: root.inset-bottom;
+                close => { root.history-sheet-open = false; }
+                restore(idx) => { root.restore-history-version(idx); }
+            }
         }
 
-        if root.vault-history-open: VaultHistorySheet {
+        Rectangle {
             width: 100%;
             height: 100%;
-            open: true;
-            vault-name: root.current-vault-name;
-            commits: root.vault-history-commits;
-            dates: root.vault-history-dates;
-            inset-top: root.inset-top;
-            inset-bottom: root.inset-bottom;
-            close => { root.vault-history-open = false; }
+            visible: vault-history-drag.sheet-progress > 0.01;
+
+            VaultHistorySheet {
+                width: 100%;
+                height: 100%;
+                open: true;
+                sheet-progress: vault-history-drag.sheet-progress;
+                sheet-y-offset: (1.0 - vault-history-drag.sheet-progress) * root.height;
+                sheet-drag-moved(dy) => { vault-history-drag.moved(dy, max(100px, root.height)); }
+                sheet-drag-swiped(dy, v) => { vault-history-drag.swiped(dy, v); }
+                sheet-drag-cancelled => { vault-history-drag.cancelled(); }
+                vault-name: root.current-vault-name;
+                commits: root.vault-history-commits;
+                dates: root.vault-history-dates;
+                inset-top: root.inset-top;
+                inset-bottom: root.inset-bottom;
+                close => { root.vault-history-open = false; }
+            }
         }
 
         // Measurement probes for `origami_richtext_flow::Measure`
