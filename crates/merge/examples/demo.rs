@@ -54,7 +54,7 @@ fn main() {
         document_to_tm(&result.document)
     );
 
-    let resolved = resolve(&result.document, &[ConflictResolution::Theirs]);
+    let resolved = resolve(&result.document, &[ConflictResolution::B]);
     println!(
         "--- after the user picks phone B's version ---\n{}",
         document_to_tm(&resolved)

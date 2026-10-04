@@ -463,10 +463,8 @@ mod tests {
             vec![PathBuf::from("note.tmt")]
         );
         let merged = read_note(&b, "note.tmt");
-        assert!(merged.contains("@use(mobile)"));
-        assert!(merged.contains("@mobile.conflict(mine)"));
+        assert!(merged.contains("@conflict("));
         assert!(merged.contains("charger"));
-        assert!(merged.contains("@mobile.conflict(theirs)"));
         assert!(merged.contains("notebook"));
     }
 

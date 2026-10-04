@@ -25,15 +25,12 @@
 //!    removed on only one side is dropped.
 //! 3. A single base block changed on *both* sides recurses via
 //!    `merge_one`, into every part of it independently:
-//!    - `content: Vec<Inline>` (a `Paragraph`'s, or an `Element`'s) gets
-//!      the same diff3 treatment as step 1, just over inline runs; a
-//!      single-`Text`-per-side inline conflict recurses once more,
+//!    - `content: Vec<Block>` (a `Paragraph`'s `Vec<Inline>`, or an
+//!      `Element`'s own `[content]`/`children`, both `Vec<Block>`) gets
+//!      the same diff3 treatment as step 1; a single-`Text`-per-side
+//!      inline conflict (within a `Paragraph`) recurses once more,
 //!      character by character (`merge_text`). This is what lets two
 //!      edits to different words in the same sentence merge silently.
-//!    - `children: Vec<Block>` recurses through this very same
-//!      algorithm (`merge_block_seq`), so a conflict inside a
-//!      container's children can dissolve exactly as it would at the
-//!      top level.
 //!    - `args`/`{data}` (`Element.value`'s `Group`) recurse by key
 //!      (`merge_value`/`merge_value_map`): editing two different
 //!      keys never conflicts, and a `Value::Map`/`Value::Seq` inside a
@@ -46,32 +43,28 @@
 //!    differs (e.g. `[content]` present on one side and absent on the
 //!    other) rather than merely disagreeing in value.
 //! 4. A conflict `merge_one` can't narrow any further is recorded
-//!    in-place, using the same element in two different roles depending
-//!    on where it sits:
-//!    - **As a sequence of blocks/inlines**, it becomes three marker
-//!      nodes around the disputed stretch: `@mobile.conflict(mine)`,
-//!      then whatever `local` made of that stretch,
-//!      `@mobile.conflict(theirs)`, then what `remote` made of it,
-//!      `@mobile.conflict(end)`. Markers, not a wrapping element,
-//!      because tomet has no syntax for "several blocks as one
-//!      element's contents" outside of list items -- `[content]` is
-//!      always `Vec<Inline>`, never `Vec<Block>`. At the
-//!      `Document.blocks` level these are block markers; inside a
-//!      paragraph's `content` they're the same element used inline
-//!      (`vocab/mobile.vocabulary.tmt` leaves `display` unset for
-//!      exactly this reason).
+//!    in-place as one `@conflict` element -- `tomet`'s own `std` element
+//!    for exactly this, bare and needing no `@use`. `a`/`b` are
+//!    structural names, not "mine"/"theirs": the side that merged the
+//!    note has no way to tell a later reader (on another device, or
+//!    itself after the app restarts) which one was whose, so the stored
+//!    document doesn't claim to know either -- see `immermemo-editor`'s
+//!    `conflicts` module for how a mine/theirs *display* label still
+//!    gets derived, without being stored. Two roles, depending on where
+//!    the conflict sits:
+//!    - **As a sequence of blocks/inlines**, `a`/`b` each hold the
+//!      disputed stretch's own blocks directly (`Value::Blocks`, `tomet`'s
+//!      `key: [...]` value grammar) -- no marker triple, no terminator;
+//!      `@conflict`'s own `(args)` is the whole thing. At the
+//!      `Document.blocks`/`children`/`content` level this is a block-
+//!      placed element; inside a paragraph's inline content, the same
+//!      element inline, with `a`/`b` each wrapping their inline run in
+//!      one `Paragraph` to fit the same `Vec<Block>` shape.
 //!    - **As a single value** (a `{data}` key, or `args`), it becomes
-//!      `@mobile.conflict(mine: ..., theirs: ...)` sitting where the
-//!      value went, using named args rather than `{value}` -- a value
-//!      slot only permits `(args)` on an embedded element, confirmed the
-//!      hard way when a first draft that used `{value}` here failed to
-//!      parse back.
-//!
-//! If the merged document ends up with at least one `@mobile.conflict`,
-//! `merge` also ensures `@use(mobile)` is present in the preamble (adding
-//! it if missing); [`resolve`] removes it again once no
-//! `@mobile.conflict` remains, so a note that has never conflicted never
-//! carries the `@use` line.
+//!      `@conflict(a: ..., b: ...)` sitting where the value went, using
+//!      named args rather than `{value}` -- a value slot only permits
+//!      `(args)` on an embedded element -- with `a`/`b` as plain scalars
+//!      (whatever the disputed value itself was), not `Value::Blocks`.
 //!
 //! # What this crate assumes
 //!
@@ -88,8 +81,8 @@
 //! - [`resolve`]: strips markers back out once a side has been picked.
 //! - [`find_conflicts`]: reads markers back out without removing them, for
 //!   showing the user what's in conflict.
-//! - `markers`: the `@mobile.conflict` marker shape itself (construction
-//!   and detection), shared by all three.
+//! - `markers`: the `@conflict` marker shape itself (construction and
+//!   detection), shared by all three.
 //! - `diff3`: the plain three-way sequence alignment every level of the
 //!   tree reuses; has no idea it's being used for an AST.
 
@@ -142,36 +135,36 @@ mod tests {
         assert_eq!(
             result.document,
             doc(concat!(
-                "@use(mobile)\n\n",
-                "@mobile.conflict(mine)\n\n",
-                "@meta{ x: 1 }\n\n",
-                "@mobile.conflict(theirs)\n\n",
-                "Theirs.\n\n",
-                "@mobile.conflict(end)\n",
+                "@conflict(\n",
+                "  a: [\n",
+                "    @meta{ x: 1 }\n",
+                "  ]\n",
+                "  b: [ Theirs. ]\n",
+                ")\n",
             ))
         );
     }
 
     #[test]
-    fn resolve_mine_drops_theirs_and_the_use_line() {
+    fn resolve_a_keeps_local() {
         let base = doc("Original.\n");
         let local = doc("Mine.\n");
         let remote = doc("Theirs.\n");
         let merged = merge(&base, &local, &remote).document;
 
-        let resolved = resolve(&merged, &[ConflictResolution::Mine]);
+        let resolved = resolve(&merged, &[ConflictResolution::A]);
 
         assert_eq!(resolved, doc("Mine.\n"));
     }
 
     #[test]
-    fn resolve_theirs_drops_mine_and_the_use_line() {
+    fn resolve_b_keeps_remote() {
         let base = doc("Original.\n");
         let local = doc("Mine.\n");
         let remote = doc("Theirs.\n");
         let merged = merge(&base, &local, &remote).document;
 
-        let resolved = resolve(&merged, &[ConflictResolution::Theirs]);
+        let resolved = resolve(&merged, &[ConflictResolution::B]);
 
         assert_eq!(resolved, doc("Theirs.\n"));
     }
@@ -205,12 +198,8 @@ mod tests {
         let result = merge(&base, &local, &remote);
 
         assert!(!result.clean);
-        assert_eq!(
-            result.document.blocks.len(),
-            2,
-            "@use(mobile) + one paragraph"
-        );
-        assert!(matches!(result.document.blocks[1], Block::Paragraph(_)));
+        assert_eq!(result.document.blocks.len(), 1, "one paragraph");
+        assert!(matches!(result.document.blocks[0], Block::Paragraph(_)));
     }
 
     #[test]
@@ -220,27 +209,27 @@ mod tests {
         let remote = doc("The lazy fox jumps.\n");
         let merged = merge(&base, &local, &remote).document;
 
-        let resolved = resolve(&merged, &[ConflictResolution::Theirs]);
+        let resolved = resolve(&merged, &[ConflictResolution::B]);
 
         assert_eq!(resolved, doc("The lazy fox jumps.\n"));
     }
 
     #[test]
-    fn resolve_all_resolves_every_conflict_and_drops_use_line() {
+    fn resolve_all_resolves_every_conflict() {
         let base = doc("Zzz.\n\nAnchor.\n\nQqq.\n");
         let local = doc("Mmm.\n\nAnchor.\n\nNnn.\n");
         let remote = doc("Ppp.\n\nAnchor.\n\nRrr.\n");
         let merged = merge(&base, &local, &remote).document;
 
-        let resolved_mine = resolve_all(&merged, ConflictResolution::Mine);
-        assert_eq!(resolved_mine, doc("Mmm.\n\nAnchor.\n\nNnn.\n"));
+        let resolved_a = resolve_all(&merged, ConflictResolution::A);
+        assert_eq!(resolved_a, doc("Mmm.\n\nAnchor.\n\nNnn.\n"));
 
-        let resolved_theirs = resolve_all(&merged, ConflictResolution::Theirs);
-        assert_eq!(resolved_theirs, doc("Ppp.\n\nAnchor.\n\nRrr.\n"));
+        let resolved_b = resolve_all(&merged, ConflictResolution::B);
+        assert_eq!(resolved_b, doc("Ppp.\n\nAnchor.\n\nRrr.\n"));
     }
 
     #[test]
-    fn resolve_leaves_the_use_line_while_another_conflict_remains() {
+    fn resolving_one_conflict_leaves_another_untouched() {
         // An unchanged paragraph in the middle gives the LCS an anchor,
         // so this is two independent conflicts rather than one hunk
         // spanning the whole document. The two conflicting paragraphs
@@ -254,10 +243,7 @@ mod tests {
         let remote = doc("Ppp.\n\nAnchor.\n\nRrr.\n");
         let merged = merge(&base, &local, &remote).document;
 
-        let resolved = resolve(
-            &merged,
-            &[ConflictResolution::Mine, ConflictResolution::Theirs],
-        );
+        let resolved = resolve(&merged, &[ConflictResolution::A, ConflictResolution::B]);
 
         assert_eq!(resolved, doc("Mmm.\n\nAnchor.\n\nRrr.\n"));
     }
@@ -285,7 +271,7 @@ mod tests {
         assert!(!result.clean);
         assert_eq!(
             result.document,
-            doc("@use(mobile)\n\n@meta{ x: @mobile.conflict(mine: 2, theirs: 3) }\n")
+            doc("@meta{ x: @conflict(a: 2, b: 3) }\n")
         );
     }
 
@@ -296,7 +282,7 @@ mod tests {
         let remote = doc("@meta{ x: 3 }\n");
         let merged = merge(&base, &local, &remote).document;
 
-        let resolved = resolve(&merged, &[ConflictResolution::Theirs]);
+        let resolved = resolve(&merged, &[ConflictResolution::B]);
 
         assert_eq!(resolved, doc("@meta{ x: 3 }\n"));
     }
@@ -336,13 +322,13 @@ mod tests {
 
         let conflicts = find_conflicts(&merged.document);
         assert_eq!(conflicts.len(), 2);
-        assert_eq!(conflicts[0].mine, "l");
-        assert_eq!(conflicts[0].theirs, " remote");
-        assert_eq!(conflicts[1].mine, "l");
-        assert_eq!(conflicts[1].theirs, " remote");
+        assert_eq!(conflicts[0].a, "l");
+        assert_eq!(conflicts[0].b, " remote");
+        assert_eq!(conflicts[1].a, "l");
+        assert_eq!(conflicts[1].b, " remote");
 
-        // Resolve only first conflict with Mine
-        let resolved_first = resolve_single(&merged.document, 0, ConflictResolution::Mine);
+        // Resolve only the first conflict, keeping its `a` side.
+        let resolved_first = resolve_single(&merged.document, 0, ConflictResolution::A);
         let remaining = find_conflicts(&resolved_first);
         assert_eq!(remaining.len(), 1);
         let text_after_first = tomet_printer::document_to_tm(&resolved_first);

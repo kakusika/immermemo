@@ -41,8 +41,8 @@ pub fn resolve_active_conflict(
         }
     };
     let side_name = match &resolution {
-        ConflictResolution::Mine => "local",
-        ConflictResolution::Theirs => "remote",
+        ConflictResolution::A => "local",
+        ConflictResolution::B => "remote",
         _ => "custom",
     };
     let resolved_doc = immermemo_merge::resolve_all(&doc, resolution);
@@ -98,8 +98,8 @@ pub fn resolve_conflict_step(
     };
     let target_idx = active_conflict_index.max(0) as usize;
     let resolution = match choice {
-        0 => ConflictResolution::Mine,
-        1 => ConflictResolution::Theirs,
+        0 => ConflictResolution::A,
+        1 => ConflictResolution::B,
         _ => ConflictResolution::Both,
     };
     let choice_name = match choice {
@@ -183,7 +183,15 @@ pub fn conflict_sheet_state(
     ConflictSheetState::Active {
         total,
         index,
-        mine: item.mine.clone(),
-        theirs: item.theirs.clone(),
+        // `immermemo_merge::merge` always puts the device that ran it
+        // into `a` and the incoming side into `b` -- correct for the
+        // common case (resolving right after the sync that produced
+        // this conflict), but not re-derived here for a conflict opened
+        // cold (app restarted) or on a different device than the one
+        // that merged it. See `.agents/tasks/adopt-std-conflict.md`'s
+        // "decided" section for the git-ancestry-based fix that would
+        // make this correct in every case, not implemented yet.
+        mine: item.a.clone(),
+        theirs: item.b.clone(),
     }
 }

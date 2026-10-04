@@ -6,17 +6,14 @@
 use tomet_ast::{Block, Document, Element, ElementValue, Entry, Inline, Paragraph, Section, Value};
 
 use crate::diff3;
-use crate::markers::{
-    coalesce_text, conflict_marker, inline_conflict_marker, is_use_mobile_block, push_text,
-    use_mobile_block, value_conflict,
-};
+use crate::markers::{coalesce_text, conflict_block, conflict_inline, push_text, value_conflict};
 
 /// The outcome of merging one note across two divergent versions of a
 /// vault.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MergeResult {
     /// The merged document. Always a structurally valid Tomet document --
-    /// conflicts are represented as `@mobile.conflict` markers, never as
+    /// conflicts are represented as `@conflict` markers, never as
     /// malformed or partial output.
     pub document: Document,
     /// Where merging succeeded without leaving a conflict marker behind.
@@ -27,14 +24,12 @@ pub struct MergeResult {
 /// document.
 ///
 /// Never fails: a merge that cannot be resolved automatically produces a
-/// document containing `@mobile.conflict` markers rather than an error.
-/// The caller (`immermemo-sync`) always has something to commit.
+/// document containing `@conflict` markers rather than an error. The
+/// caller (`immermemo-sync`) always has something to commit. `@conflict`
+/// is `tomet`'s own bare `std` element, so unlike the retired
+/// `@mobile.conflict`, nothing needs adding to the preamble for it.
 pub fn merge(base: &Document, local: &Document, remote: &Document) -> MergeResult {
-    let (mut blocks, clean) = merge_block_seq(&base.blocks, &local.blocks, &remote.blocks);
-
-    if !clean && !blocks.iter().any(is_use_mobile_block) {
-        blocks.insert(0, use_mobile_block());
-    }
+    let (blocks, clean) = merge_block_seq(&base.blocks, &local.blocks, &remote.blocks);
 
     MergeResult {
         document: Document {
@@ -46,9 +41,10 @@ pub fn merge(base: &Document, local: &Document, remote: &Document) -> MergeResul
 }
 
 /// Diffs one `Vec<Block>` three ways, narrowing each conflict via
-/// [`merge_one`] before falling back to whole-block marker nodes. Used
-/// both for `Document.blocks` (top level) and an `Element`'s `children`
-/// (recursively, from inside `merge_one` itself).
+/// [`merge_one`] before falling back to one `@conflict` marker holding
+/// both sides' blocks directly. Used for `Document.blocks` (top level),
+/// an `Element`'s `children`, and now its `content` too (recursively,
+/// from inside `merge_one` itself) -- all three are `Vec<Block>`.
 fn merge_block_seq(base: &[Block], local: &[Block], remote: &[Block]) -> (Vec<Block>, bool) {
     let mut blocks = Vec::new();
     let mut clean = true;
@@ -66,11 +62,7 @@ fn merge_block_seq(base: &[Block], local: &[Block], remote: &[Block]) -> (Vec<Bl
                     continue;
                 }
                 clean = false;
-                blocks.push(conflict_marker("mine"));
-                blocks.extend(mine);
-                blocks.push(conflict_marker("theirs"));
-                blocks.extend(theirs);
-                blocks.push(conflict_marker("end"));
+                blocks.push(conflict_block(mine, theirs));
             }
         }
     }
@@ -131,7 +123,7 @@ fn merge_one(base: &Block, local: &Block, remote: &Block) -> Option<(Block, bool
             })?;
             let (content, content_clean) =
                 merge_optional(&b.content, &l.content, &r.content, |bc, lc, rc| {
-                    let (merged, clean) = merge_inline_seq(bc, lc, rc);
+                    let (merged, clean) = merge_block_seq(bc, lc, rc);
                     Some((merged, clean))
                 })?;
             let (children, children_clean) =
@@ -158,7 +150,10 @@ fn merge_one(base: &Block, local: &Block, remote: &Block) -> Option<(Block, bool
         (Block::Section(b), Block::Section(l), Block::Section(r))
             if b.level == l.level && l.level == r.level =>
         {
-            if l.connects != r.connects {
+            // Neither `connects` nor `id` is diffed -- bail rather than
+            // silently keep `local`'s and drop a real difference on the
+            // floor.
+            if l.connects != r.connects || l.id != r.id {
                 return None;
             }
 
@@ -179,6 +174,7 @@ fn merge_one(base: &Block, local: &Block, remote: &Block) -> Option<(Block, bool
                     title,
                     args,
                     value,
+                    id: l.id.clone(),
                     connects: l.connects.clone(),
                     blocks,
                     span: l.span,
@@ -378,11 +374,7 @@ fn merge_inline_seq(base: &[Inline], local: &[Inline], remote: &[Inline]) -> (Ve
                     continue;
                 }
                 clean = false;
-                out.push(inline_conflict_marker("mine"));
-                out.extend(mine);
-                out.push(inline_conflict_marker("theirs"));
-                out.extend(theirs);
-                out.push(inline_conflict_marker("end"));
+                out.push(conflict_inline(mine, theirs));
             }
         }
     }
@@ -406,11 +398,11 @@ fn merge_text(base: &str, local: &str, remote: &str) -> (Vec<Inline>, bool) {
             diff3::Region::Same(chars) => push_text(&mut out, chars),
             diff3::Region::Conflict { mine, theirs, .. } => {
                 clean = false;
-                out.push(inline_conflict_marker("mine"));
-                push_text(&mut out, mine);
-                out.push(inline_conflict_marker("theirs"));
-                push_text(&mut out, theirs);
-                out.push(inline_conflict_marker("end"));
+                let mut mine_run = Vec::new();
+                push_text(&mut mine_run, mine);
+                let mut theirs_run = Vec::new();
+                push_text(&mut theirs_run, theirs);
+                out.push(conflict_inline(mine_run, theirs_run));
             }
         }
     }

@@ -33,7 +33,7 @@
 //!
 //! [`tomet_parser::parse_document`] has no error recovery: it either
 //! parses the whole document or fails outright, so a user mid-keystroke on
-//! something like `@mobile.conflict(` can turn the *entire* note into an
+//! something like `@conflict(` can turn the *entire* note into an
 //! unparseable one. [`classify`] treats that the same as "nothing
 //! recognized" -- one [`RenderItem::Text`] spanning the source -- which is
 //! exactly today's always-plain-text experience, not a regression. Once
@@ -62,14 +62,15 @@
 //! of [`ATOMIC_BARE_ELEMENTS`], out of its surrounding prose -- any other
 //! bare inline element stays merged into the running text span around
 //! it, because splitting prose on every unrecognized marker would
-//! fragment a sentence a reader expects to flow as one run. The first and
-//! only namespaced element this
-//! crate's caller currently cares about is `immermemo_merge`'s
-//! `@mobile.conflict` marker, but [`classify`] does not special-case it:
-//! it reports every element's [`ElementIdentity`] uniformly, and leaves
-//! "do I recognize this `(namespace, name)` pair, or should it fall back
-//! to something generic" to whatever renders [`RenderItem`]s (today:
-//! `immermemo`'s render::classify REGISTRY).
+//! fragment a sentence a reader expects to flow as one run. The only
+//! bare element this crate's caller currently cares about beyond
+//! `ruby`/`link` is `tomet`'s own `@conflict` (`immermemo_merge`'s
+//! marker for an unresolved three-way merge), but [`classify`] does not
+//! special-case it either: it reports every element's
+//! [`ElementIdentity`] uniformly, and leaves "do I recognize this
+//! `(namespace, name)` pair, or should it fall back to something
+//! generic" to whatever renders [`RenderItem`]s (today: `immermemo`'s
+//! render::classify REGISTRY).
 //!
 //! Tomet's bare built-in elements split into two families, and only one
 //! of them is special here. `em`/`strong`/`mark`/`strikeout`
@@ -146,7 +147,8 @@ pub enum RenderItem {
         span: Span,
         /// The element's own `[content]` span, if it has one -- `None`
         /// for an element with no bracketed content at all (e.g.
-        /// `@mobile.conflict(mine)`). A bare `@ruby[base](rt:...)`'s
+        /// `@conflict(a: ..., b: ...)`, whose payload lives in `(args)`
+        /// instead -- see `block_args`). A bare `@ruby[base](rt:...)`'s
         /// `base`, or a bare `@link(...)[display]`'s `display`, read
         /// this same field; nothing about it is ruby/link-specific.
         content: Option<Span>,
@@ -164,6 +166,18 @@ pub enum RenderItem {
         /// `args_summary`: a non-string or missing value is just absent
         /// here, never an error.
         args: ElementArgs,
+        /// Every `key: [...]` (`Value::Blocks`) entry of `(args)`,
+        /// recursively classified the same way this element's own
+        /// `[content]` is -- `args_summary`/`args` only ever cover
+        /// scalar values, so a block-content arg (e.g. `@conflict`'s
+        /// `a`/`b`) needs its own field or it silently vanishes.
+        /// Generic, not `@conflict`-specific: any element with a
+        /// `key: [...]` arg gets one entry here. Empty when `args` holds
+        /// no such entry, or isn't a `Value::Map` at all. A positional
+        /// (keyless) `Value::Blocks` entry is skipped -- real usage
+        /// always writes `a`/`b` by name; nothing downstream needs the
+        /// positional-shorthand case rendered richly yet.
+        block_args: Vec<(String, Vec<RenderItem>)>,
     },
 }
 
@@ -244,7 +258,7 @@ fn classify_bare_character_element(el: &Element) -> Option<Vec<RenderItem>> {
         )]);
     }
     let wrapper = style_wrapper(el)?;
-    let content = el.content.as_ref()?;
+    let content = inline_content(el)?;
     let mut items = Vec::new();
     let mut run = None;
     walk_inline_seq(content, wrapper, &mut items, &mut run);
@@ -254,9 +268,31 @@ fn classify_bare_character_element(el: &Element) -> Option<Vec<RenderItem>> {
     Some(items)
 }
 
+/// `el`'s own `[content]` as a flat run of `Inline`s. Correct for every
+/// kind this crate ever recurses into here (`em`/`strong`/`mark`/
+/// `strikeout`, `ruby`, `link`), whose content-shape is always a single
+/// paragraph (see `tomet-semantics`'s `builtin_content_shape`) --
+/// `Element.content` became `Vec<Block>` upstream (any element's
+/// `[content]` is now the same recursive block grammar
+/// `Document.blocks` uses), but these kinds can still only ever produce
+/// the single-paragraph shape. Anything else (multiple blocks) is a
+/// shape violation this crate doesn't validate against; treated the
+/// same as "no content" rather than guessing which paragraph to use.
+fn inline_content(el: &Element) -> Option<&[Inline]> {
+    match el.content.as_deref()? {
+        [Block::Paragraph(p)] => Some(&p.content),
+        _ => None,
+    }
+}
+
 /// Bare built-in names that stand as a thing of their own -- see the
-/// module doc for why this list is short and how it grows.
-const ATOMIC_BARE_ELEMENTS: &[&str] = &["ruby", "link"];
+/// module doc for why this list is short and how it grows. `conflict`
+/// joined `ruby`/`link` for the same reason: `tomet`'s own `@conflict`
+/// takes either shape (mid-sentence or standing alone), the same as
+/// `link`, so it needs splitting out inline too, not just at the block
+/// level (which every `Block::Element` already gets regardless of this
+/// list -- see `classify_block_groups`).
+const ATOMIC_BARE_ELEMENTS: &[&str] = &["ruby", "link", "conflict"];
 
 /// Whether `el`'s sigil is a bare (non-`@use`'d) name in
 /// [`ATOMIC_BARE_ELEMENTS`].
@@ -379,7 +415,7 @@ fn walk_inline_seq(
     for inline in content {
         if let Inline::Element(el) = inline {
             if let Some(wrapper) = style_wrapper(el) {
-                if let Some(nested) = &el.content {
+                if let Some(nested) = inline_content(el) {
                     walk_inline_seq(nested, style.union(wrapper), items, run);
                 }
                 continue;
@@ -476,11 +512,41 @@ fn element_item(el: &Element) -> Option<RenderItem> {
         content: el
             .content
             .as_ref()
-            .and_then(|inlines| inlines.iter().map(Inline::span).reduce(|a, b| a.union(&b))),
+            .and_then(|blocks| blocks.iter().map(Block::span).reduce(|a, b| a.union(&b))),
         args_summary: summarize_args(el.args.as_ref()),
         data_summary: summarize_data(el.value.as_ref()),
         args: element_args(el.args.as_ref()),
+        block_args: block_args(el.args.as_ref()),
     })
+}
+
+/// [`RenderItem::Element::block_args`] -- see that field's doc.
+fn block_args(args: Option<&Value>) -> Vec<(String, Vec<RenderItem>)> {
+    let Some(Value::Map(entries)) = args else {
+        return Vec::new();
+    };
+    entries
+        .iter()
+        .filter_map(|(key, value)| match value {
+            Value::Blocks(blocks) if !key.is_empty() => {
+                Some((key.clone(), classify_blocks_flat(blocks)))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// `blocks` classified into one flat `RenderItem` list, the same way
+/// [`classify`] flattens a whole document's top-level blocks -- used for
+/// a `Value::Blocks` arg, which is exactly that shape (`tomet`'s
+/// `key: [...]` value grammar reuses the document/`[content]` block
+/// grammar, see `tomet-syntax-ast`'s `Value::Blocks`).
+fn classify_blocks_flat(blocks: &[Block]) -> Vec<RenderItem> {
+    blocks
+        .iter()
+        .flat_map(classify_block_groups)
+        .flat_map(|(_, items)| items)
+        .collect()
 }
 
 /// `el`'s [`RenderItem::Element::args`] -- every string-valued entry of
@@ -552,6 +618,7 @@ fn summarize_value(value: &Value) -> String {
             .join(", "),
         Value::Call(name, args) => format!("{name}({} arg(s))", args.len()),
         Value::Element(el) => el.sigil.name().map(|n| n.to_string()).unwrap_or_default(),
+        Value::Blocks(blocks) => format!("[{} block(s)]", blocks.len()),
     }
 }
 
@@ -628,13 +695,18 @@ mod tests {
     }
 
     #[test]
-    fn a_mobile_conflict_marker_triple_is_identified() {
+    fn repeated_namespaced_elements_are_each_identified() {
+        // Generic: three occurrences of the same namespaced identity are
+        // each found and split correctly, not just the first one. Any
+        // namespaced name would do here -- this isn't about `@conflict`
+        // (which is bare `std` now, not namespaced; see the `conflict`-
+        // specific tests below).
         let src = "Before.\n\n\
-                   @mobile.conflict(mine)\n\n\
-                   Mine text.\n\n\
-                   @mobile.conflict(theirs)\n\n\
-                   Theirs text.\n\n\
-                   @mobile.conflict(end)\n\n\
+                   @deck.marker(x)\n\n\
+                   X text.\n\n\
+                   @deck.marker(y)\n\n\
+                   Y text.\n\n\
+                   @deck.marker(z)\n\n\
                    After.\n";
         let items = classify(src);
 
@@ -647,8 +719,8 @@ mod tests {
             .collect();
         assert_eq!(identities.len(), 3);
         for identity in identities {
-            assert_eq!(identity.namespace.as_deref(), Some("mobile"));
-            assert_eq!(identity.name, "conflict");
+            assert_eq!(identity.namespace.as_deref(), Some("deck"));
+            assert_eq!(identity.name, "marker");
         }
 
         let args_summaries: Vec<&str> = items
@@ -658,17 +730,44 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(args_summaries, vec!["mine", "theirs", "end"]);
+        assert_eq!(args_summaries, vec!["x", "y", "z"]);
     }
 
     #[test]
-    fn an_inline_conflict_marker_splits_the_paragraph_around_it() {
+    fn a_bare_conflict_element_is_identified_with_both_sides_classified() {
+        // `@conflict` is `tomet`'s own bare `std` element (not namespaced),
+        // and its `a`/`b` live in `(args)` as `Value::Blocks` rather than
+        // in `[content]` -- `block_args` is what exposes them, recursively
+        // classified the same way top-level blocks are.
+        let items = classify("@conflict(a: [Mine text.], b: [Their text.])\n");
+        assert_eq!(items.len(), 1);
+        match &items[0] {
+            RenderItem::Element {
+                identity,
+                content,
+                block_args,
+                ..
+            } => {
+                assert_eq!(identity.namespace, None);
+                assert_eq!(identity.name, "conflict");
+                assert_eq!(*content, None, "conflict's payload is in (args), not [content]");
+                assert_eq!(block_args.len(), 2);
+                assert_eq!(block_args[0].0, "a");
+                assert_eq!(block_args[1].0, "b");
+                assert_eq!(block_args[0].1.len(), 1);
+                assert_eq!(block_args[1].1.len(), 1);
+            }
+            other => panic!("expected an Element item, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn an_inline_conflict_splits_the_paragraph_around_it() {
         // The common conflict shape: both sides edited the same sentence,
-        // which `immermemo_merge::merge_one` always narrows to inline
-        // markers (never a whole-block marker) for a Paragraph/Paragraph/
-        // Paragraph triple. This is the case the module doc's "Scope"
-        // section added coverage for.
-        let src = "Before @mobile.conflict(mine)mine text@mobile.conflict(theirs)their text@mobile.conflict(end) after.\n";
+        // which `immermemo_merge::merge_one` narrows to one inline
+        // `@conflict` (never a whole-block marker) sitting where the
+        // disputed word did.
+        let src = "Before @conflict(a: [mine text], b: [their text]) after.\n";
         let items = classify(src);
 
         let kinds: Vec<&str> = items
@@ -678,12 +777,7 @@ mod tests {
                 RenderItem::Element { .. } => "element",
             })
             .collect();
-        assert_eq!(
-            kinds,
-            vec![
-                "text", "element", "text", "element", "text", "element", "text"
-            ]
-        );
+        assert_eq!(kinds, vec!["text", "element", "text"]);
 
         let RenderItem::Text(first, _) = &items[0] else {
             unreachable!()
@@ -694,6 +788,13 @@ mod tests {
             unreachable!()
         };
         assert_eq!(&src[last.start.offset..last.end.offset], " after.");
+
+        let RenderItem::Element { block_args, .. } = &items[1] else {
+            unreachable!()
+        };
+        assert_eq!(block_args.len(), 2);
+        assert_eq!(block_args[0].0, "a");
+        assert_eq!(block_args[1].0, "b");
     }
 
     #[test]
@@ -718,7 +819,7 @@ mod tests {
 
     #[test]
     fn unparseable_source_falls_back_to_one_text_item_spanning_everything() {
-        let src = "Fine paragraph.\n\n@mobile.conflict(\n";
+        let src = "Fine paragraph.\n\n@conflict(\n";
         let items = classify(src);
         assert_eq!(items.len(), 1);
         match &items[0] {
@@ -735,22 +836,20 @@ mod tests {
         // Same fixture `immermemo`'s render/classify.rs proves goes through
         // the real merge pipeline -- here just checking `classify_blocks`
         // keeps all of a paragraph's split items in one group, unlike
-        // `classify`'s flat list.
-        let src = "@use(mobile)\nThe @mobile.conflict(mine)slow@mobile.conflict(theirs)lazy@mobile.conflict(end) fox jumps.\n";
+        // `classify`'s flat list. `@conflict` needs no `@use` (it's bare
+        // `std`), so the whole document is one `Block::Paragraph`.
+        let src = "The @conflict(a: [slow], b: [lazy]) fox jumps.\n";
         let groups = classify_blocks(src).unwrap();
 
-        // `@use(mobile)` is its own bare `Block::Element`, then the
-        // sentence is one `Block::Paragraph` holding every inline item.
-        assert_eq!(groups.len(), 2);
-        assert_eq!(groups[0].0, RenderBlockKind::Element);
-        assert_eq!(groups[0].1.len(), 1);
-        assert_eq!(groups[1].0, RenderBlockKind::Paragraph);
-        assert_eq!(groups[1].1.len(), 7);
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].0, RenderBlockKind::Paragraph);
+        // "The ", the @conflict element, " fox jumps."
+        assert_eq!(groups[0].1.len(), 3);
     }
 
     #[test]
     fn classify_blocks_reports_parse_failure_instead_of_guessing_a_kind() {
-        let src = "Fine paragraph.\n\n@mobile.conflict(\n";
+        let src = "Fine paragraph.\n\n@conflict(\n";
         assert_eq!(classify_blocks(src), Err(ParseFailed));
     }
 
@@ -957,7 +1056,7 @@ mod tests {
 
     #[test]
     fn a_section_heading_flows_like_a_paragraph_and_its_blocks_classify_recursively() {
-        let src = "= A @strong[bold] heading\n\nInside.\n\n@mobile.conflict(mine)\n\nMine.\n";
+        let src = "= A @strong[bold] heading\n\nInside.\n\n@conflict(a: 1, b: 2)\n\nMine.\n";
         let groups = classify_blocks(src).unwrap();
 
         assert_eq!(groups.len(), 4);
