@@ -32,8 +32,10 @@ pub fn android_main(app: slint::android::AndroidApp) {
         Ok(Arc::new(store) as Arc<dyn TokenStore>)
     });
     slint::android::init(app).expect("initialize the Android backend");
-    unsafe {
+    let initial_note_path = unsafe {
         haptic::init_android_haptics(vm_ptr, activity_ptr);
-    }
-    run(default_vault_dir, base, token_store_for).expect("run the app");
+        crate::widget::init_android_widget_bridge(vm_ptr, activity_ptr, &base);
+        crate::widget::read_launch_note_path(vm_ptr, activity_ptr)
+    };
+    run(default_vault_dir, base, token_store_for, initial_note_path).expect("run the app");
 }

@@ -1,13 +1,14 @@
 # Requires the dev shell (`nix develop`, or direnv via .envrc) -- these
-# recipes assume `emulator`, `avdmanager`, `adb` and `cargo apk` are already
-# on PATH, not just installed somewhere.
+# recipes assume `emulator`, `avdmanager`, `adb`, `cargo ndk` and `gradle`
+# are already on PATH, not just installed somewhere.
 
 avd := "immermemo_test"
 device := "pixel_6"
 system_image := "system-images;android-34;google_apis;x86_64"
 package := "dev.immermemo.app"
 activity := package + "/android.app.NativeActivity"
-apk := "target/release/apk/immermemo.apk"
+jniLibs := "android/app/src/main/jniLibs"
+apk := "immermemo/android/app/build/outputs/apk/release/app-release.apk"
 
 # List available recipes
 default:
@@ -44,25 +45,54 @@ emulator:
 emulator-stop:
     adb emu kill
 
-# Build the release APK -- one fat APK with both aarch64 (a real phone)
-# and x86_64 (the emulator) native libraries, see immermemo/Cargo.toml.
-# --lib is load-bearing: without it, cargo-apk also tries to process the
-# crate's desktop `[[bin]]` target as if it were another cdylib, and
-# panics ("Bin is not compatible with Cdylib") -- after the APK itself is
-# already built and signed, but the nonzero exit still fails this recipe.
+# Build one fat APK with both aarch64 (a real phone) and x86_64 (the
+# emulator) native libraries, see immermemo/Cargo.toml. Native libs are
+# stored uncompressed and page-aligned (Gradle's
+# `packaging.jniLibs.useLegacyPackaging = false`, see android/app/build.gradle.kts),
+# so there's no second install-time-extracted copy on top of the APK's own
+# size -- but bundling both ABIs' full-size libs in one file still makes
+# this the biggest of the three on-device footprints (~51 MB). Only useful
+# for sideloading onto a device whose ABI you don't know ahead of time;
+# `install`/`run` use `apk-auto` instead, which picks a single ABI.
+# --lib is load-bearing: without it, cargo-ndk also tries to cross-compile
+# the crate's desktop `[[bin]]` target, which doesn't link for Android.
 apk:
-    cd immermemo && cargo apk build --release --lib
+    cd immermemo && rm -rf {{jniLibs}}
+    cd immermemo && cargo ndk -t arm64-v8a -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
+    cd immermemo/android && gradle assembleRelease
 
-# Build a slim release APK for real devices only (aarch64, ~11 MB)
+# Build a slim release APK for real devices only (aarch64, ~24 MB on-device,
+# no duplicate extracted copy -- see the `apk` recipe's comment)
 apk-arm:
-    cd immermemo && cargo apk build --release --lib --target aarch64-linux-android
+    cd immermemo && rm -rf {{jniLibs}}
+    cd immermemo && cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo
+    cd immermemo/android && gradle assembleRelease
 
-# Build a slim release APK for the emulator only (x86_64, ~12 MB)
+# Build a slim release APK for the emulator only (x86_64, ~26 MB on-device)
 apk-x86:
-    cd immermemo && cargo apk build --release --lib --target x86_64-linux-android
+    cd immermemo && rm -rf {{jniLibs}}
+    cd immermemo && cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
+    cd immermemo/android && gradle assembleRelease
+
+# Build for whatever single device/emulator adb currently sees, picking
+# its ABI automatically instead of bundling both (what `install`/`run`
+# use by default -- see the `apk` recipe for when the universal build is
+# the right call instead).
+apk-auto:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    abi="$(adb shell getprop ro.product.cpu.abi | tr -d '\r')"
+    case "$abi" in
+        arm64-v8a) just apk-arm ;;
+        x86_64)    just apk-x86 ;;
+        *)
+            echo "error: unsupported device ABI '$abi' (expected arm64-v8a or x86_64)" >&2
+            exit 1
+            ;;
+    esac
 
 # Install the built APK on whatever device/emulator adb currently sees
-install: apk
+install: apk-auto
     adb install -r {{apk}}
 
 # Build, install, and launch

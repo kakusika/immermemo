@@ -4,6 +4,7 @@ mod haptic;
 pub mod render;
 mod session;
 mod sync;
+mod widget;
 
 #[cfg(target_os = "android")]
 mod android;
@@ -21,9 +22,9 @@ use immermemo_vault::notes;
 
 use session::{
     SESSION, Session, apply_restored, open_first_conflicted_note, open_initial_or_last_note,
-    open_note, refresh_list, refresh_vault_list, resolve_conflict_step, set_status,
-    show_history_state, start_sync, switch_vault, sync_conflict_sheet_state, update_filtered_list,
-    vault_display_name, vault_path_from_input,
+    open_note, open_note_by_rel_path, refresh_list, refresh_vault_list, resolve_conflict_step,
+    set_status, show_history_state, start_sync, switch_vault, sync_conflict_sheet_state,
+    update_filtered_list, vault_display_name, vault_path_from_input,
 };
 
 slint::include_modules!();
@@ -81,6 +82,7 @@ pub fn run(
     default_vault_dir: PathBuf,
     app_data_base: PathBuf,
     token_store_for: TokenStoreFactory,
+    initial_note_path: Option<PathBuf>,
 ) -> anyhow::Result<()> {
     let app_data = AppData::new(app_data_base);
     let mut known_vaults = app_data.known_vaults();
@@ -146,7 +148,12 @@ pub fn run(
         app.set_list_open(true);
     } else {
         app.set_list_open(false);
-        open_initial_or_last_note(&app, &session);
+        let opened_from_widget = initial_note_path
+            .as_deref()
+            .is_some_and(|rel| open_note_by_rel_path(&app, &session, rel));
+        if !opened_from_widget {
+            open_initial_or_last_note(&app, &session);
+        }
     }
     if session.borrow().remote.is_some() {
         session::schedule_auto_sync(&app, std::time::Duration::from_millis(500));

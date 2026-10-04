@@ -13,6 +13,7 @@
     #= Main
     rustfmt.enable = true; # Rust
     taplo.enable = true; # Toml
+    ktlint.enable = true;
   };
   settings = {
     # https://github.com/numtide/treefmt-nix/issues/171

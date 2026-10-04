@@ -18,5 +18,5 @@ fn main() -> anyhow::Result<()> {
         let path = immermemo::token_path_in(&base, vault_dir)?;
         Ok(Arc::new(PlainFileTokenStore::new(path)) as Arc<dyn TokenStore>)
     });
-    immermemo::run(default_vault_dir, app_data, token_store_for)
+    immermemo::run(default_vault_dir, app_data, token_store_for, None)
 }

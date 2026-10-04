@@ -26,6 +26,13 @@ let
     fenix.targets.x86_64-linux-android.stable.rust-std
   ];
   androidSdk = pkgs.androidenv.composeAndroidPackages {
+    # Must match the `-P`/`--platform` given to `cargo ndk` in the `apk`
+    # justfile recipe: that value also picks which `android.jar` Slint's
+    # own build-time Java helper compiles against (not just the native API
+    # level), and anything below compileSdk/targetSdk (34) is missing
+    # symbols (`WindowInsets.Type`, `Insets`, ...) the helper references
+    # even inside `Build.VERSION.SDK_INT` guards -- javac still needs them
+    # in the compile-time classpath.
     platformVersions = [ "34" ];
     buildToolsVersions = [ "34.0.0" ];
     includeNDK = true;
@@ -65,7 +72,8 @@ mkShell {
     androidSdk.androidsdk
     jdk17
     wasm-bindgen-cli
-    cargo-apk
+    gradle
+    cargo-ndk
 
     #= Runtime
     #== Wayland

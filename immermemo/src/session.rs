@@ -1,7 +1,7 @@
 //! UI session state management and application action handlers.
 
 use std::cell::RefCell;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -140,6 +140,7 @@ pub fn refresh_list(app: &App, session: &Rc<RefCell<Session>>) {
     let previous = s.current_path();
     let vault_dir = s.vault_dir.clone();
     let _ = s.index.reconcile_filesystem(&vault_dir);
+    crate::widget::export_recent_notes(&s.index);
     let all = s.index.list_all().unwrap_or_default();
     let vault_dir = s.vault_dir.clone();
     s.notes = all.iter().map(|n| vault_dir.join(&n.path)).collect();
@@ -429,6 +430,26 @@ pub fn open_initial_or_last_note(app: &App, session: &Rc<RefCell<Session>>) {
     };
     if let Some(index) = index {
         open_note(app, session, index);
+    }
+}
+
+/// Opens the note at `rel_path` (vault-relative, as stored in the note
+/// index), if it still exists in the current vault's note list. Returns
+/// `false` without changing anything if it doesn't -- e.g. the note was
+/// deleted or renamed after a home-screen widget tap launched the app with
+/// a path it had snapshotted earlier.
+pub fn open_note_by_rel_path(app: &App, session: &Rc<RefCell<Session>>, rel_path: &Path) -> bool {
+    let index = {
+        let s = session.borrow();
+        let abs_path = s.vault_dir.join(rel_path);
+        s.notes.iter().position(|p| *p == abs_path)
+    };
+    match index {
+        Some(index) => {
+            open_note(app, session, index);
+            true
+        }
+        None => false,
     }
 }
 

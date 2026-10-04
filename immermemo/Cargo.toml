@@ -40,6 +40,22 @@ slint = { workspace = true }
 # For the Android Keystore token store: plain JNI calls into java.security /
 # javax.crypto, no Gradle-managed dependency needed.
 jni = "0.21"
+# `renderer-femtovg` is requested and is what actually draws -- but it does
+# NOT mean Skia is absent from the Android build, despite that being the
+# intent. `i-slint-backend-android-activity` 1.18.1's own (published, not
+# this repo's) Cargo.toml has an unconditional
+# `[target.'cfg(target_os = "android")'.dependencies.i-slint-renderer-skia]`
+# with no feature gate -- so Skia's GPU (Ganesh/OpenGL) backend and SkSL
+# shader compiler get linked into every Android build regardless, confirmed
+# by `strings` on the built .so (`GrProgramDesc.cpp`, `GrGLSLVarying.cpp`,
+# SkSL symbols all present) and accounting for essentially all of its
+# ~24 MB. This is NOT github.com/slint-ui/slint#13011 (that one's about
+# skia-safe's own default features -- pdf/jpeg/embedded-ICU -- being left
+# enabled; those specifically are *not* present here, since
+# i-slint-renderer-skia's Android dependency already sets
+# `default-features = false`, confirmed by their total absence from the
+# built .so's strings). No cargo-level feature flag avoids the Skia core
+# itself; as of 2026-10-04 no upstream issue covers that specific gap.
 slint = { version = "1.18", default-features = false, features = [
   "backend-android-activity-06",
   "compat-1-2",
@@ -58,28 +74,17 @@ tomet-parser = { workspace = true }
 tomet-printer = { workspace = true }
 
 #= Crates.io
-# Only for `examples/snap.rs`, which renders the window headlessly at a chosen
-# size: the software renderer needs this to find system (Japanese) fonts.
-slint = { workspace = true, features = ["software-renderer-systemfonts"] }
 tempfile = "3"
 
-[package.metadata.android]
-package = "dev.immermemo.app"
-# aarch64 is what a real phone needs; x86_64 lets the same APK also install
-# on an emulator running at native speed under KVM (see nix/dev.nix).
-# Target-specific APKs can be built via `just apk-arm` or `just apk-x86`.
-build_targets = ["aarch64-linux-android", "x86_64-linux-android"]
-
-[package.metadata.android.sdk]
-min_sdk_version = 26
-target_sdk_version = 34
-
-[package.metadata.android.application]
-label = "immermemo"
-# TODO: Re-enable `extract_native_libs = false` once cargo-apk supports storing
-# uncompressed (Stored) and 4KB/16KB page-aligned libraries. Currently, cargo-apk
-# writes android:extractNativeLibs="false" to the manifest but still Deflates
-# the .so, causing Android 11+ to reject installation with INSTALL_FAILED_INVALID_APK.
-
-[[package.metadata.android.uses_permission]]
-name = "android.permission.INTERNET"
+# Only for `examples/snap.rs` (desktop-only -- it renders the window
+# headlessly at a chosen size; the software renderer needs this to find
+# system (Japanese) fonts). Target-gated: an *unconditional*
+# `[dev-dependencies]` entry here would still pull in `backend-winit-wayland`
+# (inherited from the workspace's base `slint` features) -- and with it the
+# full Skia renderer (GPU backend, SkSL shader compiler, ...) -- into the
+# Android `--lib` build too, even though nothing on Android ever uses it
+# (confirmed via `cargo tree --target x86_64-linux-android -e features -i
+# i-slint-renderer-skia`, which traced the edge to exactly this line before
+# it was gated). That's most of the Android .so's ~24MB.
+[target.'cfg(not(target_os = "android"))'.dev-dependencies]
+slint = { workspace = true, features = ["software-renderer-systemfonts"] }

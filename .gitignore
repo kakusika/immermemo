@@ -6,6 +6,12 @@
 
 #= Project-specific
 
+# Android (immermemo/android/): `build/` below already covers Gradle's own
+# output dirs. These three don't fit any shared rule.
+immermemo/android/.gradle/
+immermemo/android/local.properties
+immermemo/android/app/src/main/jniLibs/
+
 
 # -----------------------------------------------------------------------
 # Shared ignore rules

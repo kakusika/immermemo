@@ -380,6 +380,31 @@ impl NoteIndex {
         Ok(notes)
     }
 
+    /// Returns up to `limit` most recently modified notes, newest first.
+    pub fn list_recent(&self, limit: usize) -> anyhow::Result<Vec<IndexedNote>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT path, title, has_conflict FROM notes
+             ORDER BY mtime_secs DESC, mtime_nanos DESC
+             LIMIT ?1",
+        )?;
+        let rows = stmt.query_map(params![limit as i64], |row| {
+            let path_str: String = row.get(0)?;
+            let title: String = row.get(1)?;
+            let conflict_int: i32 = row.get(2)?;
+            Ok(IndexedNote {
+                path: PathBuf::from(path_str),
+                title,
+                has_conflict: conflict_int != 0,
+            })
+        })?;
+
+        let mut notes = Vec::new();
+        for r in rows {
+            notes.push(r?);
+        }
+        Ok(notes)
+    }
+
     /// Returns the number of notes currently having unresolved conflicts.
     pub fn conflict_count(&self) -> anyhow::Result<usize> {
         let count: i64 = self.conn.query_row(
@@ -669,6 +694,30 @@ mod tests {
         let notes_after = index.list_all().unwrap();
         assert_eq!(notes_after.len(), 1);
         assert_eq!(notes_after[0].path, PathBuf::from("sub/b.tmt"));
+    }
+
+    #[test]
+    fn list_recent_orders_by_mtime_descending_and_respects_limit() {
+        let vault = TempDir::new().unwrap();
+        let oldest = vault.path().join("oldest.tmt");
+        let middle = vault.path().join("middle.tmt");
+        let newest = vault.path().join("newest.tmt");
+
+        for (path, age_secs) in [(&oldest, 2000), (&middle, 1000), (&newest, 0)] {
+            std::fs::write(path, "content").unwrap();
+            let mtime = SystemTime::now() - std::time::Duration::from_secs(age_secs);
+            std::fs::File::open(path).unwrap().set_modified(mtime).unwrap();
+        }
+
+        let mut index = NoteIndex::open_in_memory().unwrap();
+        index.reconcile_filesystem(vault.path()).unwrap();
+
+        let recent = index.list_recent(2).unwrap();
+        assert_eq!(recent.len(), 2);
+        assert_eq!(recent[0].path, PathBuf::from("newest.tmt"));
+        assert_eq!(recent[1].path, PathBuf::from("middle.tmt"));
+
+        assert_eq!(index.list_recent(10).unwrap().len(), 3);
     }
 
     #[test]
