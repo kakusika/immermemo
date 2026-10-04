@@ -7,6 +7,9 @@ import {
     ActionRow,
     AppScrollView,
     SegmentedControl,
+    Card,
+    Section,
+    Divider,
 } from "@origami-mobile/components.slint";
 
 // A tappable row for the Settings list: icon, label, and a trailing
@@ -154,82 +157,51 @@ export component SettingsSheet inherits Rectangle {
                 padding-bottom: root.inset-bottom + 24px;
                 spacing: 24px;
 
-                Rectangle {
-                    border-radius: 8px;
-                    background: Colors.surface-elevated;
+                Card {
+                    content-padding: Metrics.spacing-xs;
+                    content-spacing: 0px;
 
-                    VerticalLayout {
-                        padding: 4px;
+                    CategoryRow {
+                        icon: TablerIcons.settings;
+                        label-text: @tr("Interface");
+                        clicked => { root.page = 1; }
+                    }
+                }
+
+                Section {
+                    title: @tr("Other");
+
+                    Card {
+                        content-padding: Metrics.spacing-xs;
+                        content-spacing: 0px;
 
                         CategoryRow {
-                            icon: TablerIcons.settings;
-                            label-text: @tr("Interface");
-                            clicked => { root.page = 1; }
+                            icon: TablerIcons.cloud;
+                            label-text: @tr("Sync & Remote");
+                            clicked => { root.page = 2; }
+                        }
+
+                        Divider { }
+
+                        CategoryRow {
+                            icon: TablerIcons.files;
+                            label-text: @tr("Vaults");
+                            clicked => { root.page = 3; }
                         }
                     }
                 }
 
-                VerticalLayout {
-                    spacing: 10px;
+                Section {
+                    title: @tr("Info");
 
-                    Text {
-                        text: @tr("Other");
-                        font-size: 12px;
-                        font-weight: 700;
-                        color: Colors.muted;
-                        letter-spacing: 0.5px;
-                    }
+                    Card {
+                        content-padding: Metrics.spacing-xs;
+                        content-spacing: 0px;
 
-                    Rectangle {
-                        border-radius: 8px;
-                        background: Colors.surface-elevated;
-
-                        VerticalLayout {
-                            padding: 4px;
-
-                            CategoryRow {
-                                icon: TablerIcons.cloud;
-                                label-text: @tr("Sync & Remote");
-                                clicked => { root.page = 2; }
-                            }
-
-                            Rectangle {
-                                height: 1px;
-                                background: Colors.separator;
-                            }
-
-                            CategoryRow {
-                                icon: TablerIcons.files;
-                                label-text: @tr("Vaults");
-                                clicked => { root.page = 3; }
-                            }
-                        }
-                    }
-                }
-
-                VerticalLayout {
-                    spacing: 10px;
-
-                    Text {
-                        text: @tr("Info");
-                        font-size: 12px;
-                        font-weight: 700;
-                        color: Colors.muted;
-                        letter-spacing: 0.5px;
-                    }
-
-                    Rectangle {
-                        border-radius: 8px;
-                        background: Colors.surface-elevated;
-
-                        VerticalLayout {
-                            padding: 4px;
-
-                            CategoryRow {
-                                icon: TablerIcons.info-circle;
-                                label-text: @tr("About");
-                                clicked => { root.page = 4; }
-                            }
+                        CategoryRow {
+                            icon: TablerIcons.info-circle;
+                            label-text: @tr("About");
+                            clicked => { root.page = 4; }
                         }
                     }
                 }
@@ -245,13 +217,8 @@ export component SettingsSheet inherits Rectangle {
                 padding-top: 16px;
                 padding-bottom: root.inset-bottom + 24px;
 
-                Rectangle {
-                    border-radius: 8px;
-                    background: Colors.surface-elevated;
-
-                    VerticalLayout {
-                        padding: 12px;
-                        spacing: 16px;
+                Card {
+                        content-spacing: Metrics.spacing-lg;
 
                         // Theme Selector
                         VerticalLayout {
@@ -273,10 +240,7 @@ export component SettingsSheet inherits Rectangle {
                             }
                         }
 
-                        Rectangle {
-                            height: 1px;
-                            background: Colors.separator;
-                        }
+                        Divider { }
 
                         // Font Size Selector
                         VerticalLayout {
@@ -298,10 +262,7 @@ export component SettingsSheet inherits Rectangle {
                             }
                         }
 
-                        Rectangle {
-                            height: 1px;
-                            background: Colors.separator;
-                        }
+                        Divider { }
 
                         // UI Scale Selector
                         VerticalLayout {
@@ -321,7 +282,6 @@ export component SettingsSheet inherits Rectangle {
                                 }
                             }
                         }
-                    }
                 }
             }
 
@@ -335,13 +295,8 @@ export component SettingsSheet inherits Rectangle {
                 padding-top: 16px;
                 padding-bottom: root.inset-bottom + 24px;
 
-                Rectangle {
-                    border-radius: 8px;
-                    background: Colors.surface-elevated;
-
-                    VerticalLayout {
-                        padding: 12px;
-                        spacing: 12px;
+                Card {
+                        content-spacing: Metrics.spacing-md;
 
                         VerticalLayout {
                             spacing: 4px;
@@ -397,7 +352,6 @@ export component SettingsSheet inherits Rectangle {
                                 clicked => { root.save-remote(root.url-draft, root.token-draft); }
                             }
                         }
-                    }
                 }
             }
 
@@ -411,13 +365,8 @@ export component SettingsSheet inherits Rectangle {
                 padding-top: 16px;
                 padding-bottom: root.inset-bottom + 24px;
 
-                Rectangle {
-                    border-radius: 8px;
-                    background: Colors.surface-elevated;
-
-                    VerticalLayout {
-                        padding: 12px;
-                        spacing: 8px;
+                Card {
+                        content-spacing: Metrics.spacing-sm;
 
                         HorizontalLayout {
                             Text {
@@ -444,17 +393,13 @@ export component SettingsSheet inherits Rectangle {
                             wrap: word-wrap;
                         }
 
-                        Rectangle {
-                            height: 1px;
-                            background: Colors.separator;
-                        }
+                        Divider { }
 
                         ActionRow {
                             text: @tr("Manage & Switch Vaults →");
                             tint: Palette.accent-background;
                             clicked => { root.open-vaults(); }
                         }
-                    }
                 }
             }
 
@@ -468,13 +413,8 @@ export component SettingsSheet inherits Rectangle {
                 padding-top: 16px;
                 padding-bottom: root.inset-bottom + 24px;
 
-                Rectangle {
-                    border-radius: 8px;
-                    background: Colors.surface-elevated;
-
-                    VerticalLayout {
-                        padding: 16px;
-                        spacing: 8px;
+                Card {
+                        content-spacing: Metrics.spacing-sm;
 
                         Text {
                             text: @tr("Immermemo v{}", root.app-version);
@@ -500,7 +440,6 @@ export component SettingsSheet inherits Rectangle {
                             color: Colors.muted;
                             wrap: word-wrap;
                         }
-                    }
                 }
             }
         }

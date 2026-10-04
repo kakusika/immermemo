@@ -5,53 +5,11 @@ import {
     BubbleButton,
     TopBar,
     AppScrollView,
+    Card,
+    Section,
+    Divider,
+    IconTile,
 } from "@origami-mobile/components.slint";
-
-// A square icon-over-label tile for the Quick Actions grid -- tiles left
-// out for now (horizontal-stretch: 1 fillers) reserve their column so
-// adding the next action doesn't reflow the grid.
-component QuickActionTile inherits Rectangle {
-    in property <image> icon;
-    in property <string> label-text;
-    in property <color> tint: Palette.foreground;
-    callback clicked();
-
-    horizontal-stretch: 1;
-    height: 76px * Metrics.ui-scale;
-    border-radius: Metrics.radius-md;
-    background: touch.pressed ? Palette.foreground.with-alpha(0.12) : Colors.surface-elevated;
-    animate background {
-        duration: 150ms;
-        easing: ease-out;
-    }
-
-    VerticalLayout {
-        alignment: center;
-        spacing: Metrics.spacing-xs;
-
-        HorizontalLayout {
-            alignment: center;
-            Icon {
-                source: root.icon;
-                width: Metrics.icon-lg;
-                height: Metrics.icon-lg;
-                color: root.tint;
-            }
-        }
-
-        Text {
-            text: root.label-text;
-            font-size: Metrics.font-sm;
-            font-weight: 600;
-            color: root.tint;
-            horizontal-alignment: center;
-        }
-    }
-
-    touch := TouchArea {
-        clicked => { root.clicked(); }
-    }
-}
 
 export component HomeScreen inherits Rectangle {
     in property <length> inset-top: 0px;
@@ -124,14 +82,7 @@ export component HomeScreen inherits Rectangle {
                 // ----------------------------------------------------
                 // Section: Active Vault Card
                 // ----------------------------------------------------
-                Rectangle {
-                    border-radius: Metrics.radius-md;
-                    background: Colors.surface-elevated;
-
-                    VerticalLayout {
-                        padding: Metrics.spacing-lg;
-                        spacing: Metrics.spacing-md;
-
+                Card {
                         HorizontalLayout {
                             spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
 
@@ -168,10 +119,7 @@ export component HomeScreen inherits Rectangle {
                             wrap: word-wrap;
                         }
 
-                        Rectangle {
-                            height: 1px;
-                            background: Colors.separator;
-                        }
+                        Divider { }
 
                         HorizontalLayout {
                             spacing: Metrics.spacing-lg;
@@ -208,52 +156,15 @@ export component HomeScreen inherits Rectangle {
                                 }
                             }
                         }
-                    }
                 }
 
                 // ----------------------------------------------------
                 // Section: Sync Status
                 // ----------------------------------------------------
-                VerticalLayout {
-                    spacing: Metrics.spacing-sm;
-
-                    HorizontalLayout {
-                        spacing: Metrics.spacing-sm;
-
-                        Text {
-                            horizontal-stretch: 1;
-                            text: @tr("Sync Status");
-                            font-size: Metrics.font-caption;
-                            font-weight: 700;
-                            vertical-alignment: center;
-                            color: Colors.muted;
-                            letter-spacing: 0.5px;
-                        }
-
-                        // Vault history & commits now lives here instead of
-                        // Quick Actions -- it's sync-related, same as this card.
-                        VerticalLayout {
-                            alignment: center;
-
-                            Rectangle {
-                                width: Metrics.touch;
-                                height: Metrics.touch;
-
-                                TouchArea {
-                                    clicked => { root.open-vault-history(); }
-                                }
-
-                                Icon {
-                                    source: TablerIcons.history;
-                                    width: Metrics.icon-sm;
-                                    height: Metrics.icon-sm;
-                                    color: Colors.muted;
-                                    x: (parent.width - self.width) / 2;
-                                    y: (parent.height - self.height) / 2;
-                                }
-                            }
-                        }
-                    }
+                Section {
+                    title: @tr("Sync Status");
+                    action-icon: TablerIcons.history;
+                    action => { root.open-vault-history(); }
 
                     // Card: Error State (When last-sync-error != "")
                     if root.last-sync-error != "": Rectangle {
@@ -417,13 +328,9 @@ export component HomeScreen inherits Rectangle {
                     }
 
                     // Card: Normal / Idle / Remote Not Configured
-                    if root.last-sync-error == "": Rectangle {
-                        border-radius: Metrics.radius-md;
-                        background: Colors.surface-elevated;
-
-                        VerticalLayout {
-                            padding: Metrics.spacing-md + 2px * Metrics.ui-scale;
-                            spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
+                    if root.last-sync-error == "": Card {
+                        content-padding: Metrics.spacing-md + 2px * Metrics.ui-scale;
+                        content-spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
 
                             if !root.remote-configured: HorizontalLayout {
                                 spacing: Metrics.spacing-md;
@@ -557,21 +464,12 @@ export component HomeScreen inherits Rectangle {
                             }
                         }
                     }
-                }
-
                 // ----------------------------------------------------
                 // Section: Unresolved Conflicts
                 // ----------------------------------------------------
-                if root.conflict-count > 0: VerticalLayout {
-                    spacing: Metrics.spacing-sm;
-
-                    Text {
-                        text: @tr("Unresolved Conflicts");
-                        font-size: Metrics.font-caption;
-                        font-weight: 700;
-                        color: Colors.warning;
-                        letter-spacing: 0.5px;
-                    }
+                if root.conflict-count > 0: Section {
+                    title: @tr("Unresolved Conflicts");
+                    title-color: Colors.warning;
 
                     Rectangle {
                         border-radius: Metrics.radius-md;
@@ -623,21 +521,13 @@ export component HomeScreen inherits Rectangle {
                 // Vault switching and Settings are already one tap away
                 // (the Vault Card's icon button, the bottom nav Settings
                 // tab) so they don't need a quick action of their own.
-                VerticalLayout {
-                    spacing: Metrics.spacing-sm;
-
-                    Text {
-                        text: @tr("Quick Actions");
-                        font-size: Metrics.font-caption;
-                        font-weight: 700;
-                        color: Colors.muted;
-                        letter-spacing: 0.5px;
-                    }
+                Section {
+                    title: @tr("Quick Actions");
 
                     HorizontalLayout {
                         spacing: Metrics.spacing-sm;
 
-                        QuickActionTile {
+                        IconTile {
                             icon: TablerIcons.note;
                             label-text: @tr("New Note");
                             tint: Palette.accent-background;

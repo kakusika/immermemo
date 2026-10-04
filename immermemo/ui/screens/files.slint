@@ -8,6 +8,8 @@ import {
     Fab,
     AppScrollView,
     SegmentedControl,
+    IconTile,
+    SelectableRow,
 } from "@origami-mobile/components.slint";
 
 // One row of the Directory page's List view, or one tile of its Grid
@@ -34,153 +36,6 @@ export struct DirectoryEntry {
 export struct BreadcrumbSegment {
     key: string,
     display: string,
-}
-
-// A square icon-over-label tile for the Library hub's 2-column section
-// grid -- same recipe as home.slint's QuickActionTile (kept as its own
-// copy here since the two screens have no shared import point for it),
-// plus an `enabled` flag: a section with no implementation yet still
-// gets a tile (muted, inert) rather than being left out, so the grid
-// doesn't need reshaping once List/Diary gain real content.
-component LibrarySectionTile inherits Rectangle {
-    in property <image> icon;
-    in property <string> label-text;
-    in property <bool> enabled: true;
-    callback clicked();
-
-    horizontal-stretch: 1;
-    // Without both of these, each tile's own preferred-width comes from
-    // its label Text's natural single-line width -- "Directory" is
-    // wider than "List"/"Diary" -- and stretch only distributes
-    // *leftover* space past that preferred-width equally; it does not
-    // equalize the preferred-width itself. (min-width alone, tried
-    // first, wasn't enough -- confirmed by measuring actual rendered
-    // pixel widths: 410px vs 334px, still off. preferred-width is the
-    // real basis stretch starts from.) Zeroing both makes the row's
-    // split purely stretch-driven, confirmed equal by the same
-    // pixel measurement after this change.
-    min-width: 0px;
-    preferred-width: 0px;
-    height: 88px * Metrics.ui-scale;
-    border-radius: Metrics.radius-md;
-    background: touch.pressed && root.enabled ? Palette.foreground.with-alpha(0.12) : Colors.surface-elevated;
-    opacity: root.enabled ? 1.0 : 0.5;
-    animate background {
-        duration: 150ms;
-        easing: ease-out;
-    }
-
-    VerticalLayout {
-        alignment: center;
-        spacing: Metrics.spacing-xs;
-
-        HorizontalLayout {
-            alignment: center;
-            Icon {
-                source: root.icon;
-                width: Metrics.icon-lg;
-                height: Metrics.icon-lg;
-                color: root.enabled ? Palette.foreground : Colors.muted;
-            }
-        }
-
-        Text {
-            text: root.label-text;
-            font-size: Metrics.font-sm;
-            font-weight: 600;
-            color: root.enabled ? Palette.foreground : Colors.muted;
-            horizontal-alignment: center;
-        }
-    }
-
-    touch := TouchArea {
-        enabled: root.enabled;
-        clicked => { root.clicked(); }
-    }
-}
-
-// An icon-over-label tile for the Directory page's Grid view -- same
-// recipe as `LibrarySectionTile`, minus its `enabled`-muting (every grid
-// entry is a real folder or note, never a placeholder), plus a long-press
-// timer on note tiles so Grid gets the same rename/delete menu List
-// already has. Folders have no such menu: they're derived from paths,
-// not an entity of their own to rename or delete.
-component DirectoryGridTile inherits Rectangle {
-    in property <image> icon;
-    in property <string> label-text;
-    in property <bool> is-folder;
-    in property <bool> has-conflict;
-    in property <bool> highlighted;
-    callback clicked();
-    callback long-pressed();
-
-    horizontal-stretch: 1;
-    height: 96px * Metrics.ui-scale;
-    border-radius: Metrics.radius-md;
-    background: touch.pressed
-        ? Palette.foreground.with-alpha(0.12)
-        : (root.highlighted ? Palette.accent-background.with-alpha(0.20) : Colors.surface-elevated);
-    animate background {
-        duration: 150ms;
-        easing: ease-out;
-    }
-
-    VerticalLayout {
-        alignment: center;
-        spacing: Metrics.spacing-xs;
-
-        HorizontalLayout {
-            alignment: center;
-            Icon {
-                source: root.icon;
-                width: Metrics.icon-lg;
-                height: Metrics.icon-lg;
-                color: root.highlighted ? Palette.accent-background : Palette.foreground;
-            }
-        }
-
-        HorizontalLayout {
-            alignment: center;
-            spacing: Metrics.spacing-xs;
-
-            Text {
-                text: root.label-text;
-                font-size: Metrics.font-sm;
-                font-weight: 600;
-                color: root.highlighted ? Palette.accent-background : Palette.foreground;
-                horizontal-alignment: center;
-                overflow: elide;
-            }
-
-            if root.has-conflict: Rectangle {
-                width: Metrics.spacing-sm;
-                height: Metrics.spacing-sm;
-                border-radius: Metrics.spacing-sm / 2;
-                background: Colors.warning;
-            }
-        }
-    }
-
-    property <bool> long-pressed-flag: false;
-
-    touch := TouchArea {
-        clicked => {
-            if (long-pressed-flag) {
-                long-pressed-flag = false;
-            } else {
-                root.clicked();
-            }
-        }
-    }
-
-    Timer {
-        interval: 400ms;
-        running: touch.pressed && !root.is-folder && !long-pressed-flag;
-        triggered => {
-            long-pressed-flag = true;
-            root.long-pressed();
-        }
-    }
 }
 
 // The folder-browsing context above List/Grid's contents: a breadcrumb
@@ -316,7 +171,8 @@ export component FilesScreen inherits Rectangle {
             HorizontalLayout {
                 spacing: Metrics.spacing-sm;
 
-                LibrarySectionTile {
+                IconTile {
+                    tile-height: 88px * Metrics.ui-scale;
                     icon: TablerIcons.folder;
                     label-text: @tr("Directory");
                     clicked => { root.page = 1; }
@@ -325,7 +181,8 @@ export component FilesScreen inherits Rectangle {
                 // No list icon exists in origami-icons -- menu-2
                 // (hamburger) stands in until this has a real
                 // implementation to design a look for.
-                LibrarySectionTile {
+                IconTile {
+                    tile-height: 88px * Metrics.ui-scale;
                     icon: TablerIcons.menu-2;
                     label-text: @tr("List");
                     enabled: false;
@@ -337,7 +194,8 @@ export component FilesScreen inherits Rectangle {
 
                 // No diary/calendar icon exists either -- same
                 // placeholder situation as List, above.
-                LibrarySectionTile {
+                IconTile {
+                    tile-height: 88px * Metrics.ui-scale;
                     icon: TablerIcons.file;
                     label-text: @tr("Diary");
                     enabled: false;
@@ -407,115 +265,24 @@ export component FilesScreen inherits Rectangle {
             VerticalLayout {
                 padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
 
-                for entry[i] in root.folder-entries: Rectangle {
-                    height: Metrics.row-height;
-
-                    item-container := Rectangle {
-                        x: Metrics.spacing-sm;
-                        y: Metrics.spacing-xs / 2;
-                        width: parent.width - Metrics.spacing-lg;
-                        height: parent.height - Metrics.spacing-xs;
-                        border-radius: Metrics.radius-lg;
-                        background: (!entry.is-folder && root.highlight-current && entry.note-index == root.current)
-                            ? Palette.accent-background.with-alpha(0.20)
-                            : (touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent);
-
-                        animate background {
-                            duration: 150ms;
-                            easing: ease-out;
-                        }
-
-                        HorizontalLayout {
-                            padding-left: Metrics.spacing-lg;
-                            padding-right: Metrics.spacing-lg;
-                            spacing: Metrics.spacing-sm;
-
-                            if entry.is-folder: VerticalLayout {
-                                alignment: center;
-                                Icon {
-                                    source: TablerIcons.folder;
-                                    width: Metrics.icon-sm;
-                                    height: Metrics.icon-sm;
-                                    color: Colors.muted;
-                                }
-                            }
-
-                            // Only when the note actually has a
-                            // `@meta{ icon: @doc.icon(...) }` -- a note
-                            // without one keeps the plain title-only row
-                            // this had before `icon-image` existed, not a
-                            // generic file icon suddenly appearing on
-                            // every row.
-                            if !entry.is-folder && entry.icon-image.width > 0: VerticalLayout {
-                                alignment: center;
-                                Icon {
-                                    source: entry.icon-image;
-                                    width: Metrics.icon-sm;
-                                    height: Metrics.icon-sm;
-                                    color: Colors.muted;
-                                }
-                            }
-
-                            VerticalLayout {
-                                horizontal-stretch: 1;
-                                alignment: center;
-
-                                Text {
-                                    text: entry.display;
-                                    font-size: Metrics.font-body;
-                                    font-weight: entry.is-folder
-                                        ? 600
-                                        : ((root.highlight-current && entry.note-index == root.current) ? 600 : 400);
-                                    color: (!entry.is-folder && root.highlight-current && entry.note-index == root.current)
-                                        ? Palette.accent-background
-                                        : Palette.foreground;
-                                    vertical-alignment: center;
-                                    overflow: elide;
-                                }
-                            }
-
-                            if !entry.is-folder && entry.has-conflict: Rectangle {
-                                width: Metrics.spacing-sm;
-                                height: Metrics.spacing-sm;
-                                y: (parent.height - self.height) / 2;
-                                border-radius: Metrics.spacing-sm / 2;
-                                background: Colors.warning;
-                            }
-
-                            if entry.is-folder: VerticalLayout {
-                                alignment: center;
-                                Icon {
-                                    source: TablerIcons.chevron-right;
-                                    width: Metrics.icon-sm;
-                                    height: Metrics.icon-sm;
-                                    color: Colors.muted;
-                                }
-                            }
+                for entry[i] in root.folder-entries: SelectableRow {
+                    leading-icon: entry.is-folder ? TablerIcons.folder : entry.icon-image;
+                    label-text: entry.display;
+                    bold: entry.is-folder;
+                    highlighted: !entry.is-folder && root.highlight-current && entry.note-index == root.current;
+                    show-dot: !entry.is-folder && entry.has-conflict;
+                    show-chevron: entry.is-folder;
+                    long-press-enabled: !entry.is-folder;
+                    clicked => {
+                        if (entry.is-folder) {
+                            root.navigate-folder(entry.key);
+                        } else {
+                            root.select(entry.note-index);
                         }
                     }
-
-                    property <bool> long-pressed: false;
-
-                    touch := TouchArea {
-                        clicked => {
-                            if (long-pressed) {
-                                long-pressed = false;
-                            } else if (entry.is-folder) {
-                                root.navigate-folder(entry.key);
-                            } else {
-                                root.select(entry.note-index);
-                            }
-                        }
-                    }
-
-                    Timer {
-                        interval: 400ms;
-                        running: touch.pressed && !entry.is-folder && !long-pressed;
-                        triggered => {
-                            long-pressed = true;
-                            root.trigger-heavy-haptic();
-                            root.note-menu-requested(entry.note-index);
-                        }
+                    long-pressed => {
+                        root.trigger-heavy-haptic();
+                        root.note-menu-requested(entry.note-index);
                     }
                 }
             }
@@ -534,16 +301,17 @@ export component FilesScreen inherits Rectangle {
                 GridLayout {
                     spacing: Metrics.spacing-sm;
 
-                    for entry[i] in root.folder-entries: DirectoryGridTile {
+                    for entry[i] in root.folder-entries: IconTile {
                         row: i / 3;
                         col: Math.mod(i, 3);
+                        tile-height: 96px * Metrics.ui-scale;
                         icon: entry.is-folder
                             ? TablerIcons.folder
                             : (entry.icon-image.width > 0 ? entry.icon-image : TablerIcons.file);
                         label-text: entry.display;
-                        is-folder: entry.is-folder;
-                        has-conflict: entry.has-conflict;
+                        show-dot: entry.has-conflict;
                         highlighted: !entry.is-folder && root.highlight-current && entry.note-index == root.current;
+                        long-press-enabled: !entry.is-folder;
                         clicked => {
                             if (entry.is-folder) {
                                 root.navigate-folder(entry.key);
