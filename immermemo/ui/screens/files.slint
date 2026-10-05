@@ -304,7 +304,6 @@ export component FilesScreen inherits Rectangle {
                             ? TablerIcons.folder
                             : (entry.icon-image.width > 0 ? entry.icon-image : TablerIcons.file);
                         label-text: entry.display;
-                        show-dot: entry.has-conflict;
                         highlighted: !entry.is-folder && root.highlight-current && entry.note-index == root.current;
                         long-press-enabled: !entry.is-folder;
                         clicked => {
@@ -317,6 +316,13 @@ export component FilesScreen inherits Rectangle {
                         long-pressed => {
                             root.trigger-heavy-haptic();
                             root.note-menu-requested(entry.note-index);
+                        }
+
+                        if entry.has-conflict: Rectangle {
+                            width: Metrics.spacing-sm;
+                            height: Metrics.spacing-sm;
+                            border-radius: Metrics.spacing-sm / 2;
+                            background: Colors.warning;
                         }
                     }
                 }

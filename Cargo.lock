@@ -3866,7 +3866,7 @@ dependencies = [
 [[package]]
 name = "origami-icons"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#4995669cb88cb33d0e53f2ca41d1bb012407cf9a"
+source = "git+https://github.com/kakusika/origami-frameworks.git#bece764ce6a331ff6d6c9faffc179ced08985446"
 dependencies = [
  "flate2",
 ]
@@ -3874,12 +3874,12 @@ dependencies = [
 [[package]]
 name = "origami-mobile"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#4995669cb88cb33d0e53f2ca41d1bb012407cf9a"
+source = "git+https://github.com/kakusika/origami-frameworks.git#bece764ce6a331ff6d6c9faffc179ced08985446"
 
 [[package]]
 name = "origami-richtext"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#4995669cb88cb33d0e53f2ca41d1bb012407cf9a"
+source = "git+https://github.com/kakusika/origami-frameworks.git#bece764ce6a331ff6d6c9faffc179ced08985446"
 dependencies = [
  "origami-richtext-flow",
 ]
@@ -3887,7 +3887,7 @@ dependencies = [
 [[package]]
 name = "origami-richtext-flow"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#4995669cb88cb33d0e53f2ca41d1bb012407cf9a"
+source = "git+https://github.com/kakusika/origami-frameworks.git#bece764ce6a331ff6d6c9faffc179ced08985446"
 
 [[package]]
 name = "os_pipe"

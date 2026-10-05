@@ -1,7 +1,7 @@
-import { Palette, LineEdit } from "std-widgets.slint";
+import { LineEdit } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, TablerIcons } from "@origami-icons/icons.slint";
-import { IconButton, TopBar, AppScrollView } from "@origami-mobile/components.slint";
+import { TablerIcons } from "@origami-icons/icons.slint";
+import { IconButton, IconTile, TopBar, AppScrollView } from "@origami-mobile/components.slint";
 import { SheetDragArea } from "../components.slint";
 
 // One candidate in the picker's (already filtered, already capped) result
@@ -61,7 +61,7 @@ export component IconPickerSheet inherits Rectangle {
             height: 100%;
             inset-top: root.inset-top;
             IconButton {
-                icon: TablerIcons.chevron-left;
+                icon: TablerIcons.x;
                 clicked => { root.close(); }
             }
 
@@ -118,27 +118,21 @@ export component IconPickerSheet inherits Rectangle {
 
                     GridLayout {
                         spacing: Metrics.spacing-sm;
+                        property <int> columns: 5;
 
-                        for entry[i] in root.results: Rectangle {
-                            row: i / 5;
-                            col: Math.mod(i, 5);
-                            height: Metrics.touch * 1.2;
-                            border-radius: Metrics.radius-lg;
-                            background: icon-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
-
-                            VerticalLayout {
-                                alignment: center;
-                                Icon {
-                                    source: entry.image;
-                                    width: Metrics.icon-md;
-                                    height: Metrics.icon-md;
-                                    color: Palette.foreground;
-                                }
-                            }
-
-                            icon-touch := TouchArea {
-                                clicked => { root.select(entry.name); }
-                            }
+                        // Same component and equal-column stretch (via
+                        // `IconTile`'s own zeroed min/preferred-width)
+                        // as `files.slint`'s library/directory grid --
+                        // `tile-height: Metrics.touch` keeps each cell a
+                        // real tap target, not an arbitrary multiple of
+                        // one.
+                        for entry[i] in root.results: IconTile {
+                            row: i / parent.columns;
+                            col: Math.mod(i, parent.columns);
+                            tile-height: Metrics.touch;
+                            icon: entry.image;
+                            label-text: "";
+                            clicked => { root.select(entry.name); }
                         }
                     }
 
