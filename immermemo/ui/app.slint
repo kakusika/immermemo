@@ -18,7 +18,6 @@ import {
     DirectoryEntry,
     BreadcrumbSegment,
 } from "screens/files.slint";
-import { PropertiesScreen } from "screens/properties.slint";
 import { SearchScreen } from "screens/search.slint";
 import { VaultSheet } from "sheets/vault.slint";
 import { SettingsSheet } from "sheets/settings.slint";
@@ -90,7 +89,9 @@ export component App inherits Window {
     background: Colors.page-background;
     forward-focus: root-focus-scope;
 
-    // Navigation: 0: Home, 1: Files, 2: Search, 3: Properties, 4: Settings
+    // Navigation: 0: Home, 1: Files, 2: Search, 3: Settings. Properties
+    // moved into the note sheet itself (EditorScreen's note-view) --
+    // see ViewSwitcher in components.slint.
     in-out property <int> active-tab: 0;
 
     in-out property <bool> note-sheet-open: false;
@@ -257,7 +258,7 @@ export component App inherits Window {
     }
     changed settings-open => {
         if (root.settings-open) {
-            root.active-tab = 4;
+            root.active-tab = 3;
             root.settings-open = false;
         }
     }
@@ -368,7 +369,7 @@ export component App inherits Window {
 
         // 4. Pop a Settings sub-page back to its category list before
         // leaving the tab entirely.
-        if (root.active-tab == 4 && settings-screen.page != 0) {
+        if (root.active-tab == 3 && settings-screen.page != 0) {
             settings-screen.page = 0;
             return true;
         }
@@ -388,7 +389,7 @@ export component App inherits Window {
             return true;
         }
 
-        // 5. If on any secondary tab (Files: 1, Search: 2, Properties: 3, Settings: 4), navigate back to Home (0)
+        // 5. If on any secondary tab (Files: 1, Search: 2, Settings: 3), navigate back to Home (0)
         if (root.active-tab != 0) {
             root.active-tab = 0;
             root.trigger-haptic();
@@ -575,7 +576,7 @@ export component App inherits Window {
                 width: 100%;
                 height: 100%;
                 enabled: root.narrow && root.keyboard == 0px && !root.note-sheet-open && !root.is-dragging-sheet;
-                handle-swipe-left: root.active-tab < 4;
+                handle-swipe-left: root.active-tab < 3;
                 handle-swipe-right: root.active-tab > 0;
 
                 moved => {
@@ -589,7 +590,7 @@ export component App inherits Window {
                 swiped => {
                     root.is-swiping = false;
                     let dx = self.current-position.x - self.pressed-position.x;
-                    if (dx < -40px && root.active-tab < 4) {
+                    if (dx < -40px && root.active-tab < 3) {
                         root.active-tab += 1;
                         root.trigger-haptic();
                     } else if (dx > 40px && root.active-tab > 0) {
@@ -630,7 +631,7 @@ export component App inherits Window {
                     sync => { root.sync(); }
                     open-vaults => { root.open-vault-sheet(); }
                     open-settings => {
-                        root.active-tab = 4;
+                        root.active-tab = 3;
                         root.trigger-haptic();
                     }
                     open-vault-history => { root.open-vault-history(); }
@@ -677,7 +678,7 @@ export component App inherits Window {
                     }
                     sync => { root.sync(); }
                     open-settings => {
-                        root.active-tab = 4;
+                        root.active-tab = 3;
                         root.trigger-haptic();
                     }
                     note-menu-requested(i) => { root.note-menu-index = i; }
@@ -715,51 +716,9 @@ export component App inherits Window {
                     }
                 }
 
-                // Screen 3: Details / Properties
-                details-screen := PropertiesScreen {
-                    x: (3 - root.active-tab) * parent.width + root.swipe-dx;
-                    y: 0px;
-                    width: parent.width;
-                    height: parent.height;
-                    inset-top: root.inset-top;
-                    inset-bottom: root.screen-inset-bottom;
-                    has-note: root.current >= 0;
-                    note-title: root.current-title;
-                    note-path: root.current-note-path;
-                    char-count: root.char-count;
-                    word-count: root.word-count;
-                    line-count: root.line-count;
-                    has-conflict: root.current-has-conflict;
-                    conflict-total: root.active-conflict-total;
-                    conflict-a-preview: root.active-conflict-a;
-                    conflict-b-preview: root.active-conflict-b;
-                    conflict-a-label: root.active-conflict-a-label;
-                    conflict-b-label: root.active-conflict-b-label;
-                    conflict-a-button-label: root.active-conflict-a-button-label;
-                    conflict-b-button-label: root.active-conflict-b-button-label;
-                    open-conflict-sheet => { root.open-conflict-sheet(); }
-                    rename-requested => {
-                        if (root.current >= 0) {
-                            root.rename-requested(root.current);
-                        }
-                    }
-                    delete-requested => {
-                        if (root.current >= 0) {
-                            root.delete-requested(root.current);
-                        }
-                    }
-                    resolve-mine => { root.resolve-mine(); }
-                    resolve-theirs => { root.resolve-theirs(); }
-
-                    animate x {
-                        duration: root.is-swiping ? 0ms : 220ms;
-                        easing: ease-out;
-                    }
-                }
-
-                // Screen 4: Settings
+                // Screen 3: Settings
                 settings-screen := SettingsSheet {
-                    x: (4 - root.active-tab) * parent.width + root.swipe-dx;
+                    x: (3 - root.active-tab) * parent.width + root.swipe-dx;
                     y: 0px;
                     width: parent.width;
                     height: parent.height;
@@ -829,8 +788,23 @@ export component App inherits Window {
                 has-note: root.current >= 0;
                 note-count: root.notes.length;
                 has-conflict: root.current-has-conflict;
+                note-path: root.current-note-path;
+                char-count: root.char-count;
+                word-count: root.word-count;
+                line-count: root.line-count;
+                conflict-total: root.active-conflict-total;
+                conflict-a-preview: root.active-conflict-a;
+                conflict-b-preview: root.active-conflict-b;
+                conflict-a-label: root.active-conflict-a-label;
+                conflict-b-label: root.active-conflict-b-label;
+                conflict-a-button-label: root.active-conflict-a-button-label;
+                conflict-b-button-label: root.active-conflict-b-button-label;
                 can-undo: root.can-undo;
                 can-redo: root.can-redo;
+                can-navigate-back: root.can-navigate-back;
+                can-navigate-forward: root.can-navigate-forward;
+                navigate-back => { root.navigate-back(); }
+                navigate-forward => { root.navigate-forward(); }
                 show-back: false;
                 back => { root.handle-back(); }
                 collapse => { root.close-note-sheet(); }

@@ -1,9 +1,13 @@
 import { Palette, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { TopBar, ActionRow, AppScrollView } from "@origami-mobile/widgets.slint";
+import { AppScrollView } from "@origami-mobile/widgets.slint";
 
-export component PropertiesScreen inherits Rectangle {
-    in property <length> inset-top: 0px;
+// The currently-open note's properties/stats, embedded as one of the
+// note sheet's views (`EditorScreen`'s `note-view`). No header of its
+// own -- EditorScreen's own header covers it, same as the body view;
+// Rename/Delete also live there, in its 3-dot overflow menu, rather
+// than a second "Actions" card here.
+export component PropertiesView inherits Rectangle {
     in property <length> inset-bottom: 0px;
 
     in property <bool> has-note: false;
@@ -24,8 +28,6 @@ export component PropertiesScreen inherits Rectangle {
     in property <string> conflict-a-button-label: "";
     in property <string> conflict-b-button-label: "";
 
-    callback rename-requested();
-    callback delete-requested();
     callback resolve-mine();
     callback resolve-theirs();
     callback open-conflict-sheet();
@@ -33,20 +35,6 @@ export component PropertiesScreen inherits Rectangle {
     background: Colors.page-background;
 
     VerticalLayout {
-        TopBar {
-            inset-top: root.inset-top;
-            bar-background: transparent;
-
-            Text {
-                horizontal-stretch: 1;
-                text: @tr("Properties");
-                font-size: Metrics.font-title;
-                font-weight: 700;
-                vertical-alignment: center;
-                color: Palette.foreground;
-            }
-        }
-
         if !root.has-note: Rectangle {
             vertical-stretch: 1;
             VerticalLayout {
@@ -300,43 +288,8 @@ export component PropertiesScreen inherits Rectangle {
                         }
                     }
                 }
-
-                // ----------------------------------------------------
-                // Section: Note Actions
-                // ----------------------------------------------------
-                VerticalLayout {
-                    spacing: Metrics.spacing-sm;
-
-                    Text {
-                        text: @tr("Actions");
-                        font-size: Metrics.font-caption;
-                        font-weight: 700;
-                        color: Colors.muted;
-                        letter-spacing: 0.5px;
-                    }
-
-                    Rectangle {
-                        border-radius: Metrics.radius-md;
-                        background: Colors.surface-elevated;
-
-                        VerticalLayout {
-                            padding: Metrics.spacing-sm;
-                            spacing: Metrics.spacing-xs;
-
-                            ActionRow {
-                                text: @tr("Rename...");
-                                clicked => { root.rename-requested(); }
-                            }
-
-                            ActionRow {
-                                text: @tr("Delete Note...");
-                                tint: Colors.danger;
-                                clicked => { root.delete-requested(); }
-                            }
-                        }
-                    }
-                }
             }
         }
     }
 }
+

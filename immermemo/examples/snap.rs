@@ -363,17 +363,11 @@ fn main() {
     app.set_current_has_conflict(false);
     app.set_note_sheet_open(false);
 
-    // Tab 3: Details / Properties
-    app.set_active_tab(3);
-    app.set_current_has_conflict(true);
-    app.set_active_conflict_total(2);
-    app.set_active_conflict_a("牛乳（低脂肪）".into());
-    app.set_active_conflict_b("牛乳（特濃）".into());
-    std::thread::sleep(std::time::Duration::from_millis(300));
-    render(&window, size, &format!("{prefix}-properties-conflict.ppm"));
-    app.set_current_has_conflict(false);
-    std::thread::sleep(std::time::Duration::from_millis(300));
-    render(&window, size, &format!("{prefix}-properties.ppm"));
+    // Properties no longer has its own tab -- it's the note sheet's own
+    // "Properties" view (EditorScreen's note-view, see ViewSwitcher in
+    // components.slint), not reachable here without simulating a tap
+    // (note-view is deliberately not exposed to Rust, see editor.slint's
+    // doc comment on it).
     app.set_note_sheet_open(true);
     std::thread::sleep(std::time::Duration::from_millis(300));
 
@@ -395,8 +389,8 @@ fn main() {
     )));
     app.set_current(0);
 
-    // Tab 4: Settings
-    app.set_active_tab(4);
+    // Tab 3: Settings
+    app.set_active_tab(3);
     app.set_current_vault_name("notes".into());
     app.set_current_vault_path("/home/user/notes".into());
     std::thread::sleep(std::time::Duration::from_millis(300));

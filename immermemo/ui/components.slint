@@ -298,22 +298,158 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: TablerIcons.info-circle;
-            label: @tr("Properties");
+            icon: TablerIcons.settings;
+            label: @tr("Settings");
             active: root.active-tab == 3;
             clicked => {
                 root.active-tab = 3;
                 root.tab-selected(3);
             }
         }
+    }
+}
 
-        NavItem {
-            icon: TablerIcons.settings;
-            label: @tr("Settings");
-            active: root.active-tab == 4;
-            clicked => {
-                root.active-tab = 4;
-                root.tab-selected(4);
+// Icon-only segmented switcher for the note sheet's own views (Body,
+// Properties, ...). Unlike `SegmentedControl` (text, full-width,
+// Settings-style) this is a compact, self-sized pill group -- a mode
+// switch for *the currently open note's* content, not a page-wide
+// setting. Sits next to `NavPill` as one group at the body's bottom
+// edge (see `EditorScreen`) -- not tied to the Edit/Done FAB's own
+// position, so it doesn't go orphaned when the FAB itself disappears
+// (Properties view has nothing to edit). Sizing mirrors
+// `BubbleButton`'s bubble-in-a-touch-target recipe: each segment's
+// visible pill is a square the track's own height, which is
+// Metrics.bubble-button-size -- the same visual size as the header's
+// own BubbleButtons, matched on request after an earlier pass first
+// tried a full Metrics.touch cell and found it inconsistent.
+export component ViewSwitcher inherits Rectangle {
+    in property <[image]> icons;
+    in property <int> selected: 0;
+    callback changed(int);
+
+    // Each cell is Metrics.bubble-button-size, with Metrics.spacing-xs
+    // as the track's margin on every side -- equal padding top/bottom
+    // and left/right, unlike a first pass at this that only padded
+    // left/right.
+    height: Metrics.bubble-button-size + 2 * Metrics.spacing-xs;
+    width: row.preferred-width;
+    border-radius: self.height / 2;
+    background: Colors.surface-elevated;
+    drop-shadow-blur: 8px * Metrics.ui-scale;
+    drop-shadow-offset-y: 2px * Metrics.ui-scale;
+    drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024;
+
+    row := HorizontalLayout {
+        padding: Metrics.spacing-xs;
+        spacing: Metrics.spacing-xs;
+
+        for icon[i] in root.icons: Rectangle {
+            width: Metrics.bubble-button-size;
+            border-radius: self.height / 2;
+            background: i == root.selected ? Palette.accent-background.with-alpha(0.18) : transparent;
+            animate background {
+                duration: 150ms;
+                easing: ease-out;
+            }
+
+            Icon {
+                source: icon;
+                color: i == root.selected ? Palette.accent-background : Colors.muted;
+                width: Metrics.icon-md;
+                height: Metrics.icon-md;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                animate color {
+                    duration: 120ms;
+                    easing: ease-out;
+                }
+            }
+
+            TouchArea {
+                clicked => { root.changed(i); }
+            }
+        }
+    }
+}
+
+// Back/forward through the note history (session.rs's
+// BackForwardStack), grouped with ViewSwitcher as one pair at the
+// note sheet body's bottom edge (see `EditorScreen`) -- deliberately
+// drawn with directional chevrons (not mode-selection icons) so the
+// pill's own shape signals "this is the swipeable one", distinct from
+// ViewSwitcher's Body/Properties toggle. Swiping the body itself to
+// navigate isn't wired up yet (still just this pill, tap-only); the
+// chevrons already read as "this direction, swipe or tap" either way,
+// so that can follow later without changing what this communicates.
+// Unlike the mini card's own reveal chevrons (which hide entirely when
+// a direction has nowhere to go), both sides always render here --
+// dimmed and untappable instead -- since this is a persistent, always-
+// visible control rather than something revealed mid-gesture: hiding
+// a side here would look like the pill itself is broken/missing a
+// piece, not like "nothing to do that way".
+export component NavPill inherits Rectangle {
+    in property <bool> can-back: false;
+    in property <bool> can-forward: false;
+    callback back();
+    callback forward();
+
+    height: Metrics.bubble-button-size + 2 * Metrics.spacing-xs;
+    width: row.preferred-width;
+    border-radius: self.height / 2;
+    background: Colors.surface-elevated;
+    drop-shadow-blur: 8px * Metrics.ui-scale;
+    drop-shadow-offset-y: 2px * Metrics.ui-scale;
+    drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024;
+
+    row := HorizontalLayout {
+        padding: Metrics.spacing-xs;
+        spacing: Metrics.spacing-xs;
+
+        Rectangle {
+            width: Metrics.bubble-button-size;
+            border-radius: self.height / 2;
+            background: root.can-back && back-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+            animate background {
+                duration: 120ms;
+                easing: ease-out;
+            }
+
+            Icon {
+                source: TablerIcons.chevron-left;
+                color: root.can-back ? Colors.muted : Colors.muted.with-alpha(0.35);
+                width: Metrics.icon-md;
+                height: Metrics.icon-md;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+
+            back-touch := TouchArea {
+                enabled: root.can-back;
+                clicked => { root.back(); }
+            }
+        }
+
+        Rectangle {
+            width: Metrics.bubble-button-size;
+            border-radius: self.height / 2;
+            background: root.can-forward && forward-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+            animate background {
+                duration: 120ms;
+                easing: ease-out;
+            }
+
+            Icon {
+                source: TablerIcons.chevron-right;
+                color: root.can-forward ? Colors.muted : Colors.muted.with-alpha(0.35);
+                width: Metrics.icon-md;
+                height: Metrics.icon-md;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+
+            forward-touch := TouchArea {
+                enabled: root.can-forward;
+                clicked => { root.forward(); }
             }
         }
     }

@@ -10,7 +10,8 @@ import {
     PillButton,
 } from "@origami-mobile/widgets.slint";
 import { NoteBodyItemView, NoteBodyView } from "note_body.slint";
-import { SheetDragArea } from "../components.slint";
+import { SheetDragArea, ViewSwitcher, NavPill } from "../components.slint";
+import { PropertiesView } from "properties.slint";
 
 // Elevation + the open/close corner-radius morph, shared by the header and
 // body halves of the note sheet so they read as one continuous card. No
@@ -51,6 +52,49 @@ export component EditorScreen inherits Rectangle {
     in property <bool> syncing: false;
     in property <bool> remote-configured: false;
     in property <string> last-synced-at: "";
+    // Properties view data (see `PropertiesView` in properties.slint) --
+    // has-conflict/resolve-mine/resolve-theirs/open-conflict-sheet above
+    // already exist for the inline conflict bar, reused here as-is.
+    // Rename/Delete aren't among these: PropertiesView has no Actions
+    // card of its own, since this screen's own header already has a
+    // 3-dot overflow menu (note-menu-requested) for the same actions.
+    in property <string> note-path: "";
+    in property <int> char-count: 0;
+    in property <int> word-count: 0;
+    in property <int> line-count: 0;
+    in property <int> conflict-total: 0;
+    in property <string> conflict-a-preview: "";
+    in property <string> conflict-b-preview: "";
+    in property <string> conflict-a-label: "";
+    in property <string> conflict-b-label: "";
+    in property <string> conflict-a-button-label: "";
+    in property <string> conflict-b-button-label: "";
+    // Which of the note sheet's own views is showing: 0 Body, 1 Properties.
+    // Purely a Slint-side UI concern -- nothing on the Rust side needs to
+    // know or persist it. Resets to Body whenever a different note is
+    // opened (note-path changes) and whenever edit mode is entered (see
+    // `focus-editor` below): there's nothing to edit on the Properties
+    // view, and the view switcher itself is hidden while editing anyway
+    // (see the ViewSwitcher instantiation below).
+    in-out property <int> note-view: 0;
+    changed note-path => { root.note-view = 0; }
+    // Browser-tab-style back/forward through previously-opened notes
+    // (session.rs's BackForwardStack), surfaced here via NavPill below --
+    // see that component's own doc comment for why it's a separate pill
+    // from ViewSwitcher (directional chevrons vs. mode-selection icons).
+    in property <bool> can-navigate-back: false;
+    in property <bool> can-navigate-forward: false;
+    callback navigate-back();
+    callback navigate-forward();
+    // 1.4x Metrics.fab -- a deliberate local bump for this one FAB, not
+    // a change to the shared token (other FABs, e.g. FilesScreen's "+"
+    // button, are unaffected).
+    property <length> fab-size: Metrics.fab * 1.4;
+    // ViewSwitcher/NavPill's own track height, duplicated here (matches
+    // each component's `height:` binding in components.slint) so the
+    // HorizontalLayout grouping them below can position itself without
+    // depending on either child's size first.
+    property <length> pill-height: Metrics.bubble-button-size + 2 * Metrics.spacing-xs;
     in-out property <string> body;
     // Derived from `body` (see `src/render/mod.rs`); drives the
     // view-mode display below in place of the raw `body` text.
@@ -116,6 +160,7 @@ export component EditorScreen inherits Rectangle {
     // Claims focus on the text editor
     public function focus-editor() {
         root.edit-mode = true;
+        root.note-view = 0;
         editor.focus();
     }
 
@@ -381,6 +426,7 @@ export component EditorScreen inherits Rectangle {
                     width: 100%;
 
                     edit-scope := FocusScope {
+                        visible: root.note-view == 0;
                         width: 100%;
                         height: 100%;
                         capture-key-pressed(event) => {
@@ -482,6 +528,30 @@ export component EditorScreen inherits Rectangle {
                             }
                         }
                     }
+
+                    PropertiesView {
+                        visible: root.note-view == 1;
+                        width: 100%;
+                        height: 100%;
+                        inset-bottom: root.inset-bottom;
+                        has-note: root.has-note;
+                        note-title: root.title;
+                        note-path: root.note-path;
+                        char-count: root.char-count;
+                        word-count: root.word-count;
+                        line-count: root.line-count;
+                        has-conflict: root.has-conflict;
+                        conflict-total: root.conflict-total;
+                        conflict-a-preview: root.conflict-a-preview;
+                        conflict-b-preview: root.conflict-b-preview;
+                        conflict-a-label: root.conflict-a-label;
+                        conflict-b-label: root.conflict-b-label;
+                        conflict-a-button-label: root.conflict-a-button-label;
+                        conflict-b-button-label: root.conflict-b-button-label;
+                        resolve-mine => { root.resolve-mine(); }
+                        resolve-theirs => { root.resolve-theirs(); }
+                        open-conflict-sheet => { root.open-conflict-sheet(); }
+                    }
                 }
             }
 
@@ -495,20 +565,22 @@ export component EditorScreen inherits Rectangle {
             // directly: its icon is hardcoded to `TablerIcons.plus`, not a
             // parameter, so this matches its visual recipe (size,
             // shape, color, shadow) by hand instead.
-            if root.has-note: Rectangle {
+            if root.has-note && root.note-view == 0: Rectangle {
                 x: parent.width - self.width - Metrics.gutter;
                 y: parent.height - self.height - Metrics.gutter;
-                width: Metrics.fab;
-                height: Metrics.fab;
+                width: root.fab-size;
+                height: root.fab-size;
                 border-radius: self.width / 2;
                 background: Palette.accent-background;
-                drop-shadow-blur: 8px;
-                drop-shadow-offset-y: 2px;
+                drop-shadow-blur: 8px * Metrics.ui-scale;
+                drop-shadow-offset-y: 2px * Metrics.ui-scale;
                 drop-shadow-color: #00000055;
 
                 Icon {
                     source: root.edit-mode ? TablerIcons.check : TablerIcons.pencil;
                     color: Palette.accent-foreground;
+                    width: Metrics.icon-lg * 1.4;
+                    height: Metrics.icon-lg * 1.4;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;
                 }
@@ -521,6 +593,42 @@ export component EditorScreen inherits Rectangle {
                             root.focus-editor();
                         }
                     }
+                }
+            }
+
+            // Note sheet view switcher (Body / Properties, ...) and note
+            // history back/forward, grouped as one pair centered at the
+            // body's bottom edge -- deliberately independent of the
+            // Edit/Done FAB's own position: the FAB disappears in
+            // Properties view (nothing to edit there), which left
+            // ViewSwitcher looking orphaned when it was positioned
+            // relative to it instead. See each component's own doc
+            // comment in components.slint for why they're two separate
+            // pills rather than one. Hidden entirely while editing,
+            // since that area is destined to become a toolbar instead.
+            if !root.edit-mode: HorizontalLayout {
+                x: 0px;
+                y: parent.height - root.pill-height - Metrics.gutter;
+                width: 100%;
+                height: root.pill-height;
+                alignment: center;
+                spacing: Metrics.spacing-sm;
+
+                if root.has-note: ViewSwitcher {
+                    icons: [TablerIcons.note, TablerIcons.info-circle];
+                    selected: root.note-view;
+                    changed(i) => { root.note-view = i; }
+                }
+
+                // Always shown (dimmed/untappable when there's nowhere
+                // to go -- see NavPill's own doc comment), not gated
+                // behind can-navigate-back/-forward the way ViewSwitcher
+                // is gated behind has-note.
+                NavPill {
+                    can-back: root.can-navigate-back;
+                    can-forward: root.can-navigate-forward;
+                    back => { root.navigate-back(); }
+                    forward => { root.navigate-forward(); }
                 }
             }
         }
