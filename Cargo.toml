@@ -45,6 +45,7 @@ tomet-tree = { git = "https://github.com/tomet-lang/tomet.git" }
 
 #= Crates.io
 anyhow = "1.0"
+directories = "6"
 git2 = { version = "0.19", features = ["vendored-libgit2", "vendored-openssl"] }
 loro = "1.16"
 # Same OpenSSL git2's vendored-openssl already builds and links; used to
@@ -52,11 +53,9 @@ loro = "1.16"
 # verification can't work at all (see crates/sync's `tls` module doc).
 openssl = "0.10"
 rusqlite = { version = "0.33", features = ["bundled"] }
-# Desktop: Skia on Wayland (no X11, no accessibility). Android: its own backend (see immermemo).
+# Target-specific backends and renderers are selected in `immermemo/Cargo.toml`.
 slint = { version = "1.18", default-features = false, features = [
-  "backend-winit-wayland",
   "compat-1-2",
-  "renderer-skia",
 ] }
 slint-build = "1.18"
 sys-locale = "0.3"

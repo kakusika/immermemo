@@ -4,9 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [lib]
-# `cdylib` is what the Android activity loads; `lib` is what the desktop
-# binary links.
-crate-type = ["lib", "cdylib"]
+# `cdylib` is what the Android activity loads; `staticlib` is what iOS Xcode
+# targets link; `lib` is what the desktop binary and tests link.
+crate-type = ["lib", "cdylib", "staticlib"]
 
 [[bin]]
 name = "immermemo"
@@ -29,13 +29,17 @@ origami-richtext-flow = { workspace = true }
 
 #= Crates.io
 anyhow = { workspace = true }
+directories = { workspace = true }
 git2 = { workspace = true }
 sys-locale = { workspace = true }
 
-# Desktop: winit + Skia (the workspace default). Android: its own backend, and
-# no Skia -- its prebuilt binaries are not fetched for that target.
-[target.'cfg(not(target_os = "android"))'.dependencies]
-slint = { workspace = true }
+# Linux Desktop: winit on Wayland + Skia.
+[target.'cfg(target_os = "linux")'.dependencies]
+slint = { workspace = true, features = ["backend-winit-wayland", "renderer-skia"] }
+
+# iOS: winit + Skia (Metal backend on iOS).
+[target.'cfg(target_os = "ios")'.dependencies]
+slint = { workspace = true, features = ["backend-winit", "renderer-skia"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 # For the Android Keystore token store: plain JNI calls into java.security /
@@ -77,15 +81,11 @@ tomet-printer = { workspace = true }
 #= Crates.io
 tempfile = "3"
 
-# Only for `examples/snap.rs` (desktop-only -- it renders the window
+# Only for `examples/snap.rs` (Linux development only -- it renders the window
 # headlessly at a chosen size; the software renderer needs this to find
 # system (Japanese) fonts). Target-gated: an *unconditional*
 # `[dev-dependencies]` entry here would still pull in `backend-winit-wayland`
-# (inherited from the workspace's base `slint` features) -- and with it the
-# full Skia renderer (GPU backend, SkSL shader compiler, ...) -- into the
-# Android `--lib` build too, even though nothing on Android ever uses it
-# (confirmed via `cargo tree --target x86_64-linux-android -e features -i
-# i-slint-renderer-skia`, which traced the edge to exactly this line before
-# it was gated). That's most of the Android .so's ~24MB.
-[target.'cfg(not(target_os = "android"))'.dev-dependencies]
+# (or the full Skia renderer) into mobile (`--lib`/`staticlib`) builds too,
+# even though neither Android nor iOS ever uses it.
+[target.'cfg(target_os = "linux")'.dev-dependencies]
 slint = { workspace = true, features = ["software-renderer-systemfonts"] }

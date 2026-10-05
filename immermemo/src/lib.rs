@@ -39,15 +39,14 @@ pub fn token_path_in(app_data_base: &Path, vault_dir: &Path) -> anyhow::Result<P
     AppData::new(app_data_base.to_owned()).token_path(vault_dir)
 }
 
-/// Desktop's app-data base: `$XDG_DATA_HOME/immermemo`, or
-/// `$HOME/.local/share/immermemo`. `main.rs` passes this to [`run`]; Android
-/// has neither variable and computes its own base in `android_main` instead.
+/// Development desktop app-data base: standard data directory on Linux
+/// (`$XDG_DATA_HOME/immermemo`). `main.rs` passes this to [`run`]; mobile
+/// platforms (Android, iOS) have their own private sandboxes and compute
+/// their base in their own entry points.
 pub fn desktop_app_data_dir() -> anyhow::Result<PathBuf> {
-    let base = std::env::var_os("XDG_DATA_HOME")
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")))
-        .ok_or_else(|| anyhow::anyhow!("neither XDG_DATA_HOME nor HOME is set"))?;
-    Ok(base.join("immermemo"))
+    let proj_dirs = directories::ProjectDirs::from("dev", "immermemo", "immermemo")
+        .ok_or_else(|| anyhow::anyhow!("could not determine desktop data directory"))?;
+    Ok(proj_dirs.data_dir().to_path_buf())
 }
 
 /// Switches the UI to whichever bundled translation (see
@@ -889,6 +888,7 @@ mod tests {
         editor_quick_resolve_buttons_walk_conflicts_one_at_a_time(&app, &session, &vault_dir);
         editing_while_a_sync_is_running_does_not_panic_on_reentrant_borrow(&app, &session);
         bundled_japanese_translation_is_discoverable_at_runtime();
+        desktop_app_data_dir_resolves_sensible_path();
 
         // `render::seam_tests` needs the same shared `app` for the same
         // one-event-loop-per-process reason -- see that module's doc.
@@ -1341,5 +1341,10 @@ mod tests {
     fn bundled_japanese_translation_is_discoverable_at_runtime() {
         assert!(slint::select_bundled_translation("ja").is_ok());
         let _ = slint::select_bundled_translation("en");
+    }
+
+    fn desktop_app_data_dir_resolves_sensible_path() {
+        let dir = desktop_app_data_dir().expect("desktop app data dir should resolve");
+        assert!(dir.ends_with("immermemo"));
     }
 }
