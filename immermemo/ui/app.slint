@@ -453,7 +453,13 @@ export component App inherits Window {
     // itself (asymptotic), which is why the progress/committable
     // properties below normalize against the *commit* threshold instead.
     property <length> mini-card-reveal-dx: 0px;
-    property <length> mini-card-reveal-max: Metrics.touch;
+    // 1.3x a touch target -- the swipe itself is always available in
+    // both directions (see `mini-card-gesture`'s `handle-swipe-left/
+    // -right` below) regardless of `can-navigate-back`/`-forward`, so
+    // there's room to drag even when it won't do anything; the chevron
+    // not being drawn at all in that case (see below) is what tells the
+    // difference, not whether dragging responds.
+    property <length> mini-card-reveal-max: Metrics.touch * 1.3;
     property <bool> is-dragging-mini-reveal: false;
     animate mini-card-reveal-dx {
         duration: root.is-dragging-mini-reveal ? 0ms : 200ms;
@@ -465,19 +471,21 @@ export component App inherits Window {
         let eased = limit * (ratio / (1.0 + ratio));
         return dx < 0px ? -eased : eased;
     }
-    // 0 at rest, 1.0 right at the release point that commits the
-    // navigation (`mini-card-reveal-threshold` below) -- what the
-    // revealed icon's opacity/highlight below actually reads, so "fully
-    // lit up" and "letting go commits" are the same moment.
+    // 0 at rest, 1.0 right at the drag distance that commits the
+    // navigation on release (`mini-card-reveal-threshold` below) --
+    // drives the revealed icon's opacity continuously the whole drag,
+    // on purpose: it's `-committable` below (separately gated on
+    // `can-navigate-back`/`-forward`) that marks the moment release
+    // would actually act, via the icon's own highlight/bounce.
     property <float> mini-card-reveal-threshold: 0.6;
-    property <float> mini-reveal-back-progress: (root.can-navigate-back && root.mini-card-reveal-dx > 0px)
+    property <float> mini-reveal-back-progress: root.mini-card-reveal-dx > 0px
         ? clamp((root.mini-card-reveal-dx / root.mini-card-reveal-max) / root.mini-card-reveal-threshold, 0.0, 1.0)
         : 0.0;
-    property <float> mini-reveal-forward-progress: (root.can-navigate-forward && root.mini-card-reveal-dx < 0px)
+    property <float> mini-reveal-forward-progress: root.mini-card-reveal-dx < 0px
         ? clamp((-root.mini-card-reveal-dx / root.mini-card-reveal-max) / root.mini-card-reveal-threshold, 0.0, 1.0)
         : 0.0;
-    property <bool> mini-reveal-back-committable: root.mini-reveal-back-progress >= 1.0;
-    property <bool> mini-reveal-forward-committable: root.mini-reveal-forward-progress >= 1.0;
+    property <bool> mini-reveal-back-committable: root.can-navigate-back && root.mini-reveal-back-progress >= 1.0;
+    property <bool> mini-reveal-forward-committable: root.can-navigate-forward && root.mini-reveal-forward-progress >= 1.0;
     // A discrete tick right as a drag crosses into "letting go now acts",
     // same idea as `SheetDragState`'s own `threshold-passed` haptic.
     changed mini-reveal-back-committable => {
@@ -909,12 +917,15 @@ export component App inherits Window {
                 height: 100%;
                 enabled: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open;
                 handle-swipe-up: true;
-                // Revealing a direction history can't actually go is
-                // pointless, so the gesture simply isn't recognized that
-                // way -- same as the tab swiper disabling whichever edge
-                // is already at its end.
-                handle-swipe-right: root.can-navigate-back;
-                handle-swipe-left: root.can-navigate-forward;
+                // Always recognized in both directions, even with no
+                // history to go to that way -- unlike the tab swiper
+                // (which disables whichever edge is already at its end),
+                // a swipe that does nothing here still needs to *feel*
+                // recognized (the card still drags, just a muted icon
+                // with no highlight/bounce comes up, see below) rather
+                // than silently not responding at all.
+                handle-swipe-right: true;
+                handle-swipe-left: true;
 
                 changed pressed-position => {
                     root.mini-drag-start-time = animation-tick();
@@ -1020,7 +1031,11 @@ export component App inherits Window {
                 // is happening" motion, not what hides/reveals these: an
                 // opaque sibling drawn *under* an icon would clip it
                 // wherever it still happened to overlap, fighting the
-                // fade instead of just letting it fade. `y`/`height`
+                // fade instead of just letting it fade. The chevron
+                // itself is gated on `can-navigate-back`/`-forward`
+                // (`if`, not just `opacity`) so a swipe that can't do
+                // anything shows nothing rather than a muted chevron --
+                // clearer that the gesture is a no-op. `y`/`height`
                 // match `MiniNoteCard`'s own *resting* span (not this
                 // whole gesture area's 100%, which has extra margin above
                 // than below for its own touch target -- centering
@@ -1037,21 +1052,49 @@ export component App inherits Window {
                     height: Metrics.mini-card-height;
                     alignment: center;
 
-                    Rectangle {
-                        width: Metrics.icon-md + 16px * Metrics.ui-scale;
-                        height: self.width;
-                        border-radius: self.width / 2;
-                        background: Palette.accent-background.with-alpha(0.18 * root.mini-reveal-back-progress);
+                    // `VerticalLayout`'s cross axis (horizontal) has no
+                    // alignment of its own -- same quirk AGENTS.md
+                    // documents for `HorizontalLayout`'s cross axis,
+                    // mirrored. Without this wrapper the fixed-width
+                    // `Rectangle` below sat at this layout's x: 0 (its
+                    // left edge) instead of centered in the reveal slot.
+                    HorizontalLayout {
+                        alignment: center;
 
-                        Icon {
-                            source: TablerIcons.chevron-left;
-                            color: root.can-navigate-back ? Palette.accent-background : Colors.muted;
-                            width: Metrics.icon-md * (1.0 + 0.15 * root.mini-reveal-back-progress);
+                        Rectangle {
+                            width: Metrics.icon-md + 16px * Metrics.ui-scale;
                             height: self.width;
-                            x: (parent.width - self.width) / 2;
-                            y: (parent.height - self.height) / 2;
-                            opacity: root.mini-reveal-back-progress;
-                            animate width, height { duration: 150ms; easing: ease-out; }
+                            border-radius: self.width / 2;
+                            // No highlight at all once it's clear this swipe
+                            // can't do anything -- the chevron not being
+                            // drawn below already says that, this would just
+                            // repeat it.
+                            background: root.can-navigate-back
+                                ? Palette.accent-background.with-alpha(0.18 * root.mini-reveal-back-progress)
+                                : transparent;
+
+                            // Not drawn at all when navigation isn't possible
+                            // -- a muted chevron still reads as "something I
+                            // could maybe do", nothing reads as "this gesture
+                            // does nothing".
+                            if root.can-navigate-back: Icon {
+                                source: TablerIcons.chevron-left;
+                                color: Palette.accent-background;
+                                // Stays put while merely dragging (the fade-in
+                                // via `opacity` below is the whole story up to
+                                // that point); a bouncy overshoot ("easeOutBack")
+                                // right at the moment release would commit.
+                                width: root.mini-reveal-back-committable
+                                    ? Metrics.icon-md * 1.45 : Metrics.icon-md;
+                                height: self.width;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                                opacity: root.mini-reveal-back-progress;
+                                animate width, height {
+                                    duration: 420ms;
+                                    easing: cubic-bezier(0.34, 1.56, 0.64, 1.0);
+                                }
+                            }
                         }
                     }
                 }
@@ -1062,21 +1105,31 @@ export component App inherits Window {
                     height: Metrics.mini-card-height;
                     alignment: center;
 
-                    Rectangle {
-                        width: Metrics.icon-md + 16px * Metrics.ui-scale;
-                        height: self.width;
-                        border-radius: self.width / 2;
-                        background: Palette.accent-background.with-alpha(0.18 * root.mini-reveal-forward-progress);
+                    HorizontalLayout {
+                        alignment: center;
 
-                        Icon {
-                            source: TablerIcons.chevron-right;
-                            color: root.can-navigate-forward ? Palette.accent-background : Colors.muted;
-                            width: Metrics.icon-md * (1.0 + 0.15 * root.mini-reveal-forward-progress);
+                        Rectangle {
+                            width: Metrics.icon-md + 16px * Metrics.ui-scale;
                             height: self.width;
-                            x: (parent.width - self.width) / 2;
-                            y: (parent.height - self.height) / 2;
-                            opacity: root.mini-reveal-forward-progress;
-                            animate width, height { duration: 150ms; easing: ease-out; }
+                            border-radius: self.width / 2;
+                            background: root.can-navigate-forward
+                                ? Palette.accent-background.with-alpha(0.18 * root.mini-reveal-forward-progress)
+                                : transparent;
+
+                            if root.can-navigate-forward: Icon {
+                                source: TablerIcons.chevron-right;
+                                color: Palette.accent-background;
+                                width: root.mini-reveal-forward-committable
+                                    ? Metrics.icon-md * 1.45 : Metrics.icon-md;
+                                height: self.width;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                                opacity: root.mini-reveal-forward-progress;
+                                animate width, height {
+                                    duration: 420ms;
+                                    easing: cubic-bezier(0.34, 1.56, 0.64, 1.0);
+                                }
+                            }
                         }
                     }
                 }
