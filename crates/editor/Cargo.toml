@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+immermemo-identity = { workspace = true }
 immermemo-index = { workspace = true }
 immermemo-merge = { workspace = true }
 immermemo-sync = { workspace = true }
@@ -20,3 +21,6 @@ loro = { workspace = true }
 
 [dev-dependencies]
 immermemo-tomet-render = { workspace = true }
+anyhow = { workspace = true }
+git2 = { workspace = true }
+tempfile = "3"

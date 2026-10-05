@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 
 use immermemo_index::NoteIndex;
 use immermemo_merge::ConflictResolution;
+use immermemo_sync::{ConflictSide, Vault};
+use immermemo_vault::appdata::AppData;
 
 use crate::state::{EditorState, current_path};
 
@@ -151,8 +153,17 @@ pub enum ConflictSheetState {
     Active {
         total: usize,
         index: usize,
-        mine: String,
-        theirs: String,
+        a: String,
+        b: String,
+        /// Whether `a`/`b` are *this* device's own content, per
+        /// `immermemo_sync::Vault::conflict_authorship` -- `Unknown` for
+        /// both whenever that can't be determined (no identity set, the
+        /// note has changed since the conflict-producing merge, or this
+        /// device never ran that merge at all). The caller decides what
+        /// to show instead of a bare "Mine"/"Theirs" label in that case;
+        /// this never guesses.
+        a_side: ConflictSide,
+        b_side: ConflictSide,
     },
 }
 
@@ -163,6 +174,8 @@ pub fn conflict_sheet_state(
     state: &EditorState,
     notes: &[PathBuf],
     requested_index: i32,
+    app_data: &AppData,
+    vault_dir: &Path,
 ) -> ConflictSheetState {
     let Some(path) = current_path(state, notes) else {
         return ConflictSheetState::NoActiveNote;
@@ -180,18 +193,210 @@ pub fn conflict_sheet_state(
     let total = items.len();
     let index = requested_index.max(0).min(total as i32 - 1) as usize;
     let item = &items[index];
+
+    // Every `@conflict` still in this note came from the same merge
+    // commit (or none of them did, if something's changed since) -- one
+    // authorship check covers the whole note, not one per conflict.
+    let (a_side, b_side) = conflict_authorship(app_data, vault_dir, &path, &current_text);
+
     ConflictSheetState::Active {
         total,
         index,
-        // `immermemo_merge::merge` always puts the device that ran it
-        // into `a` and the incoming side into `b` -- correct for the
-        // common case (resolving right after the sync that produced
-        // this conflict), but not re-derived here for a conflict opened
-        // cold (app restarted) or on a different device than the one
-        // that merged it. See `.agents/tasks/adopt-std-conflict.md`'s
-        // "decided" section for the git-ancestry-based fix that would
-        // make this correct in every case, not implemented yet.
-        mine: item.a.clone(),
-        theirs: item.b.clone(),
+        a: item.a.clone(),
+        b: item.b.clone(),
+        a_side,
+        b_side,
+    }
+}
+
+/// `(a_side, b_side)` for every `@conflict` in `path`'s current content
+/// -- see `immermemo_sync::Vault::conflict_authorship`'s own doc. Opens
+/// its own transient, read-only `Vault` (same pattern as
+/// `note_history::load_note_history`) rather than needing a persistent
+/// one threaded through from the caller. `Unknown`/`Unknown` if the
+/// vault can't be opened at all, or `path` isn't inside `vault_dir`.
+fn conflict_authorship(
+    app_data: &AppData,
+    vault_dir: &Path,
+    path: &Path,
+    current_text: &str,
+) -> (ConflictSide, ConflictSide) {
+    let unknown = (ConflictSide::Unknown, ConflictSide::Unknown);
+    let Ok(rel_path) = path.strip_prefix(vault_dir) else {
+        return unknown;
+    };
+    let Ok(gitdir) = app_data.gitdir(vault_dir) else {
+        return unknown;
+    };
+    let Ok(mut vault) = Vault::open(vault_dir, &gitdir) else {
+        return unknown;
+    };
+    vault.set_identity(
+        immermemo_identity::DeviceIdentity::load_or_init(&app_data.identity_path()).ok(),
+    );
+    let authorship = vault.conflict_authorship(rel_path, current_text);
+    (authorship.a, authorship.b)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use immermemo_identity::DeviceIdentity;
+    use tempfile::TempDir;
+
+    struct NoCredentials;
+    impl immermemo_sync::CredentialProvider for NoCredentials {
+        fn credentials(&self, _remote_url: &str) -> anyhow::Result<git2::Cred> {
+            anyhow::bail!("not expected to be called for a local-path transport")
+        }
+    }
+
+    /// One "device": a vault working tree plus its own app-data base,
+    /// signing every commit it makes with its own `device_id` -- same
+    /// shape `immermemo_sync`'s own tests use, plus an `app_data` this
+    /// crate's `conflict_sheet_state` can be driven through directly.
+    struct Device {
+        working_tree: TempDir,
+        app_data: AppData,
+        _app_data_dir: TempDir,
+    }
+
+    impl Device {
+        fn new(device_id: &'static str) -> Self {
+            let app_data_dir = TempDir::new().unwrap();
+            let app_data = AppData::new(app_data_dir.path().to_owned());
+            // Persisted up front, not just held in memory: `conflict_sheet_state`
+            // reads this device's identity back from `app_data.identity_path()`
+            // itself (via `DeviceIdentity::load_or_init`), same as the real
+            // app does -- an in-memory-only identity here would make
+            // `load_or_init` generate an unrelated random one instead of
+            // this test's fixed `device_id`.
+            DeviceIdentity {
+                device_id: device_id.to_owned(),
+                display_name: None,
+            }
+            .save(&app_data.identity_path())
+            .unwrap();
+            Self {
+                working_tree: TempDir::new().unwrap(),
+                app_data,
+                _app_data_dir: app_data_dir,
+            }
+        }
+
+        fn write(&self, name: &str, text: &str) {
+            std::fs::write(self.working_tree.path().join(name), text).unwrap();
+        }
+
+        fn read(&self, name: &str) -> String {
+            std::fs::read_to_string(self.working_tree.path().join(name)).unwrap()
+        }
+
+        fn sync(&self, remote: &Path) {
+            let gitdir = self.app_data.gitdir(self.working_tree.path()).unwrap();
+            let mut vault = Vault::open(self.working_tree.path(), &gitdir).unwrap();
+            vault.set_identity(DeviceIdentity::load_or_init(&self.app_data.identity_path()).ok());
+            vault.set_remote(remote.to_str().unwrap()).unwrap();
+            vault.sync(&NoCredentials).unwrap();
+        }
+
+        fn state_for(&self, note: &str) -> (EditorState, Vec<PathBuf>) {
+            let path = self.working_tree.path().join(note);
+            (
+                EditorState {
+                    current: Some(0),
+                    history: None,
+                    note_history_revisions: Vec::new(),
+                },
+                vec![path],
+            )
+        }
+    }
+
+    fn shared_remote() -> TempDir {
+        let dir = TempDir::new().unwrap();
+        git2::Repository::init_bare(dir.path()).unwrap();
+        dir
+    }
+
+    /// The seam this whole feature exists for: the same conflicted note,
+    /// opened on each of the two devices that produced it, labels each
+    /// device's own side correctly -- not from a stored flag, but from
+    /// `conflict_sheet_state` wiring through to `Vault::conflict_authorship`
+    /// with each device's own identity.
+    #[test]
+    fn conflict_sheet_state_labels_each_devices_own_side_correctly() {
+        let remote = shared_remote();
+
+        let a = Device::new("device-a");
+        a.write("note.tmt", "Bring a laptop.\n");
+        a.sync(remote.path());
+
+        let b = Device::new("device-b");
+        b.sync(remote.path());
+
+        a.write("note.tmt", "Bring a charger.\n");
+        a.sync(remote.path());
+        b.write("note.tmt", "Bring a notebook.\n");
+        b.sync(remote.path());
+
+        let (state, notes) = b.state_for("note.tmt");
+        let ConflictSheetState::Active { a_side, b_side, .. } =
+            conflict_sheet_state(&state, &notes, 0, &b.app_data, b.working_tree.path())
+        else {
+            panic!("expected an active conflict");
+        };
+        assert_eq!(a_side, ConflictSide::Mine);
+        assert_eq!(b_side, ConflictSide::NotMine);
+
+        // A's next sync fast-forwards onto the same merge commit -- same
+        // note content, opposite answer, correctly.
+        a.sync(remote.path());
+        assert_eq!(a.read("note.tmt"), b.read("note.tmt"));
+
+        let (state, notes) = a.state_for("note.tmt");
+        let ConflictSheetState::Active { a_side, b_side, .. } =
+            conflict_sheet_state(&state, &notes, 0, &a.app_data, a.working_tree.path())
+        else {
+            panic!("expected an active conflict");
+        };
+        assert_eq!(a_side, ConflictSide::NotMine);
+        assert_eq!(b_side, ConflictSide::Mine);
+    }
+
+    /// A *third* device -- one that never participated in the merge that
+    /// produced this conflict, syncing in afterward with its own
+    /// freshly-generated identity -- correctly sees neither side as its
+    /// own, rather than defaulting to "mine" for either.
+    #[test]
+    fn conflict_sheet_state_shows_not_mine_for_a_third_devices_conflict() {
+        let remote = shared_remote();
+
+        let a = Device::new("device-a");
+        a.write("note.tmt", "Bring a laptop.\n");
+        a.sync(remote.path());
+
+        let b = Device::new("device-b");
+        b.sync(remote.path());
+
+        a.write("note.tmt", "Bring a charger.\n");
+        a.sync(remote.path());
+        b.write("note.tmt", "Bring a notebook.\n");
+        b.sync(remote.path());
+
+        // A third device, synced in after the fact -- never ran this
+        // merge, and `DeviceIdentity::load_or_init` gives it a fresh
+        // identity with no relationship to either side.
+        let c = Device::new("device-c");
+        c.sync(remote.path());
+
+        let (state, notes) = c.state_for("note.tmt");
+        let ConflictSheetState::Active { a_side, b_side, .. } =
+            conflict_sheet_state(&state, &notes, 0, &c.app_data, c.working_tree.path())
+        else {
+            panic!("expected an active conflict");
+        };
+        assert_eq!(a_side, ConflictSide::NotMine);
+        assert_eq!(b_side, ConflictSide::NotMine);
     }
 }

@@ -13,9 +13,12 @@
 //!
 //! Split by responsibility: [`paths`] (where a vault's own files live),
 //! [`registry`] (which vaults exist, which is current), [`settings`]
-//! (remote URL, last-opened note, editor font size, theme) -- all as
-//! `impl AppData` blocks over the one struct defined here.
+//! (remote URL, last-opened note, editor font size, theme), [`identity`]
+//! (where this device's own `immermemo-identity` file lives -- app-level,
+//! like `registry`'s `known_vaults`/`current_vault`, not per-vault) --
+//! all as `impl AppData` blocks over the one struct defined here.
 
+mod identity;
 mod paths;
 mod registry;
 mod settings;

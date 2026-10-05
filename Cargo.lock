@@ -2433,6 +2433,7 @@ dependencies = [
  "anyhow",
  "git2",
  "immermemo-editor",
+ "immermemo-identity",
  "immermemo-index",
  "immermemo-merge",
  "immermemo-sync",
@@ -2455,16 +2456,28 @@ dependencies = [
 name = "immermemo-editor"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "git2",
+ "immermemo-identity",
  "immermemo-index",
  "immermemo-merge",
  "immermemo-sync",
  "immermemo-tomet-render",
  "immermemo-vault",
  "loro",
+ "tempfile",
  "tomet-ast",
  "tomet-parser",
  "tomet-printer",
  "tomet-stats",
+]
+
+[[package]]
+name = "immermemo-identity"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "tempfile",
 ]
 
 [[package]]
@@ -2493,6 +2506,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "git2",
+ "immermemo-identity",
  "immermemo-merge",
  "immermemo-vault",
  "openssl",

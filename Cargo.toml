@@ -4,6 +4,7 @@ resolver = "3"
 members = [
   "immermemo",
   "crates/editor",
+  "crates/identity",
   "crates/index",
   "crates/merge",
   "crates/sync",
@@ -20,6 +21,7 @@ rust-version = "1.85"
 
 [workspace.dependencies]
 immermemo-editor = { path = "crates/editor" }
+immermemo-identity = { path = "crates/identity" }
 immermemo-index = { path = "crates/index" }
 immermemo-merge = { path = "crates/merge" }
 immermemo-sync = { path = "crates/sync" }

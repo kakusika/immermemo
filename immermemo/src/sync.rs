@@ -6,21 +6,29 @@
 
 use std::path::Path;
 
+use immermemo_identity::DeviceIdentity;
 use immermemo_sync::{CertificateVerifier, CredentialProvider, SyncReport, Vault};
 
 /// Runs a sync against `remote` and returns the resulting `SyncReport`.
+/// `identity` (plain data, loaded by the caller before this runs --
+/// `AppData`/`DeviceIdentity::load_or_init` aren't this module's concern
+/// either, same as `gitdir`/credentials) signs every commit this sync
+/// makes and is what later lets a conflict be labeled "Mine"/"Theirs"
+/// honestly (see `immermemo_sync::Vault::conflict_authorship`).
 pub fn run(
     vault_dir: &Path,
     gitdir: &Path,
     remote: &str,
     credentials: &dyn CredentialProvider,
     certificate_verifier: Option<Box<dyn CertificateVerifier>>,
+    identity: Option<DeviceIdentity>,
 ) -> anyhow::Result<SyncReport> {
     if !gitdir.exists() {
         std::fs::create_dir_all(gitdir)?;
     }
     let mut vault = Vault::open(vault_dir, gitdir)?;
     vault.set_certificate_verifier(certificate_verifier);
+    vault.set_identity(identity);
     vault.set_remote(remote)?;
     vault.sync(credentials)
 }
@@ -81,6 +89,7 @@ mod tests {
                 &gitdir,
                 remote.path().to_str().unwrap(),
                 &NoCredentials,
+                None,
                 None,
             )?;
             Ok(report

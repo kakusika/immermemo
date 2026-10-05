@@ -37,7 +37,7 @@
 //! [`Vault::sync`] computes the merge base itself, and for every `.tmt` file
 //! that changed on both sides, reads all three blobs (base/local/remote),
 //! parses them, and hands them to [`immermemo_merge::merge`] instead. The
-//! result -- possibly containing `@mobile.conflict` markers -- becomes the
+//! result -- possibly containing `@conflict` markers -- becomes the
 //! new tree, and the merge commit is recorded as a real two-parent git
 //! commit, so history and blame stay intact even though the content-level
 //! merge was ours rather than git's. A push that a concurrent push beat us
@@ -130,11 +130,20 @@ pub struct Vault {
     /// app's private storage, opaque to the user.
     repo: Repository,
     certificate_verifier: Option<Box<dyn CertificateVerifier>>,
+    /// This device's own identity, used to sign every commit this
+    /// `Vault` makes (see [`set_identity`](Self::set_identity)) and to
+    /// decide authorship when labeling a conflict's sides (see
+    /// [`conflict_authorship`](Self::conflict_authorship)). `None` (the
+    /// default, same as a `Vault` nobody ever calls `set_identity` on)
+    /// signs with the generic `"immermemo"` signature every device used
+    /// before this existed, and never claims a conflict side as "mine" --
+    /// the correct, honest degradation, not a bug.
+    identity: Option<immermemo_identity::DeviceIdentity>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct SyncReport {
-    /// Relative paths of notes that contain unresolved `@mobile.conflict` markers.
+    /// Relative paths of notes that contain unresolved `@conflict` markers.
     pub notes_needing_resolution: Vec<PathBuf>,
     /// Relative paths of notes written or updated in the working tree during this sync.
     pub updated_notes: Vec<PathBuf>,
@@ -164,6 +173,7 @@ impl Vault {
             working_tree: working_tree.to_owned(),
             repo,
             certificate_verifier: None,
+            identity: None,
         })
     }
 
@@ -172,6 +182,12 @@ impl Vault {
     /// verification isn't available. See [`CertificateVerifier`].
     pub fn set_certificate_verifier(&mut self, verifier: Option<Box<dyn CertificateVerifier>>) {
         self.certificate_verifier = verifier;
+    }
+
+    /// Sets (or clears) this device's own identity -- see the `identity`
+    /// field's own doc for what changes when it's set vs. left `None`.
+    pub fn set_identity(&mut self, identity: Option<immermemo_identity::DeviceIdentity>) {
+        self.identity = identity;
     }
 
     /// Links this vault to a remote (GitHub, Gitea, self-hosted). Takes a
@@ -193,7 +209,7 @@ impl Vault {
 
     /// Stages, commits, fetches, and reconciles with the remote. Returns
     /// which notes (relative paths) came back containing unresolved
-    /// `@mobile.conflict` markers, so the caller can surface them.
+    /// `@conflict` markers, so the caller can surface them.
     pub fn sync(&mut self, credentials: &dyn CredentialProvider) -> anyhow::Result<SyncReport> {
         self.commit_working_tree()?;
         let initial_head_tree_oid = self.head_commit().map(|c| c.tree_id());
@@ -287,7 +303,7 @@ impl Vault {
         tree: &Tree,
         parents: &[&git2::Commit],
     ) -> anyhow::Result<()> {
-        let sig = Signature::now("immermemo", "immermemo@local")?;
+        let sig = self.signature()?;
         self.repo.commit(
             Some(&format!("refs/heads/{BRANCH}")),
             &sig,
@@ -298,6 +314,125 @@ impl Vault {
         )?;
         Ok(())
     }
+
+    /// The signature every commit this `Vault` makes is signed with --
+    /// `self.identity`'s `display_name` (cosmetic, defaults to the
+    /// generic `"immermemo"` every device used before per-device identity
+    /// existed) as the author *name*, `device_id` as the author *email*
+    /// (`<device_id>@immermemo.local`) -- the part [`conflict_authorship`]
+    /// actually compares. `self.identity: None` keeps today's fully
+    /// generic signature, same as before this existed.
+    fn signature(&self) -> anyhow::Result<Signature<'static>> {
+        let (name, email) = match &self.identity {
+            Some(identity) => (
+                identity
+                    .display_name
+                    .clone()
+                    .unwrap_or_else(|| "immermemo".to_owned()),
+                format!("{}@immermemo.local", identity.device_id),
+            ),
+            None => ("immermemo".to_owned(), "immermemo@local".to_owned()),
+        };
+        Ok(Signature::now(&name, &email)?)
+    }
+
+    /// Whether `email` (an author's, from a commit) is *this* device's
+    /// own, per `self.identity`. `false` whenever `self.identity` is
+    /// unset -- a `Vault` with no identity never claims a conflict side
+    /// as its own (see the `identity` field's own doc).
+    fn email_is_this_device(&self, email: &str) -> bool {
+        self.identity
+            .as_ref()
+            .is_some_and(|identity| email == format!("{}@immermemo.local", identity.device_id))
+    }
+
+    /// Who made each side of a `@conflict` still sitting in `note_rel_path`
+    /// at `current_text` -- for labeling the resolution sheet honestly
+    /// instead of assuming `a` is always "mine" (see
+    /// `.agents/tasks/git-ancestry-conflict-labeling.md` for the full
+    /// reasoning, and why this only ever answers for the *immediate*
+    /// case: nothing committed since the merge that produced the
+    /// conflict, never a deeper history walk).
+    ///
+    /// Reads `HEAD`: if it isn't a two-parent (merge) commit, or its tree
+    /// entry for `note_rel_path` doesn't match `current_text` exactly
+    /// (something changed since -- a later sync, an edit around the
+    /// conflict), returns [`ConflictAuthorship::Unknown`] for both sides.
+    /// Otherwise checks `HEAD`'s two parents' author emails against this
+    /// device's own identity: `merge_histories`'s own fixed parent order
+    /// is `[local_commit, remote_commit]`, and `markers.rs`/`merge.rs`'s
+    /// own fixed convention is "`local` becomes `a`, `remote` becomes
+    /// `b`" -- so `HEAD.parent(0)` authored `a`, `HEAD.parent(1)`
+    /// authored `b`.
+    pub fn conflict_authorship(
+        &self,
+        note_rel_path: &Path,
+        current_text: &str,
+    ) -> ConflictAuthorship {
+        let unknown = ConflictAuthorship {
+            a: ConflictSide::Unknown,
+            b: ConflictSide::Unknown,
+        };
+        // No identity at all means this device can't judge authorship
+        // one way or the other -- `Unknown`, not `NotMine`: without an
+        // identity to compare against, "not mine" would be true of every
+        // commit, including ones this device itself made, which isn't a
+        // useful signal for a caller to act on.
+        if self.identity.is_none() {
+            return unknown;
+        }
+        let Some(head) = self.head_commit() else {
+            return unknown;
+        };
+        if head.parent_count() != 2 {
+            return unknown;
+        }
+        let Ok(tree) = head.tree() else {
+            return unknown;
+        };
+        let Some(entry) = tree.get_path(note_rel_path).ok() else {
+            return unknown;
+        };
+        let Ok(blob) = self.repo.find_blob(entry.id()) else {
+            return unknown;
+        };
+        if blob.content() != current_text.as_bytes() {
+            return unknown;
+        };
+        let side = |parent_index: usize| -> ConflictSide {
+            let Ok(parent) = head.parent(parent_index) else {
+                return ConflictSide::Unknown;
+            };
+            match parent.author().email() {
+                Some(email) if self.email_is_this_device(email) => ConflictSide::Mine,
+                Some(_) => ConflictSide::NotMine,
+                None => ConflictSide::Unknown,
+            }
+        };
+        ConflictAuthorship {
+            a: side(0),
+            b: side(1),
+        }
+    }
+}
+
+/// [`Vault::conflict_authorship`]'s answer for one side of a `@conflict`.
+/// Three states, not a `bool`/`Option<bool>`: "I know this isn't mine"
+/// (`NotMine`) is a real, useful answer (a UI can still show "Theirs"
+/// confidently), distinct from genuinely not knowing either way
+/// (`Unknown` -- no usable record at all, e.g. a third device's commit,
+/// or the immediate-case check above didn't apply).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConflictSide {
+    Mine,
+    NotMine,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ConflictAuthorship {
+    pub a: ConflictSide,
+    pub b: ConflictSide,
 }
 
 #[cfg(test)]
@@ -466,6 +601,118 @@ mod tests {
         assert!(merged.contains("@conflict("));
         assert!(merged.contains("charger"));
         assert!(merged.contains("notebook"));
+    }
+
+    fn identity(device_id: &str) -> immermemo_identity::DeviceIdentity {
+        immermemo_identity::DeviceIdentity {
+            device_id: device_id.to_owned(),
+            display_name: None,
+        }
+    }
+
+    /// The whole point of per-device identity: the same merge commit,
+    /// read by two different devices, answers "whose side is this"
+    /// correctly for *each* of them -- never a stored flag that reads
+    /// backwards on the device that didn't run the merge.
+    #[test]
+    fn conflict_authorship_is_correctly_relative_to_each_device() {
+        let remote = shared_remote();
+
+        let mut a = open_vault();
+        a.vault.set_identity(Some(identity("device-a")));
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        write_note(&a, "note.tmt", "Bring a laptop.\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        let mut b = open_vault();
+        b.vault.set_identity(Some(identity("device-b")));
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        b.vault.sync(&NoCredentials).unwrap();
+
+        write_note(&a, "note.tmt", "Bring a charger.\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        write_note(&b, "note.tmt", "Bring a notebook.\n");
+        b.vault.sync(&NoCredentials).unwrap();
+        let merged = read_note(&b, "note.tmt");
+
+        // B ran this merge: B's own edit became `a`, A's incoming edit
+        // became `b` (merge.rs's own fixed convention).
+        let from_b = b.vault.conflict_authorship(Path::new("note.tmt"), &merged);
+        assert_eq!(from_b.a, ConflictSide::Mine);
+        assert_eq!(from_b.b, ConflictSide::NotMine);
+
+        // A's next sync fast-forwards onto that exact same merge commit
+        // (it's a direct descendant of A's own tip) -- no new merge, just
+        // adopting B's commit object as-is.
+        a.vault.sync(&NoCredentials).unwrap();
+        assert_eq!(read_note(&a, "note.tmt"), merged);
+
+        // From A's side, the same commit, the same `a`/`b` -- but the
+        // answer flips, correctly: `a` (B's edit) is not A's, `b` (A's
+        // own edit) is.
+        let from_a = a.vault.conflict_authorship(Path::new("note.tmt"), &merged);
+        assert_eq!(from_a.a, ConflictSide::NotMine);
+        assert_eq!(from_a.b, ConflictSide::Mine);
+    }
+
+    /// A `Vault` nobody ever calls `set_identity` on never claims a side
+    /// as its own -- the honest default, not a bug (see the `identity`
+    /// field's own doc).
+    #[test]
+    fn conflict_authorship_is_unknown_without_an_identity() {
+        let remote = shared_remote();
+
+        let mut a = open_vault();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        write_note(&a, "note.tmt", "Bring a laptop.\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        let mut b = open_vault();
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        b.vault.sync(&NoCredentials).unwrap();
+
+        write_note(&a, "note.tmt", "Bring a charger.\n");
+        a.vault.sync(&NoCredentials).unwrap();
+        write_note(&b, "note.tmt", "Bring a notebook.\n");
+        b.vault.sync(&NoCredentials).unwrap();
+        let merged = read_note(&b, "note.tmt");
+
+        let authorship = b.vault.conflict_authorship(Path::new("note.tmt"), &merged);
+        assert_eq!(authorship.a, ConflictSide::Unknown);
+        assert_eq!(authorship.b, ConflictSide::Unknown);
+    }
+
+    /// If anything changed the note since the conflict-producing merge
+    /// (another sync, an edit around the conflict), `HEAD`'s tree no
+    /// longer matches `current_text` exactly -- the immediate-case check
+    /// this method does (see its own doc) correctly refuses to guess
+    /// rather than labeling against the wrong commit.
+    #[test]
+    fn conflict_authorship_is_unknown_once_the_note_no_longer_matches_head() {
+        let remote = shared_remote();
+
+        let mut a = open_vault();
+        a.vault.set_identity(Some(identity("device-a")));
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        write_note(&a, "note.tmt", "Bring a laptop.\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        let mut b = open_vault();
+        b.vault.set_identity(Some(identity("device-b")));
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        b.vault.sync(&NoCredentials).unwrap();
+
+        write_note(&a, "note.tmt", "Bring a charger.\n");
+        a.vault.sync(&NoCredentials).unwrap();
+        write_note(&b, "note.tmt", "Bring a notebook.\n");
+        b.vault.sync(&NoCredentials).unwrap();
+
+        let authorship = b
+            .vault
+            .conflict_authorship(Path::new("note.tmt"), "something else entirely");
+        assert_eq!(authorship.a, ConflictSide::Unknown);
+        assert_eq!(authorship.b, ConflictSide::Unknown);
     }
 
     #[test]

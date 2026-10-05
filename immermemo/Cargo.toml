@@ -14,6 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 immermemo-editor = { workspace = true }
+immermemo-identity = { workspace = true }
 immermemo-index = { workspace = true }
 immermemo-merge = { workspace = true }
 immermemo-sync = { workspace = true }

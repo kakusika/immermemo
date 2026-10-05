@@ -353,8 +353,8 @@ fn main() {
     // Conflict Sheet overlay
     app.set_active_conflict_index(0);
     app.set_active_conflict_total(2);
-    app.set_active_conflict_mine("牛乳（低脂肪）".into());
-    app.set_active_conflict_theirs("牛乳（特濃）".into());
+    app.set_active_conflict_a("牛乳（低脂肪）".into());
+    app.set_active_conflict_b("牛乳（特濃）".into());
     app.set_conflict_sheet_open(true);
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-conflict-sheet.ppm"));
@@ -367,8 +367,8 @@ fn main() {
     app.set_active_tab(3);
     app.set_current_has_conflict(true);
     app.set_active_conflict_total(2);
-    app.set_active_conflict_mine("牛乳（低脂肪）".into());
-    app.set_active_conflict_theirs("牛乳（特濃）".into());
+    app.set_active_conflict_a("牛乳（低脂肪）".into());
+    app.set_active_conflict_b("牛乳（特濃）".into());
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-properties-conflict.ppm"));
     app.set_current_has_conflict(false);

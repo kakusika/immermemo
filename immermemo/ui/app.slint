@@ -138,8 +138,19 @@ export component App inherits Window {
     in property <[string]> vault-history-dates: [];
     in-out property <int> active-conflict-index: 0;
     in property <int> active-conflict-total: 0;
-    in property <string> active-conflict-mine: "";
-    in property <string> active-conflict-theirs: "";
+    // `a`/`b` are `@conflict`'s own structural names -- neither carries
+    // mine/theirs meaning by itself (reversible depending on who's
+    // looking, see `.agents/tasks/git-ancestry-conflict-labeling.md`).
+    // `a-label`/`b-label` (and the matching `*-button-label`s) are
+    // computed in Rust from `immermemo_sync::ConflictSide` and already
+    // say "Mine"/"Theirs"/a neutral "A"/"B" as appropriate -- this file
+    // never branches on that itself.
+    in property <string> active-conflict-a: "";
+    in property <string> active-conflict-b: "";
+    in property <string> active-conflict-a-label: "";
+    in property <string> active-conflict-b-label: "";
+    in property <string> active-conflict-a-button-label: "";
+    in property <string> active-conflict-b-button-label: "";
     in property <bool> can-undo;
     in property <bool> can-redo;
     // Back/forward stack of previously-opened notes (`session.rs`'s
@@ -716,8 +727,12 @@ export component App inherits Window {
                     line-count: root.line-count;
                     has-conflict: root.current-has-conflict;
                     conflict-total: root.active-conflict-total;
-                    conflict-mine-preview: root.active-conflict-mine;
-                    conflict-theirs-preview: root.active-conflict-theirs;
+                    conflict-a-preview: root.active-conflict-a;
+                    conflict-b-preview: root.active-conflict-b;
+                    conflict-a-label: root.active-conflict-a-label;
+                    conflict-b-label: root.active-conflict-b-label;
+                    conflict-a-button-label: root.active-conflict-a-button-label;
+                    conflict-b-button-label: root.active-conflict-b-button-label;
                     open-conflict-sheet => { root.open-conflict-sheet(); }
                     rename-requested => {
                         if (root.current >= 0) {
@@ -1303,8 +1318,12 @@ export component App inherits Window {
             open: true;
             conflict-index: root.active-conflict-index;
             conflict-total: root.active-conflict-total;
-            mine-text: root.active-conflict-mine;
-            theirs-text: root.active-conflict-theirs;
+            a-text: root.active-conflict-a;
+            b-text: root.active-conflict-b;
+            a-label: root.active-conflict-a-label;
+            b-label: root.active-conflict-b-label;
+            a-button-label: root.active-conflict-a-button-label;
+            b-button-label: root.active-conflict-b-button-label;
             close => { root.conflict-sheet-open = false; }
             resolve-choice(choice) => { root.resolve-conflict-step(choice); }
             prev-conflict => { root.prev-conflict-step(); }

@@ -171,7 +171,7 @@ impl Session {
 /// Spawns a sync in the background, unless no remote is linked yet -- then
 /// it just opens the sheet to ask for one instead of failing.
 pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
-    let (vault_dir, gitdir, remote, token_store) = {
+    let (vault_dir, gitdir, remote, token_store, identity) = {
         let s = session.borrow();
         let Some(remote) = s.remote.clone() else {
             set_status(app, "No remote linked yet");
@@ -191,7 +191,18 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
                 return;
             }
         };
-        (s.vault_dir.clone(), gitdir, remote, s.token_store.clone())
+        // A failure here (can't write `identity.txt`) just means this
+        // sync signs with the generic signature and can't label a
+        // conflict mine/theirs -- not worth failing the whole sync over.
+        let identity =
+            immermemo_identity::DeviceIdentity::load_or_init(&s.app_data.identity_path()).ok();
+        (
+            s.vault_dir.clone(),
+            gitdir,
+            remote,
+            s.token_store.clone(),
+            identity,
+        )
     };
 
     app.set_syncing(true);
@@ -212,7 +223,16 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
         let verifier: anyhow::Result<Option<Box<dyn immermemo_sync::CertificateVerifier>>> =
             Ok(None);
         let result = verifier
-            .and_then(|verifier| sync::run(&vault_dir, &gitdir, &remote, &credentials, verifier))
+            .and_then(|verifier| {
+                sync::run(
+                    &vault_dir,
+                    &gitdir,
+                    &remote,
+                    &credentials,
+                    verifier,
+                    identity,
+                )
+            })
             .map_err(|e| format!("{e:#}"));
         let _ = slint::invoke_from_event_loop(move || {
             let app = weak.unwrap();
@@ -551,8 +571,8 @@ fn open_note_inner(app: &App, session: &Rc<RefCell<Session>>, index: usize) -> O
             } else {
                 app.set_conflict_sheet_open(false);
                 app.set_active_conflict_total(0);
-                app.set_active_conflict_mine(SharedString::new());
-                app.set_active_conflict_theirs(SharedString::new());
+                app.set_active_conflict_a(SharedString::new());
+                app.set_active_conflict_b(SharedString::new());
             }
             Some(opened.note_rel_path)
         }
@@ -813,10 +833,36 @@ pub fn resolve_active_conflict(
     }
 }
 
+/// `(header label, button label)` for one side of a conflict, from
+/// what `immermemo_sync::Vault::conflict_authorship` could determine --
+/// "Mine"/"Theirs" when known, a neutral "A"/"B" when not (see
+/// `ConflictSide`'s own doc for why `NotMine` safely reads as "Theirs"
+/// even when a third device is looking: it only ever claims "not this
+/// device's", never *which* other one).
+fn conflict_side_labels(side: immermemo_sync::ConflictSide, letter: &str) -> (String, String) {
+    match side {
+        immermemo_sync::ConflictSide::Mine => {
+            ("📱 Your changes".to_owned(), "Keep Mine".to_owned())
+        }
+        immermemo_sync::ConflictSide::NotMine => {
+            ("☁️ Their changes".to_owned(), "Keep Theirs".to_owned())
+        }
+        immermemo_sync::ConflictSide::Unknown => {
+            (format!("Version {letter}"), format!("Keep {letter}"))
+        }
+    }
+}
+
 pub fn sync_conflict_sheet_state(app: &App, session: &Rc<RefCell<Session>>) {
     let state = {
         let s = session.borrow();
-        immermemo_editor::conflict_sheet_state(&s.editor, &s.notes, app.get_active_conflict_index())
+        immermemo_editor::conflict_sheet_state(
+            &s.editor,
+            &s.notes,
+            app.get_active_conflict_index(),
+            &s.app_data,
+            &s.vault_dir,
+        )
     };
     match state {
         immermemo_editor::ConflictSheetState::NoActiveNote => {
@@ -827,19 +873,27 @@ pub fn sync_conflict_sheet_state(app: &App, session: &Rc<RefCell<Session>>) {
             app.set_active_conflict_total(0);
             app.set_conflict_sheet_open(false);
             app.set_current_has_conflict(false);
-            app.set_active_conflict_mine(SharedString::new());
-            app.set_active_conflict_theirs(SharedString::new());
+            app.set_active_conflict_a(SharedString::new());
+            app.set_active_conflict_b(SharedString::new());
         }
         immermemo_editor::ConflictSheetState::Active {
             total,
             index,
-            mine,
-            theirs,
+            a,
+            b,
+            a_side,
+            b_side,
         } => {
+            let (a_label, a_button_label) = conflict_side_labels(a_side, "A");
+            let (b_label, b_button_label) = conflict_side_labels(b_side, "B");
             app.set_active_conflict_total(total as i32);
             app.set_active_conflict_index(index as i32);
-            app.set_active_conflict_mine(mine.into());
-            app.set_active_conflict_theirs(theirs.into());
+            app.set_active_conflict_a(a.into());
+            app.set_active_conflict_b(b.into());
+            app.set_active_conflict_a_label(a_label.into());
+            app.set_active_conflict_b_label(b_label.into());
+            app.set_active_conflict_a_button_label(a_button_label.into());
+            app.set_active_conflict_b_button_label(b_button_label.into());
         }
     }
 }

@@ -14,8 +14,15 @@ export component PropertiesScreen inherits Rectangle {
     in property <int> line-count: 0;
     in property <bool> has-conflict: false;
     in property <int> conflict-total: 0;
-    in property <string> conflict-mine-preview: "";
-    in property <string> conflict-theirs-preview: "";
+    // See `ConflictSheet`'s own doc (`sheets/conflict.slint`) for why
+    // `a`/`b` carry no mine/theirs meaning by themselves, and why
+    // `*-label` is computed in Rust instead of hardcoded here.
+    in property <string> conflict-a-preview: "";
+    in property <string> conflict-b-preview: "";
+    in property <string> conflict-a-label: "";
+    in property <string> conflict-b-label: "";
+    in property <string> conflict-a-button-label: "";
+    in property <string> conflict-b-button-label: "";
 
     callback rename-requested();
     callback delete-requested();
@@ -199,10 +206,10 @@ export component PropertiesScreen inherits Rectangle {
                         }
 
                         // Conflict Preview cards if preview text is available
-                        if root.conflict-mine-preview != "" || root.conflict-theirs-preview != "": VerticalLayout {
+                        if root.conflict-a-preview != "" || root.conflict-b-preview != "": VerticalLayout {
                             spacing: Metrics.spacing-sm;
 
-                            if root.conflict-mine-preview != "": Rectangle {
+                            if root.conflict-a-preview != "": Rectangle {
                                 border-radius: Metrics.radius-sm;
                                 background: Palette.foreground.with-alpha(0.04);
                                 border-width: 1px;
@@ -212,14 +219,14 @@ export component PropertiesScreen inherits Rectangle {
                                     padding: Metrics.spacing-sm;
                                     spacing: Metrics.spacing-xs;
                                     Text {
-                                        text: @tr("📱 Your changes (Local):");
+                                        text: root.conflict-a-label + ":";
                                         font-size: Metrics.font-caption;
                                         font-weight: 700;
                                         color: Palette.accent-background;
                                     }
 
                                     Text {
-                                        text: root.conflict-mine-preview;
+                                        text: root.conflict-a-preview;
                                         font-size: Metrics.font-sub;
                                         color: Palette.foreground;
                                         overflow: elide;
@@ -227,7 +234,7 @@ export component PropertiesScreen inherits Rectangle {
                                 }
                             }
 
-                            if root.conflict-theirs-preview != "": Rectangle {
+                            if root.conflict-b-preview != "": Rectangle {
                                 border-radius: Metrics.radius-sm;
                                 background: Palette.foreground.with-alpha(0.04);
                                 border-width: 1px;
@@ -237,14 +244,14 @@ export component PropertiesScreen inherits Rectangle {
                                     padding: Metrics.spacing-sm;
                                     spacing: Metrics.spacing-xs;
                                     Text {
-                                        text: @tr("☁️ Remote changes (Remote):");
+                                        text: root.conflict-b-label + ":";
                                         font-size: Metrics.font-caption;
                                         font-weight: 700;
                                         color: Colors.warning;
                                     }
 
                                     Text {
-                                        text: root.conflict-theirs-preview;
+                                        text: root.conflict-b-preview;
                                         font-size: Metrics.font-sub;
                                         color: Palette.foreground;
                                         overflow: elide;
@@ -281,13 +288,13 @@ export component PropertiesScreen inherits Rectangle {
                             spacing: Metrics.spacing-sm;
                             Button {
                                 horizontal-stretch: 1;
-                                text: @tr("Keep Mine");
+                                text: root.conflict-a-button-label;
                                 clicked => { root.resolve-mine(); }
                             }
 
                             Button {
                                 horizontal-stretch: 1;
-                                text: @tr("Keep Theirs");
+                                text: root.conflict-b-button-label;
                                 clicked => { root.resolve-theirs(); }
                             }
                         }

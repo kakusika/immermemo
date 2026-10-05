@@ -1,0 +1,11 @@
+[package]
+name = "immermemo-identity"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+#= Crates.io
+anyhow = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

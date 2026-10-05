@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+immermemo-identity = { workspace = true }
 immermemo-merge = { workspace = true }
 immermemo-vault = { workspace = true }
 

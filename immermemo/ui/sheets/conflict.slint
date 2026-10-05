@@ -7,8 +7,17 @@ export component ConflictSheet inherits Rectangle {
     in property <bool> open: false;
     in property <int> conflict-index: 0;
     in property <int> conflict-total: 0;
-    in property <string> mine-text: "";
-    in property <string> theirs-text: "";
+    // `a`/`b` are `@conflict`'s own structural names, not mine/theirs --
+    // `a-label`/`b-label`/`*-button-label` are computed in Rust (from
+    // `immermemo_sync::ConflictSide`) and already say "Mine"/"Theirs"/a
+    // neutral "A"/"B" as appropriate; this file never decides that
+    // itself (see `.agents/tasks/git-ancestry-conflict-labeling.md`).
+    in property <string> a-text: "";
+    in property <string> b-text: "";
+    in property <string> a-label: "";
+    in property <string> b-label: "";
+    in property <string> a-button-label: "";
+    in property <string> b-button-label: "";
 
     callback close();
     callback resolve-choice(int); // 0: Mine, 1: Theirs, 2: Both
@@ -107,7 +116,7 @@ export component ConflictSheet inherits Rectangle {
                             HorizontalLayout {
                                 spacing: 6px;
                                 Text {
-                                    text: @tr("📱 Your changes (Local)");
+                                    text: root.a-label;
                                     font-size: 13px;
                                     font-weight: 700;
                                     color: Palette.accent-background;
@@ -123,24 +132,24 @@ export component ConflictSheet inherits Rectangle {
                                 HorizontalLayout {
                                     padding: 8px;
                                     Text {
-                                        text: root.mine-text != "" ? root.mine-text : @tr("(deleted or empty)");
+                                        text: root.a-text != "" ? root.a-text : @tr("(deleted or empty)");
                                         font-size: 14px;
-                                        color: root.mine-text != "" ? Palette.foreground : Colors.muted;
+                                        color: root.a-text != "" ? Palette.foreground : Colors.muted;
                                         wrap: word-wrap;
                                     }
                                 }
                             }
 
-                            // Keep Mine Button
+                            // Keep A Button
                             Rectangle {
                                 height: 36px;
                                 border-radius: 18px;
-                                background: mine-btn-touch.pressed ? Palette.accent-background.darker(15%) : Palette.accent-background;
+                                background: a-btn-touch.pressed ? Palette.accent-background.darker(15%) : Palette.accent-background;
 
                                 HorizontalLayout {
                                     alignment: center;
                                     Text {
-                                        text: @tr("Keep Mine");
+                                        text: root.a-button-label;
                                         font-size: 13px;
                                         font-weight: 600;
                                         color: #ffffff;
@@ -148,7 +157,7 @@ export component ConflictSheet inherits Rectangle {
                                     }
                                 }
 
-                                mine-btn-touch := TouchArea {
+                                a-btn-touch := TouchArea {
                                     clicked => { root.resolve-choice(0); }
                                 }
                             }
@@ -169,7 +178,7 @@ export component ConflictSheet inherits Rectangle {
                             HorizontalLayout {
                                 spacing: 6px;
                                 Text {
-                                    text: @tr("☁️ Remote changes (Remote)");
+                                    text: root.b-label;
                                     font-size: 13px;
                                     font-weight: 700;
                                     color: Colors.warning;
@@ -185,24 +194,24 @@ export component ConflictSheet inherits Rectangle {
                                 HorizontalLayout {
                                     padding: 8px;
                                     Text {
-                                        text: root.theirs-text != "" ? root.theirs-text : @tr("(deleted or empty)");
+                                        text: root.b-text != "" ? root.b-text : @tr("(deleted or empty)");
                                         font-size: 14px;
-                                        color: root.theirs-text != "" ? Palette.foreground : Colors.muted;
+                                        color: root.b-text != "" ? Palette.foreground : Colors.muted;
                                         wrap: word-wrap;
                                     }
                                 }
                             }
 
-                            // Keep Theirs Button
+                            // Keep B Button
                             Rectangle {
                                 height: 36px;
                                 border-radius: 18px;
-                                background: theirs-btn-touch.pressed ? Colors.warning.darker(15%) : Colors.warning;
+                                background: b-btn-touch.pressed ? Colors.warning.darker(15%) : Colors.warning;
 
                                 HorizontalLayout {
                                     alignment: center;
                                     Text {
-                                        text: @tr("Keep Theirs");
+                                        text: root.b-button-label;
                                         font-size: 13px;
                                         font-weight: 600;
                                         color: #ffffff;
@@ -210,7 +219,7 @@ export component ConflictSheet inherits Rectangle {
                                     }
                                 }
 
-                                theirs-btn-touch := TouchArea {
+                                b-btn-touch := TouchArea {
                                     clicked => { root.resolve-choice(1); }
                                 }
                             }
@@ -227,7 +236,7 @@ export component ConflictSheet inherits Rectangle {
                             alignment: center;
                             spacing: 6px;
                             Text {
-                                text: @tr("+ Keep Both (Local → Remote)");
+                                text: @tr("+ Keep Both (A → B)");
                                 font-size: 13px;
                                 font-weight: 600;
                                 color: Palette.foreground;

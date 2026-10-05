@@ -1093,22 +1093,22 @@ mod tests {
         assert!(app.get_note_sheet_open());
         assert!(app.get_conflict_sheet_open());
         assert_eq!(app.get_active_conflict_total(), 2);
-        assert_eq!(app.get_active_conflict_mine(), "min");
-        assert_eq!(app.get_active_conflict_theirs(), "theirs");
+        assert_eq!(app.get_active_conflict_a(), "min");
+        assert_eq!(app.get_active_conflict_b(), "theirs");
 
         // Initial state sync
         sync_conflict_sheet_state(app, session);
         assert_eq!(app.get_active_conflict_total(), 2);
         assert_eq!(app.get_active_conflict_index(), 0);
-        assert_eq!(app.get_active_conflict_mine(), "min");
-        assert_eq!(app.get_active_conflict_theirs(), "theirs");
+        assert_eq!(app.get_active_conflict_a(), "min");
+        assert_eq!(app.get_active_conflict_b(), "theirs");
 
         // Navigate to next conflict
         app.set_active_conflict_index(1);
         sync_conflict_sheet_state(app, session);
         assert_eq!(app.get_active_conflict_index(), 1);
-        assert_eq!(app.get_active_conflict_mine(), "min");
-        assert_eq!(app.get_active_conflict_theirs(), "theirs");
+        assert_eq!(app.get_active_conflict_a(), "min");
+        assert_eq!(app.get_active_conflict_b(), "theirs");
 
         // Resolve conflict at index 1 with Keep Both (choice 2)
         resolve_conflict_step(app, session, 2);
