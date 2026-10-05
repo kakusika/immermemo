@@ -1,9 +1,10 @@
 //! Android entry point, platform keystore, certificate verification,
-//! and the startup-splash handoff.
+//! the startup-splash handoff, and system UI (status bar) visibility.
 
 pub mod cert;
 pub mod keystore;
 pub mod splash;
+pub mod system_ui;
 
 use std::sync::Arc;
 
@@ -37,6 +38,7 @@ pub fn android_main(app: slint::android::AndroidApp) {
     let initial_note_path = unsafe {
         haptic::init_android_haptics(vm_ptr, activity_ptr);
         splash::init(vm_ptr, activity_ptr);
+        system_ui::init(vm_ptr, activity_ptr);
         crate::widget::init_android_widget_bridge(vm_ptr, activity_ptr, &base);
         crate::widget::read_launch_note_path(vm_ptr, activity_ptr)
     };

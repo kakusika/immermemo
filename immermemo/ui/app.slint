@@ -94,6 +94,7 @@ export component App inherits Window {
     in-out property <int> active-tab: 0;
 
     in-out property <bool> note-sheet-open: false;
+    changed note-sheet-open => { root.note-sheet-open-changed(root.note-sheet-open); }
 
     public function open-note-sheet() {
         root.note-sheet-open = true;
@@ -225,6 +226,7 @@ export component App inherits Window {
     in-out property <int> font-size-choice: 1;
     in-out property <length> editor-font-size: 17px;
     in-out property <int> theme-choice: 0;
+    in-out property <int> status-bar-choice: 0;
     in-out property <float> ui-scale <=> Metrics.ui-scale;
     in-out property <bool> editor-edit-mode <=> pane.edit-mode;
     in-out property <int> directory-mode <=> files-screen.directory-mode;
@@ -279,6 +281,8 @@ export component App inherits Window {
     callback close-settings();
     callback font-size-changed(int);
     callback theme-changed(int);
+    callback status-bar-changed(int);
+    callback note-sheet-open-changed(bool);
     callback save-remote(string, string);
     callback rename-requested(int);
     callback delete-requested(int);
@@ -769,6 +773,7 @@ export component App inherits Window {
                     current-vault-path: root.current-vault-path;
                     font-size-choice <=> root.font-size-choice;
                     theme-choice <=> root.theme-choice;
+                    status-bar-choice <=> root.status-bar-choice;
                     inset-top: root.inset-top;
                     inset-bottom: root.screen-inset-bottom;
                     save-remote(url, token) => { root.save-remote(url, token); }
@@ -776,6 +781,7 @@ export component App inherits Window {
                     open-vaults => { root.open-vault-sheet(); }
                     font-size-changed(c) => { root.font-size-changed(c); }
                     theme-changed(c) => { root.theme-changed(c); }
+                    status-bar-changed(c) => { root.status-bar-changed(c); }
                     close => { root.active-tab = 0; }
 
                     animate x {

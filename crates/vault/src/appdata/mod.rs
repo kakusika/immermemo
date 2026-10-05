@@ -190,6 +190,16 @@ mod tests {
     }
 
     #[test]
+    fn status_bar_choice_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().to_owned());
+        assert_eq!(data.load_status_bar_choice(), None);
+
+        data.save_status_bar_choice(1).unwrap();
+        assert_eq!(data.load_status_bar_choice(), Some(1));
+    }
+
+    #[test]
     fn in_tree_gitdir_is_used_when_present() {
         let dir = tempfile::tempdir().unwrap();
         let data = AppData::new(dir.path().join("appdata"));

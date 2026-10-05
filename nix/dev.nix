@@ -57,6 +57,7 @@ mkShell {
     twrit
     slint-lsp
     slint-viewer
+    slint-tr-extractor
     just
     #== Build
     pkg-config

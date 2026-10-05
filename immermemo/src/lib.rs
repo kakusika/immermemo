@@ -9,6 +9,8 @@ mod widget;
 #[cfg(target_os = "android")]
 mod android;
 
+#[cfg(target_os = "android")]
+use std::cell::Cell;
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -60,6 +62,18 @@ fn select_system_translation() {
     };
     let lang = locale.split(['-', '_']).next().unwrap_or(&locale);
     let _ = slint::select_bundled_translation(lang);
+}
+
+/// Whether the status bar should be visible, given the Settings choice
+/// (0: always show, 1: hide while editing a note, 2: always hide) and
+/// whether the note editor sheet is currently open.
+#[cfg(target_os = "android")]
+fn status_bar_visible_for(choice: i32, note_sheet_open: bool) -> bool {
+    match choice {
+        1 => !note_sheet_open,
+        2 => false,
+        _ => true,
+    }
 }
 
 /// Opens the window and runs until it is closed.
@@ -114,6 +128,17 @@ pub fn run(
         _ => 17.0,
     });
     app.set_theme_choice(theme_choice);
+    let status_bar_choice = app_data.load_status_bar_choice().unwrap_or(0);
+    app.set_status_bar_choice(status_bar_choice);
+    #[cfg(target_os = "android")]
+    let status_bar_choice_cell = Rc::new(Cell::new(status_bar_choice));
+    // 2 (always hidden) takes effect immediately; 0/1 don't need an
+    // initial call -- the window starts visible either way (AppTheme's
+    // own default), and 1 only hides once a note is actually opened.
+    #[cfg(target_os = "android")]
+    if status_bar_choice == 2 {
+        android::system_ui::set_status_bar_visible(false);
+    }
     app.set_current_vault_name(vault_display_name(&vault_dir).into());
     app.set_current_vault_path(vault_dir.display().to_string().into());
     app.set_remote_configured(remote.is_some());
@@ -344,6 +369,33 @@ pub fn run(
         let session = session.clone();
         move |choice| {
             let _ = session.borrow().app_data.save_theme(choice);
+        }
+    });
+    app.on_status_bar_changed({
+        let session = session.clone();
+        #[cfg(target_os = "android")]
+        let (weak, status_bar_choice_cell) = (app.as_weak(), status_bar_choice_cell.clone());
+        move |choice| {
+            let _ = session.borrow().app_data.save_status_bar_choice(choice);
+            #[cfg(target_os = "android")]
+            {
+                status_bar_choice_cell.set(choice);
+                let app = weak.unwrap();
+                android::system_ui::set_status_bar_visible(status_bar_visible_for(
+                    choice,
+                    app.get_note_sheet_open(),
+                ));
+            }
+        }
+    });
+    #[cfg(target_os = "android")]
+    app.on_note_sheet_open_changed({
+        let status_bar_choice_cell = status_bar_choice_cell.clone();
+        move |open| {
+            android::system_ui::set_status_bar_visible(status_bar_visible_for(
+                status_bar_choice_cell.get(),
+                open,
+            ));
         }
     });
 

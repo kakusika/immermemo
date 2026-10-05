@@ -91,6 +91,8 @@ export component SettingsSheet inherits Rectangle {
     in-out property <int> font-size-choice: 1;
     // 0: System, 1: Light, 2: Dark
     in-out property <int> theme-choice: 0;
+    // 0: show (default), 1: hide while editing a note, 2: always hide
+    in-out property <int> status-bar-choice: 0;
 
     // App info
     in property <string> app-version: "0.1.0";
@@ -100,6 +102,7 @@ export component SettingsSheet inherits Rectangle {
     callback save-remote(string, string);
     callback sync();
     callback open-vaults();
+    callback status-bar-changed(int);
     callback font-size-changed(int);
     callback theme-changed(int);
 
@@ -279,6 +282,35 @@ export component SettingsSheet inherits Rectangle {
                                 selected: Metrics.ui-scale < 0.95 ? 0 : (Metrics.ui-scale <= 1.05 ? 1 : (Metrics.ui-scale <= 1.18 ? 2 : 3));
                                 changed(i) => {
                                     Metrics.ui-scale = [0.9, 1.0, 1.1, 1.25][i];
+                                }
+                            }
+                        }
+
+                        Divider { }
+
+                        // Status Bar Selector
+                        VerticalLayout {
+                            spacing: Metrics.spacing-sm;
+
+                            Text {
+                                text: @tr("Status Bar");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            Text {
+                                text: @tr("Hide it while editing a note (for a less distracting full-screen view), or everywhere in the app.");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+
+                            SegmentedControl {
+                                options: [@tr("Show"), @tr("Hide While Editing"), @tr("Always Hide")];
+                                selected: root.status-bar-choice;
+                                changed(i) => {
+                                    root.status-bar-choice = i;
+                                    root.status-bar-changed(i);
                                 }
                             }
                         }

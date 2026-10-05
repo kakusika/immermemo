@@ -14,8 +14,14 @@
       Colors.page-background` (itself dynamic: OS palette, or a
       user-chosen custom theme); it only needs to be close enough
       that the transition isn't jarring, not an exact live match.
+
+      Deliberately NOT .Fullscreen: that also hides the status bar by
+      default, which isn't this theme's call to make; the status
+      bar's visibility while editing a note is a Settings toggle (see
+      MainActivity.kt's setStatusBarVisible / src/android/system_ui.rs),
+      defaulting to visible.
     -->
-    <style name="AppTheme" parent="android:Theme.Black.NoTitleBar.Fullscreen">
+    <style name="AppTheme" parent="android:Theme.Black.NoTitleBar">
         <item name="android:windowBackground">#f7f3f9</item>
     </style>
 

@@ -1,6 +1,7 @@
 //! Small per-vault (remote URL, last-opened note) and per-install (editor
-//! font size, theme) settings -- each just a trimmed-text file under the
-//! app-data root, read and written independently of each other.
+//! font size, theme, status bar visibility while editing) settings --
+//! each just a trimmed-text file under the app-data root, read and
+//! written independently of each other.
 
 use std::path::{Path, PathBuf};
 
@@ -98,5 +99,18 @@ impl AppData {
 
     pub fn save_theme(&self, choice: i32) -> anyhow::Result<()> {
         write(&self.theme_file(), &choice.to_string())
+    }
+
+    fn status_bar_file(&self) -> PathBuf {
+        self.base.join("status_bar.txt")
+    }
+
+    /// 0: show (default, even while editing), 1: hide while editing a note.
+    pub fn load_status_bar_choice(&self) -> Option<i32> {
+        read_trimmed(&self.status_bar_file()).and_then(|s| s.parse().ok())
+    }
+
+    pub fn save_status_bar_choice(&self, choice: i32) -> anyhow::Result<()> {
+        write(&self.status_bar_file(), &choice.to_string())
     }
 }

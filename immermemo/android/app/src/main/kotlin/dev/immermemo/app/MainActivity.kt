@@ -4,6 +4,7 @@ import android.app.NativeActivity
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -20,6 +21,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  * released by [markFirstFrameRendered] -- called over JNI from
  * `src/android/splash.rs` once Slint's renderer reports its first
  * frame (see that file for the Rust side).
+ *
+ * Also exposes [setStatusBarVisible], called over JNI from
+ * `src/android/system_ui.rs`, for the Settings toggle that hides the
+ * status bar while editing a note.
  */
 class MainActivity : NativeActivity() {
     private val firstFrameRendered = AtomicBoolean(false)
@@ -42,6 +47,26 @@ class MainActivity : NativeActivity() {
     @Suppress("unused")
     fun markFirstFrameRendered() {
         firstFrameRendered.set(true)
+    }
+
+    /**
+     * Called over JNI from `src/android/system_ui.rs` to show/hide the
+     * status bar -- used to free up screen space while editing a note,
+     * when the user opts into that in Settings. View mutations must
+     * happen on the UI thread, which this JNI call doesn't originate
+     * from (Slint's Android backend runs its own event loop thread).
+     */
+    @Suppress("unused", "DEPRECATION")
+    fun setStatusBarVisible(visible: Boolean) {
+        runOnUiThread {
+            window.decorView.systemUiVisibility = if (visible) {
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            } else {
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            }
+        }
     }
 
     companion object {

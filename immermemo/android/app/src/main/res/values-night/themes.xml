@@ -2,7 +2,7 @@
 <resources>
     <!-- Dark counterpart of ../values/themes.xml; see that file's
          comment for why this exists and why it's an approximation. -->
-    <style name="AppTheme" parent="android:Theme.Black.NoTitleBar.Fullscreen">
+    <style name="AppTheme" parent="android:Theme.Black.NoTitleBar">
         <item name="android:windowBackground">#150c1d</item>
     </style>
 
