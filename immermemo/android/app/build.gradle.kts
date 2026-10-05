@@ -66,3 +66,14 @@ android {
         jvmTarget = "17"
     }
 }
+
+dependencies {
+    // Holds the system splash screen open past NativeActivity's own
+    // startup (see MainActivity.kt) until Slint's first frame has
+    // rendered. Pinned to 1.0.1, not the newer 1.2.0: 1.2.0's AAR
+    // metadata requires compileSdk 35+, and the next stable line after
+    // 1.0.1 (1.1.0) never shipped past -rc01 -- compileSdk here stays
+    // at 34 since this nix dev shell only provides the android-34 SDK
+    // platform.
+    implementation("androidx.core:core-splashscreen:1.0.1")
+}

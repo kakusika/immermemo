@@ -1,7 +1,9 @@
-//! Android entry point, platform keystore, and certificate verification.
+//! Android entry point, platform keystore, certificate verification,
+//! and the startup-splash handoff.
 
 pub mod cert;
 pub mod keystore;
+pub mod splash;
 
 use std::sync::Arc;
 
@@ -34,6 +36,7 @@ pub fn android_main(app: slint::android::AndroidApp) {
     slint::android::init(app).expect("initialize the Android backend");
     let initial_note_path = unsafe {
         haptic::init_android_haptics(vm_ptr, activity_ptr);
+        splash::init(vm_ptr, activity_ptr);
         crate::widget::init_android_widget_bridge(vm_ptr, activity_ptr, &base);
         crate::widget::read_launch_note_path(vm_ptr, activity_ptr)
     };

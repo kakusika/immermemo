@@ -102,6 +102,8 @@ pub fn run(
     let remote = app_data.load_remote(&vault_dir);
 
     let app = App::new()?;
+    #[cfg(target_os = "android")]
+    android::splash::notify_on_first_frame(&app);
     select_system_translation();
     let font_size_choice = app_data.load_font_size().unwrap_or(1);
     let theme_choice = app_data.load_theme().unwrap_or(0);

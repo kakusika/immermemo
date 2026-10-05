@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The app's real theme, in effect once `Theme.App.Starting` below
+      hands off to it (see MainActivity.kt). windowBackground here
+      only covers any later moment the window is shown without Slint
+      having drawn yet (e.g. a config-change recreate); it does NOT
+      cover first cold start, since NativeActivity.onCreate hands the
+      window's Surface straight to native code (`takeSurface`) before
+      this DecorView-owned background would ever be visible. That gap
+      is what `Theme.App.Starting`'s system splash hold is for.
+
+      This is only an approximation of app.slint's root `background:
+      Colors.page-background` (itself dynamic: OS palette, or a
+      user-chosen custom theme); it only needs to be close enough
+      that the transition isn't jarring, not an exact live match.
+    -->
+    <style name="AppTheme" parent="android:Theme.Black.NoTitleBar.Fullscreen">
+        <item name="android:windowBackground">#f7f3f9</item>
+    </style>
+
+    <!--
+      The manifest's starting theme: keeps the system splash (plain
+      background, no icon configured) on screen past NativeActivity's
+      own startup, held open by MainActivity.kt's
+      `setKeepOnScreenCondition` until Slint's first frame has
+      reached the native surface. Hands off to AppTheme via
+      postSplashScreenTheme once released.
+    -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#f7f3f9</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
+    </style>
+</resources>

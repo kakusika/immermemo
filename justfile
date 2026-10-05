@@ -6,7 +6,7 @@ avd := "immermemo_test"
 device := "pixel_6"
 system_image := "system-images;android-34;google_apis;x86_64"
 package := "dev.immermemo.app"
-activity := package + "/android.app.NativeActivity"
+activity := package + "/.MainActivity"
 jniLibs := "android/app/src/main/jniLibs"
 apk := "immermemo/android/app/build/outputs/apk/release/app-release.apk"
 
