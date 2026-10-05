@@ -22,8 +22,8 @@ use immermemo_vault::appdata::AppData;
 use immermemo_vault::credentials::TokenStore;
 use immermemo_vault::notes;
 
-#[cfg(target_os = "android")]
-use crate::android::cert as android_cert;
+#[cfg(any(target_os = "android", target_os = "ios"))]
+use crate::cert;
 
 /// Back/forward navigation between previously-opened notes -- distinct
 /// from `EditorState.history` (per-note text undo/redo) and the
@@ -221,12 +221,12 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
     // Sync) token store cross.
     std::thread::spawn(move || {
         let credentials = TokenCredentials::new(token_store);
-        // Desktop's OpenSSL can still find an OS-provided CA bundle itself
-        // (see `git2::init`'s path probing); only Android needs a verifier
-        // supplied here at all.
-        #[cfg(target_os = "android")]
-        let verifier = android_cert::verifier().map(Some);
-        #[cfg(not(target_os = "android"))]
+        // Desktop Linux OpenSSL can find an OS-provided CA bundle itself
+        // (see `git2::init`'s path probing); mobile targets (Android, iOS)
+        // require the vendored root CA bundle.
+        #[cfg(any(target_os = "android", target_os = "ios"))]
+        let verifier = cert::verifier().map(Some);
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
         let verifier: anyhow::Result<Option<Box<dyn immermemo_sync::CertificateVerifier>>> =
             Ok(None);
         let result = verifier
@@ -505,10 +505,10 @@ pub fn clear_note_stats(app: &App) {
 }
 
 /// Turns what the user typed in the "Add vault" dialog into an actual
-/// vault directory -- desktop takes it as a path outright; Android has no
-/// external folder access in this build, so it names a subfolder of the
-/// same private storage the app already uses.
-#[cfg(target_os = "android")]
+/// vault directory -- desktop takes it as a path outright; mobile platforms
+/// (Android, iOS) have no arbitrary filesystem folder access, so it names
+/// a subfolder of the private sandbox storage the app already uses.
+#[cfg(any(target_os = "android", target_os = "ios"))]
 pub fn vault_path_from_input(base: &std::path::Path, input: &str) -> anyhow::Result<PathBuf> {
     anyhow::ensure!(!input.is_empty(), "the name can't be empty");
     anyhow::ensure!(
@@ -522,7 +522,7 @@ pub fn vault_path_from_input(base: &std::path::Path, input: &str) -> anyhow::Res
     Ok(base.join(input))
 }
 
-#[cfg(not(target_os = "android"))]
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn vault_path_from_input(_base: &std::path::Path, input: &str) -> anyhow::Result<PathBuf> {
     anyhow::ensure!(!input.is_empty(), "the path can't be empty");
     Ok(PathBuf::from(input))

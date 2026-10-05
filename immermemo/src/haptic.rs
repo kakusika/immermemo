@@ -1,9 +1,9 @@
 //! Platform haptic feedback implementation.
 //!
-//! On Android, this calls `window.getDecorView().performHapticFeedback(LONG_PRESS)`
-//! via JNI, which provides the system-standard tactile response on long press
-//! without requiring extra permissions.
-//! On other platforms (e.g. desktop), this is a graceful no-op.
+//! - On Android, this calls `window.getDecorView().performHapticFeedback(...)`
+//!   via JNI, which provides tactile response without extra permissions.
+//! - On iOS, this will invoke UIKit's `UIImpactFeedbackGenerator`.
+//! - On desktop Linux, this is a graceful no-op.
 
 #[cfg(target_os = "android")]
 static ANDROID_APP_VM: std::sync::OnceLock<(jni::JavaVM, jni::objects::GlobalRef)> =
@@ -89,5 +89,10 @@ pub fn perform_haptic_with_type(_haptic_type: HapticType) {
         if let Err(e) = res {
             eprintln!("immermemo: failed to trigger Android haptic feedback: {e}");
         }
+    }
+    #[cfg(target_os = "ios")]
+    {
+        // TODO(ios): Trigger UIImpactFeedbackGenerator style (Light / Heavy) via UIKit
+        let _ = _haptic_type;
     }
 }

@@ -15,8 +15,12 @@ fn main() {
         std::env::set_var("SLINT_ENABLE_EXPERIMENTAL_FEATURES", "1");
     }
 
-    let is_android = std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("android");
-    let default_style = if is_android { "material" } else { "fluent" };
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    let default_style = match target_os.as_str() {
+        "android" => "material",
+        "ios" => "cupertino",
+        _ => "fluent",
+    };
     let style = std::env::var("SLINT_STYLE").unwrap_or_else(|_| default_style.to_string());
 
     // `origami-mobile` (from `origami-frameworks`, migrated out of this

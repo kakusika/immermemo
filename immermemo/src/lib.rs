@@ -1,3 +1,4 @@
+pub mod cert;
 pub mod credentials;
 mod directory;
 mod haptic;
