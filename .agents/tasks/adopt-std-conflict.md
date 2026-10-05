@@ -1,5 +1,3 @@
-${macro.generated\_by(self.path)}
-
 # Adopt `tomet`'s std `@conflict`, retire `@mobile.conflict`
 
 Planning only -- not started. Parked until other in-flight work here
@@ -172,10 +170,14 @@ writing any code, not before writing this plan.
 
 ## Status
 
-Steps 0-5 done, 6-8 in progress -- the data model and the resolution-
-sheet backend are fully migrated and tested; the view-mode UI rendering
-(`immermemo/src/render/*`, the Slint files) is not, and needs its own
-look (see below) before it's touched.
+Steps 0-5 committed (`c45a737`, already pushed). Steps 6-8 -- the
+view-mode UI rendering (`immermemo/src/render/*`, the Slint files) --
+done in a later session and detailed further down ("View-mode design,
+decided" section): data model, `conflict_look`, the new `.slint` struct/
+component, `flow.rs`'s inline treatment, every stale fixture rewritten,
+`cargo test --workspace` green. Not yet committed -- holding for the
+user's review (and the UI hasn't been visually checked on a real screen
+yet, see that section's last note).
 
 - Step 0: `tomet` pushed to `origin` (3 commits it was behind), `cargo
   update` bumped every `tomet-*`/`tove` dependency to `f444178b`.
@@ -230,45 +232,22 @@ look (see below) before it's touched.
   from the open note back to the merge commit that introduced the
   still-unresolved `@conflict`, read its two parents via `git2`, check
   each against the device's own branch history) -- still pending.
-- Step 6 (not started): `immermemo/src/render/classify.rs`'s `REGISTRY`/
-  `mobile_conflict_look`, `immermemo/src/render/flow.rs`, and their test
-  fixtures are real, conflict-specific view-mode rendering logic (not
-  generic fallback) -- `BlockShape::Chip`/`Divider`, "Mine"/"Theirs"
-  chip labels, built entirely around the retired 3-marker shape where
-  the disputed content flowed as ordinary sibling blocks/inlines around
-  bare marker elements. That assumption is now wrong: `@conflict`'s
-  whole payload lives inside its own `(args)` (`a`/`b` as `Value::
-  Blocks`), not in the surrounding document flow at all, so `immermemo-
-  tomet-render`'s `RenderItem::Element` (which only ever summarizes
-  `args` as a short lossy string, by design -- same shape of problem
-  this session already found and fixed for `tomet`'s own HTML/Markdown/
-  Pandoc/Typst converters) currently has no path to show `a`/`b`'s real
-  content in view mode at all. **This needs an actual design decision
-  from the user before any code here** -- options sketched when this
-  was found: show both sides inline somehow (richer `tomet-render`
-  output, bigger lift), or drop inline content preview entirely and
-  make the conflict chip itself the only thing shown (tap it to open the
-  resolution sheet, no inline peek) -- not decided, don't guess.
-  `immermemo/ui/sheets/conflict.slint` (the resolution sheet itself) is
-  also still completely unread.
-- Step 7: not started -- `immermemo/src/render/*`'s own test fixtures
-  (`a_mobile_conflict_marker_triple_is_identified` and friends, plus
-  `immermemo/examples/snap.rs`) still build `.tmt` text in the old
-  3-marker shape; blocked on step 6's design decision, since rewriting
-  them needs to know what the new rendering actually produces.
-- Step 8: `cargo build`/`cargo test` green for every non-UI crate
-  (`immermemo-merge`, `-editor`, `-sync`, `-index`, `-vault`, `-tomet-
-  render`) -- confirmed repeatedly through this pass, most recently
-  after the vocabulary file deletion. The UI crate itself
-  (`immermemo`/`immermemo-tomet-render`'s own consumer) could not be
-  built in this sandbox at all (missing system `fontconfig`, unrelated
-  to this change -- same kind of sandbox limitation as `tomet-python`'s
-  pyo3 issue in the `tomet` repo), so step 6/7's eventual Slint-side
-  code needs verifying for real once it exists, not just type-checked
-  blind.
+- Step 6: done -- see "View-mode design, decided" below for the full
+  account (`classify.rs`'s `conflict_look`/`ConflictLeafBlock`,
+  `flow.rs`'s `push_conflict_side`, the new `.slint` struct/component,
+  `render/mod.rs`'s and `examples/snap.rs`'s conversions).
+  `immermemo/ui/sheets/conflict.slint` (the resolution sheet itself)
+  remains untouched -- nothing about the `a`/`b` rename changes its UI.
+- Step 7: done -- every fixture that spelled the old 3-marker/
+  `@use(mobile)` shape is rewritten (see "View-mode design, decided"
+  for the full list).
+- Step 8: `cargo build && cargo test --workspace` green for every crate,
+  including the UI crate itself and `examples/snap.rs` -- confirmed via
+  `nix develop` (this sandbox has no system `fontconfig`/etc. outside
+  that shell, same limitation noted when steps 0-5 landed).
 
-Nothing committed yet -- holding for the user's review, and for the view-
-mode design decision above before continuing into steps 6/7.
+Not committed yet -- holding for the user's review. Nothing in this
+session has been pushed or committed.
 
 ## View-mode design, decided (option 1: show both sides inline)
 
@@ -312,36 +291,129 @@ needs two more of). The fix is additive, not a dispatch bypass:
   (`(None, "conflict", conflict_look)`), same shape as every other
   entry -- no special-cased dispatch ahead of `look_up` needed after
   all.
-- `ClassifiedBlock` (and the Slint-side `RenderedBlock` it's converted
-  to in `render/mod.rs`'s `to_rendered_block`) needs the same two fields.
-  Whether Slint's struct/array system actually supports a
-  self-referential struct (`RenderedBlock { side_a: [RenderedBlock], ...
-  }`) is **not verified** -- needs trying against the real Slint
-  compiler (via `nix develop`, confirmed working in this sandbox, see
-  below) before assuming the design is even buildable as sketched. If
-  Slint rejects a directly self-referential struct, the fallback is
-  presumably a level of indirection (e.g. a wrapper/boxed-model type),
-  not a change to the Rust-side design above.
+- **Verified, resolved**: neither a self-referential Slint struct
+  (`RenderedBlock { side_a: [RenderedBlock], ... }`) nor a
+  self-referential Slint component (one that instantiates itself inside
+  its own body, e.g. for a recursive `Repeater`) compiles. Checked
+  against the real Slint 1.18.1 compiler in an isolated scratch project
+  (outside this repo, via `nix develop` from here to get the same
+  toolchain) -- both fail at the exact self-reference with `error:
+  Unknown type 'RenderedBlock'` / `error: Unknown element 'TreeNode'`
+  respectively: Slint compiles to a static component tree and can't
+  resolve a name against its own not-yet-finished definition, with no
+  `Loader`-style dynamic-instantiation escape hatch the way QML has one.
+  A generic recursive tree was never actually needed, though: a
+  `@conflict` only ever has exactly two sides, never an unbounded
+  nesting depth the UI needs to walk. `RenderedBlock.side_a`/`side_b`
+  are `[ConflictSideBlock]`, a new, deliberately non-recursive struct
+  (same flat fields as today's shapes -- `shape, tone, text,
+  secondary_text` -- but no `side_a`/`side_b` of its own). Mirror this
+  bound on the Rust side too, so the Rust -> Slint conversion in
+  `render/mod.rs`'s `to_rendered_block` is a plain field-for-field copy,
+  not a lossy flatten: `Look`/`ClassifiedBlock`'s `side_a`/`side_b` are a
+  new flat leaf type (name TBD), not `Vec<ClassifiedBlock>` recursively.
+  If a side's content happens to itself contain an unresolved
+  `@conflict` (e.g. two unresolved merges stacked before either was
+  resolved) it renders flat/atomic inside that `ConflictSideBlock`,
+  same as any other not-specially-visualized element, rather than as a
+  second resolvable nested chip. That loses nothing that worked before:
+  `crates/merge/src/find_conflicts.rs`'s `find_conflicts_block_seq` and
+  `document_or_block_has_conflict` already stop at the first `@conflict`
+  found and never recurse into its own `a`/`b` content looking for more
+  -- a nested conflict was never independently reachable from the
+  resolution sheet until the outer one resolves and its chosen side's
+  content is spliced into the document in its place, same as always.
 - A new `RenderedBlockShape.conflict` branch in `rendered_block.slint`'s
   `RenderedBlockView` -- still the one existing component, one more
   branch inside it (same as every other shape), laying out both sides
-  via a `Repeater`/recursive call to itself over `side_a`/`side_b`. Real
-  layout work, not a one-line enum addition, but not a new component
-  either.
-- `flow.rs`'s inline path needs its own decision: `@conflict`'s inline
-  form (`conflict_inline`, always exactly one `Paragraph` per side, by
-  construction) is flat text in practice, but whether to render it
-  compactly inline (old chip-pair spirit) or still expand both sides
-  (consistent with the stacked case, more disruptive to a flowing
-  sentence) isn't settled -- the old "Divider renders as nothing inline"
-  special-case goes away either way (there's no third/end marker to
-  render as nothing, any more).
-- Every fixture across `classify.rs` (`a_conflict_triple_becomes_mine_
-  theirs_end`, the two "real pipeline" tests, more), `flow.rs` (4
-  fixtures), and `mod.rs`'s `seam_tests` (3 of 4) still spells the old
-  3-marker/`@use(mobile)` shape and needs rewriting to match whatever
-  the new rendering actually produces -- can't be written correctly
-  until the design above is settled and built.
+  with a plain, non-recursive `Repeater` over `[ConflictSideBlock]` (not
+  a recursive call to `RenderedBlockView` itself -- confirmed unbuildable
+  above). Real layout work, not a one-line enum addition, but not a new
+  component either.
+
+**Done.** All of the above is implemented and tested (steps 6/7 of the
+rough shape above, plus the view-mode design). What actually landed,
+differing from the sketch in small ways discovered while building it:
+
+- **`flow.rs`'s inline decision, settled: expand both sides inline**, not
+  a compact chip. Reasoning (discussed with the user): an inline
+  `@conflict` only ever reaches `flow.rs` from `merge_text`'s character-
+  level diff -- a structural mismatch (a whole paragraph, an element)
+  always narrows to a *block*-level `@conflict` instead (`merge_one`
+  returns `None`, `merge_block_seq` embeds the marker), never an inline
+  one. So an inline `@conflict`'s two sides are always short runs by
+  construction, not the "could be arbitrarily long" case the sketch
+  above worried about -- safe to expand right in the sentence. Hiding
+  that content behind a tap target would also have been a real
+  regression from the retired `@mobile.conflict` scheme, which already
+  showed real Mine/Theirs text inline, just with chip labels. Landed as
+  `flow::push_conflict_side`: each side's leaves become their own
+  `Inline::Element`s (even a plain-text leaf, which elsewhere in
+  `to_flow_paragraph` flows as bare `Inline::Text` -- `Inline::Text` has
+  no color of its own), tinted `Tone::Accent`/`Tone::Warning`
+  respectively (the same colors the retired chips used, without a
+  mine/theirs *label*), joined by a plain `" / "` text run. Needed one
+  small addition to `rendered_block.slint`'s `plain-text` branch, which
+  used to hardcode `Palette.foreground` ignoring `tone` entirely (every
+  other caller always passed `Tone::Neutral`, so this is additive, not a
+  behavior change for them).
+- **`ConflictSideBlock`/`ConflictSideBlockView`, Rust and Slint sides,
+  as sketched**, with one correction found only by trying to compile it:
+  `ConflictSideBlockView` could **not** delegate to `RenderedBlockView`
+  by wrapping a `ConflictSideBlock` into an ad-hoc `RenderedBlock` value
+  and instantiating `RenderedBlockView` inside its own body. That is not
+  the self-reference already ruled out (two distinct, non-recursive
+  component names), but Slint still rejects it with the same `Unknown
+  element` error: name resolution is strictly top-down within a file,
+  so `RenderedBlockView`'s own `conflict` branch (which needs
+  `ConflictSideBlockView` to render each side) and `ConflictSideBlockView`
+  (which would have needed `RenderedBlockView` to already exist) can't
+  reference each other in either file order. Fixed by making
+  `ConflictSideBlockView` fully self-contained instead (the same five
+  shape branches `RenderedBlockView` has, minus `conflict` itself,
+  duplicated rather than shared) and placing it *before*
+  `RenderedBlockView` in the file, so the one-directional reference
+  (`RenderedBlockView` -> `ConflictSideBlockView`) is the only one that
+  has to resolve.
+- A nested, still-unresolved `@conflict` inside a side (the edge case
+  the design above flags) is normalized to a `Badge`-shaped leaf
+  (`to_conflict_side_block`/`to_rendered_block_shape`, both `render/
+  mod.rs` and its `examples/snap.rs` duplicate) rather than rendering
+  blank -- "show *something*", same convention the rest of this module
+  already uses for an unrecognized element.
+- `ClassifiedBlock`/`Look`/`LookInput` all landed exactly as sketched
+  (`side_a`/`side_b: Vec<ConflictLeafBlock>`, `block_args`/`body` added
+  to `LookInput`, `conflict_look` as an ordinary `REGISTRY` row).
+  `BlockShape::Chip`/`Divider` deleted outright (nothing but the retired
+  marker scheme ever used them) in favor of `BlockShape::Conflict`.
+- Every fixture that spelled the old 3-marker/`@use(mobile)` shape is
+  rewritten: `classify.rs` (the hand-written triple test ->
+  `a_conflict_block_classifies_both_sides`, both "real pipeline" tests,
+  plus a new `a_nested_conflict_renders_flat_inside_a_side`), `flow.rs`
+  (`note_body_items_mixes_stacked_and_flowed_items_in_source_order`,
+  `an_inline_conflict_flows_with_the_end_divider_rendering_as_nothing` ->
+  `an_inline_conflict_flows_both_sides_with_distinct_tones`), `mod.rs`'s
+  `seam_tests` (all 4; the two layout-engine ones now assert only
+  row/line counts, not exact fragment counts -- that detail is `flow.rs`'s
+  own tests' job, not the Slint-seam ones'), and `examples/snap.rs`'s
+  own duplicate of the `render/mod.rs` seam (demo body text + its own
+  `to_rendered_block`/new `to_conflict_side_block`/`icon_image`).
+- Found and fixed one pre-existing, unrelated break while getting
+  `cargo test --workspace` green: `immermemo/src/lib.rs`'s
+  `resolving_the_conflict_clears_the_marker_and_status` still referenced
+  `ConflictResolution::Mine`, a leftover from the `A`/`B` rename in the
+  commit that landed steps 0-5 (c45a737) that nothing had caught since
+  (fixed to `::A`, matching the test's own fixture: `merge()`'s `local`
+  is always `@conflict`'s `a` side, and `local` here is the "Mine." note).
+- `immermemo/ui/sheets/settings.slint`'s one `@tr(...)` string naming
+  `@mobile.conflict` updated to `@conflict`, and its `.po` msgid/msgstr
+  hand-edited to match (not run through `slint-tr-extractor` -- not
+  installed in this sandbox, and installing a new global cargo tool for
+  one string felt like overkill; if a fuller translation-catalog
+  refresh is wanted later, `AGENTS.md`'s own instructions cover it).
+- `cargo build && cargo test --workspace` green end to end, every crate
+  (confirmed via `nix develop` -- see the verification note below),
+  including `examples/snap.rs` building clean.
 
 **Verification note, resolved**: this crate (`immermemo`, the Slint UI
 binary) would not build in this sandbox at all at first --
@@ -351,7 +423,13 @@ binary) would not build in this sandbox at all at first --
 bzip2/libpng/libbrotlidec -> ...) not worth pursuing -- the repo's own
 `flake.nix` already solves this. Run everything that touches this crate
 through `nix develop --command bash -c '...'`; confirmed working
-end to end (`cargo check -p immermemo` succeeds, ~2 minutes cold).
+end to end (`cargo test --workspace` succeeds, ~a few minutes cold).
+
+**Not done**: the view-mode binary itself hasn't been *looked at* --
+`cargo test`/`cargo check` prove the data flows and the `.slint` compiles,
+not that the layout reads well on a real screen. Worth a real run
+(`just run`/`cargo run --example snap`) before calling the UI side done,
+same as any other visual change in this crate.
 
 ## Git-ancestry mine/theirs labeling, detailed design (not implemented)
 

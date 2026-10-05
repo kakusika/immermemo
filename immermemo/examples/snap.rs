@@ -16,7 +16,7 @@ use slint::platform::{Platform, WindowAdapter, WindowEvent};
 use slint::{ComponentFactory, ComponentHandle, ModelRc, PhysicalSize, VecModel};
 slint::include_modules!();
 
-use immermemo::render::classify::{BlockShape, ClassifiedBlock, Tone};
+use immermemo::render::classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
 use immermemo::render::flow::{FlowParagraph, NoteBodyItem};
 use origami_richtext_flow::{Fragment, Measure, layout_block};
 
@@ -307,12 +307,12 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor.ppm"));
 
-    // View mode via the real classify/flow pipeline: a `@mobile.conflict`
-    // triple, an unrecognized namespaced element, and -- the common case
-    // that motivated `origami-richtext`/`origami-richtext-flow` in the
-    // first place -- both sides editing the same sentence, which narrows
-    // to an *inline* conflict mid-paragraph rather than a whole-block one
-    // (see `src/render/classify.rs`'s
+    // View mode via the real classify/flow pipeline: a block-level
+    // `@conflict`, an unrecognized namespaced element, and -- the common
+    // case that motivated `origami-richtext`/`origami-richtext-flow` in
+    // the first place -- both sides editing the same sentence, which
+    // narrows to an *inline* `@conflict` mid-paragraph rather than a
+    // whole-block one (see `src/render/classify.rs`'s
     // `an_inline_merge_conflict_is_recognized_through_the_real_pipeline`).
     // That last paragraph now flows as one line instead of stacking each
     // split fragment as its own row. Goes through
@@ -324,14 +324,10 @@ fn main() {
     // the small seam (`to_note_body_item_view` and friends, below) has to
     // be repeated here too.
     let body = "買い物リストの変更について。\n\n\
-                @mobile.conflict(mine)\n\n\
-                牛乳（低脂肪）\n\n\
-                @mobile.conflict(theirs)\n\n\
-                牛乳（特濃）\n\n\
-                @mobile.conflict(end)\n\n\
+                @conflict(a: [牛乳（低脂肪）], b: [牛乳（特濃）])\n\n\
                 @deck.bookmark(label: しおり)\n\n\
                 続きはここから。\n\n\
-                The @mobile.conflict(mine)slow@mobile.conflict(theirs)lazy@mobile.conflict(end) fox jumps.\n\n\
+                The @conflict(a: [slow], b: [lazy]) fox jumps.\n\n\
                 Some @strong[bold] and @em[italic] and @mark[marked] and @strikeout[struck] text, with @ruby[漢字](rt:\"かんじ\") inline.\n\n\
                 Starred @doc.icon(\"star\") and flagged @doc.icon(\"flag\", pkg:\"tabler\") inline.";
     app.set_body(body.into());
@@ -588,20 +584,8 @@ fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> Ri
 
 fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
     RenderedBlock {
-        shape: match block.shape {
-            BlockShape::PlainText => RenderedBlockShape::PlainText,
-            BlockShape::Chip => RenderedBlockShape::Chip,
-            BlockShape::Divider => RenderedBlockShape::Divider,
-            BlockShape::Badge => RenderedBlockShape::Badge,
-            BlockShape::Ruby => RenderedBlockShape::Ruby,
-            BlockShape::Link => RenderedBlockShape::Link,
-            BlockShape::Icon => RenderedBlockShape::Icon,
-        },
-        tone: match block.tone {
-            Tone::Accent => RenderedBlockTone::Accent,
-            Tone::Warning => RenderedBlockTone::Warning,
-            Tone::Neutral => RenderedBlockTone::Neutral,
-        },
+        shape: to_rendered_block_shape(block.shape),
+        tone: to_rendered_block_tone(block.tone),
         text: block.text.clone().into(),
         bold: block.style.bold,
         italic: block.style.italic,
@@ -609,11 +593,80 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
         strikeout: block.style.strikeout,
         reading: block.reading.clone().into(),
         icon_image: if block.shape == BlockShape::Icon {
-            origami_icons::icon_svg(&block.reading, &block.text)
-                .and_then(|svg| slint::Image::load_from_svg_data(&svg).ok())
-                .unwrap_or_default()
+            icon_image(&block.text, &block.reading)
+        } else {
+            slint::Image::default()
+        },
+        side_a: ModelRc::new(VecModel::from(
+            block
+                .side_a
+                .iter()
+                .map(to_conflict_side_block)
+                .collect::<Vec<_>>(),
+        )),
+        side_b: ModelRc::new(VecModel::from(
+            block
+                .side_b
+                .iter()
+                .map(to_conflict_side_block)
+                .collect::<Vec<_>>(),
+        )),
+    }
+}
+
+fn to_rendered_block_shape(shape: BlockShape) -> RenderedBlockShape {
+    match shape {
+        BlockShape::PlainText => RenderedBlockShape::PlainText,
+        BlockShape::Conflict => RenderedBlockShape::Conflict,
+        BlockShape::Badge => RenderedBlockShape::Badge,
+        BlockShape::Ruby => RenderedBlockShape::Ruby,
+        BlockShape::Link => RenderedBlockShape::Link,
+        BlockShape::Icon => RenderedBlockShape::Icon,
+    }
+}
+
+fn to_rendered_block_tone(tone: Tone) -> RenderedBlockTone {
+    match tone {
+        Tone::Accent => RenderedBlockTone::Accent,
+        Tone::Warning => RenderedBlockTone::Warning,
+        Tone::Neutral => RenderedBlockTone::Neutral,
+    }
+}
+
+// See `src/render/mod.rs`'s `to_conflict_side_block` doc -- same
+// normalization (a nested, still-unresolved `@conflict` shows as a
+// `Badge` instead of a silently blank leaf), repeated here for the same
+// reason the rest of this seam is (see this file's own module doc).
+fn to_conflict_side_block(leaf: &ConflictLeafBlock) -> ConflictSideBlock {
+    let shape = if leaf.shape == BlockShape::Conflict {
+        BlockShape::Badge
+    } else {
+        leaf.shape
+    };
+    let text = if leaf.shape == BlockShape::Conflict {
+        "conflict".to_owned()
+    } else {
+        leaf.text.clone()
+    };
+    ConflictSideBlock {
+        shape: to_rendered_block_shape(shape),
+        tone: to_rendered_block_tone(leaf.tone),
+        text: text.into(),
+        bold: leaf.style.bold,
+        italic: leaf.style.italic,
+        mark: leaf.style.mark,
+        strikeout: leaf.style.strikeout,
+        reading: leaf.reading.clone().into(),
+        icon_image: if leaf.shape == BlockShape::Icon {
+            icon_image(&leaf.text, &leaf.reading)
         } else {
             slint::Image::default()
         },
     }
+}
+
+fn icon_image(slug: &str, pkg: &str) -> slint::Image {
+    origami_icons::icon_svg(pkg, slug)
+        .and_then(|svg| slint::Image::load_from_svg_data(&svg).ok())
+        .unwrap_or_default()
 }

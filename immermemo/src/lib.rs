@@ -916,7 +916,7 @@ mod tests {
         session: &Rc<RefCell<Session>>,
         note_path: &Path,
     ) {
-        resolve_active_conflict(app, session, immermemo_merge::ConflictResolution::Mine);
+        resolve_active_conflict(app, session, immermemo_merge::ConflictResolution::A);
 
         assert!(!app.get_current_has_conflict());
         assert_eq!(app.get_body(), "Mine.\n");

@@ -13,8 +13,6 @@ import { Icon } from "@origami-icons/icons.slint";
 // file.
 export enum RenderedBlockShape {
     plain-text,
-    chip,
-    divider,
     badge,
     // A `@ruby[base](rt:"reading")` standing as its own block (rarer than
     // the inline case, `@richtext/flow_view.slint`'s `FlowView` -- see
@@ -28,6 +26,11 @@ export enum RenderedBlockShape {
     // A `@doc.icon(name, pkg)` -- `icon-image` is the resolved image (see
     // `RenderedBlock.icon-image`'s doc).
     icon,
+    // A `@conflict(a: [...], b: [...])` -- `side-a`/`side-b` hold each
+    // side's own content (see `immermemo_editor::classify::BlockShape::
+    // Conflict`'s doc). `text`/`reading` unused (empty), same as every
+    // other shape whose look doesn't come from them.
+    conflict,
 }
 
 export enum RenderedBlockTone {
@@ -36,12 +39,35 @@ export enum RenderedBlockTone {
     neutral,
 }
 
+// One block inside a `@conflict`'s `side-a`/`side-b` -- the same flat
+// fields `RenderedBlock` has, minus `side-a`/`side-b` themselves: Slint's
+// struct/component system can't express a type nesting inside itself
+// (confirmed against the real compiler -- see
+// `immermemo::render::classify::ConflictLeafBlock`'s doc, the Rust-side
+// counterpart this mirrors field-for-field), and a `@conflict` only ever
+// has exactly two sides in practice, never an unbounded tree to walk, so
+// there was nothing to buy by reaching for one anyway. `shape` is never
+// `conflict` here -- a nested, still-unresolved `@conflict` inside a side
+// is normalized to `badge` before it ever reaches this struct (see
+// `immermemo::render::to_conflict_side_block`).
+export struct ConflictSideBlock {
+    shape: RenderedBlockShape,
+    tone: RenderedBlockTone,
+    text: string,
+    bold: bool,
+    italic: bool,
+    mark: bool,
+    strikeout: bool,
+    reading: string,
+    icon-image: image,
+}
+
 export struct RenderedBlock {
     shape: RenderedBlockShape,
     tone: RenderedBlockTone,
     // The paragraph text for `plain-text`, the base for `ruby`, or a label
-    // for `chip`/`badge`. Unused (empty) for `divider` -- its look comes
-    // entirely from `shape`.
+    // for `badge`. Unused (empty) for `conflict` -- its look comes
+    // entirely from `side-a`/`side-b`.
     text: string,
     // Meaningful only for `plain-text` -- `em`/`strong`/`mark`/`strikeout`
     // tagging a whole block with nothing else sharing its line (see
@@ -59,6 +85,120 @@ export struct RenderedBlock {
     // own `@image-url()` can only ever resolve a fixed literal per call
     // site, never a runtime string). Empty elsewhere.
     icon-image: image,
+    // `@conflict`'s two sides, meaningful only for `conflict`. Empty for
+    // every other shape, same convention as `reading`.
+    side-a: [ConflictSideBlock],
+    side-b: [ConflictSideBlock],
+}
+
+// One leaf inside a `@conflict`'s side -- the same five shape branches
+// `RenderedBlockView` below has (everything but `conflict` itself, which
+// never reaches here -- see `ConflictSideBlock`'s own doc), duplicated
+// rather than delegating to `RenderedBlockView`: Slint resolves names
+// top-down within a file with no forward declarations (confirmed against
+// the real compiler), and `RenderedBlockView`'s own `conflict` branch
+// needs this component, so the two can't reference each other in either
+// order without one of them existing first. Defining this one first and
+// keeping it self-contained sidesteps that cycle instead of fighting it.
+export component ConflictSideBlockView inherits VerticalLayout {
+    in property <ConflictSideBlock> block;
+    in property <length> text-font-size: Metrics.font-body;
+
+    property <color> tone-color: root.block.tone == RenderedBlockTone.accent ? Palette.accent-background
+        : root.block.tone == RenderedBlockTone.warning ? Colors.warning
+        : Colors.muted;
+
+    if root.block.shape == RenderedBlockShape.plain-text: Rectangle {
+        width: 100%;
+        background: root.block.mark ? Colors.warning.with-alpha(0.25) : transparent;
+
+        leaf-text-item := Text {
+            width: 100%;
+            text: root.block.text;
+            font-size: root.text-font-size;
+            font-weight: root.block.bold ? 700 : 400;
+            font-italic: root.block.italic;
+            color: root.block.tone == RenderedBlockTone.neutral ? Palette.foreground : root.tone-color;
+            wrap: word-wrap;
+        }
+
+        if root.block.strikeout: Rectangle {
+            y: leaf-text-item.height / 2;
+            width: leaf-text-item.preferred-width;
+            height: 1px;
+            background: leaf-text-item.color;
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.badge: HorizontalLayout {
+        alignment: start;
+
+        Rectangle {
+            height: Metrics.bubble-chip-height * 0.75;
+            border-radius: self.height / 2;
+            background: Palette.foreground.with-alpha(0.08);
+
+            HorizontalLayout {
+                padding-left: Metrics.spacing-sm;
+                padding-right: Metrics.spacing-sm;
+                Text {
+                    text: root.block.text;
+                    font-size: Metrics.font-sm;
+                    font-weight: 600;
+                    color: Colors.muted;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.ruby: VerticalLayout {
+        alignment: start;
+
+        Text {
+            text: root.block.reading;
+            font-size: root.text-font-size * 0.5;
+            color: Colors.muted;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.block.text;
+            font-size: root.text-font-size;
+            color: Palette.foreground;
+            horizontal-alignment: center;
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.link: Rectangle {
+        width: 100%;
+
+        leaf-link-text-item := Text {
+            width: 100%;
+            text: root.block.text;
+            font-size: root.text-font-size;
+            color: root.tone-color;
+            wrap: word-wrap;
+        }
+
+        Rectangle {
+            y: leaf-link-text-item.height - 1px;
+            width: leaf-link-text-item.preferred-width;
+            height: 1px;
+            background: root.tone-color;
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.icon: HorizontalLayout {
+        alignment: start;
+
+        Icon {
+            source: root.block.icon-image;
+            width: root.text-font-size;
+            height: root.text-font-size;
+            color: Palette.foreground;
+        }
+    }
 }
 
 // Renders one `RenderedBlock` in the editor's view-mode display: plain
@@ -92,7 +232,12 @@ export component RenderedBlockView inherits VerticalLayout {
             font-size: root.text-font-size;
             font-weight: root.block.bold ? 700 : 400;
             font-italic: root.block.italic;
-            color: Palette.foreground;
+            // Every other caller leaves `tone` at its default (`neutral`)
+            // for this shape -- only a `@conflict`'s two inline sides set
+            // it to `accent`/`warning`, to read as visually distinct runs
+            // without a "Mine"/"Theirs" text label (see
+            // `immermemo::render::flow::push_conflict_side`'s doc).
+            color: root.block.tone == RenderedBlockTone.neutral ? Palette.foreground : root.tone-color;
             wrap: word-wrap;
         }
 
@@ -108,31 +253,46 @@ export component RenderedBlockView inherits VerticalLayout {
         }
     }
 
-    if root.block.shape == RenderedBlockShape.chip: HorizontalLayout {
-        alignment: start;
+    // Each side gets a thin colored rule down its left edge (accent for
+    // `side-a`, warning for `side-b`) instead of a text label -- the same
+    // colors the retired `@mobile.conflict` scheme used for its "Mine"/
+    // "Theirs" chips, without reintroducing a mine/theirs label that can
+    // read backwards on another device (see the decision in
+    // `.agents/tasks/adopt-std-conflict.md`). `ConflictSideBlockView`,
+    // not a recursive call to `RenderedBlockView` itself -- confirmed
+    // unbuildable (see `ConflictSideBlock`'s own doc).
+    if root.block.shape == RenderedBlockShape.conflict: VerticalLayout {
+        spacing: Metrics.spacing-sm;
 
-        Rectangle {
-            height: Metrics.bubble-chip-height * 0.75;
-            border-radius: self.height / 2;
-            background: root.tone-color.with-alpha(0.14);
-
-            HorizontalLayout {
-                padding-left: Metrics.spacing-sm;
-                padding-right: Metrics.spacing-sm;
-                Text {
-                    text: root.block.text;
-                    font-size: Metrics.font-sm;
-                    font-weight: 700;
-                    color: root.tone-color;
-                    vertical-alignment: center;
+        HorizontalLayout {
+            spacing: Metrics.spacing-sm;
+            Rectangle {
+                width: 3px;
+                background: Palette.accent-background;
+            }
+            VerticalLayout {
+                spacing: Metrics.spacing-xs;
+                for side-item in root.block.side-a: ConflictSideBlockView {
+                    block: side-item;
+                    text-font-size: root.text-font-size;
                 }
             }
         }
-    }
 
-    if root.block.shape == RenderedBlockShape.divider: Rectangle {
-        height: 1px;
-        background: Colors.separator;
+        HorizontalLayout {
+            spacing: Metrics.spacing-sm;
+            Rectangle {
+                width: 3px;
+                background: Colors.warning;
+            }
+            VerticalLayout {
+                spacing: Metrics.spacing-xs;
+                for side-item in root.block.side-b: ConflictSideBlockView {
+                    block: side-item;
+                    text-font-size: root.text-font-size;
+                }
+            }
+        }
     }
 
     if root.block.shape == RenderedBlockShape.badge: HorizontalLayout {
@@ -207,3 +367,4 @@ export component RenderedBlockView inherits VerticalLayout {
         }
     }
 }
+

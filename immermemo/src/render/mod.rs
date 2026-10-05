@@ -39,14 +39,14 @@
 pub mod classify;
 pub mod flow;
 
-use classify::{BlockShape, ClassifiedBlock, Tone};
+use classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
 use flow::{FlowParagraph, NoteBodyItem, note_body_items as classify_note_body_items};
 use origami_richtext_flow::{Fragment, Measure, layout_block};
 use slint::{ComponentFactory, ModelRc, VecModel};
 
 use crate::{
-    App, FlowElementWidget, NoteBodyItemView, RenderedBlock, RenderedBlockShape, RenderedBlockTone,
-    RichTextFragment, RichTextLine,
+    App, ConflictSideBlock, FlowElementWidget, NoteBodyItemView, RenderedBlock, RenderedBlockShape,
+    RenderedBlockTone, RichTextFragment, RichTextLine,
 };
 
 /// Classifies/flows `body` and converts the result into the model
@@ -173,20 +173,8 @@ fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> Ri
 
 fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
     RenderedBlock {
-        shape: match block.shape {
-            BlockShape::PlainText => RenderedBlockShape::PlainText,
-            BlockShape::Chip => RenderedBlockShape::Chip,
-            BlockShape::Divider => RenderedBlockShape::Divider,
-            BlockShape::Badge => RenderedBlockShape::Badge,
-            BlockShape::Ruby => RenderedBlockShape::Ruby,
-            BlockShape::Link => RenderedBlockShape::Link,
-            BlockShape::Icon => RenderedBlockShape::Icon,
-        },
-        tone: match block.tone {
-            Tone::Accent => RenderedBlockTone::Accent,
-            Tone::Warning => RenderedBlockTone::Warning,
-            Tone::Neutral => RenderedBlockTone::Neutral,
-        },
+        shape: to_rendered_block_shape(block.shape),
+        tone: to_rendered_block_tone(block.tone),
         text: block.text.clone().into(),
         bold: block.style.bold,
         italic: block.style.italic,
@@ -195,6 +183,75 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
         reading: block.reading.clone().into(),
         icon_image: if block.shape == BlockShape::Icon {
             icon_image(&block.text, &block.reading)
+        } else {
+            slint::Image::default()
+        },
+        side_a: ModelRc::new(VecModel::from(
+            block
+                .side_a
+                .iter()
+                .map(to_conflict_side_block)
+                .collect::<Vec<_>>(),
+        )),
+        side_b: ModelRc::new(VecModel::from(
+            block
+                .side_b
+                .iter()
+                .map(to_conflict_side_block)
+                .collect::<Vec<_>>(),
+        )),
+    }
+}
+
+fn to_rendered_block_shape(shape: BlockShape) -> RenderedBlockShape {
+    match shape {
+        BlockShape::PlainText => RenderedBlockShape::PlainText,
+        BlockShape::Conflict => RenderedBlockShape::Conflict,
+        BlockShape::Badge => RenderedBlockShape::Badge,
+        BlockShape::Ruby => RenderedBlockShape::Ruby,
+        BlockShape::Link => RenderedBlockShape::Link,
+        BlockShape::Icon => RenderedBlockShape::Icon,
+    }
+}
+
+fn to_rendered_block_tone(tone: Tone) -> RenderedBlockTone {
+    match tone {
+        Tone::Accent => RenderedBlockTone::Accent,
+        Tone::Warning => RenderedBlockTone::Warning,
+        Tone::Neutral => RenderedBlockTone::Neutral,
+    }
+}
+
+/// One leaf of a `@conflict`'s side, converted the same way
+/// [`to_rendered_block`] converts a top-level [`ClassifiedBlock`] --
+/// except `shape` can never carry `Conflict` through to the Slint side:
+/// [`ConflictSideBlock`] has no `side_a`/`side_b` fields to hold a nested
+/// one's content at all (see that struct's own doc), so a nested,
+/// still-unresolved `@conflict` here is normalized to the same `Badge`
+/// look an unrecognized `@use`'d element gets -- "show *something*"
+/// rather than a silently blank leaf.
+fn to_conflict_side_block(leaf: &ConflictLeafBlock) -> ConflictSideBlock {
+    let shape = if leaf.shape == BlockShape::Conflict {
+        BlockShape::Badge
+    } else {
+        leaf.shape
+    };
+    let text = if leaf.shape == BlockShape::Conflict {
+        "conflict".to_owned()
+    } else {
+        leaf.text.clone()
+    };
+    ConflictSideBlock {
+        shape: to_rendered_block_shape(shape),
+        tone: to_rendered_block_tone(leaf.tone),
+        text: text.into(),
+        bold: leaf.style.bold,
+        italic: leaf.style.italic,
+        mark: leaf.style.mark,
+        strikeout: leaf.style.strikeout,
+        reading: leaf.reading.clone().into(),
+        icon_image: if leaf.shape == BlockShape::Icon {
+            icon_image(&leaf.text, &leaf.reading)
         } else {
             slint::Image::default()
         },
@@ -236,16 +293,23 @@ pub(crate) mod seam_tests {
     use slint::Model;
 
     pub(crate) fn stacked_items_convert_into_the_generated_model(app: &App) {
-        let model = note_body_items("Before.\n\n@mobile.conflict(mine)\n\nMine.\n", app, 1000.0);
-        assert_eq!(model.row_count(), 3);
+        let model = note_body_items(
+            "Before.\n\n@conflict(a: [Mine.], b: [Theirs.])\n",
+            app,
+            1000.0,
+        );
+        assert_eq!(model.row_count(), 2);
         let first = model.row_data(0).unwrap();
         assert!(!first.is_flow);
         assert_eq!(first.block.shape, RenderedBlockShape::PlainText);
         assert_eq!(first.block.text, "Before.");
         let second = model.row_data(1).unwrap();
-        assert_eq!(second.block.shape, RenderedBlockShape::Chip);
-        assert_eq!(second.block.tone, RenderedBlockTone::Accent);
-        assert_eq!(second.block.text, "Mine");
+        assert!(!second.is_flow);
+        assert_eq!(second.block.shape, RenderedBlockShape::Conflict);
+        assert_eq!(second.block.side_a.row_count(), 1);
+        assert_eq!(second.block.side_a.row_data(0).unwrap().text, "Mine.");
+        assert_eq!(second.block.side_b.row_count(), 1);
+        assert_eq!(second.block.side_b.row_data(0).unwrap().text, "Theirs.");
     }
 
     /// `icon_image` is the one field `to_rendered_block` computes instead
@@ -267,33 +331,26 @@ pub(crate) mod seam_tests {
         assert_eq!(item.block.icon_image.size().width, 0);
     }
 
+    // The exact fragment/element count a `@conflict`'s two sides produce
+    // is `flow`'s own `to_flow_paragraph`/`push_conflict_side` tests'
+    // job now (plain data, no `App`/Slint layout engine needed to check
+    // it) -- this only proves the seam: that flowing and wrapping still
+    // work end to end through the real layout engine once a conflict is
+    // in the mix.
     pub(crate) fn a_wide_inline_conflict_paragraph_flows_onto_one_line(app: &App) {
-        let src = "The @mobile.conflict(mine)slow@mobile.conflict(theirs)lazy@mobile.conflict(end) fox jumps.\n";
+        let src = "The @conflict(a: [slow], b: [lazy]) fox jumps.\n";
         let model = note_body_items(src, app, 10_000.0);
         assert_eq!(model.row_count(), 1);
         let item = model.row_data(0).unwrap();
         assert!(item.is_flow);
         assert_eq!(item.lines.row_count(), 1);
-        let line = item.lines.row_data(0).unwrap();
-        // "The " / Mine-chip / "slow" / Theirs-chip / "lazy" / " " /
-        // "fox " / "jumps." -- 8, not the paragraph's own 6 `Inline`s: the
-        // "end" divider still renders as nothing inline (see
-        // `flow::to_flow_paragraph`'s doc comment), but
-        // `layout_block` additionally splits each text run into its own
-        // word tokens (`origami_richtext_flow::layout::words`), and
-        // " fox jumps." is 3 words, including its own leading space (not
-        // dropped here -- that only happens at an actual line start, and
-        // this whole paragraph fits on one line).
-        assert_eq!(line.fragments.row_count(), 8);
-        assert!(!line.fragments.row_data(0).unwrap().is_element);
-        assert!(line.fragments.row_data(1).unwrap().is_element);
-        assert!(line.fragments.row_data(3).unwrap().is_element);
     }
 
     pub(crate) fn a_narrow_width_wraps_an_inline_conflict_paragraph_onto_several_lines(app: &App) {
-        let src = "The @mobile.conflict(mine)slow@mobile.conflict(theirs)lazy@mobile.conflict(end) fox jumps.\n";
+        let src = "The @conflict(a: [slow], b: [lazy]) fox jumps.\n";
         // Real font metrics, not a fake fixed-width measure -- too narrow
-        // for the whole sentence (and its two chips) to fit on one line.
+        // for the whole sentence (and its two colored runs) to fit on one
+        // line.
         let model = note_body_items(src, app, 80.0);
         let item = model.row_data(0).unwrap();
         assert!(item.is_flow);

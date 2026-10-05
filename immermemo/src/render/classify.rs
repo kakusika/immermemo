@@ -43,10 +43,12 @@ pub enum BlockShape {
     /// sharing its line (see `immermemo_tomet_render`'s
     /// `classify_bare_character_element`).
     PlainText,
-    /// A small colored pill with a label (a `mobile.conflict` side marker).
-    Chip,
-    /// A hairline divider (a `mobile.conflict` end marker).
-    Divider,
+    /// A `@conflict(a: [...], b: [...])` -- `ClassifiedBlock::side_a`/
+    /// `side_b` hold each side's own content, classified the same way the
+    /// surrounding document's blocks are (see [`ConflictLeafBlock`]).
+    /// `text`/`reading` are unused (empty), same as `Divider` used to be --
+    /// this shape's look comes entirely from `side_a`/`side_b`.
+    Conflict,
     /// A neutral pill with a label -- the fallback for anything
     /// namespaced that [`REGISTRY`] doesn't recognize.
     Badge,
@@ -88,8 +90,8 @@ pub struct ClassifiedBlock {
     pub shape: BlockShape,
     pub tone: Tone,
     /// The paragraph text for `PlainText`, the base for `Ruby`, or a label
-    /// for `Chip`/`Badge`. Unused (empty) for `Divider` -- its look comes
-    /// entirely from `shape`.
+    /// for `Badge`. Unused (empty) for `Conflict` -- its look comes
+    /// entirely from `side_a`/`side_b`.
     pub text: String,
     /// Meaningful only for `PlainText` -- see that variant's doc.
     /// `Default::default()` (no style) everywhere else.
@@ -98,6 +100,54 @@ pub struct ClassifiedBlock {
     /// straight from the matching [`Look::secondary_text`]. Empty
     /// everywhere else.
     pub reading: String,
+    /// `@conflict`'s two sides, meaningful only for `Conflict` -- empty
+    /// for every other shape. [`ConflictLeafBlock`], not `ClassifiedBlock`
+    /// itself: a side's own content never gets a further `side_a`/`side_b`
+    /// of its own, even if it happens to contain another, still-unresolved
+    /// `@conflict` (see that type's doc for why, and `conflict_look` for
+    /// where these get built).
+    pub side_a: Vec<ConflictLeafBlock>,
+    pub side_b: Vec<ConflictLeafBlock>,
+}
+
+/// A block inside one side of a `@conflict`, classified the same way any
+/// other block is -- but never itself carrying `side_a`/`side_b`. Slint's
+/// struct/component system can't express a type that nests inside itself
+/// (confirmed against the real compiler: a struct field or a component
+/// referencing its own type fails to resolve, with no `Loader`-style
+/// dynamic-instantiation escape hatch the way QML has one) -- and a
+/// `@conflict` only ever has exactly two sides in practice, never an
+/// unbounded tree the UI needs to walk, so there was nothing to buy by
+/// reaching for one anyway. If a side's content happens to itself contain
+/// an unresolved `@conflict` (two unresolved merges stacked before either
+/// was resolved), it renders flat/atomic here -- same as any other
+/// not-specially-visualized element -- rather than as a second resolvable
+/// nested chip. That loses nothing that worked before:
+/// `immermemo_merge::find_conflicts`'s own block-sequence walk already
+/// stops at the first `@conflict` it finds and never recurses into that
+/// element's own `a`/`b` content looking for more, so a nested conflict
+/// was never independently reachable from the resolution sheet until the
+/// outer one resolves and its chosen side's content is spliced into the
+/// document in its place -- same as always.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConflictLeafBlock {
+    pub shape: BlockShape,
+    pub tone: Tone,
+    pub text: String,
+    pub style: TextStyle,
+    pub reading: String,
+}
+
+impl From<ClassifiedBlock> for ConflictLeafBlock {
+    fn from(block: ClassifiedBlock) -> Self {
+        ConflictLeafBlock {
+            shape: block.shape,
+            tone: block.tone,
+            text: block.text,
+            style: block.style,
+            reading: block.reading,
+        }
+    }
 }
 
 // `pub(super)`: `super::flow` also needs a recognized identity's
@@ -109,6 +159,10 @@ pub(super) struct Look {
     /// The reading annotation, meaningful only for [`BlockShape::Ruby`].
     /// Empty for every other shape.
     pub(super) secondary_text: String,
+    /// `@conflict`'s two sides, meaningful only for [`BlockShape::Conflict`].
+    /// Empty for every other shape, same convention as `secondary_text`.
+    pub(super) side_a: Vec<ConflictLeafBlock>,
+    pub(super) side_b: Vec<ConflictLeafBlock>,
 }
 
 /// What a [`REGISTRY`] entry's lookup function gets to decide a [`Look`]
@@ -116,22 +170,29 @@ pub(super) struct Look {
 /// unchanged, `content` is the same item's `content` span already
 /// resolved against the note body (so a lookup function never needs to
 /// know what a [`tomet_ast::Span`] is or where the body string lives).
+/// `block_args`/`body` are for [`conflict_look`] alone -- a lookup
+/// function that wants to classify a `key: [...]` arg's own content
+/// (rather than just read it as a string, like `args` offers) needs both:
+/// `immermemo_tomet_render::RenderItem::Element::block_args` unchanged,
+/// and `body` to resolve its items' spans against, the same way
+/// [`to_classified_block`] always has.
 pub(super) struct LookInput<'a> {
     pub(super) args: &'a ElementArgs,
     pub(super) content: Option<&'a str>,
+    pub(super) block_args: &'a [(String, Vec<RenderItem>)],
+    pub(super) body: &'a str,
 }
 
 /// Which `(namespace, name)` pairs this app recognizes, and how each
 /// should look. `namespace: None` registers a look for one of Tomet's own
-/// bare built-in elements -- `mobile.conflict` is `@use`'d
-/// (`immermemo_merge::CONFLICT_MARKER`), `ruby`/`link` are bare, but all
-/// three are ordinary entries here: `immermemo_tomet_render` doesn't
-/// treat `ruby`/`link` as a thing apart from any other element (see its
-/// module doc), and neither does this table. A future vocabulary --
-/// `@use`'d or bare built-in -- gets its own presentation by adding a row
-/// here, not by touching [`look_up`] or anything downstream of it.
+/// bare built-in elements -- `conflict`/`ruby`/`link` are all three bare,
+/// and ordinary entries here: `immermemo_tomet_render` doesn't treat any
+/// of them as a thing apart from any other element (see its module doc),
+/// and neither does this table. A future vocabulary -- `@use`'d or bare
+/// built-in -- gets its own presentation by adding a row here, not by
+/// touching [`look_up`] or anything downstream of it.
 const REGISTRY: &[(Option<&str>, &str, fn(LookInput) -> Look)] = &[
-    (Some("mobile"), "conflict", mobile_conflict_look),
+    (None, "conflict", conflict_look),
     (None, "ruby", ruby_look),
     (None, "link", link_look),
     (Some("doc"), "icon", icon_look),
@@ -143,30 +204,35 @@ const REGISTRY: &[(Option<&str>, &str, fn(LookInput) -> Look)] = &[
 /// far).
 const DEFAULT_ICON_PKG: &str = "tabler";
 
-/// `@mobile.conflict(side)` -- `side` is the one positional arg.
-fn mobile_conflict_look(input: LookInput) -> Look {
-    match input.args {
-        ElementArgs::Positional(side) if side == "mine" => Look {
-            shape: BlockShape::Chip,
-            tone: Tone::Accent,
-            text: "Mine".to_owned(),
-            secondary_text: String::new(),
-        },
-        ElementArgs::Positional(side) if side == "theirs" => Look {
-            shape: BlockShape::Chip,
-            tone: Tone::Warning,
-            text: "Theirs".to_owned(),
-            secondary_text: String::new(),
-        },
-        // "end", or anything else this marker might someday carry -- the
-        // end marker has nothing worth labeling, just a divider, same as
-        // an unrecognized `side`.
-        _ => Look {
-            shape: BlockShape::Divider,
-            tone: Tone::Neutral,
-            text: String::new(),
-            secondary_text: String::new(),
-        },
+/// `@conflict(a: [...], b: [...])` -- `a`/`b` are plain structural names,
+/// not "mine"/"theirs" (see `immermemo_merge::find_conflicts`'s own module
+/// doc for why neither carries that meaning). Resolving the conflict is
+/// the resolution sheet's job (`crates/editor/src/conflicts.rs`), not
+/// this one's -- this only classifies each side's content for display,
+/// via the same [`to_classified_block`] the surrounding document uses,
+/// one level deep (see [`ConflictLeafBlock`]'s doc for why not further).
+fn conflict_look(input: LookInput) -> Look {
+    let side = |key: &str| -> Vec<ConflictLeafBlock> {
+        input
+            .block_args
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, items)| {
+                items
+                    .iter()
+                    .cloned()
+                    .map(|item| to_classified_block(input.body, item).into())
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    Look {
+        shape: BlockShape::Conflict,
+        tone: Tone::Neutral,
+        text: String::new(),
+        secondary_text: String::new(),
+        side_a: side("a"),
+        side_b: side("b"),
     }
 }
 
@@ -187,6 +253,8 @@ fn ruby_look(input: LookInput) -> Look {
         tone: Tone::Neutral,
         text: input.content.unwrap_or_default().to_owned(),
         secondary_text: reading,
+        side_a: Vec::new(),
+        side_b: Vec::new(),
     }
 }
 
@@ -218,6 +286,8 @@ fn link_look(input: LookInput) -> Look {
         tone: Tone::Accent,
         text: input.content.map(str::to_owned).unwrap_or(target),
         secondary_text: String::new(),
+        side_a: Vec::new(),
+        side_b: Vec::new(),
     }
 }
 
@@ -259,6 +329,8 @@ fn icon_look(input: LookInput) -> Look {
         tone: Tone::Neutral,
         text: name,
         secondary_text: pkg,
+        side_a: Vec::new(),
+        side_b: Vec::new(),
     }
 }
 
@@ -322,6 +394,8 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
             text: body[span.start.offset..span.end.offset].into(),
             style,
             reading: String::new(),
+            side_a: Vec::new(),
+            side_b: Vec::new(),
         },
         RenderItem::Element {
             identity,
@@ -329,12 +403,15 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
             content,
             args_summary,
             args,
+            block_args,
             ..
         } => {
             let content_text = content.map(|span| &body[span.start.offset..span.end.offset]);
             let input = LookInput {
                 args: &args,
                 content: content_text,
+                block_args: &block_args,
+                body,
             };
             match look_up(&identity, input) {
                 Some(look) => ClassifiedBlock {
@@ -343,6 +420,8 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                     text: look.text,
                     style: TextStyle::default(),
                     reading: look.secondary_text,
+                    side_a: look.side_a,
+                    side_b: look.side_b,
                 },
                 None => match &identity.namespace {
                     // A `@use`'d marker nobody's given a look to yet --
@@ -354,6 +433,8 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                         text: fallback_label(namespace, &identity.name, &args_summary),
                         style: TextStyle::default(),
                         reading: String::new(),
+                        side_a: Vec::new(),
+                        side_b: Vec::new(),
                     },
                     // A bare built-in nobody's registered a look for --
                     // its own syntax already reads fine unrendered (e.g.
@@ -366,6 +447,8 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                         text: body[span.start.offset..span.end.offset].into(),
                         style: TextStyle::default(),
                         reading: String::new(),
+                        side_a: Vec::new(),
+                        side_b: Vec::new(),
                     },
                 },
             }
@@ -376,10 +459,6 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn shapes(body: &str) -> Vec<BlockShape> {
-        classify_body(body).into_iter().map(|b| b.shape).collect()
-    }
 
     fn summary(body: &str) -> Vec<(BlockShape, Tone, String)> {
         classify_body(body)
@@ -399,37 +478,43 @@ mod tests {
     }
 
     #[test]
-    fn a_conflict_triple_becomes_mine_theirs_end() {
+    fn a_conflict_block_classifies_both_sides() {
         let src = "Before.\n\n\
-                   @mobile.conflict(mine)\n\n\
-                   Mine text.\n\n\
-                   @mobile.conflict(theirs)\n\n\
-                   Theirs text.\n\n\
-                   @mobile.conflict(end)\n\n\
+                   @conflict(a: [Mine text.], b: [Theirs text.])\n\n\
                    After.\n";
         assert_eq!(
-            summary(src)
-                .into_iter()
-                .map(|(shape, tone, text)| (shape, tone, text))
-                .collect::<Vec<_>>(),
+            summary(src),
             vec![
                 (BlockShape::PlainText, Tone::Neutral, "Before.".to_owned()),
-                (BlockShape::Chip, Tone::Accent, "Mine".to_owned()),
-                (
-                    BlockShape::PlainText,
-                    Tone::Neutral,
-                    "Mine text.".to_owned()
-                ),
-                (BlockShape::Chip, Tone::Warning, "Theirs".to_owned()),
-                (
-                    BlockShape::PlainText,
-                    Tone::Neutral,
-                    "Theirs text.".to_owned()
-                ),
-                (BlockShape::Divider, Tone::Neutral, String::new()),
+                (BlockShape::Conflict, Tone::Neutral, String::new()),
                 (BlockShape::PlainText, Tone::Neutral, "After.".to_owned()),
             ]
         );
+        let blocks = classify_body(src);
+        let leaf = |text: &str| ConflictLeafBlock {
+            shape: BlockShape::PlainText,
+            tone: Tone::Neutral,
+            text: text.to_owned(),
+            style: TextStyle::default(),
+            reading: String::new(),
+        };
+        assert_eq!(blocks[1].side_a, vec![leaf("Mine text.")]);
+        assert_eq!(blocks[1].side_b, vec![leaf("Theirs text.")]);
+    }
+
+    // `ConflictLeafBlock` has no `side_a`/`side_b` fields of its own (see
+    // its doc for why) -- a `@conflict` nested inside another, still-
+    // unresolved one's side still gets `BlockShape::Conflict`, but its own
+    // sides are simply not representable one level down, by construction,
+    // not by a special case in `conflict_look`.
+    #[test]
+    fn a_nested_conflict_renders_flat_inside_a_side() {
+        let src = "@conflict(a: [@conflict(a: [Deep A.], b: [Deep B.])], b: [Theirs text.])\n";
+        let blocks = classify_body(src);
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].shape, BlockShape::Conflict);
+        assert_eq!(blocks[0].side_a.len(), 1);
+        assert_eq!(blocks[0].side_a[0].shape, BlockShape::Conflict);
     }
 
     #[test]
@@ -466,14 +551,13 @@ mod tests {
     // `immermemo_merge::merge_one` always recurses into a
     // Paragraph/Paragraph/Paragraph triple (`merge_inline_seq` never
     // fails), so two sides editing the *same* paragraph differently --
-    // the common conflict -- narrows to *inline* conflict markers, which
-    // this crate deliberately does not touch (see the module doc). Only a
+    // the common conflict -- narrows to an *inline* `@conflict`. Only a
     // structural mismatch (here: local turns the block into a different
-    // kind of node, which `merge_one` can't narrow across) produces the
-    // whole-block markers `classify_body` recognizes. This test proves
-    // the real `immermemo_merge::merge` -> `tomet_parser::parse_document`
-    // -> `classify` pipeline actually reaches `Chip`/`Chip`/`Divider` for
-    // that case, not just a hand-written `@mobile.conflict(...)` fixture.
+    // kind of node, which `merge_one` can't narrow across) produces a
+    // block-level one instead. This test proves the real
+    // `immermemo_merge::merge` -> `tomet_parser::parse_document` ->
+    // `classify` pipeline actually reaches `BlockShape::Conflict` for
+    // that case, not just a hand-written `@conflict(...)` fixture.
     #[test]
     fn an_inline_merge_conflict_is_recognized_through_the_real_pipeline() {
         let base = tomet_parser::parse_document("The quick fox jumps.\n").unwrap();
@@ -482,18 +566,23 @@ mod tests {
         let merged = immermemo_merge::merge(&base, &local, &remote).document;
         let text = tomet_printer::document_to_tm(&merged);
 
+        let blocks = classify_body(&text);
         assert_eq!(
-            shapes(&text),
+            blocks.iter().map(|b| b.shape).collect::<Vec<_>>(),
             vec![
-                BlockShape::PlainText, // "@use(mobile)" -- bare, not namespaced
                 BlockShape::PlainText, // "The "
-                BlockShape::Chip,
-                BlockShape::PlainText, // "slow"
-                BlockShape::Chip,
-                BlockShape::PlainText, // "lazy"
-                BlockShape::Divider,
+                BlockShape::Conflict,
                 BlockShape::PlainText, // " fox jumps."
             ]
+        );
+        let conflict = blocks.into_iter().nth(1).unwrap();
+        assert_eq!(
+            conflict.side_a.iter().map(|b| &b.text).collect::<Vec<_>>(),
+            vec!["slow"]
+        );
+        assert_eq!(
+            conflict.side_b.iter().map(|b| &b.text).collect::<Vec<_>>(),
+            vec!["lazy"]
         );
     }
 
@@ -505,17 +594,12 @@ mod tests {
         let merged = immermemo_merge::merge(&base, &local, &remote).document;
         let text = tomet_printer::document_to_tm(&merged);
 
-        assert_eq!(
-            shapes(&text),
-            vec![
-                BlockShape::PlainText, // "@use(mobile)" -- bare, not namespaced
-                BlockShape::Chip,
-                BlockShape::PlainText, // "@meta{ x: 1 }" -- bare too
-                BlockShape::Chip,
-                BlockShape::PlainText, // "Theirs."
-                BlockShape::Divider,
-            ]
-        );
+        let blocks = classify_body(&text);
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].shape, BlockShape::Conflict);
+        assert_eq!(blocks[0].side_a.len(), 1);
+        assert_eq!(blocks[0].side_b.len(), 1);
+        assert_eq!(blocks[0].side_b[0].text, "Theirs.");
     }
 
     #[test]

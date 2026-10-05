@@ -9,11 +9,19 @@
 //! label/tone in both the flowing and the stacked presentation -- adding a
 //! vocabulary entry never needs touching two places.
 //!
-//! A standalone `@mobile.conflict` marker between paragraphs is not
-//! flowed here: inline flow only matters where an element sits *inside*
-//! running prose, and `classify_body`'s stacked `RenderedBlockView` path
-//! already renders a standalone block-level marker correctly. A
-//! `Heading` group *is* flowed exactly like a `Paragraph` when it has
+//! A standalone `@conflict` marker between paragraphs is not flowed here:
+//! inline flow only matters where an element sits *inside* running prose,
+//! and `classify_body`'s stacked `RenderedBlockView` path already renders
+//! a standalone block-level one correctly (with both sides, however long,
+//! laid out as their own rows -- fine there since there's no running
+//! sentence to break). An *inline* `@conflict` is different: it only
+//! ever reaches here from `immermemo_merge::merge`'s character-level text
+//! diff (a structural mismatch -- a whole paragraph, an element -- always
+//! narrows to a *block*-level `@conflict` instead, never an inline one),
+//! so its two sides are always short runs, safe to expand right inline
+//! rather than hiding behind a tap target (see [`push_conflict_side`]).
+//!
+//! A `Heading` group *is* flowed exactly like a `Paragraph` when it has
 //! more than one item (a heading can carry a link or a bold word same as
 //! any other prose -- see `immermemo_tomet_render`'s module doc) --
 //! `RenderBlockKind::Element` is the only kind that never does, since it
@@ -29,7 +37,9 @@
 use immermemo_tomet_render::{RenderItem, TextStyle, classify_blocks};
 use origami_richtext_flow::{Block, Inline};
 
-use super::classify::{BlockShape, ClassifiedBlock, classify_body, to_classified_block};
+use super::classify::{
+    BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone, classify_body, to_classified_block,
+};
 
 /// `tomet-render`'s [`TextStyle`] (bold/italic/mark/strikeout -- the same
 /// four flags, just a separate type since `tomet-render` has no
@@ -130,16 +140,24 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
             }),
             item @ RenderItem::Element { .. } => {
                 let classified = to_classified_block(body, item);
-                // A divider marks where a conflict region ends -- a full-
-                // width hairline is the right cue between stacked rows
-                // (the reader is scanning top to bottom and needs an
-                // explicit boundary), but inline, within one running line,
-                // the boundary is already implicit the moment no more
-                // Mine/Theirs chips follow: a rule slicing through a
-                // sentence would break the text without adding
-                // information. So it renders as nothing here, not a
-                // shrunk-down sliver.
-                if classified.shape != BlockShape::Divider {
+                if classified.shape == BlockShape::Conflict {
+                    push_conflict_side(
+                        &mut content,
+                        &mut elements,
+                        classified.side_a,
+                        Tone::Accent,
+                    );
+                    content.push(Inline::Text {
+                        content: " / ".to_string(),
+                        style: to_richtext_style(TextStyle::default()).to_style_id(),
+                    });
+                    push_conflict_side(
+                        &mut content,
+                        &mut elements,
+                        classified.side_b,
+                        Tone::Warning,
+                    );
+                } else {
                     let id = elements.len() as u64;
                     elements.push(classified);
                     content.push(Inline::Element { id });
@@ -156,6 +174,49 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
     }
 }
 
+/// One side of an inline `@conflict`, flattened into
+/// `elements`/`content` the same way every other item in
+/// [`to_flow_paragraph`] is -- but every leaf becomes its own
+/// `Inline::Element`, even a plain-text one (which elsewhere in this
+/// function flows as bare `Inline::Text`): `Inline::Text` carries no
+/// color of its own (only bold/italic/mark/strikeout, see
+/// [`to_richtext_style`]), and `side_tone` is the whole point here -- the
+/// two sides need to read as visually distinct runs. `side_tone`
+/// overrides a plain-text leaf's own (always `Tone::Neutral`) tone with
+/// the same accent/warning colors the retired `@mobile.conflict` scheme
+/// used for its "Mine"/"Theirs" chips, without reintroducing a
+/// mine/theirs *label* (see the decision in
+/// `.agents/tasks/adopt-std-conflict.md` for why `a`/`b` carry no such
+/// meaning). A non-plain-text leaf (rare: a nested element inside a
+/// conflicting run) keeps its own tone -- overriding, say, a nested
+/// link's accent color to match its side would fight the look that
+/// element already has everywhere else it appears.
+fn push_conflict_side(
+    content: &mut Vec<Inline>,
+    elements: &mut Vec<ClassifiedBlock>,
+    side: Vec<ConflictLeafBlock>,
+    side_tone: Tone,
+) {
+    for leaf in side {
+        let tone = if leaf.shape == BlockShape::PlainText {
+            side_tone
+        } else {
+            leaf.tone
+        };
+        let id = elements.len() as u64;
+        elements.push(ClassifiedBlock {
+            shape: leaf.shape,
+            tone,
+            text: leaf.text,
+            style: leaf.style,
+            reading: leaf.reading,
+            side_a: Vec::new(),
+            side_b: Vec::new(),
+        });
+        content.push(Inline::Element { id });
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::classify::Tone;
@@ -164,18 +225,18 @@ mod tests {
     #[test]
     fn note_body_items_mixes_stacked_and_flowed_items_in_source_order() {
         let src = "Before.\n\n\
-                   @mobile.conflict(mine)\n\n\
-                   The @mobile.conflict(theirs)slow@mobile.conflict(end) fox jumps.\n";
+                   @conflict(a: [Mine.], b: [Theirs.])\n\n\
+                   The @conflict(a: [slow], b: [lazy]) fox jumps.\n";
         let items = note_body_items(src);
         assert_eq!(items.len(), 3);
         assert!(matches!(items[0], NoteBodyItem::Stacked(_)));
         assert!(matches!(items[1], NoteBodyItem::Stacked(_)));
         match &items[2] {
             NoteBodyItem::Flowed(paragraph) => {
-                // "The ", theirs-chip, "slow", " fox jumps." -- the "end"
-                // divider renders as nothing inline (see `to_flow_paragraph`).
-                assert_eq!(paragraph.block.content.len(), 4);
-                assert_eq!(paragraph.elements.len(), 1);
+                // "The ", side_a's "slow", " / ", side_b's "lazy",
+                // " fox jumps." -- see `push_conflict_side`'s doc.
+                assert_eq!(paragraph.block.content.len(), 5);
+                assert_eq!(paragraph.elements.len(), 2);
             }
             NoteBodyItem::Stacked(_) => panic!("expected the inline-split paragraph to flow"),
         }
@@ -189,26 +250,16 @@ mod tests {
     }
 
     #[test]
-    fn an_inline_conflict_flows_with_the_end_divider_rendering_as_nothing() {
-        let src = "@use(mobile)\nThe @mobile.conflict(mine)slow@mobile.conflict(theirs)lazy@mobile.conflict(end) fox jumps.\n";
+    fn an_inline_conflict_flows_both_sides_with_distinct_tones() {
+        let src = "The @conflict(a: [slow], b: [lazy]) fox jumps.\n";
         let paragraphs = flow_paragraphs(src);
         assert_eq!(paragraphs.len(), 1);
 
         let paragraph = &paragraphs[0];
         assert_eq!(paragraph.block.kind, "paragraph");
-        // "The ", mine-chip, "slow", theirs-chip, "lazy", " fox jumps." --
-        // the "end" divider contributes no `Inline` at all (see
-        // `to_flow_paragraph`'s doc comment), so only 2 elements remain
-        // even though the source has 3 `@mobile.conflict(...)` markers.
-        assert_eq!(paragraph.block.content.len(), 6);
+        // "The ", side_a's "slow", " / ", side_b's "lazy", " fox jumps.".
+        assert_eq!(paragraph.block.content.len(), 5);
         assert_eq!(paragraph.elements.len(), 2);
-        assert!(
-            paragraph
-                .elements
-                .iter()
-                .all(|e| e.shape != BlockShape::Divider),
-            "a Divider-shaped element must never reach the flowed content"
-        );
 
         match &paragraph.block.content[0] {
             Inline::Text { content, .. } => assert_eq!(content, "The "),
@@ -216,17 +267,31 @@ mod tests {
         }
         match &paragraph.block.content[1] {
             Inline::Element { id } => {
-                assert_eq!(paragraph.elements[*id as usize].text, "Mine");
-                assert_eq!(paragraph.elements[*id as usize].shape, BlockShape::Chip);
+                assert_eq!(paragraph.elements[*id as usize].text, "slow");
+                assert_eq!(
+                    paragraph.elements[*id as usize].shape,
+                    BlockShape::PlainText
+                );
                 assert_eq!(paragraph.elements[*id as usize].tone, Tone::Accent);
             }
             Inline::Text { .. } => panic!("expected an element"),
         }
-        match &paragraph.block.content[4] {
-            Inline::Text { content, .. } => assert_eq!(content, "lazy"),
+        match &paragraph.block.content[2] {
+            Inline::Text { content, .. } => assert_eq!(content, " / "),
             Inline::Element { .. } => panic!("expected text"),
         }
-        match &paragraph.block.content[5] {
+        match &paragraph.block.content[3] {
+            Inline::Element { id } => {
+                assert_eq!(paragraph.elements[*id as usize].text, "lazy");
+                assert_eq!(
+                    paragraph.elements[*id as usize].shape,
+                    BlockShape::PlainText
+                );
+                assert_eq!(paragraph.elements[*id as usize].tone, Tone::Warning);
+            }
+            Inline::Text { .. } => panic!("expected an element"),
+        }
+        match &paragraph.block.content[4] {
             Inline::Text { content, .. } => assert_eq!(content, " fox jumps."),
             Inline::Element { .. } => panic!("expected text"),
         }

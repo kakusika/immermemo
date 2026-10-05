@@ -386,8 +386,8 @@ msgstr "Tomet (.tmt) 形式のノートを書くモバイルノートアプリ�
 
 #: ui/sheets/settings.slint:501
 msgctxt "SettingsSheet"
-msgid "AST-level three-way merge with conflict tracking (@mobile.conflict)."
-msgstr "AST単位の3-wayマージと競合追跡 (@mobile.conflict) に対応しています。"
+msgid "AST-level three-way merge with conflict tracking (@conflict)."
+msgstr "AST単位の3-wayマージと競合追跡 (@conflict) に対応しています。"
 
 #: ui/screens/search.slint:60
 msgctxt "SearchScreen"
