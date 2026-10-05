@@ -29,6 +29,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 class MainActivity : NativeActivity() {
     private val firstFrameRendered = AtomicBoolean(false)
 
+    // The last state [setStatusBarVisible] was asked for -- distinct
+    // from the system's own current flags, which a swipe-to-reveal
+    // gesture changes out from under us. Read by the system-UI-visibility
+    // listener below to tell "the user just revealed it over a hidden
+    // request" (re-hide) apart from "it's visible because it's meant to
+    // be" (leave alone).
+    private var statusBarShouldBeVisible = true
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         splashScreen.setKeepOnScreenCondition { !firstFrameRendered.get() }
@@ -41,6 +49,18 @@ class MainActivity : NativeActivity() {
             { firstFrameRendered.set(true) },
             SPLASH_TIMEOUT_MS,
         )
+        // SYSTEM_UI_FLAG_IMMERSIVE_STICKY (applied in
+        // applyStatusBarVisibility) already makes a swipe-reveal
+        // transient and auto-hide again on its own, but re-asserting
+        // here too is cheap insurance against an OEM skin that doesn't
+        // honor that for a plain NativeActivity.
+        @Suppress("DEPRECATION")
+        window.decorView.setOnSystemUiVisibilityChangeListener { flags ->
+            val systemShowsIt = (flags and View.SYSTEM_UI_FLAG_FULLSCREEN) == 0
+            if (!statusBarShouldBeVisible && systemShowsIt) {
+                applyStatusBarVisibility(false)
+            }
+        }
         super.onCreate(savedInstanceState)
     }
 
@@ -56,16 +76,27 @@ class MainActivity : NativeActivity() {
      * happen on the UI thread, which this JNI call doesn't originate
      * from (Slint's Android backend runs its own event loop thread).
      */
-    @Suppress("unused", "DEPRECATION")
+    @Suppress("unused")
     fun setStatusBarVisible(visible: Boolean) {
         runOnUiThread {
-            window.decorView.systemUiVisibility = if (visible) {
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            } else {
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                    View.SYSTEM_UI_FLAG_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            }
+            statusBarShouldBeVisible = visible
+            applyStatusBarVisibility(visible)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun applyStatusBarVisibility(visible: Boolean) {
+        window.decorView.systemUiVisibility = if (visible) {
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        } else {
+            // IMMERSIVE_STICKY: without it, a swipe-to-reveal clears
+            // FULLSCREEN permanently instead of just temporarily --
+            // the bug this is fixing (status bar stays shown forever
+            // after the first swipe once "Always Hide" is set).
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         }
     }
 
