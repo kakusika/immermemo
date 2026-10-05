@@ -169,6 +169,7 @@ pub fn run(
         current_folder: String::new(),
         directory_source: Vec::new(),
         note_nav: session::BackForwardStack::default(),
+        history_preview_cache: std::collections::HashMap::new(),
     }));
 
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
@@ -273,6 +274,11 @@ pub fn run(
                             let vault_dir = s.vault_dir.clone();
                             if let Ok(rel) = path.strip_prefix(&vault_dir) {
                                 let _ = s.index.record_write(&vault_dir, rel, text.as_str());
+                                // Drop any cached history-neighbor preview
+                                // for this note -- it's now stale (see
+                                // session.rs's `history_preview_items`).
+                                s.history_preview_cache
+                                    .remove(&rel.display().to_string());
                             }
                             if app.get_status_is_error()
                                 && app.get_status().starts_with("Save failed")
@@ -957,6 +963,7 @@ mod tests {
             current_folder: String::new(),
             directory_source: Vec::new(),
             note_nav: session::BackForwardStack::default(),
+            history_preview_cache: std::collections::HashMap::new(),
         }));
 
         app.set_current_has_conflict(true);

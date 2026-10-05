@@ -10,7 +10,7 @@ import {
     PillButton,
 } from "@origami-mobile/widgets.slint";
 import { NoteBodyItemView, NoteBodyView } from "note_body.slint";
-import { SheetDragArea, ViewSwitcher, NavPill } from "../components.slint";
+import { ViewSwitcher, NavPill } from "../components.slint";
 import { PropertiesView } from "properties.slint";
 
 // Elevation + the open/close corner-radius morph, shared by the header and
@@ -32,6 +32,112 @@ component SheetSurface inherits Rectangle {
     drop-shadow-color: root.is-header
         ? (Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024)
         : transparent;
+}
+
+// header-gesture/body-gesture both need two independent swipe behaviors at
+// once: the existing down-to-dismiss (forwarded as `sheet-drag-*`, same
+// shape `SheetDragArea` in components.slint offers the other sheets) and a
+// new left/right history-navigation swipe (`nav-drag-*`). `moved` fires for
+// every pointer move regardless of which direction `swiped` eventually
+// resolves to, so a continuous drag still needs its own axis lock -- same
+// dx-vs-dy comparison `app.slint`'s `mini-card-gesture` already uses for the
+// same reason, decided once per gesture at its first `moved` call.
+// handle-swipe-left/right are left for the instantiation site to bind (see
+// `nav-swipe-enabled` below), same as any other inherited SwipeGestureHandler
+// property -- only handle-swipe-down is fixed here, since both header and
+// body always offer the dismiss gesture.
+component NoteSheetGestureArea inherits SwipeGestureHandler {
+    handle-swipe-down: true;
+    property <duration> drag-start-time: 0ms;
+    property <bool> drag-locked: false;
+    property <bool> drag-horizontal: false;
+    callback sheet-drag-moved(length);
+    // dy, average downward px/ms over the drag (0 if timing wasn't captured)
+    callback sheet-drag-swiped(length, float);
+    callback sheet-drag-cancelled();
+    callback nav-drag-moved(length);
+    // dx, average px/ms over the drag (0 if timing wasn't captured)
+    callback nav-drag-swiped(length, float);
+    callback nav-drag-cancelled();
+
+    changed pressed-position => {
+        root.drag-start-time = animation-tick();
+        root.drag-locked = false;
+    }
+    moved => {
+        if (self.swiping) {
+            let dx = self.current-position.x - self.pressed-position.x;
+            let dy = self.current-position.y - self.pressed-position.y;
+            if (!root.drag-locked) {
+                root.drag-locked = true;
+                root.drag-horizontal = abs(dx) > abs(dy);
+            }
+            if (root.drag-horizontal) {
+                root.nav-drag-moved(dx);
+            } else {
+                root.sheet-drag-moved(dy);
+            }
+        }
+    }
+    swiped => {
+        let elapsed-ms = max(1.0, (animation-tick() - root.drag-start-time) / 1ms);
+        if (root.drag-horizontal) {
+            let dx = self.current-position.x - self.pressed-position.x;
+            root.nav-drag-swiped(dx, (dx / 1px) / elapsed-ms);
+        } else {
+            let dy = self.current-position.y - self.pressed-position.y;
+            root.sheet-drag-swiped(dy, (dy / 1px) / elapsed-ms);
+        }
+    }
+    cancelled => {
+        if (root.drag-horizontal) {
+            root.nav-drag-cancelled();
+        } else {
+            root.sheet-drag-cancelled();
+        }
+    }
+}
+
+// The note sheet's own real content, mirrored for whichever history
+// neighbor is being dragged toward (see `EditorScreen`'s `swipe-nav-dx`
+// carousel below) -- same title + `NoteBodyView` structure `edit-scope`'s
+// own view-box uses, not a lightweight stand-in: `session.rs`'s
+// `history_preview_items` (called from `sync_nav_state`) runs the real
+// `classify`/`flow` pipeline for the adjacent note, cached per path so
+// repeat visits through the same history don't re-parse. Only ever one of
+// these exists at a time (see `nav-drag-moved`'s `swipe-nav-dx` sign gate
+// on each instantiation below) -- back and forward are never visible
+// together, so there's no reason to keep both mounted and animating.
+component HistoryPreviewPanel inherits Rectangle {
+    in property <string> title: "";
+    in property <[NoteBodyItemView]> items: [];
+    in property <length> text-font-size: 17px;
+
+    background: Colors.page-background;
+    clip: true;
+
+    VerticalLayout {
+        alignment: start;
+        padding-left: Metrics.gutter;
+        padding-right: Metrics.gutter;
+        padding-top: Metrics.spacing-lg;
+        padding-bottom: Metrics.spacing-3xl;
+        spacing: Metrics.spacing-md;
+
+        Text {
+            text: root.title != "" ? root.title : @tr("Untitled");
+            font-size: Metrics.font-headline;
+            font-weight: 700;
+            color: Palette.foreground;
+            wrap: word-wrap;
+        }
+
+        NoteBodyView {
+            width: 100%;
+            items: root.items;
+            text-font-size: root.text-font-size;
+        }
+    }
 }
 
 export component EditorScreen inherits Rectangle {
@@ -84,8 +190,108 @@ export component EditorScreen inherits Rectangle {
     // from ViewSwitcher (directional chevrons vs. mode-selection icons).
     in property <bool> can-navigate-back: false;
     in property <bool> can-navigate-forward: false;
+    // Title + real rendered content for the adjacent history entries
+    // (session.rs's `sync_nav_state`/`history_preview_items`), shown by
+    // `HistoryPreviewPanel` while mid-swipe below.
+    in property <string> history-back-title: "";
+    in property <[NoteBodyItemView]> history-back-items: [];
+    in property <string> history-forward-title: "";
+    in property <[NoteBodyItemView]> history-forward-items: [];
     callback navigate-back();
     callback navigate-forward();
+    // Horizontal history-navigation swipe, alongside NavPill's tap-only
+    // affordance (see components.slint's own doc comment on NavPill for why
+    // this follows it rather than replacing it). Modeled on app.slint's
+    // 5-tab swiper: a plain distance threshold decides the commit, no
+    // velocity/fast-flick special case (unlike the sheet-dismiss/mini-card
+    // gestures, which do need one -- this one is closer in spirit to
+    // flipping through tabs than to a commit-or-cancel sheet drag).
+    // Disabled outright while Properties view is showing (note-view == 1,
+    // nothing there to carousel through) or while editing text has focus.
+    property <length> swipe-nav-dx: 0px;
+    property <bool> is-swiping-nav: false;
+    // Set for exactly one property write -- the final, instant handoff
+    // inside `finish-nav-commit` below -- so that one change to
+    // `swipe-nav-dx` bypasses the 220ms ease the same way a live drag
+    // does. Kept separate from `is-swiping-nav` (rather than reusing it)
+    // since "actively dragging" and "snapping state after a completed
+    // commit" are different moments that happen to want the same (0ms)
+    // duration.
+    property <bool> nav-commit-instant: false;
+    animate swipe-nav-dx {
+        duration: (root.is-swiping-nav || root.nav-commit-instant) ? 0ms : 220ms;
+        easing: ease-out;
+    }
+    property <bool> nav-swipe-enabled: root.header-swipe-enabled
+        && root.note-view == 0
+        && (!root.edit-mode || !root.editor-has-focus);
+    // -1 forward pending, 1 back pending, 0 none -- which direction
+    // `nav-settle-timer` should finalize once the commit animation below
+    // finishes.
+    property <int> pending-nav-direction: 0;
+    // `commit-nav-swipe` used to call `navigate-back()`/`navigate-forward()`
+    // immediately on release, synchronously swapping `can-navigate-*` and
+    // `edit-scope`'s real content (body/note-body-items) *while*
+    // `swipe-nav-dx` was still mid-ease back to 0 -- the two
+    // `HistoryPreviewPanel`s' own `if` conditions (gated on
+    // `can-navigate-*`/the sign of `swipe-nav-dx`) could then flip mid-
+    // animation too, which is what actually produced "the note appears
+    // from the wrong side" (diagnosed, not fixed, in this task file's
+    // "Phase 2 redesign" section -- fixed here).
+    //
+    // Fixed by splitting the commit into two phases instead of one:
+    // 1. Past the threshold, animate `swipe-nav-dx` the rest of the way
+    //    to a full `+-root.width` (not back to 0px) -- the *already-
+    //    correct* `HistoryPreviewPanel` finishes sliding fully into the
+    //    center, `edit-scope`'s still-old content finishes sliding fully
+    //    off-screen. Nothing about `can-navigate-*`/`edit-scope`'s
+    //    content changes during this phase, so there's nothing to flip.
+    // 2. `nav-settle-timer`, with the same 220ms interval as that
+    //    animation's own duration, fires `finish-nav-commit` once it's
+    //    done: *then* call `navigate-back()`/`navigate-forward()` (the
+    //    real content becomes what the preview was already showing --
+    //    same title/`NoteBodyView` structure, so this is visually a
+    //    no-op) and snap `swipe-nav-dx` back to 0px instantly
+    //    (`nav-commit-instant`, above) in the same instant --
+    //    `can-navigate-*` flips at the same moment the panels'
+    //    `swipe-nav-dx > 0px`/`< 0px` gate goes false, so the panel that
+    //    was covering the screen and `edit-scope` underneath it (now
+    //    showing the same thing) swap with nothing visibly moving.
+    nav-settle-timer := Timer {
+        interval: 220ms;
+        running: false;
+        triggered => {
+            root.finish-nav-commit();
+        }
+    }
+    function commit-nav-swipe(dx: length) {
+        root.is-swiping-nav = false;
+        nav-settle-timer.running = false;
+        if (dx > 40px && root.can-navigate-back) {
+            root.pending-nav-direction = 1;
+            root.swipe-nav-dx = root.width;
+            nav-settle-timer.running = true;
+        } else if (dx < -40px && root.can-navigate-forward) {
+            root.pending-nav-direction = -1;
+            root.swipe-nav-dx = -root.width;
+            nav-settle-timer.running = true;
+        } else {
+            root.swipe-nav-dx = 0px;
+        }
+    }
+    function finish-nav-commit() {
+        nav-settle-timer.running = false;
+        let direction = root.pending-nav-direction;
+        root.pending-nav-direction = 0;
+        root.nav-commit-instant = true;
+        if (direction == 1) {
+            root.navigate-back();
+        } else if (direction == -1) {
+            root.navigate-forward();
+        }
+        root.swipe-nav-dx = 0px;
+        root.nav-commit-instant = false;
+    }
     // 1.4x Metrics.fab -- a deliberate local bump for this one FAB, not
     // a change to the shared token (other FABs, e.g. FilesScreen's "+"
     // button, are unaffected).
@@ -184,15 +390,26 @@ export component EditorScreen inherits Rectangle {
     // part of this area during the drag, that gap is meant to show
     // whatever's behind the sheet, not get papered over by an opaque root.
 
-    header-gesture := SheetDragArea {
+    header-gesture := NoteSheetGestureArea {
         x: 0px;
         y: 0px;
         width: 100%;
         height: root.inset-top + Metrics.bar-height;
         enabled: root.header-swipe-enabled;
+        handle-swipe-right: root.nav-swipe-enabled && root.can-navigate-back;
+        handle-swipe-left: root.nav-swipe-enabled && root.can-navigate-forward;
         sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
         sheet-drag-swiped(dy, v) => { root.sheet-drag-swiped(dy, v); }
         sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
+        nav-drag-moved(dx) => {
+            root.is-swiping-nav = true;
+            root.swipe-nav-dx = clamp(dx, -root.width, root.width);
+        }
+        nav-drag-swiped(dx, v) => { root.commit-nav-swipe(dx); }
+        nav-drag-cancelled => {
+            root.is-swiping-nav = false;
+            root.swipe-nav-dx = 0px;
+        }
 
         header-surface := SheetSurface {
             is-header: true;
@@ -258,7 +475,7 @@ export component EditorScreen inherits Rectangle {
     // this is "everything below the header", all tracking the same
     // sheet-y-offset as one unit via body-surface, same as before the
     // header/body split.
-    body-gesture := SheetDragArea {
+    body-gesture := NoteSheetGestureArea {
         x: 0px;
         y: root.inset-top + Metrics.bar-height;
         width: 100%;
@@ -266,9 +483,20 @@ export component EditorScreen inherits Rectangle {
         // A note with nothing to scroll (or no note at all) has no scroll
         // position to gate on.
         enabled: root.header-swipe-enabled && (!root.has-note || root.scroll-at-top) && (!root.edit-mode || !root.editor-has-focus);
+        handle-swipe-right: root.nav-swipe-enabled && root.can-navigate-back;
+        handle-swipe-left: root.nav-swipe-enabled && root.can-navigate-forward;
         sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
         sheet-drag-swiped(dy, v) => { root.sheet-drag-swiped(dy, v); }
         sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
+        nav-drag-moved(dx) => {
+            root.is-swiping-nav = true;
+            root.swipe-nav-dx = clamp(dx, -root.width, root.width);
+        }
+        nav-drag-swiped(dx, v) => { root.commit-nav-swipe(dx); }
+        nav-drag-cancelled => {
+            root.is-swiping-nav = false;
+            root.swipe-nav-dx = 0px;
+        }
 
         body-surface := SheetSurface {
             is-header: false;
@@ -424,11 +652,96 @@ export component EditorScreen inherits Rectangle {
                     visible: root.has-note;
                     vertical-stretch: root.has-note ? 1 : 0;
                     width: 100%;
+                    // `edit-scope` slides fully off to one side on a
+                    // committed drag (up to +-its own width) -- clip so
+                    // that doesn't spill past this sheet's own bounds,
+                    // same reasoning as content-box's own clip in
+                    // app.slint for its 5-tab swiper.
+                    clip: true;
+
+                    // The "back" (past) neighbor sits here, fully opaque,
+                    // fixed at the same resting position `edit-scope`
+                    // itself rests at -- never animated, never slides in.
+                    // `edit-scope` (declared after this, so it paints on
+                    // top and fully covers it at rest) is the only thing
+                    // that moves: dragging right slides it out of the way
+                    // to reveal more of this already-complete panel
+                    // underneath, the way a card peels back to reveal the
+                    // one beneath it in a stack, rather than something
+                    // new sliding in from off-screen. Fixes a real
+                    // complaint (title took a full off-screen-to-on-
+                    // screen drag to become legible when this used to
+                    // slide in like `forward`'s panel still does below) --
+                    // deliberately back-only, not symmetric with forward:
+                    // the user's own framing was "the *past* note doesn't
+                    // move, it's already sitting there" (a stack/depth
+                    // metaphor that only makes sense for what's behind
+                    // you), not a general back/forward symmetry -- `forward`
+                    // keeps its original off-screen slide-in.
+                    //
+                    // Only mounted while actually being dragged toward
+                    // (`swipe-nav-dx > 0px`), same as before -- no reason
+                    // to keep it in the tree (even doing nothing, fixed in
+                    // place) outside of the one drag that's revealing it.
+                    if root.note-view == 0 && root.can-navigate-back && root.swipe-nav-dx > 0px: HistoryPreviewPanel {
+                        x: 0px;
+                        width: parent.width;
+                        height: parent.height;
+                        title: root.history-back-title;
+                        items: root.history-back-items;
+                        text-font-size: root.font-size;
+                    }
 
                     edit-scope := FocusScope {
                         visible: root.note-view == 0;
+                        // Moves for a back-direction drag (dragging the
+                        // current note out of the way to reveal the fixed
+                        // panel above); stays put for a forward-direction
+                        // one (dx < 0px) -- the forward panel is the thing
+                        // that moves there, sliding in on top of this
+                        // fixed frame instead, per the user's own framing:
+                        // the *older* note in either pair stays fixed, the
+                        // *newer* one moves (back: current is the newer of
+                        // the two, so it moves; forward: the target is the
+                        // newer one, so it moves instead).
+                        x: max(0px, root.swipe-nav-dx);
                         width: 100%;
                         height: 100%;
+                        // `FocusScope` paints nothing of its own, and
+                        // neither does `AppScrollView` below (no
+                        // `background` of its own either) -- this used to
+                        // be fine because nothing was ever positioned
+                        // directly underneath this frame's own bounds at
+                        // the same time. That's no longer true: the back
+                        // `HistoryPreviewPanel` above now sits fixed at
+                        // this exact frame's resting position, so without
+                        // an opaque layer of its own here, its content
+                        // shows straight through every gap in this frame's
+                        // own content (anywhere not actually covered by
+                        // text) instead of being properly occluded.
+                        Rectangle {
+                            background: Colors.page-background;
+                            width: 100%;
+                            height: 100%;
+                            // Depth cue for the back-direction reveal:
+                            // this frame is the one moving/elevated (the
+                            // fixed back panel sits flush underneath,
+                            // casting none itself), so a shadow leaning
+                            // toward its own leading (left) edge reads as
+                            // "lifting away to reveal what's beneath",
+                            // same blur/color convention `SheetSurface`
+                            // already uses elsewhere in this file -- only
+                            // an offset axis away (x, not y), since the
+                            // travel here is horizontal. Gated on
+                            // `swipe-nav-dx > 0px` (only while an actual
+                            // back-reveal is happening) rather than always
+                            // on, so it doesn't look like a stray shadow
+                            // around the note view the rest of the time.
+                            drop-shadow-blur: root.swipe-nav-dx > 0px ? 10px * Metrics.ui-scale : 0px;
+                            drop-shadow-offset-x: -6px * Metrics.ui-scale;
+                            drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024;
+                        }
+
                         capture-key-pressed(event) => {
                             if (event.modifiers.control && (event.text == "z" || event.text == "Z") && !event.modifiers.shift) {
                                 root.undo();
@@ -527,6 +840,25 @@ export component EditorScreen inherits Rectangle {
                                 }
                             }
                         }
+                    }
+
+                    if root.note-view == 0 && root.can-navigate-forward && root.swipe-nav-dx < 0px: HistoryPreviewPanel {
+                        x: parent.width + root.swipe-nav-dx;
+                        width: parent.width;
+                        height: parent.height;
+                        title: root.history-forward-title;
+                        items: root.history-forward-items;
+                        text-font-size: root.font-size;
+                        // Depth cue mirroring edit-scope's own back-reveal
+                        // shadow above: this panel is the moving/elevated
+                        // one for a forward drag (the fixed current note
+                        // sits flush underneath), so the same leading-edge
+                        // shadow treatment applies -- unconditional here,
+                        // since this whole panel only exists while
+                        // `swipe-nav-dx < 0px` already (see the `if` above).
+                        drop-shadow-blur: 10px * Metrics.ui-scale;
+                        drop-shadow-offset-x: -6px * Metrics.ui-scale;
+                        drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024;
                     }
 
                     PropertiesView {

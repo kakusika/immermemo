@@ -1,6 +1,7 @@
 //! UI session state management and application action handlers.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -11,7 +12,9 @@ use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use crate::credentials::TokenCredentials;
 use crate::directory;
 use crate::sync;
-use crate::{App, BreadcrumbSegment, DirectoryEntry, PickerIconEntry, TokenStoreFactory};
+use crate::{
+    App, BreadcrumbSegment, DirectoryEntry, NoteBodyItemView, PickerIconEntry, TokenStoreFactory,
+};
 use immermemo_editor::History;
 use immermemo_index::NoteIndex;
 use immermemo_sync::Vault;
@@ -153,6 +156,10 @@ pub struct Session {
     pub directory_source: Vec<(String, i32, bool)>,
     /// Back/forward stack of previously-opened notes in this vault.
     pub note_nav: BackForwardStack,
+    /// `history_preview_items`'s cache of rendered history-neighbor
+    /// previews, keyed by vault-relative path -- see that function's own
+    /// doc comment.
+    pub history_preview_cache: HashMap<String, (f32, ModelRc<NoteBodyItemView>)>,
 }
 
 thread_local! {
@@ -442,11 +449,12 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     s.search_query.clear();
     s.editor = EditorState::default();
     s.note_nav.clear();
+    s.history_preview_cache.clear();
     s.pending_auto_sync = false;
     s.last_synced_at = None;
     drop(s);
 
-    sync_nav_state(app, &session.borrow());
+    sync_nav_state(app, session);
     app.set_search_query(SharedString::new());
     app.set_remote_configured(remote.is_some());
     app.set_current_title(SharedString::new());
@@ -528,7 +536,7 @@ pub fn vault_path_from_input(_base: &std::path::Path, input: &str) -> anyhow::Re
 pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
     if let Some(rel_path) = open_note_inner(app, session, index) {
         session.borrow_mut().note_nav.visit(rel_path);
-        sync_nav_state(app, &session.borrow());
+        sync_nav_state(app, session);
     }
 }
 
@@ -618,62 +626,77 @@ fn navigate_to(app: &App, session: &Rc<RefCell<Session>>, rel_path: Option<Strin
     if let Some(index) = index {
         open_note_inner(app, session, index);
     }
-    sync_nav_state(app, &session.borrow());
+    sync_nav_state(app, session);
 }
 
-/// Pushes `can-navigate-back`/`-forward` and the adjacent notes' preview
-/// text to the UI -- called after every change to `note_nav` (a visit, or
-/// a step in either direction), not per animation frame: the swipe
-/// gesture just reads whatever was last pushed here while dragging.
-fn sync_nav_state(app: &App, session: &Session) {
-    app.set_can_navigate_back(session.note_nav.can_back());
-    app.set_can_navigate_forward(session.note_nav.can_forward());
-    let (back_title, back_preview) = session
-        .note_nav
-        .peek_back()
-        .and_then(|p| note_preview(&session.vault_dir, p))
+/// Pushes `can-navigate-back`/`-forward` and the adjacent notes' title +
+/// rendered preview to the UI -- called after every change to `note_nav`
+/// (a visit, or a step in either direction), not per animation frame: the
+/// swipe gesture just reads whatever was last pushed here while dragging.
+fn sync_nav_state(app: &App, session: &Rc<RefCell<Session>>) {
+    let (vault_dir, can_back, can_forward, back_path, forward_path) = {
+        let s = session.borrow();
+        (
+            s.vault_dir.clone(),
+            s.note_nav.can_back(),
+            s.note_nav.can_forward(),
+            s.note_nav.peek_back().map(str::to_string),
+            s.note_nav.peek_forward().map(str::to_string),
+        )
+    };
+    app.set_can_navigate_back(can_back);
+    app.set_can_navigate_forward(can_forward);
+    let max_width = app.get_body_content_width();
+    let (back_title, back_items) = back_path
+        .as_deref()
+        .map(|p| history_preview(app, session, &vault_dir, p, max_width))
         .unwrap_or_default();
-    let (forward_title, forward_preview) = session
-        .note_nav
-        .peek_forward()
-        .and_then(|p| note_preview(&session.vault_dir, p))
+    let (forward_title, forward_items) = forward_path
+        .as_deref()
+        .map(|p| history_preview(app, session, &vault_dir, p, max_width))
         .unwrap_or_default();
     app.set_history_back_title(back_title.into());
-    app.set_history_back_preview(back_preview.into());
+    app.set_history_back_items(back_items);
     app.set_history_forward_title(forward_title.into());
-    app.set_history_forward_preview(forward_preview.into());
+    app.set_history_forward_items(forward_items);
 }
 
-/// Title + a short preview line for `rel_path`, read directly from disk.
-/// `None` if the file can't be read (e.g. deleted a moment ago -- callers
-/// already prune genuinely dead history entries via `note_is_live`-style
-/// checks before getting here, so this is only a last-moment race, not
-/// the normal path).
-fn note_preview(vault_dir: &Path, rel_path: &str) -> Option<(String, String)> {
+/// Title + real rendered body items (the same `classify`/`flow` pipeline
+/// `update_rendered_body` runs for the currently-open note) for `rel_path`'s
+/// history-neighbor preview (`HistoryPreviewPanel`, editor.slint). Cached
+/// per path in `Session::history_preview_cache`, keyed alongside the
+/// `max_width` it was measured against -- browser-bfcache style: paid
+/// once per distinct note, reused on repeat visits through the same
+/// history, dropped by `on_edited` the moment that note's own content
+/// changes, and recomputed automatically if `max_width` itself changed
+/// (a resize/font-size change) since the cached entry was built. Empty
+/// title/items if the file can't be read (e.g. deleted a moment ago --
+/// callers already prune genuinely dead history entries via
+/// `is_live`-style checks before getting here, so this is only a
+/// last-moment race, not the normal path).
+fn history_preview(
+    app: &App,
+    session: &Rc<RefCell<Session>>,
+    vault_dir: &Path,
+    rel_path: &str,
+    max_width: f32,
+) -> (String, ModelRc<NoteBodyItemView>) {
     let abs_path = vault_dir.join(rel_path);
-    let text = std::fs::read_to_string(&abs_path).ok()?;
-    Some((notes::display_name(vault_dir, &abs_path), preview_line(&text)))
-}
-
-/// A short, query-less preview of a note's own first non-empty line --
-/// unlike `immermemo_index::extract_snippet`, which needs a search query
-/// to find context around (so outside of an active search it comes back
-/// empty; see `BackForwardStack`'s own doc for why that isn't reusable
-/// here). Used for the lightweight preview shown while swiping through
-/// back/forward history.
-fn preview_line(body: &str) -> String {
-    const MAX_CHARS: usize = 80;
-    let Some(line) = body.lines().map(str::trim).find(|l| !l.is_empty()) else {
-        return String::new();
-    };
-    let chars: Vec<char> = line.chars().collect();
-    if chars.len() <= MAX_CHARS {
-        line.to_string()
-    } else {
-        let mut truncated: String = chars[..MAX_CHARS].iter().collect();
-        truncated.push_str("...");
-        truncated
+    let title = notes::display_name(vault_dir, &abs_path);
+    if let Some((cached_width, items)) = session.borrow().history_preview_cache.get(rel_path)
+        && *cached_width == max_width
+    {
+        return (title, items.clone());
     }
+    let Ok(text) = std::fs::read_to_string(&abs_path) else {
+        return (String::new(), ModelRc::default());
+    };
+    let items = crate::render::note_body_items(&text, app, max_width);
+    session
+        .borrow_mut()
+        .history_preview_cache
+        .insert(rel_path.to_string(), (max_width, items.clone()));
+    (title, items)
 }
 
 /// Opens the note that was last open in `vault_dir`, or the first note in the

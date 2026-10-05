@@ -165,9 +165,9 @@ export component App inherits Window {
     // the back/forward stack changes, not per drag frame. Empty when
     // `can-navigate-back`/`-forward` is false.
     in property <string> history-back-title;
-    in property <string> history-back-preview;
+    in property <[NoteBodyItemView]> history-back-items: [];
     in property <string> history-forward-title;
-    in property <string> history-forward-preview;
+    in property <[NoteBodyItemView]> history-forward-items: [];
     callback navigate-back();
     callback navigate-forward();
     in-out property <string> body;
@@ -803,6 +803,10 @@ export component App inherits Window {
                 can-redo: root.can-redo;
                 can-navigate-back: root.can-navigate-back;
                 can-navigate-forward: root.can-navigate-forward;
+                history-back-title: root.history-back-title;
+                history-back-items: root.history-back-items;
+                history-forward-title: root.history-forward-title;
+                history-forward-items: root.history-forward-items;
                 navigate-back => { root.navigate-back(); }
                 navigate-forward => { root.navigate-forward(); }
                 show-back: false;
