@@ -223,7 +223,8 @@ export component App inherits Window {
     in property <int> current-vault: -1;
     in property <string> current-vault-name: "";
     in property <string> current-vault-path: "";
-    in-out property <bool> settings-open: false;
+    in-out property <bool> settings-sheet-open: false;
+    in-out property <bool> settings-open <=> root.settings-sheet-open;
     in-out property <int> font-size-choice: 1;
     in-out property <length> editor-font-size: 17px;
     in-out property <int> theme-choice: 0;
@@ -254,12 +255,6 @@ export component App inherits Window {
     changed list-open => {
         if (root.list-open && root.active-tab != 1) {
             root.active-tab = 1;
-        }
-    }
-    changed settings-open => {
-        if (root.settings-open) {
-            root.active-tab = 3;
-            root.settings-open = false;
         }
     }
 
@@ -357,6 +352,15 @@ export component App inherits Window {
             root.vault-sheet-open = false;
             return true;
         }
+        if (root.settings-sheet-open) {
+            if (settings-sheet.page != 0) {
+                settings-sheet.page = 0;
+            } else {
+                root.settings-sheet-open = false;
+                root.close-settings();
+            }
+            return true;
+        }
         // 3. Close note sheet if open (unfocus if keyboard is up or typing)
         if (root.note-sheet-open) {
             if (pane.edit-mode || pane.editor-has-focus || root.keyboard > 0px) {
@@ -367,17 +371,10 @@ export component App inherits Window {
             return true;
         }
 
-        // 4. Pop a Settings sub-page back to its category list before
-        // leaving the tab entirely.
-        if (root.active-tab == 3 && settings-screen.page != 0) {
-            settings-screen.page = 0;
-            return true;
-        }
-        // 4b. Same for the Library tab's Directory page: pop one folder
+        // 4. Same for the Library tab's Directory page: pop one folder
         // level (List and Grid both browse folder-at-a-time) before
-        // falling back to the hub, same nested shape as 4's Settings pop
-        // above. The parent is the breadcrumb's second-to-last segment,
-        // or the vault root if there isn't one.
+        // falling back to the hub. The parent is the breadcrumb's
+        // second-to-last segment, or the vault root if there isn't one.
         if (root.active-tab == 1 && files-screen.page != 0) {
             if (root.directory-breadcrumb.length > 0) {
                 root.navigate-directory-folder(root.directory-breadcrumb.length >= 2
@@ -389,7 +386,7 @@ export component App inherits Window {
             return true;
         }
 
-        // 5. If on any secondary tab (Files: 1, Search: 2, Settings: 3), navigate back to Home (0)
+        // 5. If on any secondary tab (Files: 1, Search: 2), navigate back to Home (0)
         if (root.active-tab != 0) {
             root.active-tab = 0;
             root.trigger-haptic();
@@ -549,6 +546,19 @@ export component App inherits Window {
         close => { root.vault-history-open = false; }
         haptic => { root.trigger-haptic(); }
     }
+    settings-sheet-drag := SheetDragState {
+        open: root.settings-sheet-open;
+        close => {
+            root.settings-sheet-open = false;
+            root.close-settings();
+        }
+        haptic => { root.trigger-haptic(); }
+    }
+
+    public function open-settings-sheet() {
+        root.open-settings();
+        root.trigger-haptic();
+    }
 
     // Main App Layout wrapped in FocusScope for Back gesture & Escape key handling
     root-focus-scope := FocusScope {
@@ -575,8 +585,8 @@ export component App inherits Window {
             SwipeGestureHandler {
                 width: 100%;
                 height: 100%;
-                enabled: root.narrow && root.keyboard == 0px && !root.note-sheet-open && !root.is-dragging-sheet;
-                handle-swipe-left: root.active-tab < 3;
+                enabled: root.narrow && root.keyboard == 0px && !root.note-sheet-open && !root.is-dragging-sheet && !root.settings-sheet-open;
+                handle-swipe-left: root.active-tab < 2;
                 handle-swipe-right: root.active-tab > 0;
 
                 moved => {
@@ -590,7 +600,7 @@ export component App inherits Window {
                 swiped => {
                     root.is-swiping = false;
                     let dx = self.current-position.x - self.pressed-position.x;
-                    if (dx < -40px && root.active-tab < 3) {
+                    if (dx < -40px && root.active-tab < 2) {
                         root.active-tab += 1;
                         root.trigger-haptic();
                     } else if (dx > 40px && root.active-tab > 0) {
@@ -631,8 +641,7 @@ export component App inherits Window {
                     sync => { root.sync(); }
                     open-vaults => { root.open-vault-sheet(); }
                     open-settings => {
-                        root.active-tab = 3;
-                        root.trigger-haptic();
+                        root.open-settings-sheet();
                     }
                     open-vault-history => { root.open-vault-history(); }
                     open-conflict-note => {
@@ -678,8 +687,7 @@ export component App inherits Window {
                     }
                     sync => { root.sync(); }
                     open-settings => {
-                        root.active-tab = 3;
-                        root.trigger-haptic();
+                        root.open-settings-sheet();
                     }
                     note-menu-requested(i) => { root.note-menu-index = i; }
                     navigate-folder(key) => { root.navigate-directory-folder(key); }
@@ -715,39 +723,6 @@ export component App inherits Window {
                         easing: ease-out;
                     }
                 }
-
-                // Screen 3: Settings
-                settings-screen := SettingsSheet {
-                    x: (3 - root.active-tab) * parent.width + root.swipe-dx;
-                    y: 0px;
-                    width: parent.width;
-                    height: parent.height;
-                    show-back: false;
-                    has-token: root.remote-has-token;
-                    url-draft <=> root.remote-url-draft;
-                    token-draft <=> root.remote-token-draft;
-                    syncing: root.syncing;
-                    sync-status: root.status;
-                    current-vault-name: root.current-vault-name;
-                    current-vault-path: root.current-vault-path;
-                    font-size-choice <=> root.font-size-choice;
-                    theme-choice <=> root.theme-choice;
-                    status-bar-choice <=> root.status-bar-choice;
-                    inset-top: root.inset-top;
-                    inset-bottom: root.screen-inset-bottom;
-                    save-remote(url, token) => { root.save-remote(url, token); }
-                    sync => { root.sync(); }
-                    open-vaults => { root.open-vault-sheet(); }
-                    font-size-changed(c) => { root.font-size-changed(c); }
-                    theme-changed(c) => { root.theme-changed(c); }
-                    status-bar-changed(c) => { root.status-bar-changed(c); }
-                    close => { root.active-tab = 0; }
-
-                    animate x {
-                        duration: root.is-swiping ? 0ms : 220ms;
-                        easing: ease-out;
-                    }
-                }
             }
         }
 
@@ -761,8 +736,9 @@ export component App inherits Window {
             property <float> combined-progress: max(root.sheet-progress, max(
                 vault-sheet-drag.sheet-progress, max(
                     icon-picker-drag.sheet-progress, max(
-                        history-sheet-drag.sheet-progress,
-                        vault-history-drag.sheet-progress))));
+                        history-sheet-drag.sheet-progress, max(
+                            vault-history-drag.sheet-progress,
+                            settings-sheet-drag.sheet-progress)))));
             background: #000000.with-alpha(0.35 * self.combined-progress);
             visible: self.combined-progress > 0.01;
         }
@@ -908,12 +884,12 @@ export component App inherits Window {
             y: root.mini-card-resting-y - 20px * Metrics.ui-scale;
             width: parent.width - 2 * Metrics.spacing-sm + 24px * Metrics.ui-scale;
             height: Metrics.mini-card-height + 26px * Metrics.ui-scale;
-            visible: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open;
+            visible: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open && !root.settings-sheet-open;
 
             mini-card-gesture := SwipeGestureHandler {
                 width: 100%;
                 height: 100%;
-                enabled: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open;
+                enabled: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open && !root.settings-sheet-open;
                 handle-swipe-up: true;
                 // Always recognized in both directions, even with no
                 // history to go to that way -- unlike the tab swiper
@@ -1213,6 +1189,45 @@ export component App inherits Window {
                 root.confirm-delete();
             }
             cancel => { root.delete-confirm-open = false; }
+        }
+
+        Rectangle {
+            width: 100%;
+            height: 100%;
+            visible: settings-sheet-drag.sheet-progress > 0.01;
+
+            settings-sheet := SettingsSheet {
+                width: 100%;
+                height: 100%;
+                sheet-progress: settings-sheet-drag.sheet-progress;
+                sheet-y-offset: (1.0 - settings-sheet-drag.sheet-progress) * root.height;
+                sheet-drag-moved(dy) => { settings-sheet-drag.moved(dy, max(100px, root.height)); }
+                sheet-drag-swiped(dy, v) => { settings-sheet-drag.swiped(dy, v); }
+                sheet-drag-cancelled => { settings-sheet-drag.cancelled(); }
+                show-back: true;
+                has-token: root.remote-has-token;
+                url-draft <=> root.remote-url-draft;
+                token-draft <=> root.remote-token-draft;
+                syncing: root.syncing;
+                sync-status: root.status;
+                current-vault-name: root.current-vault-name;
+                current-vault-path: root.current-vault-path;
+                font-size-choice <=> root.font-size-choice;
+                theme-choice <=> root.theme-choice;
+                status-bar-choice <=> root.status-bar-choice;
+                inset-top: root.inset-top;
+                inset-bottom: root.inset-bottom;
+                save-remote(url, token) => { root.save-remote(url, token); }
+                sync => { root.sync(); }
+                open-vaults => { root.open-vault-sheet(); }
+                font-size-changed(c) => { root.font-size-changed(c); }
+                theme-changed(c) => { root.theme-changed(c); }
+                status-bar-changed(c) => { root.status-bar-changed(c); }
+                close => {
+                    root.settings-sheet-open = false;
+                    root.close-settings();
+                }
+            }
         }
 
         Rectangle {

@@ -11,6 +11,7 @@ import {
     Section,
     Divider,
 } from "@origami-mobile/widgets.slint";
+import { SheetDragArea } from "../components.slint";
 
 // A tappable row for the Settings list: icon, label, and a trailing
 // chevron to show it drills into its own sub-page.
@@ -74,6 +75,12 @@ component CategoryRow inherits Rectangle {
 export component SettingsSheet inherits Rectangle {
     in property <length> inset-top: 0px;
     in property <length> inset-bottom: 0px;
+    in property <float> sheet-progress: 1.0;
+    in property <length> sheet-y-offset: 0px;
+    callback sheet-drag-moved(length);
+    // dy, average downward px/ms over the drag (0 if timing wasn't captured)
+    callback sheet-drag-swiped(length, float);
+    callback sheet-drag-cancelled();
 
     // Remote sync properties
     in property <bool> has-token;
@@ -112,10 +119,26 @@ export component SettingsSheet inherits Rectangle {
     // handle-back().
     in-out property <int> page: 0;
 
+    property <length> scroll-content-y: 0px;
+    property <bool> scroll-at-top: root.scroll-content-y >= -1px;
+
     background: Colors.page-background;
 
-    VerticalLayout {
+    header-gesture := SheetDragArea {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: root.inset-top + Metrics.bar-height;
+        inset-top: root.inset-top;
+        enabled: root.page == 0;
+        sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
+        sheet-drag-swiped(dy, v) => { root.sheet-drag-swiped(dy, v); }
+        sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
+
         TopBar {
+            y: root.sheet-y-offset;
+            width: 100%;
+            height: 100%;
             inset-top: root.inset-top;
             bar-background: transparent;
 
@@ -124,7 +147,7 @@ export component SettingsSheet inherits Rectangle {
                 clicked => { root.page = 0; }
             }
             if root.page == 0 && root.show-back: IconButton {
-                icon: TablerIcons.chevron-left;
+                icon: TablerIcons.chevron-down;
                 clicked => { root.close(); }
             }
 
@@ -141,9 +164,26 @@ export component SettingsSheet inherits Rectangle {
                 color: Palette.foreground;
             }
         }
+    }
 
-        AppScrollView {
-            vertical-stretch: 1;
+    body-gesture := SheetDragArea {
+        x: 0px;
+        y: root.inset-top + Metrics.bar-height;
+        width: 100%;
+        height: root.height - (root.inset-top + Metrics.bar-height) - root.inset-bottom;
+        enabled: root.scroll-at-top && root.page == 0;
+        sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
+        sheet-drag-swiped(dy, v) => { root.sheet-drag-swiped(dy, v); }
+        sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
+
+        VerticalLayout {
+            y: root.sheet-y-offset;
+            width: 100%;
+            height: 100%;
+
+            AppScrollView {
+                vertical-stretch: 1;
+                content-y <=> root.scroll-content-y;
 
             // --------------------------------------------------------
             // List: Interface / Other (Sync & Remote, Vaults) / Info (About)
@@ -476,4 +516,5 @@ export component SettingsSheet inherits Rectangle {
             }
         }
     }
+}
 }

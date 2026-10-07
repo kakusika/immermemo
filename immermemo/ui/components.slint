@@ -302,16 +302,6 @@ export component BottomNavBar inherits Rectangle {
                 root.tab-selected(2);
             }
         }
-
-        NavItem {
-            icon: TablerIcons.settings;
-            label: @tr("Settings");
-            active: root.active-tab == 3;
-            clicked => {
-                root.active-tab = 3;
-                root.tab-selected(3);
-            }
-        }
     }
 }
 

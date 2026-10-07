@@ -58,6 +58,11 @@ export component HomeScreen inherits Rectangle {
                 enabled: !root.syncing;
                 clicked => { root.sync(); }
             }
+
+            BubbleButton {
+                icon: TablerIcons.settings;
+                clicked => { root.open-settings(); }
+            }
         }
 
         AppScrollView {

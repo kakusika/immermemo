@@ -389,13 +389,13 @@ fn main() {
     )));
     app.set_current(0);
 
-    // Tab 3: Settings
-    app.set_active_tab(3);
+    // Settings Sheet
+    app.set_settings_sheet_open(true);
     app.set_current_vault_name("notes".into());
     app.set_current_vault_path("/home/user/notes".into());
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-settings.ppm"));
-    app.set_active_tab(0);
+    app.set_settings_sheet_open(false);
 
     app.set_note_menu_index(2);
     std::thread::sleep(std::time::Duration::from_millis(300));
