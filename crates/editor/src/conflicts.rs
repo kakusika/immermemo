@@ -47,8 +47,12 @@ pub fn resolve_active_conflict(
         ConflictResolution::B => "remote",
         _ => "custom",
     };
-    let resolved_doc = immermemo_merge::resolve_all(&doc, resolution);
-    let resolved_text = tomet_printer::document_to_tm(&resolved_doc);
+    let (resolved_text, _resolved_doc) = resolve_all_lossless(&current_text, &resolution)
+        .unwrap_or_else(|| {
+            let resolved_doc = immermemo_merge::resolve_all(&doc, resolution);
+            let resolved_text = tomet_printer::document_to_tm(&resolved_doc);
+            (resolved_text, resolved_doc)
+        });
 
     if let Err(e) = std::fs::write(&path, &resolved_text) {
         return Some(Err(format!("Save failed: {e}")));
@@ -110,8 +114,12 @@ pub fn resolve_conflict_step(
         _ => "kept both",
     };
 
-    let resolved_doc = immermemo_merge::resolve_single(&doc, target_idx, resolution);
-    let resolved_text = tomet_printer::document_to_tm(&resolved_doc);
+    let (resolved_text, resolved_doc) =
+        resolve_single_lossless(&current_text, target_idx, &resolution).unwrap_or_else(|| {
+            let resolved_doc = immermemo_merge::resolve_single(&doc, target_idx, resolution);
+            let resolved_text = tomet_printer::document_to_tm(&resolved_doc);
+            (resolved_text, resolved_doc)
+        });
 
     if let Err(e) = std::fs::write(&path, &resolved_text) {
         return Some(Err(format!("Save failed: {e}")));
@@ -236,6 +244,156 @@ fn conflict_authorship(
     );
     let authorship = vault.conflict_authorship(rel_path, current_text);
     (authorship.a, authorship.b)
+}
+
+fn resolve_single_lossless(
+    src: &str,
+    target_idx: usize,
+    resolution: &ConflictResolution,
+) -> Option<(String, tomet_ast::Document)> {
+    use tomet_edit::{export_doc, import_source};
+
+    let mut doc = import_source(src);
+    let mut current_conflict_idx = 0;
+    let mut resolved = false;
+
+    let node_ids = collect_leaf_node_ids(&doc);
+
+    for node_id in node_ids {
+        let Some(node) = doc.get(node_id) else {
+            continue;
+        };
+        if !node.raw.contains(immermemo_merge::CONFLICT_MARKER) {
+            continue;
+        }
+
+        let Ok(parsed) = tomet_parser::parse_document(&node.raw) else {
+            continue;
+        };
+        let node_conflicts = immermemo_merge::find_conflicts(&parsed);
+        let count = node_conflicts.len();
+
+        if count == 0 {
+            continue;
+        }
+
+        if target_idx >= current_conflict_idx && target_idx < current_conflict_idx + count {
+            let local_idx = target_idx - current_conflict_idx;
+            let resolved_ast =
+                immermemo_merge::resolve_single(&parsed, local_idx, resolution.clone());
+            let mut new_text = tomet_printer::document_to_tm(&resolved_ast);
+
+            if node.raw.ends_with('\n') && !new_text.ends_with('\n') {
+                new_text.push('\n');
+            } else if !node.raw.ends_with('\n') && new_text.ends_with('\n') {
+                new_text.pop();
+            }
+
+            let node_mut = doc.get_mut(node_id).unwrap();
+            node_mut.kind = tomet_edit::NodeKind::Paragraph {
+                text: new_text.clone(),
+            };
+            node_mut.raw = new_text.clone();
+            node_mut.mark_edited();
+            resolved = true;
+            break;
+        }
+
+        current_conflict_idx += count;
+    }
+
+    if !resolved {
+        return None;
+    }
+
+    let resolved_text = export_doc(&doc);
+    let resolved_doc = tomet_parser::parse_document(&resolved_text).ok()?;
+    Some((resolved_text, resolved_doc))
+}
+
+fn resolve_all_lossless(
+    src: &str,
+    resolution: &ConflictResolution,
+) -> Option<(String, tomet_ast::Document)> {
+    use tomet_edit::{export_doc, import_source};
+
+    let mut doc = import_source(src);
+    let node_ids = collect_leaf_node_ids(&doc);
+    let mut any_resolved = false;
+
+    for node_id in node_ids {
+        let Some(node) = doc.get(node_id) else {
+            continue;
+        };
+        if !node.raw.contains(immermemo_merge::CONFLICT_MARKER) {
+            continue;
+        }
+
+        let Ok(parsed) = tomet_parser::parse_document(&node.raw) else {
+            continue;
+        };
+        if immermemo_merge::find_conflicts(&parsed).is_empty() {
+            continue;
+        }
+
+        let resolved_ast = immermemo_merge::resolve_all(&parsed, resolution.clone());
+        let mut new_text = tomet_printer::document_to_tm(&resolved_ast);
+        if node.raw.ends_with('\n') && !new_text.ends_with('\n') {
+            new_text.push('\n');
+        } else if !node.raw.ends_with('\n') && new_text.ends_with('\n') {
+            new_text.pop();
+        }
+
+        let node_mut = doc.get_mut(node_id).unwrap();
+        node_mut.kind = tomet_edit::NodeKind::Paragraph {
+            text: new_text.clone(),
+        };
+        node_mut.raw = new_text.clone();
+        node_mut.mark_edited();
+        any_resolved = true;
+    }
+
+    if !any_resolved {
+        return None;
+    }
+
+    let resolved_text = export_doc(&doc);
+    let resolved_doc = tomet_parser::parse_document(&resolved_text).ok()?;
+    Some((resolved_text, resolved_doc))
+}
+
+fn collect_leaf_node_ids(doc: &tomet_edit::EditDoc) -> Vec<tomet_edit::NodeId> {
+    let mut out = Vec::new();
+    for item in doc.root_children() {
+        if let Some(id) = item.as_node_id() {
+            collect_nodes_recursive(doc, id, &mut out);
+        }
+    }
+    out
+}
+
+fn collect_nodes_recursive(
+    doc: &tomet_edit::EditDoc,
+    id: tomet_edit::NodeId,
+    out: &mut Vec<tomet_edit::NodeId>,
+) {
+    let Some(node) = doc.get(id) else {
+        return;
+    };
+    match &node.kind {
+        tomet_edit::NodeKind::Section { children, .. }
+        | tomet_edit::NodeKind::List { children }
+        | tomet_edit::NodeKind::ListItem { children, .. } => {
+            for child in children {
+                if let Some(cid) = child.as_node_id() {
+                    collect_nodes_recursive(doc, cid, out);
+                }
+            }
+        }
+        _ => {
+            out.push(id);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -398,5 +556,37 @@ mod tests {
         };
         assert_eq!(a_side, ConflictSide::NotMine);
         assert_eq!(b_side, ConflictSide::NotMine);
+    }
+
+    #[test]
+    fn resolve_single_preserves_comments_and_surrounding_layout() {
+        let src = "// Top comment\n\n\nFirst paragraph.\n\n@conflict(\n  a: [ Mine. ]\n  b: [ Theirs. ]\n)\n\n\n// Bottom comment\n";
+        let (resolved_text, doc) =
+            resolve_single_lossless(src, 0, &ConflictResolution::A).unwrap();
+
+        assert!(resolved_text.starts_with("// Top comment\n\n\nFirst paragraph.\n\n"));
+        assert!(resolved_text.contains("Mine."));
+        assert!(!resolved_text.contains("Theirs."));
+        assert!(resolved_text.ends_with("\n\n\n// Bottom comment\n"));
+
+        let remaining = immermemo_merge::find_conflicts(&doc);
+        assert!(remaining.is_empty());
+    }
+
+    #[test]
+    fn resolve_all_preserves_comments_and_surrounding_layout() {
+        let src = "// Top comment\n\n\nParagraph 1.\n\n@conflict(\n  a: [ A1. ]\n  b: [ B1. ]\n)\n\nMiddle text.\n\n@conflict(\n  a: [ A2. ]\n  b: [ B2. ]\n)\n\n\n// Bottom comment\n";
+        let (resolved_text, doc) =
+            resolve_all_lossless(src, &ConflictResolution::B).unwrap();
+
+        assert!(resolved_text.starts_with("// Top comment\n\n\nParagraph 1.\n\n"));
+        assert!(resolved_text.contains("B1."));
+        assert!(resolved_text.contains("B2."));
+        assert!(!resolved_text.contains("A1."));
+        assert!(!resolved_text.contains("A2."));
+        assert!(resolved_text.ends_with("\n\n\n// Bottom comment\n"));
+
+        let remaining = immermemo_merge::find_conflicts(&doc);
+        assert!(remaining.is_empty());
     }
 }

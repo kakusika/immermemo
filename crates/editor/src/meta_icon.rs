@@ -1,71 +1,76 @@
 //! Writes a note's `@meta{ icon: @doc.icon(name, pkg) }` -- the save-side
 //! counterpart of `immermemo_tomet_render::meta_element`/`note_icon`
-//! (`immermemo`'s `render::classify`), which only read it. Parses, mutates
-//! the AST (inserting a `@meta{}` block if the note had none, or
-//! replacing/adding its `icon` entry if it did), then re-prints the whole
-//! document -- the same round-trip `crates/merge`'s `markers` module uses
-//! to turn a constructed node back into source text.
+//! (`immermemo`'s `render::classify`), which only read it.
+//!
+//! Uses `tomet_edit` to mutate only the `@meta{}` block while preserving 100% of
+//! layout trivia, comments, and unedited blocks byte-identically.
 
-use tomet_ast::{Block, Document, Element, ElementValue, Entry, Name, Placement, Sigil, Value};
+use tomet_edit::{
+    AttrGroup, ChildItem, EditDoc, EditOp, Node, NodeKind, export_doc, import_source,
+};
 
 /// `body` with its top-level `@meta{}`'s `icon` entry set to
 /// `@doc.icon(name, pkg)`, constructing a `@meta{}` block first if `body`
-/// had none. `None` only if `body` itself doesn't parse (a saved note's
-/// own body always should; this isn't a format this function can produce
-/// unparseable input for) -- same "shouldn't happen, but don't panic on a
-/// caller's unchecked assumption" scope as the rest of this crate.
+/// had none. Preserves comments, whitespace, and layout trivia in the rest of
+/// the document byte-identically.
 pub fn set_note_icon(body: &str, name: &str, pkg: &str) -> Option<String> {
-    let mut doc: Document = tomet_parser::parse_document(body).ok()?;
+    let mut doc: EditDoc = import_source(body);
 
-    let icon_value = Value::Element(Box::new(Element {
-        sigil: Sigil::Named(Name::namespaced("doc", "icon")),
-        args: Some(Value::Map(vec![
-            (String::new(), Value::String(name.to_owned())),
-            ("pkg".to_owned(), Value::String(pkg.to_owned())),
-        ])),
-        ..Default::default()
-    }));
-    let icon_entry = Entry::Pair("icon".to_owned(), icon_value);
-
-    let meta_index = doc
-        .blocks
+    let meta_node_id = doc
+        .root_children()
         .iter()
-        .position(|block| matches!(block, Block::Element(el) if el.sigil.is_bare_named("meta")));
+        .filter_map(|item| item.as_node_id())
+        .find(|id| {
+            matches!(
+                doc.get(*id).map(|n| &n.kind),
+                Some(NodeKind::BlockElement { name, .. }) if name == "meta"
+            )
+        });
 
-    match meta_index {
-        Some(i) => {
-            let Block::Element(meta) = &mut doc.blocks[i] else {
-                unreachable!("meta_index only matches Block::Element");
-            };
-            let Some(ElementValue::Group(entries)) = &mut meta.value else {
-                // `@meta` with a `+++` fence or `${...}` interp body
-                // instead of a plain `{...}` group -- not a shape this
-                // function knows how to add an entry to; leave it alone
-                // rather than clobber whatever the note actually has.
-                return None;
-            };
-            match entries
-                .iter_mut()
-                .find(|entry| matches!(entry, Entry::Pair(key, _) if key == "icon"))
-            {
-                Some(existing) => *existing = icon_entry,
-                None => entries.push(icon_entry),
-            }
+    let icon_val = if pkg.is_empty() {
+        format!("@doc.icon({name})")
+    } else {
+        format!("@doc.icon({name}, pkg: {pkg})")
+    };
+
+    match meta_node_id {
+        Some(id) => {
+            doc.set_attribute(id, AttrGroup::Data, "icon", Some(icon_val))
+                .ok()?;
         }
         None => {
-            doc.blocks.insert(
-                0,
-                Block::Element(Element {
-                    sigil: Sigil::named("meta"),
-                    placement: Placement::Block,
-                    value: Some(ElementValue::Group(vec![icon_entry])),
-                    ..Default::default()
-                }),
+            let new_id = doc.alloc_id();
+            let mut new_node = Node::new(
+                new_id,
+                NodeKind::BlockElement {
+                    name: "meta".to_string(),
+                    id_attr: None,
+                    args: Vec::new(),
+                    data: vec![("icon".to_string(), icon_val)],
+                    content: None,
+                },
+                String::new(),
             );
+            new_node.mark_edited();
+            doc.apply_op(EditOp::Insert {
+                parent: None,
+                index: 0,
+                node: new_node,
+            })
+            .ok()?;
+
+            // Insert spacing trivia between @meta and the rest of the body
+            if doc.root_children().len() > 1 {
+                doc.root_children_mut()
+                    .insert(1, ChildItem::Trivia("\n\n".to_string()));
+            } else {
+                doc.root_children_mut()
+                    .insert(1, ChildItem::Trivia("\n".to_string()));
+            }
         }
     }
 
-    Some(tomet_printer::document_to_tm(&doc))
+    Some(export_doc(&doc))
 }
 
 #[cfg(test)]
@@ -117,5 +122,13 @@ mod tests {
                 ("pkg".to_owned(), "tabler".to_owned()),
             ])
         );
+    }
+
+    #[test]
+    fn preserves_existing_comments_and_blank_lines_outside_meta() {
+        let src = "// Leading comment\n@meta{ x: 1 }\n\n\nBody paragraph with *markup*.\n\n// Trailing comment\n";
+        let result = set_note_icon(src, "star", "tabler").unwrap();
+        assert!(result.starts_with("// Leading comment\n@meta{x: 1, icon: @doc.icon(star, pkg: tabler)}\n\n\n"));
+        assert!(result.contains("Body paragraph with *markup*.\n\n// Trailing comment\n"));
     }
 }

@@ -12,6 +12,7 @@ immermemo-vault = { workspace = true }
 
 #= Tomet
 tomet-ast = { workspace = true }
+tomet-edit = { workspace = true }
 tomet-parser = { workspace = true }
 tomet-printer = { workspace = true }
 tomet-stats = { workspace = true }
