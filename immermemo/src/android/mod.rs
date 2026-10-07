@@ -1,7 +1,6 @@
-//! Android entry point, platform keystore, certificate verification,
-//! the startup-splash handoff, and system UI (status bar) visibility.
+//! Android entry point, platform keystore, the startup-splash handoff,
+//! and system UI (status bar) visibility.
 
-pub mod cert;
 pub mod keystore;
 pub mod splash;
 pub mod system_ui;
