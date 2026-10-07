@@ -88,79 +88,79 @@ export component HomeScreen inherits Rectangle {
                 // Section: Active Vault Card
                 // ----------------------------------------------------
                 Card {
-                        HorizontalLayout {
-                            spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
+                    HorizontalLayout {
+                        spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
 
-                            VerticalLayout {
-                                horizontal-stretch: 1;
-                                spacing: 2px * Metrics.ui-scale;
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 2px * Metrics.ui-scale;
 
-                                Text {
-                                    text: @tr("Current Vault");
-                                    font-size: Metrics.font-caption;
-                                    font-weight: 700;
-                                    color: Colors.muted;
-                                    letter-spacing: 0.5px;
-                                }
-
-                                Text {
-                                    text: root.vault-name != "" ? root.vault-name : @tr("Notes");
-                                    font-size: Metrics.font-title;
-                                    font-weight: 700;
-                                    color: Palette.foreground;
-                                }
+                            Text {
+                                text: @tr("Current Vault");
+                                font-size: Metrics.font-caption;
+                                font-weight: 700;
+                                color: Colors.muted;
+                                letter-spacing: 0.5px;
                             }
 
-                            BubbleButton {
-                                icon: TablerIcons.files;
-                                clicked => { root.open-vaults(); }
+                            Text {
+                                text: root.vault-name != "" ? root.vault-name : @tr("Notes");
+                                font-size: Metrics.font-title;
+                                font-weight: 700;
+                                color: Palette.foreground;
                             }
                         }
 
-                        if root.vault-path != "": Text {
-                            text: root.vault-path;
-                            font-size: Metrics.font-sm;
-                            color: Colors.muted;
-                            wrap: word-wrap;
+                        BubbleButton {
+                            icon: TablerIcons.files;
+                            clicked => { root.open-vaults(); }
                         }
+                    }
 
-                        Divider { }
+                    if root.vault-path != "": Text {
+                        text: root.vault-path;
+                        font-size: Metrics.font-sm;
+                        color: Colors.muted;
+                        wrap: word-wrap;
+                    }
 
-                        HorizontalLayout {
-                            spacing: Metrics.spacing-lg;
+                    Divider { }
 
-                            VerticalLayout {
-                                spacing: 2px * Metrics.ui-scale;
-                                Text {
-                                    text: @tr("Notes");
-                                    font-size: Metrics.font-sm;
-                                    color: Colors.muted;
-                                }
+                    HorizontalLayout {
+                        spacing: Metrics.spacing-lg;
 
-                                Text {
-                                    text: root.note-count;
-                                    font-size: Metrics.font-body;
-                                    font-weight: 600;
-                                    color: Palette.foreground;
-                                }
+                        VerticalLayout {
+                            spacing: 2px * Metrics.ui-scale;
+                            Text {
+                                text: @tr("Notes");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
                             }
 
-                            if root.conflict-count > 0: VerticalLayout {
-                                spacing: 2px * Metrics.ui-scale;
-                                Text {
-                                    text: @tr("Conflicts");
-                                    font-size: Metrics.font-sm;
-                                    color: Colors.warning;
-                                }
-
-                                Text {
-                                    text: root.conflict-count;
-                                    font-size: Metrics.font-body;
-                                    font-weight: 600;
-                                    color: Colors.warning;
-                                }
+                            Text {
+                                text: root.note-count;
+                                font-size: Metrics.font-body;
+                                font-weight: 600;
+                                color: Palette.foreground;
                             }
                         }
+
+                        if root.conflict-count > 0: VerticalLayout {
+                            spacing: 2px * Metrics.ui-scale;
+                            Text {
+                                text: @tr("Conflicts");
+                                font-size: Metrics.font-sm;
+                                color: Colors.warning;
+                            }
+
+                            Text {
+                                text: root.conflict-count;
+                                font-size: Metrics.font-body;
+                                font-weight: 600;
+                                color: Colors.warning;
+                            }
+                        }
+                    }
                 }
 
                 // ----------------------------------------------------
@@ -337,138 +337,138 @@ export component HomeScreen inherits Rectangle {
                         content-padding: Metrics.spacing-md + 2px * Metrics.ui-scale;
                         content-spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
 
-                            if !root.remote-configured: HorizontalLayout {
-                                spacing: Metrics.spacing-md;
+                        if !root.remote-configured: HorizontalLayout {
+                            spacing: Metrics.spacing-md;
 
-                                VerticalLayout {
-                                    alignment: center;
-                                    Icon {
-                                        width: Metrics.icon-lg;
-                                        height: Metrics.icon-lg;
-                                        source: TablerIcons.link;
-                                        color: Colors.muted;
-                                    }
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    width: Metrics.icon-lg;
+                                    height: Metrics.icon-lg;
+                                    source: TablerIcons.link;
+                                    color: Colors.muted;
+                                }
+                            }
+
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                spacing: 2px * Metrics.ui-scale;
+
+                                Text {
+                                    text: @tr("No remote configured");
+                                    font-size: Metrics.font-body;
+                                    font-weight: 600;
+                                    color: Palette.foreground;
                                 }
 
-                                VerticalLayout {
-                                    horizontal-stretch: 1;
-                                    spacing: 2px * Metrics.ui-scale;
-
-                                    Text {
-                                        text: @tr("No remote configured");
-                                        font-size: Metrics.font-body;
-                                        font-weight: 600;
-                                        color: Palette.foreground;
-                                    }
-
-                                    Text {
-                                        text: @tr("Set a git remote to enable automatic sync");
-                                        font-size: Metrics.font-sm;
-                                        color: Colors.muted;
-                                        wrap: word-wrap;
-                                    }
+                                Text {
+                                    text: @tr("Set a git remote to enable automatic sync");
+                                    font-size: Metrics.font-sm;
+                                    color: Colors.muted;
+                                    wrap: word-wrap;
                                 }
+                            }
 
-                                VerticalLayout {
-                                    alignment: center;
-                                    Rectangle {
-                                        height: Metrics.bubble-chip-height;
-                                        width: 60px * Metrics.ui-scale;
-                                        border-radius: Metrics.radius-sm;
-                                        background: Palette.accent-background.with-alpha(0.12);
+                            VerticalLayout {
+                                alignment: center;
+                                Rectangle {
+                                    height: Metrics.bubble-chip-height;
+                                    width: 60px * Metrics.ui-scale;
+                                    border-radius: Metrics.radius-sm;
+                                    background: Palette.accent-background.with-alpha(0.12);
 
-                                        TouchArea {
-                                            clicked => { root.open-settings(); }
-                                        }
+                                    TouchArea {
+                                        clicked => { root.open-settings(); }
+                                    }
 
-                                        HorizontalLayout {
-                                            alignment: center;
-                                            Text {
-                                                text: @tr("Settings");
-                                                font-size: Metrics.font-sm;
-                                                font-weight: 600;
-                                                color: Palette.accent-background;
-                                                vertical-alignment: center;
-                                            }
+                                    HorizontalLayout {
+                                        alignment: center;
+                                        Text {
+                                            text: @tr("Settings");
+                                            font-size: Metrics.font-sm;
+                                            font-weight: 600;
+                                            color: Palette.accent-background;
+                                            vertical-alignment: center;
                                         }
                                     }
                                 }
                             }
+                        }
 
-                            if root.remote-configured: HorizontalLayout {
-                                spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
+                        if root.remote-configured: HorizontalLayout {
+                            spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
 
-                                VerticalLayout {
-                                    alignment: center;
-                                    Icon {
-                                        width: Metrics.icon-md;
-                                        height: Metrics.icon-md;
-                                        source: root.syncing ? TablerIcons.refresh : TablerIcons.check;
-                                        color: root.syncing ? Palette.accent-background : Colors.success;
-                                    }
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    width: Metrics.icon-md;
+                                    height: Metrics.icon-md;
+                                    source: root.syncing ? TablerIcons.refresh : TablerIcons.check;
+                                    color: root.syncing ? Palette.accent-background : Colors.success;
+                                }
+                            }
+
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                spacing: 2px * Metrics.ui-scale;
+
+                                Text {
+                                    text: root.syncing ? @tr("Syncing...") : @tr("Up to date");
+                                    font-size: Metrics.font-body;
+                                    font-weight: 600;
+                                    color: root.syncing ? Palette.accent-background : Palette.foreground;
                                 }
 
-                                VerticalLayout {
-                                    horizontal-stretch: 1;
-                                    spacing: 2px * Metrics.ui-scale;
-
-                                    Text {
-                                        text: root.syncing ? @tr("Syncing...") : @tr("Up to date");
-                                        font-size: Metrics.font-body;
-                                        font-weight: 600;
-                                        color: root.syncing ? Palette.accent-background : Palette.foreground;
-                                    }
-
-                                    Text {
-                                        text: root.syncing
-                                            ? @tr("Checking for changes with the remote")
-                                            : (root.last-synced-at != "" ? @tr("Last synced: {}", root.last-synced-at) : (root.status != "" ? root.status : @tr("Local and remote are in sync")));
-                                        font-size: Metrics.font-sm;
-                                        color: Colors.muted;
-                                        wrap: word-wrap;
-                                    }
+                                Text {
+                                    text: root.syncing
+                                        ? @tr("Checking for changes with the remote")
+                                        : (root.last-synced-at != "" ? @tr("Last synced: {}", root.last-synced-at) : (root.status != "" ? root.status : @tr("Local and remote are in sync")));
+                                    font-size: Metrics.font-sm;
+                                    color: Colors.muted;
+                                    wrap: word-wrap;
                                 }
+                            }
 
-                                VerticalLayout {
-                                    alignment: center;
-                                    Rectangle {
-                                        height: Metrics.bubble-chip-height;
-                                        width: 80px * Metrics.ui-scale;
-                                        border-radius: Metrics.radius-sm;
-                                        background: Palette.foreground.with-alpha(0.06);
+                            VerticalLayout {
+                                alignment: center;
+                                Rectangle {
+                                    height: Metrics.bubble-chip-height;
+                                    width: 80px * Metrics.ui-scale;
+                                    border-radius: Metrics.radius-sm;
+                                    background: Palette.foreground.with-alpha(0.06);
 
-                                        TouchArea {
-                                            enabled: !root.syncing;
-                                            clicked => { root.sync(); }
+                                    TouchArea {
+                                        enabled: !root.syncing;
+                                        clicked => { root.sync(); }
+                                    }
+
+                                    HorizontalLayout {
+                                        alignment: center;
+                                        spacing: Metrics.spacing-xs;
+
+                                        VerticalLayout {
+                                            alignment: center;
+                                            Icon {
+                                                width: Metrics.icon-sm;
+                                                height: Metrics.icon-sm;
+                                                source: TablerIcons.refresh;
+                                                color: root.syncing ? Colors.muted : Palette.foreground;
+                                            }
                                         }
 
-                                        HorizontalLayout {
-                                            alignment: center;
-                                            spacing: Metrics.spacing-xs;
-
-                                            VerticalLayout {
-                                                alignment: center;
-                                                Icon {
-                                                    width: Metrics.icon-sm;
-                                                    height: Metrics.icon-sm;
-                                                    source: TablerIcons.refresh;
-                                                    color: root.syncing ? Colors.muted : Palette.foreground;
-                                                }
-                                            }
-
-                                            Text {
-                                                text: @tr("Sync");
-                                                font-size: Metrics.font-sm;
-                                                font-weight: 600;
-                                                color: root.syncing ? Colors.muted : Palette.foreground;
-                                                vertical-alignment: center;
-                                            }
+                                        Text {
+                                            text: @tr("Sync");
+                                            font-size: Metrics.font-sm;
+                                            font-weight: 600;
+                                            color: root.syncing ? Colors.muted : Palette.foreground;
+                                            vertical-alignment: center;
                                         }
                                     }
                                 }
                             }
                         }
                     }
+                }
                 // ----------------------------------------------------
                 // Section: Unresolved Conflicts
                 // ----------------------------------------------------

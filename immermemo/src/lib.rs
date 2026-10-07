@@ -277,8 +277,7 @@ pub fn run(
                                 // Drop any cached history-neighbor preview
                                 // for this note -- it's now stale (see
                                 // session.rs's `history_preview_items`).
-                                s.history_preview_cache
-                                    .remove(&rel.display().to_string());
+                                s.history_preview_cache.remove(&rel.display().to_string());
                             }
                             if app.get_status_is_error()
                                 && app.get_status().starts_with("Save failed")
@@ -924,11 +923,11 @@ mod tests {
         let vault_dir = tmp.path().join("vault");
         std::fs::create_dir_all(&vault_dir).unwrap();
         let note_path = vault_dir.join("test.tmt");
-        let base_doc = tomet_parser::parse_document("Original.\n").unwrap();
-        let local_doc = tomet_parser::parse_document("Mine.\n").unwrap();
-        let remote_doc = tomet_parser::parse_document("Theirs.\n").unwrap();
+        let base_doc = tomet::parser::parse_document("Original.\n").unwrap();
+        let local_doc = tomet::parser::parse_document("Mine.\n").unwrap();
+        let remote_doc = tomet::parser::parse_document("Theirs.\n").unwrap();
         let merged_doc = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc).document;
-        let conflicted_text = tomet_printer::document_to_tm(&merged_doc);
+        let conflicted_text = tomet::printer::document_to_tm(&merged_doc);
         std::fs::write(&note_path, &conflicted_text).unwrap();
 
         let app_data = AppData::new(tmp.path().join("data"));
@@ -956,7 +955,7 @@ mod tests {
                 note_history_revisions: Vec::new(),
             },
             rename_target: None,
-        icon_picker_target: None,
+            icon_picker_target: None,
             delete_target: None,
             delete_vault_target: None,
             pending_auto_sync: false,
@@ -1034,7 +1033,11 @@ mod tests {
         vault_dir: &Path,
     ) {
         let iconed = vault_dir.join("starred.tmt");
-        std::fs::write(&iconed, "@meta{ icon: @doc.icon(\"star\") }\n\nStarred note.\n").unwrap();
+        std::fs::write(
+            &iconed,
+            "@meta{ icon: @doc.icon(\"star\") }\n\nStarred note.\n",
+        )
+        .unwrap();
         session.borrow_mut().search_query = String::new();
         refresh_list(app, session);
 
@@ -1087,7 +1090,10 @@ mod tests {
 
         filter_icon_picker(app, "star");
         let results = app.get_icon_picker_results();
-        assert!(results.row_count() > 0, "\"star\" should match at least tabler's own star icon");
+        assert!(
+            results.row_count() > 0,
+            "\"star\" should match at least tabler's own star icon"
+        );
         let star = (0..results.row_count())
             .map(|i| results.row_data(i).unwrap())
             .find(|r| r.name == "star")
@@ -1124,16 +1130,16 @@ mod tests {
     ) -> PathBuf {
         let multi_note_path = vault_dir.join("multi_conflict.tmt");
         let base_doc =
-            tomet_parser::parse_document("Alpha base.\n\nMiddle untouched.\n\nBeta base.\n")
+            tomet::parser::parse_document("Alpha base.\n\nMiddle untouched.\n\nBeta base.\n")
                 .unwrap();
         let local_doc =
-            tomet_parser::parse_document("Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n")
+            tomet::parser::parse_document("Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n")
                 .unwrap();
         let remote_doc =
-            tomet_parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n")
+            tomet::parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n")
                 .unwrap();
         let merged_doc = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc).document;
-        let conflicted_text = tomet_printer::document_to_tm(&merged_doc);
+        let conflicted_text = tomet::printer::document_to_tm(&merged_doc);
         std::fs::write(&multi_note_path, &conflicted_text).unwrap();
 
         let new_idx = session.borrow().notes.len();
@@ -1206,16 +1212,16 @@ mod tests {
     ) {
         let note_path = vault_dir.join("editor_quick_resolve.tmt");
         let base_doc =
-            tomet_parser::parse_document("Alpha base.\n\nMiddle untouched.\n\nBeta base.\n")
+            tomet::parser::parse_document("Alpha base.\n\nMiddle untouched.\n\nBeta base.\n")
                 .unwrap();
         let local_doc =
-            tomet_parser::parse_document("Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n")
+            tomet::parser::parse_document("Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n")
                 .unwrap();
         let remote_doc =
-            tomet_parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n")
+            tomet::parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n")
                 .unwrap();
         let merged_doc = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc).document;
-        let conflicted_text = tomet_printer::document_to_tm(&merged_doc);
+        let conflicted_text = tomet::printer::document_to_tm(&merged_doc);
         std::fs::write(&note_path, &conflicted_text).unwrap();
 
         let new_idx = session.borrow().notes.len();

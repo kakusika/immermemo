@@ -1,7 +1,11 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origami-icons/icons.slint";
-import { BubbleButton, TopBar, AppScrollView } from "@origami-mobile/widgets.slint";
+import {
+    BubbleButton,
+    TopBar,
+    AppScrollView,
+} from "@origami-mobile/widgets.slint";
 import { SheetDragArea } from "../components.slint";
 
 export component VaultHistorySheet inherits Rectangle {
@@ -78,96 +82,96 @@ export component VaultHistorySheet inherits Rectangle {
         sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
 
         VerticalLayout {
-        y: root.sheet-y-offset;
-        width: 100%;
-        height: 100%;
-        padding: 0px;
-        spacing: 0px;
+            y: root.sheet-y-offset;
+            width: 100%;
+            height: 100%;
+            padding: 0px;
+            spacing: 0px;
 
-        Rectangle {
-            height: 1px;
-            background: Colors.separator;
-        }
+            Rectangle {
+                height: 1px;
+                background: Colors.separator;
+            }
 
-        if root.commits.length == 0: Rectangle {
-            vertical-stretch: 1;
-            VerticalLayout {
-                alignment: center;
-                spacing: 8px;
-                padding: 24px;
+            if root.commits.length == 0: Rectangle {
+                vertical-stretch: 1;
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 8px;
+                    padding: 24px;
 
-                Text {
-                    text: @tr("No commit history yet");
-                    font-size: 16px;
-                    font-weight: 600;
-                    color: Palette.foreground;
-                    horizontal-alignment: center;
-                }
+                    Text {
+                        text: @tr("No commit history yet");
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: Palette.foreground;
+                        horizontal-alignment: center;
+                    }
 
-                Text {
-                    text: @tr("Creating or syncing notes will record the vault's history here.");
-                    font-size: 13px;
-                    color: Colors.muted;
-                    horizontal-alignment: center;
-                    wrap: word-wrap;
+                    Text {
+                        text: @tr("Creating or syncing notes will record the vault's history here.");
+                        font-size: 13px;
+                        color: Colors.muted;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
+                    }
                 }
             }
-        }
 
-        if root.commits.length > 0: AppScrollView {
-            vertical-stretch: 1;
-            content-y <=> root.history-content-y;
+            if root.commits.length > 0: AppScrollView {
+                vertical-stretch: 1;
+                content-y <=> root.history-content-y;
 
-            VerticalLayout {
-                padding-left: 4px;
-                padding-right: 4px;
-                padding-top: 6px;
-                padding-bottom: max(16px, root.inset-bottom);
-                spacing: 4px;
+                VerticalLayout {
+                    padding-left: 4px;
+                    padding-right: 4px;
+                    padding-top: 6px;
+                    padding-bottom: max(16px, root.inset-bottom);
+                    spacing: 4px;
 
-                for commit[i] in root.commits: Rectangle {
-                    height: 48px;
-                    border-radius: 8px;
-                    background: Colors.surface-elevated;
+                    for commit[i] in root.commits: Rectangle {
+                        height: 48px;
+                        border-radius: 8px;
+                        background: Colors.surface-elevated;
 
-                    HorizontalLayout {
-                        padding-left: 10px;
-                        padding-right: 10px;
-                        spacing: 8px;
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+                            spacing: 8px;
 
-                        VerticalLayout {
-                            alignment: center;
-                            Icon {
-                                source: TablerIcons.check;
-                                color: Colors.success;
-                                width: 16px;
-                                height: 16px;
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    source: TablerIcons.check;
+                                    color: Colors.success;
+                                    width: 16px;
+                                    height: 16px;
+                                }
                             }
-                        }
 
-                        // Time is what users scan for here, so it leads;
+                            // Time is what users scan for here, so it leads;
                         // the commit hash/message is secondary detail.
                         Text {
-                            text: root.dates[i];
-                            font-size: 13px;
-                            font-weight: 600;
-                            color: Palette.foreground;
-                            vertical-alignment: center;
-                        }
+                                text: root.dates[i];
+                                font-size: 13px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                                vertical-alignment: center;
+                            }
 
-                        Text {
-                            horizontal-stretch: 1;
-                            text: commit;
-                            font-size: 11px;
-                            color: Colors.muted;
-                            horizontal-alignment: right;
-                            vertical-alignment: center;
-                            overflow: elide;
+                            Text {
+                                horizontal-stretch: 1;
+                                text: commit;
+                                font-size: 11px;
+                                color: Colors.muted;
+                                horizontal-alignment: right;
+                                vertical-alignment: center;
+                                overflow: elide;
+                            }
                         }
                     }
                 }
             }
-        }
         }
     }
 }

@@ -194,7 +194,7 @@ fn main() {
         display: "2026-09-27".into(),
         note_index: 1,
         has_conflict: true,
-                icon_image: slint::Image::default(),
+        icon_image: slint::Image::default(),
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(
@@ -223,7 +223,7 @@ fn main() {
         display: "09-27".into(),
         note_index: 1,
         has_conflict: true,
-                icon_image: slint::Image::default(),
+        icon_image: slint::Image::default(),
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(
@@ -253,7 +253,7 @@ fn main() {
         display: "2026-09-27".into(),
         note_index: 1,
         has_conflict: true,
-                icon_image: slint::Image::default(),
+        icon_image: slint::Image::default(),
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(

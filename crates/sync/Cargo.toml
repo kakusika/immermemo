@@ -9,9 +9,7 @@ immermemo-merge = { workspace = true }
 immermemo-vault = { workspace = true }
 
 #= Tomet
-tomet-ast = { workspace = true }
-tomet-parser = { workspace = true }
-tomet-printer = { workspace = true }
+tomet = { workspace = true, features = ["parser", "printer"] }
 
 #= Crates.io
 anyhow = { workspace = true }

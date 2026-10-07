@@ -5,10 +5,10 @@
 //! Run with: `cargo run -p immermemo-merge --example demo`
 
 use immermemo_merge::{ConflictResolution, merge, resolve};
-use tomet_parser::parse_document;
-use tomet_printer::document_to_tm;
+use tomet::parser::parse_document;
+use tomet::printer::document_to_tm;
 
-fn doc(src: &str) -> tomet_ast::Document {
+fn doc(src: &str) -> tomet::ast::Document {
     parse_document(src).unwrap()
 }
 

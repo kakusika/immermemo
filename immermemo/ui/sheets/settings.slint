@@ -185,7 +185,7 @@ export component SettingsSheet inherits Rectangle {
                 vertical-stretch: 1;
                 content-y <=> root.scroll-content-y;
 
-            // --------------------------------------------------------
+                // --------------------------------------------------------
             // List: Interface / Other (Sync & Remote, Vaults) / Info (About)
             // --------------------------------------------------------
             if root.page == 0: VerticalLayout {
@@ -194,73 +194,73 @@ export component SettingsSheet inherits Rectangle {
                 // leaving it below the content -- see home.slint's content
                 // VerticalLayout for the full explanation.
                 alignment: start;
-                padding-left: Metrics.gutter;
-                padding-right: Metrics.gutter;
-                padding-top: 16px;
-                padding-bottom: root.inset-bottom + 24px;
-                spacing: 24px;
-
-                Card {
-                    content-padding: Metrics.spacing-xs;
-                    content-spacing: 0px;
-
-                    CategoryRow {
-                        icon: TablerIcons.settings;
-                        label-text: @tr("Interface");
-                        clicked => { root.page = 1; }
-                    }
-                }
-
-                Section {
-                    title: @tr("Other");
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
+                    spacing: 24px;
 
                     Card {
                         content-padding: Metrics.spacing-xs;
                         content-spacing: 0px;
 
                         CategoryRow {
-                            icon: TablerIcons.cloud;
-                            label-text: @tr("Sync & Remote");
-                            clicked => { root.page = 2; }
+                            icon: TablerIcons.settings;
+                            label-text: @tr("Interface");
+                            clicked => { root.page = 1; }
                         }
+                    }
 
-                        Divider { }
+                    Section {
+                        title: @tr("Other");
 
-                        CategoryRow {
-                            icon: TablerIcons.files;
-                            label-text: @tr("Vaults");
-                            clicked => { root.page = 3; }
+                        Card {
+                            content-padding: Metrics.spacing-xs;
+                            content-spacing: 0px;
+
+                            CategoryRow {
+                                icon: TablerIcons.cloud;
+                                label-text: @tr("Sync & Remote");
+                                clicked => { root.page = 2; }
+                            }
+
+                            Divider { }
+
+                            CategoryRow {
+                                icon: TablerIcons.files;
+                                label-text: @tr("Vaults");
+                                clicked => { root.page = 3; }
+                            }
+                        }
+                    }
+
+                    Section {
+                        title: @tr("Info");
+
+                        Card {
+                            content-padding: Metrics.spacing-xs;
+                            content-spacing: 0px;
+
+                            CategoryRow {
+                                icon: TablerIcons.info-circle;
+                                label-text: @tr("About");
+                                clicked => { root.page = 4; }
+                            }
                         }
                     }
                 }
 
-                Section {
-                    title: @tr("Info");
-
-                    Card {
-                        content-padding: Metrics.spacing-xs;
-                        content-spacing: 0px;
-
-                        CategoryRow {
-                            icon: TablerIcons.info-circle;
-                            label-text: @tr("About");
-                            clicked => { root.page = 4; }
-                        }
-                    }
-                }
-            }
-
-            // --------------------------------------------------------
+                // --------------------------------------------------------
             // Interface (theme, font size, UI scale)
             // --------------------------------------------------------
             if root.page == 1: VerticalLayout {
-                alignment: start;
-                padding-left: Metrics.gutter;
-                padding-right: Metrics.gutter;
-                padding-top: 16px;
-                padding-bottom: root.inset-bottom + 24px;
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
 
-                Card {
+                    Card {
                         content-spacing: Metrics.spacing-lg;
 
                         // Theme Selector
@@ -354,20 +354,20 @@ export component SettingsSheet inherits Rectangle {
                                 }
                             }
                         }
+                    }
                 }
-            }
 
-            // --------------------------------------------------------
+                // --------------------------------------------------------
             // Sync & Remote
             // --------------------------------------------------------
             if root.page == 2: VerticalLayout {
-                alignment: start;
-                padding-left: Metrics.gutter;
-                padding-right: Metrics.gutter;
-                padding-top: 16px;
-                padding-bottom: root.inset-bottom + 24px;
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
 
-                Card {
+                    Card {
                         content-spacing: Metrics.spacing-md;
 
                         VerticalLayout {
@@ -424,20 +424,20 @@ export component SettingsSheet inherits Rectangle {
                                 clicked => { root.save-remote(root.url-draft, root.token-draft); }
                             }
                         }
+                    }
                 }
-            }
 
-            // --------------------------------------------------------
+                // --------------------------------------------------------
             // Vaults
             // --------------------------------------------------------
             if root.page == 3: VerticalLayout {
-                alignment: start;
-                padding-left: Metrics.gutter;
-                padding-right: Metrics.gutter;
-                padding-top: 16px;
-                padding-bottom: root.inset-bottom + 24px;
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
 
-                Card {
+                    Card {
                         content-spacing: Metrics.spacing-sm;
 
                         HorizontalLayout {
@@ -472,20 +472,20 @@ export component SettingsSheet inherits Rectangle {
                             tint: Palette.accent-background;
                             clicked => { root.open-vaults(); }
                         }
+                    }
                 }
-            }
 
-            // --------------------------------------------------------
+                // --------------------------------------------------------
             // About
             // --------------------------------------------------------
             if root.page == 4: VerticalLayout {
-                alignment: start;
-                padding-left: Metrics.gutter;
-                padding-right: Metrics.gutter;
-                padding-top: 16px;
-                padding-bottom: root.inset-bottom + 24px;
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
 
-                Card {
+                    Card {
                         content-spacing: Metrics.spacing-sm;
 
                         Text {
@@ -512,9 +512,9 @@ export component SettingsSheet inherits Rectangle {
                             color: Colors.muted;
                             wrap: word-wrap;
                         }
+                    }
                 }
             }
         }
     }
-}
 }

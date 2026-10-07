@@ -3,7 +3,7 @@
 //! giving up and embedding a marker (see the crate's module doc for the
 //! full algorithm).
 
-use tomet_ast::{Block, Document, Element, ElementValue, Entry, Inline, Paragraph, Section, Value};
+use tomet::ast::{Block, Document, Element, ElementValue, Entry, Inline, Paragraph, Section, Value};
 
 use crate::diff3;
 use crate::markers::{coalesce_text, conflict_block, conflict_inline, push_text, value_conflict};

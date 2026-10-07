@@ -35,7 +35,10 @@ sys-locale = { workspace = true }
 
 # Linux Desktop: winit on Wayland + Skia.
 [target.'cfg(target_os = "linux")'.dependencies]
-slint = { workspace = true, features = ["backend-winit-wayland", "renderer-skia"] }
+slint = { workspace = true, features = [
+  "backend-winit-wayland",
+  "renderer-skia",
+] }
 
 # iOS: winit + Skia (Metal backend on iOS).
 [target.'cfg(target_os = "ios")'.dependencies]
@@ -73,10 +76,8 @@ slint-build = { workspace = true }
 [dev-dependencies]
 #= Tomet
 # Only used to build `.tmt` fixtures in `#[cfg(test)]` -- production code
-# goes through `immermemo-editor` instead (see its own `tomet-parser`/
-# `tomet-printer` dependency).
-tomet-parser = { workspace = true }
-tomet-printer = { workspace = true }
+# goes through `immermemo-editor` instead (see its own `tomet` dependency).
+tomet = { workspace = true, features = ["parser", "printer"] }
 
 #= Crates.io
 tempfile = "3"

@@ -727,7 +727,10 @@ mod tests {
         index.reconcile_filesystem(vault.path()).unwrap();
 
         let bodies = index.bodies().unwrap();
-        assert_eq!(bodies, vec![(PathBuf::from("a.tmt"), "Alpha content".to_owned())]);
+        assert_eq!(
+            bodies,
+            vec![(PathBuf::from("a.tmt"), "Alpha content".to_owned())]
+        );
     }
 
     #[test]

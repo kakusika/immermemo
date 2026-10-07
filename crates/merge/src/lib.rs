@@ -100,8 +100,8 @@ pub use resolve::{ConflictResolution, resolve, resolve_all, resolve_single};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tomet_ast::{Block, Document};
-    use tomet_parser::parse_document;
+    use tomet::ast::{Block, Document};
+    use tomet::parser::parse_document;
 
     fn doc(src: &str) -> Document {
         parse_document(src).unwrap_or_else(|e| panic!("failed to parse {src:?}: {e}"))
@@ -269,10 +269,7 @@ mod tests {
         let result = merge(&base, &local, &remote);
 
         assert!(!result.clean);
-        assert_eq!(
-            result.document,
-            doc("@meta{ x: @conflict(a: 2, b: 3) }\n")
-        );
+        assert_eq!(result.document, doc("@meta{ x: @conflict(a: 2, b: 3) }\n"));
     }
 
     #[test]
@@ -331,14 +328,14 @@ mod tests {
         let resolved_first = resolve_single(&merged.document, 0, ConflictResolution::A);
         let remaining = find_conflicts(&resolved_first);
         assert_eq!(remaining.len(), 1);
-        let text_after_first = tomet_printer::document_to_tm(&resolved_first);
+        let text_after_first = tomet::printer::document_to_tm(&resolved_first);
         assert!(text_after_first.contains("Alpha local."));
         assert!(!text_after_first.contains("Alpha remote."));
 
         // Resolve remaining conflict with Both
         let resolved_all = resolve_single(&resolved_first, 0, ConflictResolution::Both);
         assert!(find_conflicts(&resolved_all).is_empty());
-        let final_text = tomet_printer::document_to_tm(&resolved_all);
+        let final_text = tomet::printer::document_to_tm(&resolved_all);
         assert!(final_text.contains("Alpha local."));
         assert!(final_text.contains("Keep."));
         assert!(final_text.contains("Beta local remote."));

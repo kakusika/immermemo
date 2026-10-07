@@ -2,7 +2,7 @@
 //! them -- for showing the user what's in conflict (the resolution UI)
 //! and for `immermemo-sync`'s post-sync conflict report.
 
-use tomet_ast::{Block, Document, ElementValue, Entry, Inline, Value};
+use tomet::ast::{Block, Document, ElementValue, Entry, Inline, Value};
 
 use crate::markers::{
     blocks_to_text, conflict_block_sides, conflict_inline_sides, inline_is_conflict,

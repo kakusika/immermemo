@@ -34,7 +34,7 @@ pub fn resolve_active_conflict(
         Ok(t) => t,
         Err(e) => return Some(Err(format!("Could not read note: {e}"))),
     };
-    let doc = match tomet_parser::parse_document(&current_text) {
+    let doc = match tomet::parser::parse_document(&current_text) {
         Ok(d) => d,
         Err(e) => {
             return Some(Err(format!(
@@ -50,7 +50,7 @@ pub fn resolve_active_conflict(
     let (resolved_text, _resolved_doc) = resolve_all_lossless(&current_text, &resolution)
         .unwrap_or_else(|| {
             let resolved_doc = immermemo_merge::resolve_all(&doc, resolution);
-            let resolved_text = tomet_printer::document_to_tm(&resolved_doc);
+            let resolved_text = tomet::printer::document_to_tm(&resolved_doc);
             (resolved_text, resolved_doc)
         });
 
@@ -94,7 +94,7 @@ pub fn resolve_conflict_step(
         Ok(t) => t,
         Err(e) => return Some(Err(format!("Could not read note: {e}"))),
     };
-    let doc = match tomet_parser::parse_document(&current_text) {
+    let doc = match tomet::parser::parse_document(&current_text) {
         Ok(d) => d,
         Err(e) => {
             return Some(Err(format!(
@@ -117,7 +117,7 @@ pub fn resolve_conflict_step(
     let (resolved_text, resolved_doc) =
         resolve_single_lossless(&current_text, target_idx, &resolution).unwrap_or_else(|| {
             let resolved_doc = immermemo_merge::resolve_single(&doc, target_idx, resolution);
-            let resolved_text = tomet_printer::document_to_tm(&resolved_doc);
+            let resolved_text = tomet::printer::document_to_tm(&resolved_doc);
             (resolved_text, resolved_doc)
         });
 
@@ -191,7 +191,7 @@ pub fn conflict_sheet_state(
     let Ok(current_text) = std::fs::read_to_string(&path) else {
         return ConflictSheetState::NoActiveNote;
     };
-    let Ok(doc) = tomet_parser::parse_document(&current_text) else {
+    let Ok(doc) = tomet::parser::parse_document(&current_text) else {
         return ConflictSheetState::NoActiveNote;
     };
     let items = immermemo_merge::find_conflicts(&doc);
@@ -250,8 +250,8 @@ fn resolve_single_lossless(
     src: &str,
     target_idx: usize,
     resolution: &ConflictResolution,
-) -> Option<(String, tomet_ast::Document)> {
-    use tomet_edit::{export_doc, import_source};
+) -> Option<(String, tomet::ast::Document)> {
+    use tomet::edit::{export_doc, import_source};
 
     let mut doc = import_source(src);
     let mut current_conflict_idx = 0;
@@ -267,7 +267,7 @@ fn resolve_single_lossless(
             continue;
         }
 
-        let Ok(parsed) = tomet_parser::parse_document(&node.raw) else {
+        let Ok(parsed) = tomet::parser::parse_document(&node.raw) else {
             continue;
         };
         let node_conflicts = immermemo_merge::find_conflicts(&parsed);
@@ -281,7 +281,7 @@ fn resolve_single_lossless(
             let local_idx = target_idx - current_conflict_idx;
             let resolved_ast =
                 immermemo_merge::resolve_single(&parsed, local_idx, resolution.clone());
-            let mut new_text = tomet_printer::document_to_tm(&resolved_ast);
+            let mut new_text = tomet::printer::document_to_tm(&resolved_ast);
 
             if node.raw.ends_with('\n') && !new_text.ends_with('\n') {
                 new_text.push('\n');
@@ -290,7 +290,7 @@ fn resolve_single_lossless(
             }
 
             let node_mut = doc.get_mut(node_id).unwrap();
-            node_mut.kind = tomet_edit::NodeKind::Paragraph {
+            node_mut.kind = tomet::edit::NodeKind::Paragraph {
                 text: new_text.clone(),
             };
             node_mut.raw = new_text.clone();
@@ -307,15 +307,15 @@ fn resolve_single_lossless(
     }
 
     let resolved_text = export_doc(&doc);
-    let resolved_doc = tomet_parser::parse_document(&resolved_text).ok()?;
+    let resolved_doc = tomet::parser::parse_document(&resolved_text).ok()?;
     Some((resolved_text, resolved_doc))
 }
 
 fn resolve_all_lossless(
     src: &str,
     resolution: &ConflictResolution,
-) -> Option<(String, tomet_ast::Document)> {
-    use tomet_edit::{export_doc, import_source};
+) -> Option<(String, tomet::ast::Document)> {
+    use tomet::edit::{export_doc, import_source};
 
     let mut doc = import_source(src);
     let node_ids = collect_leaf_node_ids(&doc);
@@ -329,7 +329,7 @@ fn resolve_all_lossless(
             continue;
         }
 
-        let Ok(parsed) = tomet_parser::parse_document(&node.raw) else {
+        let Ok(parsed) = tomet::parser::parse_document(&node.raw) else {
             continue;
         };
         if immermemo_merge::find_conflicts(&parsed).is_empty() {
@@ -337,7 +337,7 @@ fn resolve_all_lossless(
         }
 
         let resolved_ast = immermemo_merge::resolve_all(&parsed, resolution.clone());
-        let mut new_text = tomet_printer::document_to_tm(&resolved_ast);
+        let mut new_text = tomet::printer::document_to_tm(&resolved_ast);
         if node.raw.ends_with('\n') && !new_text.ends_with('\n') {
             new_text.push('\n');
         } else if !node.raw.ends_with('\n') && new_text.ends_with('\n') {
@@ -345,7 +345,7 @@ fn resolve_all_lossless(
         }
 
         let node_mut = doc.get_mut(node_id).unwrap();
-        node_mut.kind = tomet_edit::NodeKind::Paragraph {
+        node_mut.kind = tomet::edit::NodeKind::Paragraph {
             text: new_text.clone(),
         };
         node_mut.raw = new_text.clone();
@@ -358,11 +358,11 @@ fn resolve_all_lossless(
     }
 
     let resolved_text = export_doc(&doc);
-    let resolved_doc = tomet_parser::parse_document(&resolved_text).ok()?;
+    let resolved_doc = tomet::parser::parse_document(&resolved_text).ok()?;
     Some((resolved_text, resolved_doc))
 }
 
-fn collect_leaf_node_ids(doc: &tomet_edit::EditDoc) -> Vec<tomet_edit::NodeId> {
+fn collect_leaf_node_ids(doc: &tomet::edit::EditDoc) -> Vec<tomet::edit::NodeId> {
     let mut out = Vec::new();
     for item in doc.root_children() {
         if let Some(id) = item.as_node_id() {
@@ -373,17 +373,17 @@ fn collect_leaf_node_ids(doc: &tomet_edit::EditDoc) -> Vec<tomet_edit::NodeId> {
 }
 
 fn collect_nodes_recursive(
-    doc: &tomet_edit::EditDoc,
-    id: tomet_edit::NodeId,
-    out: &mut Vec<tomet_edit::NodeId>,
+    doc: &tomet::edit::EditDoc,
+    id: tomet::edit::NodeId,
+    out: &mut Vec<tomet::edit::NodeId>,
 ) {
     let Some(node) = doc.get(id) else {
         return;
     };
     match &node.kind {
-        tomet_edit::NodeKind::Section { children, .. }
-        | tomet_edit::NodeKind::List { children }
-        | tomet_edit::NodeKind::ListItem { children, .. } => {
+        tomet::edit::NodeKind::Section { children, .. }
+        | tomet::edit::NodeKind::List { children }
+        | tomet::edit::NodeKind::ListItem { children, .. } => {
             for child in children {
                 if let Some(cid) = child.as_node_id() {
                     collect_nodes_recursive(doc, cid, out);
@@ -561,8 +561,7 @@ mod tests {
     #[test]
     fn resolve_single_preserves_comments_and_surrounding_layout() {
         let src = "// Top comment\n\n\nFirst paragraph.\n\n@conflict(\n  a: [ Mine. ]\n  b: [ Theirs. ]\n)\n\n\n// Bottom comment\n";
-        let (resolved_text, doc) =
-            resolve_single_lossless(src, 0, &ConflictResolution::A).unwrap();
+        let (resolved_text, doc) = resolve_single_lossless(src, 0, &ConflictResolution::A).unwrap();
 
         assert!(resolved_text.starts_with("// Top comment\n\n\nFirst paragraph.\n\n"));
         assert!(resolved_text.contains("Mine."));
@@ -576,8 +575,7 @@ mod tests {
     #[test]
     fn resolve_all_preserves_comments_and_surrounding_layout() {
         let src = "// Top comment\n\n\nParagraph 1.\n\n@conflict(\n  a: [ A1. ]\n  b: [ B1. ]\n)\n\nMiddle text.\n\n@conflict(\n  a: [ A2. ]\n  b: [ B2. ]\n)\n\n\n// Bottom comment\n";
-        let (resolved_text, doc) =
-            resolve_all_lossless(src, &ConflictResolution::B).unwrap();
+        let (resolved_text, doc) = resolve_all_lossless(src, &ConflictResolution::B).unwrap();
 
         assert!(resolved_text.starts_with("// Top comment\n\n\nParagraph 1.\n\n"));
         assert!(resolved_text.contains("B1."));

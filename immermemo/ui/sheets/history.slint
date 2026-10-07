@@ -1,7 +1,11 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origami-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origami-icons/icons.slint";
-import { BubbleButton, TopBar, AppScrollView } from "@origami-mobile/widgets.slint";
+import {
+    BubbleButton,
+    TopBar,
+    AppScrollView,
+} from "@origami-mobile/widgets.slint";
 import { SheetDragArea } from "../components.slint";
 
 export component HistorySheet inherits Rectangle {
@@ -108,269 +112,89 @@ export component HistorySheet inherits Rectangle {
         sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
 
         VerticalLayout {
-        y: root.sheet-y-offset;
-        width: 100%;
-        height: 100%;
-        padding: 0px;
-        spacing: 0px;
+            y: root.sheet-y-offset;
+            width: 100%;
+            height: 100%;
+            padding: 0px;
+            spacing: 0px;
 
-        Rectangle {
-            height: 1px;
-            background: Colors.separator;
-        }
+            Rectangle {
+                height: 1px;
+                background: Colors.separator;
+            }
 
-        // Empty state
+            // Empty state
         if root.commits.length == 0: Rectangle {
-            vertical-stretch: 1;
-            VerticalLayout {
-                alignment: center;
-                spacing: 8px;
-                padding: 24px;
-
-                Text {
-                    text: @tr("This note has no history yet");
-                    font-size: 16px;
-                    font-weight: 600;
-                    color: Palette.foreground;
-                    horizontal-alignment: center;
-                }
-
-                Text {
-                    text: @tr("Saving or syncing this note will record past versions here.");
-                    font-size: 13px;
-                    color: Colors.muted;
-                    horizontal-alignment: center;
-                    wrap: word-wrap;
-                }
-            }
-        }
-
-        // Mobile portrait mode: Commit list view
-        if root.commits.length > 0 && !root.is-wide && !root.viewing-preview: AppScrollView {
-            vertical-stretch: 1;
-            content-y <=> root.mobile-content-y;
-
-            VerticalLayout {
-                padding-left: 4px;
-                padding-right: 4px;
-                padding-top: 6px;
-                padding-bottom: max(16px, root.inset-bottom);
-                spacing: 4px;
-
-                for commit[i] in root.commits: Rectangle {
-                    height: 48px;
-                    border-radius: 8px;
-                    background: item-touch.pressed
-                        ? Palette.foreground.with-alpha(0.08)
-                        : (root.selected-index == i ? Palette.accent-background.with-alpha(0.12) : Colors.surface-elevated);
-                    border-width: root.selected-index == i ? 1px : 0px;
-                    border-color: Palette.accent-background;
-
-                    item-touch := TouchArea {
-                        clicked => {
-                            root.selected-index = i;
-                            root.viewing-preview = true;
-                        }
-                    }
-
-                    HorizontalLayout {
-                        padding-left: 4px;
-                        padding-right: 4px;
-                        spacing: 6px;
-                        alignment: center;
-
-                        VerticalLayout {
-                            alignment: center;
-                            Icon {
-                                source: TablerIcons.history;
-                                color: root.selected-index == i ? Palette.accent-background : Colors.muted;
-                                width: 16px;
-                                height: 16px;
-                            }
-                        }
-
-                        VerticalLayout {
-                            horizontal-stretch: 1;
-                            spacing: 1px;
-                            alignment: center;
-
-                            Text {
-                                text: root.dates[i];
-                                font-size: 13px;
-                                font-weight: 600;
-                                color: root.selected-index == i ? Palette.accent-background : Palette.foreground;
-                                overflow: elide;
-                            }
-
-                            Text {
-                                text: commit;
-                                font-size: 11px;
-                                color: Colors.muted;
-                                overflow: elide;
-                            }
-                        }
-
-                        VerticalLayout {
-                            alignment: center;
-                            Icon {
-                                source: TablerIcons.chevron-right;
-                                color: Colors.muted.with-alpha(0.5);
-                                width: 12px;
-                                height: 12px;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Mobile portrait mode: Single version preview view
-        if root.commits.length > 0 && !root.is-wide && root.viewing-preview: VerticalLayout {
-            vertical-stretch: 1;
-            padding-left: 6px;
-            padding-right: 6px;
-            padding-top: 6px;
-            padding-bottom: max(16px, root.inset-bottom);
-            spacing: 6px;
-
-            // Revision Info pill
-            Rectangle {
-                height: 38px;
-                border-radius: 6px;
-                background: Colors.surface-elevated;
-
-                HorizontalLayout {
-                    padding-left: 8px;
-                    padding-right: 8px;
-                    spacing: 6px;
-                    alignment: center;
-
-                    VerticalLayout {
-                        alignment: center;
-                        Icon {
-                            source: TablerIcons.history;
-                            color: Palette.accent-background;
-                            width: 16px;
-                            height: 16px;
-                        }
-                    }
-
-                    VerticalLayout {
-                        horizontal-stretch: 1;
-                        spacing: 0px;
-                        alignment: center;
-
-                        Text {
-                            text: root.selected-index >= 0 && root.selected-index < root.dates.length ? root.dates[root.selected-index] : "";
-                            font-size: 12px;
-                            font-weight: 600;
-                            color: Palette.foreground;
-                            overflow: elide;
-                        }
-
-                        Text {
-                            text: root.selected-index >= 0 && root.selected-index < root.commits.length ? root.commits[root.selected-index] : "";
-                            font-size: 10px;
-                            color: Colors.muted;
-                            overflow: elide;
-                        }
-                    }
-                }
-            }
-
-            // Scrollable note preview with reduced padding for maximum readable width
-            Rectangle {
                 vertical-stretch: 1;
-                border-radius: 6px;
-                background: Colors.surface-elevated;
-                clip: true;
-
-                AppScrollView {
-                    content-y <=> root.mobile-content-y;
-                    VerticalLayout {
-                        padding-left: 6px;
-                        padding-right: 6px;
-                        padding-top: 6px;
-                        padding-bottom: 6px;
-
-                        Text {
-                            text: root.selected-index >= 0 && root.selected-index < root.previews.length ? root.previews[root.selected-index] : "";
-                            font-size: 14px;
-                            color: Palette.foreground;
-                            wrap: word-wrap;
-                        }
-                    }
-                }
-            }
-
-            // Mobile-friendly full-width Restore button
-            Rectangle {
-                height: 48px;
-                border-radius: 24px;
-                background: mobile_restore_touch.pressed ? Palette.accent-background.darker(0.15) : Palette.accent-background;
-
-                mobile_restore_touch := TouchArea {
-                    clicked => { root.restore(root.selected-index); }
-                }
-
-                HorizontalLayout {
+                VerticalLayout {
                     alignment: center;
                     spacing: 8px;
+                    padding: 24px;
 
-                    VerticalLayout {
-                        alignment: center;
-                        Icon {
-                            source: TablerIcons.arrow-back-up;
-                            color: Palette.accent-foreground;
-                            width: 18px;
-                            height: 18px;
-                        }
+                    Text {
+                        text: @tr("This note has no history yet");
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: Palette.foreground;
+                        horizontal-alignment: center;
                     }
 
                     Text {
-                        text: @tr("Restore This Version");
-                        font-size: 15px;
-                        font-weight: 700;
-                        color: Palette.accent-foreground;
-                        vertical-alignment: center;
+                        text: @tr("Saving or syncing this note will record past versions here.");
+                        font-size: 13px;
+                        color: Colors.muted;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
                     }
                 }
             }
-        }
 
-        // Desktop / Tablet wide mode: Side-by-side view
-        if root.commits.length > 0 && root.is-wide: HorizontalLayout {
-            vertical-stretch: 1;
-            padding: 12px;
-            spacing: 12px;
+            // Mobile portrait mode: Commit list view
+        if root.commits.length > 0 && !root.is-wide && !root.viewing-preview: AppScrollView {
+                vertical-stretch: 1;
+                content-y <=> root.mobile-content-y;
 
-            // Left: Commit list
-            Rectangle {
-                width: 250px;
-                background: Colors.surface-elevated;
-                border-radius: 10px;
-                clip: true;
+                VerticalLayout {
+                    padding-left: 4px;
+                    padding-right: 4px;
+                    padding-top: 6px;
+                    padding-bottom: max(16px, root.inset-bottom);
+                    spacing: 4px;
 
-                AppScrollView {
-                    content-y <=> root.wide-list-content-y;
-                    VerticalLayout {
-                        padding: 6px;
-                        spacing: 4px;
+                    for commit[i] in root.commits: Rectangle {
+                        height: 48px;
+                        border-radius: 8px;
+                        background: item-touch.pressed
+                            ? Palette.foreground.with-alpha(0.08)
+                            : (root.selected-index == i ? Palette.accent-background.with-alpha(0.12) : Colors.surface-elevated);
+                        border-width: root.selected-index == i ? 1px : 0px;
+                        border-color: Palette.accent-background;
 
-                        for commit[i] in root.commits: Rectangle {
-                            height: 48px;
-                            border-radius: 6px;
-                            background: root.selected-index == i ? Palette.accent-background.with-alpha(0.18) : (item_wide_touch.has-hover ? Palette.foreground.with-alpha(0.06) : transparent);
-                            border-width: root.selected-index == i ? 1px : 0px;
-                            border-color: Palette.accent-background;
+                        item-touch := TouchArea {
+                            clicked => {
+                                root.selected-index = i;
+                                root.viewing-preview = true;
+                            }
+                        }
 
-                            item_wide_touch := TouchArea {
-                                clicked => { root.selected-index = i; }
+                        HorizontalLayout {
+                            padding-left: 4px;
+                            padding-right: 4px;
+                            spacing: 6px;
+                            alignment: center;
+
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    source: TablerIcons.history;
+                                    color: root.selected-index == i ? Palette.accent-background : Colors.muted;
+                                    width: 16px;
+                                    height: 16px;
+                                }
                             }
 
                             VerticalLayout {
-                                padding-left: 4px;
-                                padding-right: 4px;
+                                horizontal-stretch: 1;
                                 spacing: 1px;
                                 alignment: center;
 
@@ -389,75 +213,90 @@ export component HistorySheet inherits Rectangle {
                                     overflow: elide;
                                 }
                             }
+
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    source: TablerIcons.chevron-right;
+                                    color: Colors.muted.with-alpha(0.5);
+                                    width: 12px;
+                                    height: 12px;
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            // Right: Preview & Restore
-            VerticalLayout {
-                horizontal-stretch: 1;
-                spacing: 8px;
+            // Mobile portrait mode: Single version preview view
+        if root.commits.length > 0 && !root.is-wide && root.viewing-preview: VerticalLayout {
+                vertical-stretch: 1;
+                padding-left: 6px;
+                padding-right: 6px;
+                padding-top: 6px;
+                padding-bottom: max(16px, root.inset-bottom);
+                spacing: 6px;
 
-                HorizontalLayout {
-                    alignment: center;
-                    Text {
-                        text: root.selected-index >= 0 && root.selected-index < root.dates.length ? @tr("{} contents", root.dates[root.selected-index]) : @tr("Preview");
-                        font-size: 14px;
-                        font-weight: 600;
-                        color: Colors.muted;
-                        vertical-alignment: center;
-                        horizontal-stretch: 1;
-                    }
+                // Revision Info pill
+            Rectangle {
+                    height: 38px;
+                    border-radius: 6px;
+                    background: Colors.surface-elevated;
 
-                    Rectangle {
-                        height: 36px;
-                        border-radius: 18px;
-                        background: wide_restore_touch.pressed ? Palette.accent-background.darker(0.15) : Palette.accent-background;
+                    HorizontalLayout {
+                        padding-left: 8px;
+                        padding-right: 8px;
+                        spacing: 6px;
+                        alignment: center;
 
-                        wide_restore_touch := TouchArea {
-                            clicked => { root.restore(root.selected-index); }
+                        VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                source: TablerIcons.history;
+                                color: Palette.accent-background;
+                                width: 16px;
+                                height: 16px;
+                            }
                         }
 
-                        HorizontalLayout {
-                            padding-left: 14px;
-                            padding-right: 14px;
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 0px;
                             alignment: center;
-                            spacing: 6px;
 
-                            VerticalLayout {
-                                alignment: center;
-                                Icon {
-                                    source: TablerIcons.arrow-back-up;
-                                    color: Palette.accent-foreground;
-                                    width: 16px;
-                                    height: 16px;
-                                }
+                            Text {
+                                text: root.selected-index >= 0 && root.selected-index < root.dates.length ? root.dates[root.selected-index] : "";
+                                font-size: 12px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                                overflow: elide;
                             }
 
                             Text {
-                                text: @tr("Restore This Version");
-                                font-size: 13px;
-                                font-weight: 700;
-                                color: Palette.accent-foreground;
-                                vertical-alignment: center;
+                                text: root.selected-index >= 0 && root.selected-index < root.commits.length ? root.commits[root.selected-index] : "";
+                                font-size: 10px;
+                                color: Colors.muted;
+                                overflow: elide;
                             }
                         }
                     }
                 }
 
-                Rectangle {
+                // Scrollable note preview with reduced padding for maximum readable width
+            Rectangle {
                     vertical-stretch: 1;
+                    border-radius: 6px;
                     background: Colors.surface-elevated;
-                    border-radius: 8px;
-                    border-width: 1px;
-                    border-color: Colors.separator;
                     clip: true;
 
                     AppScrollView {
-                        content-y <=> root.wide-preview-content-y;
+                        content-y <=> root.mobile-content-y;
                         VerticalLayout {
-                            padding: 8px;
+                            padding-left: 6px;
+                            padding-right: 6px;
+                            padding-top: 6px;
+                            padding-bottom: 6px;
+
                             Text {
                                 text: root.selected-index >= 0 && root.selected-index < root.previews.length ? root.previews[root.selected-index] : "";
                                 font-size: 14px;
@@ -467,8 +306,173 @@ export component HistorySheet inherits Rectangle {
                         }
                     }
                 }
+
+                // Mobile-friendly full-width Restore button
+            Rectangle {
+                    height: 48px;
+                    border-radius: 24px;
+                    background: mobile_restore_touch.pressed ? Palette.accent-background.darker(0.15) : Palette.accent-background;
+
+                    mobile_restore_touch := TouchArea {
+                        clicked => { root.restore(root.selected-index); }
+                    }
+
+                    HorizontalLayout {
+                        alignment: center;
+                        spacing: 8px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                source: TablerIcons.arrow-back-up;
+                                color: Palette.accent-foreground;
+                                width: 18px;
+                                height: 18px;
+                            }
+                        }
+
+                        Text {
+                            text: @tr("Restore This Version");
+                            font-size: 15px;
+                            font-weight: 700;
+                            color: Palette.accent-foreground;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
             }
-        }
+
+            // Desktop / Tablet wide mode: Side-by-side view
+        if root.commits.length > 0 && root.is-wide: HorizontalLayout {
+                vertical-stretch: 1;
+                padding: 12px;
+                spacing: 12px;
+
+                // Left: Commit list
+            Rectangle {
+                    width: 250px;
+                    background: Colors.surface-elevated;
+                    border-radius: 10px;
+                    clip: true;
+
+                    AppScrollView {
+                        content-y <=> root.wide-list-content-y;
+                        VerticalLayout {
+                            padding: 6px;
+                            spacing: 4px;
+
+                            for commit[i] in root.commits: Rectangle {
+                                height: 48px;
+                                border-radius: 6px;
+                                background: root.selected-index == i ? Palette.accent-background.with-alpha(0.18) : (item_wide_touch.has-hover ? Palette.foreground.with-alpha(0.06) : transparent);
+                                border-width: root.selected-index == i ? 1px : 0px;
+                                border-color: Palette.accent-background;
+
+                                item_wide_touch := TouchArea {
+                                    clicked => { root.selected-index = i; }
+                                }
+
+                                VerticalLayout {
+                                    padding-left: 4px;
+                                    padding-right: 4px;
+                                    spacing: 1px;
+                                    alignment: center;
+
+                                    Text {
+                                        text: root.dates[i];
+                                        font-size: 13px;
+                                        font-weight: 600;
+                                        color: root.selected-index == i ? Palette.accent-background : Palette.foreground;
+                                        overflow: elide;
+                                    }
+
+                                    Text {
+                                        text: commit;
+                                        font-size: 11px;
+                                        color: Colors.muted;
+                                        overflow: elide;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Right: Preview & Restore
+            VerticalLayout {
+                    horizontal-stretch: 1;
+                    spacing: 8px;
+
+                    HorizontalLayout {
+                        alignment: center;
+                        Text {
+                            text: root.selected-index >= 0 && root.selected-index < root.dates.length ? @tr("{} contents", root.dates[root.selected-index]) : @tr("Preview");
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: Colors.muted;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+
+                        Rectangle {
+                            height: 36px;
+                            border-radius: 18px;
+                            background: wide_restore_touch.pressed ? Palette.accent-background.darker(0.15) : Palette.accent-background;
+
+                            wide_restore_touch := TouchArea {
+                                clicked => { root.restore(root.selected-index); }
+                            }
+
+                            HorizontalLayout {
+                                padding-left: 14px;
+                                padding-right: 14px;
+                                alignment: center;
+                                spacing: 6px;
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    Icon {
+                                        source: TablerIcons.arrow-back-up;
+                                        color: Palette.accent-foreground;
+                                        width: 16px;
+                                        height: 16px;
+                                    }
+                                }
+
+                                Text {
+                                    text: @tr("Restore This Version");
+                                    font-size: 13px;
+                                    font-weight: 700;
+                                    color: Palette.accent-foreground;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                        background: Colors.surface-elevated;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Colors.separator;
+                        clip: true;
+
+                        AppScrollView {
+                            content-y <=> root.wide-preview-content-y;
+                            VerticalLayout {
+                                padding: 8px;
+                                Text {
+                                    text: root.selected-index >= 0 && root.selected-index < root.previews.length ? root.previews[root.selected-index] : "";
+                                    font-size: 14px;
+                                    color: Palette.foreground;
+                                    wrap: word-wrap;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

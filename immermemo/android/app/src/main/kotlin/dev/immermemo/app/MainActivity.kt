@@ -86,18 +86,19 @@ class MainActivity : NativeActivity() {
 
     @Suppress("DEPRECATION")
     private fun applyStatusBarVisibility(visible: Boolean) {
-        window.decorView.systemUiVisibility = if (visible) {
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-        } else {
-            // IMMERSIVE_STICKY: without it, a swipe-to-reveal clears
-            // FULLSCREEN permanently instead of just temporarily --
-            // the bug this is fixing (status bar stays shown forever
-            // after the first swipe once "Always Hide" is set).
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                View.SYSTEM_UI_FLAG_FULLSCREEN or
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-        }
+        window.decorView.systemUiVisibility =
+            if (visible) {
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            } else {
+                // IMMERSIVE_STICKY: without it, a swipe-to-reveal clears
+                // FULLSCREEN permanently instead of just temporarily --
+                // the bug this is fixing (status bar stays shown forever
+                // after the first swipe once "Always Hide" is set).
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            }
     }
 
     companion object {

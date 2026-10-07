@@ -2,10 +2,10 @@
 //! counterpart of `immermemo_tomet_render::meta_element`/`note_icon`
 //! (`immermemo`'s `render::classify`), which only read it.
 //!
-//! Uses `tomet_edit` to mutate only the `@meta{}` block while preserving 100% of
+//! Uses `tomet::edit` to mutate only the `@meta{}` block while preserving 100% of
 //! layout trivia, comments, and unedited blocks byte-identically.
 
-use tomet_edit::{
+use tomet::edit::{
     AttrGroup, ChildItem, EditDoc, EditOp, Node, NodeKind, export_doc, import_source,
 };
 
@@ -128,7 +128,9 @@ mod tests {
     fn preserves_existing_comments_and_blank_lines_outside_meta() {
         let src = "// Leading comment\n@meta{ x: 1 }\n\n\nBody paragraph with *markup*.\n\n// Trailing comment\n";
         let result = set_note_icon(src, "star", "tabler").unwrap();
-        assert!(result.starts_with("// Leading comment\n@meta{x: 1, icon: @doc.icon(star, pkg: tabler)}\n\n\n"));
+        assert!(result.starts_with(
+            "// Leading comment\n@meta{x: 1, icon: @doc.icon(star, pkg: tabler)}\n\n\n"
+        ));
         assert!(result.contains("Body paragraph with *markup*.\n\n// Trailing comment\n"));
     }
 }

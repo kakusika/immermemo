@@ -117,7 +117,7 @@ impl Vault {
             .filter(|rel| {
                 std::fs::read_to_string(self.working_tree.join(rel))
                     .ok()
-                    .and_then(|src| tomet_parser::parse_document(&src).ok())
+                    .and_then(|src| tomet::parser::parse_document(&src).ok())
                     .is_some_and(|doc| immermemo_merge::has_conflicts(&doc))
             })
             .cloned()

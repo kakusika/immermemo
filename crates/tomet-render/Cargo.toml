@@ -4,5 +4,4 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-tomet-ast = { workspace = true }
-tomet-parser = { workspace = true }
+tomet = { workspace = true, features = ["parser"] }

@@ -11,9 +11,9 @@
 //!
 //! # Scope
 //!
-//! [`tomet_ast::Block::Element`] is classified directly, and so is a
-//! [`tomet_ast::Block::Paragraph`]'s inline content -- a recognized
-//! [`tomet_ast::Inline::Element`] becomes its own [`RenderItem::Element`],
+//! [`tomet::ast::Block::Element`] is classified directly, and so is a
+//! [`tomet::ast::Block::Paragraph`]'s inline content -- a recognized
+//! [`tomet::ast::Inline::Element`] becomes its own [`RenderItem::Element`],
 //! splitting the surrounding plain-text runs around it the same way a
 //! block-level marker splits the blocks around it. This only covers
 //! *view-mode* rendering (a read-only display with no cursor or selection
@@ -23,7 +23,7 @@
 //! source text unconditionally; that's a caller decision (`immermemo`'s
 //! edit-mode `TextInput`), not something this crate restricts.
 //!
-//! A [`tomet_ast::Section`]'s title walks the same as a paragraph's content
+//! A [`tomet::ast::Section`]'s title walks the same as a paragraph's content
 //! (it can carry a link or a bold word same as any other prose), and its
 //! nested blocks classify recursively, each becoming its own group --
 //! `classify_block_groups`'s doc has the detail. A section itself is never
@@ -31,13 +31,13 @@
 //!
 //! # Parse failures fall back to one plain-text span
 //!
-//! [`tomet_parser::parse_document`] has no error recovery: it either
+//! [`tomet::parser::parse_document`] has no error recovery: it either
 //! parses the whole document or fails outright, so a user mid-keystroke on
 //! something like `@conflict(` can turn the *entire* note into an
 //! unparseable one. [`classify`] treats that the same as "nothing
 //! recognized" -- one [`RenderItem::Text`] spanning the source -- which is
 //! exactly today's always-plain-text experience, not a regression. Once
-//! [`tomet_parser`] gains partial recovery, this crate can classify
+//! [`tomet::parser`] gains partial recovery, this crate can classify
 //! further into whatever it did manage to parse.
 //!
 //! # Every named element gets an identity -- block and inline differ in
@@ -53,7 +53,7 @@
 //! keeps this crate's only dependency `tomet-ast` itself -- deciding "is
 //! `ol` really structural" would be `tomet-semantics`'s `classify_std*`
 //! job, and this crate never needs to ask that question: identity here is
-//! read straight off [`tomet_ast::Sigil::Named`]'s `Name`, nothing more.
+//! read straight off [`tomet::ast::Sigil::Named`]'s `Name`, nothing more.
 //!
 //! What *does* still differ between block and inline is splitting: a
 //! block-level element is always its own top-level item regardless of its
@@ -93,12 +93,12 @@
 //! text run, because splitting prose on every unrecognized marker would
 //! fragment a sentence a reader expects to flow as one run.
 
-use tomet_ast::{
+use tomet::ast::{
     Block, Document, Element, ElementValue, Entry, Inline, Position, Sigil, Span, Value,
 };
 
 /// An element's identity: the `(namespace, name)` pair from its
-/// [`tomet_ast::Sigil::Named`] name. `namespace` is `None` for one of
+/// [`tomet::ast::Sigil::Named`] name. `namespace` is `None` for one of
 /// Tomet's own bare built-in elements (came in with no `@use`), `Some`
 /// for one brought in through `@use`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -200,7 +200,7 @@ pub enum ElementArgs {
 /// module doc for the parse-failure fallback and the namespace-gating
 /// rule.
 pub fn classify(src: &str) -> Vec<RenderItem> {
-    let doc: Document = match tomet_parser::parse_document(src) {
+    let doc: Document = match tomet::parser::parse_document(src) {
         Ok(doc) => doc,
         Err(_) => {
             return vec![RenderItem::Text(
@@ -339,7 +339,7 @@ pub struct ParseFailed;
 /// own, since a section is never one row to render, only the sum of its
 /// parts.
 pub fn classify_blocks(src: &str) -> Result<Vec<(RenderBlockKind, Vec<RenderItem>)>, ParseFailed> {
-    let doc: Document = tomet_parser::parse_document(src).map_err(|_| ParseFailed)?;
+    let doc: Document = tomet::parser::parse_document(src).map_err(|_| ParseFailed)?;
     Ok(doc.blocks.iter().flat_map(classify_block_groups).collect())
 }
 
@@ -357,7 +357,7 @@ pub fn classify_blocks(src: &str) -> Result<Vec<(RenderBlockKind, Vec<RenderItem
 /// meta value has no `(namespace, name)` identity to resolve against
 /// anything).
 pub fn meta_element(src: &str, key: &str) -> Option<(ElementIdentity, ElementArgs)> {
-    let doc: Document = tomet_parser::parse_document(src).ok()?;
+    let doc: Document = tomet::parser::parse_document(src).ok()?;
     let meta = doc.blocks.iter().find_map(|block| match block {
         Block::Element(el) => {
             let Sigil::Named(name) = &el.sigil else {
@@ -495,7 +495,7 @@ fn style_wrapper(el: &Element) -> Option<TextStyle> {
 }
 
 /// `el`'s [`RenderItem::Element`], for any named element -- `None` only
-/// for [`Sigil::Bare`]/`Dollar`/`Caret`, which have no [`tomet_ast::Name`]
+/// for [`Sigil::Bare`]/`Dollar`/`Caret`, which have no [`tomet::ast::Name`]
 /// at all and so carry no identity to report. `identity.namespace` is
 /// `None` for one of Tomet's own bare built-in elements; see the module
 /// doc for how block and inline classification treat that differently.
@@ -623,7 +623,7 @@ fn summarize_value(value: &Value) -> String {
 }
 
 /// A [`Span`] covering all of `src`, for [`classify`]'s parse-failure
-/// fallback -- [`tomet_parser::parse_document`] gives up before producing a
+/// fallback -- [`tomet::parser::parse_document`] gives up before producing a
 /// [`Document::span`] to reuse, so this walks `src` itself to find the end
 /// line/column (1-indexed, matching [`Position`]'s own convention).
 fn whole_source_span(src: &str) -> Span {
@@ -750,7 +750,10 @@ mod tests {
             } => {
                 assert_eq!(identity.namespace, None);
                 assert_eq!(identity.name, "conflict");
-                assert_eq!(*content, None, "conflict's payload is in (args), not [content]");
+                assert_eq!(
+                    *content, None,
+                    "conflict's payload is in (args), not [content]"
+                );
                 assert_eq!(block_args.len(), 2);
                 assert_eq!(block_args[0].0, "a");
                 assert_eq!(block_args[1].0, "b");

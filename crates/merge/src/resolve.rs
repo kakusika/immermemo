@@ -4,9 +4,11 @@
 //! order merging produced markers in, so resolutions line up with the
 //! right conflict.
 
-use tomet_ast::{Block, Document, ElementValue, Entry, Inline, Paragraph, Text, Value};
+use tomet::ast::{Block, Document, ElementValue, Entry, Inline, Paragraph, Text, Value};
 
-use crate::markers::{coalesce_text, conflict_block_sides, conflict_inline_sides, value_conflict_sides};
+use crate::markers::{
+    coalesce_text, conflict_block_sides, conflict_inline_sides, value_conflict_sides,
+};
 
 /// Which side of one `@conflict` a caller picked, or that they edited a
 /// fresh replacement by hand, or kept both versions. `A`/`B` match

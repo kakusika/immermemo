@@ -270,6 +270,7 @@ export component RenderedBlockView inherits VerticalLayout {
                 width: 3px;
                 background: Palette.accent-background;
             }
+
             VerticalLayout {
                 spacing: Metrics.spacing-xs;
                 for side-item in root.block.side-a: ConflictSideBlockView {
@@ -285,6 +286,7 @@ export component RenderedBlockView inherits VerticalLayout {
                 width: 3px;
                 background: Colors.warning;
             }
+
             VerticalLayout {
                 spacing: Metrics.spacing-xs;
                 for side-item in root.block.side-b: ConflictSideBlockView {
@@ -367,4 +369,3 @@ export component RenderedBlockView inherits VerticalLayout {
         }
     }
 }
-

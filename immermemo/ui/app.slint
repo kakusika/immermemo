@@ -25,7 +25,12 @@ import { ConflictSheet } from "sheets/conflict.slint";
 import { HistorySheet } from "sheets/history.slint";
 import { VaultHistorySheet } from "sheets/vault_history.slint";
 import { IconPickerSheet, PickerIconEntry } from "sheets/icon_picker.slint";
-import { TextInputDialog, ConfirmDialog, ActionSheet, ActionRow } from "@origami-mobile/widgets.slint";
+import {
+    TextInputDialog,
+    ConfirmDialog,
+    ActionSheet,
+    ActionRow,
+} from "@origami-mobile/widgets.slint";
 export { PickerIconEntry } from "sheets/icon_picker.slint";
 
 // Drives one full-screen sheet's "hop up from the bottom, swipe down to
@@ -526,21 +531,25 @@ export component App inherits Window {
         close => { root.vault-sheet-open = false; }
         haptic => { root.trigger-haptic(); }
     }
+
     icon-picker-drag := SheetDragState {
         open: root.icon-picker-open;
         close => { root.icon-picker-open = false; }
         haptic => { root.trigger-haptic(); }
     }
+
     history-sheet-drag := SheetDragState {
         open: root.history-sheet-open;
         close => { root.history-sheet-open = false; }
         haptic => { root.trigger-haptic(); }
     }
+
     vault-history-drag := SheetDragState {
         open: root.vault-history-open;
         close => { root.vault-history-open = false; }
         haptic => { root.trigger-haptic(); }
     }
+
     settings-sheet-drag := SheetDragState {
         open: root.settings-sheet-open;
         close => {
@@ -1067,6 +1076,7 @@ export component App inherits Window {
                         }
                     }
                 }
+
                 VerticalLayout {
                     x: parent.width - 12px * Metrics.ui-scale - root.mini-card-reveal-max;
                     y: 20px * Metrics.ui-scale;

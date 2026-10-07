@@ -169,7 +169,7 @@ pub(super) struct Look {
 /// from: `args` is `immermemo_tomet_render::RenderItem::Element::args`
 /// unchanged, `content` is the same item's `content` span already
 /// resolved against the note body (so a lookup function never needs to
-/// know what a [`tomet_ast::Span`] is or where the body string lives).
+/// know what a [`tomet::ast::Span`] is or where the body string lives).
 /// `block_args`/`body` are for [`conflict_look`] alone -- a lookup
 /// function that wants to classify a `key: [...]` arg's own content
 /// (rather than just read it as a string, like `args` offers) needs both:
@@ -555,16 +555,16 @@ mod tests {
     // structural mismatch (here: local turns the block into a different
     // kind of node, which `merge_one` can't narrow across) produces a
     // block-level one instead. This test proves the real
-    // `immermemo_merge::merge` -> `tomet_parser::parse_document` ->
+    // `immermemo_merge::merge` -> `tomet::parser::parse_document` ->
     // `classify` pipeline actually reaches `BlockShape::Conflict` for
     // that case, not just a hand-written `@conflict(...)` fixture.
     #[test]
     fn an_inline_merge_conflict_is_recognized_through_the_real_pipeline() {
-        let base = tomet_parser::parse_document("The quick fox jumps.\n").unwrap();
-        let local = tomet_parser::parse_document("The slow fox jumps.\n").unwrap();
-        let remote = tomet_parser::parse_document("The lazy fox jumps.\n").unwrap();
+        let base = tomet::parser::parse_document("The quick fox jumps.\n").unwrap();
+        let local = tomet::parser::parse_document("The slow fox jumps.\n").unwrap();
+        let remote = tomet::parser::parse_document("The lazy fox jumps.\n").unwrap();
         let merged = immermemo_merge::merge(&base, &local, &remote).document;
-        let text = tomet_printer::document_to_tm(&merged);
+        let text = tomet::printer::document_to_tm(&merged);
 
         let blocks = classify_body(&text);
         assert_eq!(
@@ -588,11 +588,11 @@ mod tests {
 
     #[test]
     fn a_structural_merge_conflict_is_recognized_through_the_real_pipeline() {
-        let base = tomet_parser::parse_document("Original.\n").unwrap();
-        let local = tomet_parser::parse_document("@meta{ x: 1 }\n").unwrap();
-        let remote = tomet_parser::parse_document("Theirs.\n").unwrap();
+        let base = tomet::parser::parse_document("Original.\n").unwrap();
+        let local = tomet::parser::parse_document("@meta{ x: 1 }\n").unwrap();
+        let remote = tomet::parser::parse_document("Theirs.\n").unwrap();
         let merged = immermemo_merge::merge(&base, &local, &remote).document;
-        let text = tomet_printer::document_to_tm(&merged);
+        let text = tomet::printer::document_to_tm(&merged);
 
         let blocks = classify_body(&text);
         assert_eq!(blocks.len(), 1);

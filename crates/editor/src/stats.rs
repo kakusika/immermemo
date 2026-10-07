@@ -4,7 +4,7 @@ pub struct NoteStats {
     pub line_count: i32,
 }
 
-/// Mirrors `tomet_stats::measure`'s character/word counts when `body`
+/// Mirrors `tomet::stats::measure`'s character/word counts when `body`
 /// parses, falling back to a plain-text approximation while it doesn't
 /// (e.g. mid-keystroke on an unfinished `@element(`).
 pub fn note_stats(body: &str) -> NoteStats {
@@ -14,9 +14,9 @@ pub fn note_stats(body: &str) -> NoteStats {
         body.lines().count() as i32
     };
 
-    let (char_count, word_count) = match tomet_parser::parse_document(body) {
+    let (char_count, word_count) = match tomet::parser::parse_document(body) {
         Ok(doc) => {
-            let stats = tomet_stats::measure(&doc);
+            let stats = tomet::stats::measure(&doc);
             (stats.characters as i32, stats.words as i32)
         }
         Err(_) => {

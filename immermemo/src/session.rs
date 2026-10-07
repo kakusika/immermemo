@@ -335,7 +335,10 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
         .into_iter()
         .filter_map(|(rel_path, body)| {
             let (name, pkg) = crate::render::classify::note_icon(&body)?;
-            Some((s.vault_dir.join(rel_path), crate::render::icon_image(&name, &pkg)))
+            Some((
+                s.vault_dir.join(rel_path),
+                crate::render::icon_image(&name, &pkg),
+            ))
         })
         .collect();
     let folder_entries: Vec<DirectoryEntry> =
@@ -1342,9 +1345,7 @@ pub fn apply_icon_selection(app: &App, session: &Rc<RefCell<Session>>, name: &st
             if is_current {
                 let max_width = app.get_body_content_width();
                 app.set_body(new_body.clone().into());
-                app.set_note_body_items(crate::render::note_body_items(
-                    &new_body, app, max_width,
-                ));
+                app.set_note_body_items(crate::render::note_body_items(&new_body, app, max_width));
             }
             schedule_auto_sync(app, std::time::Duration::from_secs(5));
         }

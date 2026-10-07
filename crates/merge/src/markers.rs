@@ -11,7 +11,9 @@
 //! retired `@mobile.conflict` name -- see the crate's module doc for the
 //! shape this replaced and why.
 
-use tomet_ast::{Block, Document, Element, Inline, Name, Paragraph, Placement, Sigil, Span, Text, Value};
+use tomet::ast::{
+    Block, Document, Element, Inline, Name, Paragraph, Placement, Sigil, Span, Text, Value,
+};
 
 /// The raw-text substring other crates can look for without parsing a
 /// document -- a cheap "does this note have a conflict in it at all"
@@ -94,10 +96,13 @@ pub(crate) fn conflict_block_sides(el: &Element) -> Option<(Vec<Block>, Vec<Bloc
         return None;
     };
     let get = |key: &str| {
-        entries.iter().find(|(k, _)| k == key).and_then(|(_, v)| match v {
-            Value::Blocks(blocks) => Some(blocks.clone()),
-            _ => None,
-        })
+        entries
+            .iter()
+            .find(|(k, _)| k == key)
+            .and_then(|(_, v)| match v {
+                Value::Blocks(blocks) => Some(blocks.clone()),
+                _ => None,
+            })
     };
     Some((get("a")?, get("b")?))
 }
@@ -179,7 +184,7 @@ pub(crate) fn inlines_to_text(inlines: &[Inline]) -> String {
                     blocks: vec![Block::Element(el.clone())],
                     span: Default::default(),
                 };
-                s.push_str(tomet_printer::document_to_tm(&doc).trim());
+                s.push_str(tomet::printer::document_to_tm(&doc).trim());
             }
         }
     }
@@ -195,7 +200,7 @@ pub(crate) fn blocks_to_text(blocks: &[Block]) -> String {
         blocks: blocks.to_vec(),
         span: Default::default(),
     };
-    tomet_printer::document_to_tm(&doc).trim().to_string()
+    tomet::printer::document_to_tm(&doc).trim().to_string()
 }
 
 pub(crate) fn value_to_text(val: &Value) -> String {
