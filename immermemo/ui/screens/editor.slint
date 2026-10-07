@@ -47,6 +47,7 @@ component SheetSurface inherits Rectangle {
 // property -- only handle-swipe-down is fixed here, since both header and
 // body always offer the dismiss gesture.
 component NoteSheetGestureArea inherits SwipeGestureHandler {
+    in property <length> inset-top: 0px;
     handle-swipe-down: true;
     property <duration> drag-start-time: 0ms;
     property <bool> drag-locked: false;
@@ -65,7 +66,8 @@ component NoteSheetGestureArea inherits SwipeGestureHandler {
         root.drag-locked = false;
     }
     moved => {
-        if (self.swiping) {
+        // Ignore gestures that begin inside the status bar / notification area.
+        if (self.swiping && self.pressed-position.y >= root.inset-top) {
             let dx = self.current-position.x - self.pressed-position.x;
             let dy = self.current-position.y - self.pressed-position.y;
             if (!root.drag-locked) {
@@ -80,13 +82,21 @@ component NoteSheetGestureArea inherits SwipeGestureHandler {
         }
     }
     swiped => {
-        let elapsed-ms = max(1.0, (animation-tick() - root.drag-start-time) / 1ms);
-        if (root.drag-horizontal) {
-            let dx = self.current-position.x - self.pressed-position.x;
-            root.nav-drag-swiped(dx, (dx / 1px) / elapsed-ms);
+        if (self.pressed-position.y >= root.inset-top) {
+            let elapsed-ms = max(1.0, (animation-tick() - root.drag-start-time) / 1ms);
+            if (root.drag-horizontal) {
+                let dx = self.current-position.x - self.pressed-position.x;
+                root.nav-drag-swiped(dx, (dx / 1px) / elapsed-ms);
+            } else {
+                let dy = self.current-position.y - self.pressed-position.y;
+                root.sheet-drag-swiped(dy, (dy / 1px) / elapsed-ms);
+            }
         } else {
-            let dy = self.current-position.y - self.pressed-position.y;
-            root.sheet-drag-swiped(dy, (dy / 1px) / elapsed-ms);
+            if (root.drag-horizontal) {
+                root.nav-drag-cancelled();
+            } else {
+                root.sheet-drag-cancelled();
+            }
         }
     }
     cancelled => {
@@ -395,6 +405,7 @@ export component EditorScreen inherits Rectangle {
         y: 0px;
         width: 100%;
         height: root.inset-top + Metrics.bar-height;
+        inset-top: root.inset-top;
         enabled: root.header-swipe-enabled;
         handle-swipe-right: root.nav-swipe-enabled && root.can-navigate-back;
         handle-swipe-left: root.nav-swipe-enabled && root.can-navigate-forward;

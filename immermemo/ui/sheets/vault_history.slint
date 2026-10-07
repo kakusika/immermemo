@@ -35,6 +35,7 @@ export component VaultHistorySheet inherits Rectangle {
         y: 0px;
         width: 100%;
         height: root.inset-top + Metrics.bar-height;
+        inset-top: root.inset-top;
         sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
         sheet-drag-swiped(dy, v) => { root.sheet-drag-swiped(dy, v); }
         sheet-drag-cancelled => { root.sheet-drag-cancelled(); }

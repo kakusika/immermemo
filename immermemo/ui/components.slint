@@ -16,6 +16,7 @@ import { BubbleButton } from "@origami-mobile/widgets.slint";
 // the sheet-wide drag/progress state, same as `App`'s
 // `SheetDragState`/`is-dragging-sheet` consumers already do).
 export component SheetDragArea inherits SwipeGestureHandler {
+    in property <length> inset-top: 0px;
     handle-swipe-down: true;
     property <duration> drag-start-time: 0ms;
     callback sheet-drag-moved(length);
@@ -27,15 +28,20 @@ export component SheetDragArea inherits SwipeGestureHandler {
         root.drag-start-time = animation-tick();
     }
     moved => {
-        if (self.swiping) {
+        // Ignore swipes that begin inside the status bar / notification area.
+        if (self.swiping && self.pressed-position.y >= root.inset-top) {
             let dy = self.current-position.y - self.pressed-position.y;
             root.sheet-drag-moved(dy);
         }
     }
     swiped => {
-        let dy = self.current-position.y - self.pressed-position.y;
-        let elapsed-ms = max(1.0, (animation-tick() - root.drag-start-time) / 1ms);
-        root.sheet-drag-swiped(dy, (dy / 1px) / elapsed-ms);
+        if (self.pressed-position.y >= root.inset-top) {
+            let dy = self.current-position.y - self.pressed-position.y;
+            let elapsed-ms = max(1.0, (animation-tick() - root.drag-start-time) / 1ms);
+            root.sheet-drag-swiped(dy, (dy / 1px) / elapsed-ms);
+        } else {
+            root.sheet-drag-cancelled();
+        }
     }
     cancelled => {
         root.sheet-drag-cancelled();
