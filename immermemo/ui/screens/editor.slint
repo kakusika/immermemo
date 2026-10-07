@@ -382,17 +382,13 @@ export component EditorScreen inherits Rectangle {
 
     // Dismisses focus from the text editor
     public function unfocus() {
-        if (root.edit-mode) {
-            editor.clear-focus();
-        }
+        editor.clear-focus();
     }
 
     // Switches to view mode and dismisses focus
     public function view-mode() {
+        editor.clear-focus();
         root.edit-mode = false;
-        if (root.edit-mode) {
-            editor.clear-focus();
-        }
     }
 
     // No background here: header-surface/body-surface each paint their own
@@ -818,6 +814,24 @@ export component EditorScreen inherits Rectangle {
                                     TouchArea {
                                         width: 100%;
                                         height: 100%;
+                                        property <duration> last-tap-time: 0ms;
+                                        property <length> last-tap-x: 0px;
+                                        property <length> last-tap-y: 0px;
+
+                                        clicked => {
+                                            let now = animation-tick();
+                                            let dt = now - self.last-tap-time;
+                                            let dx = abs(self.pressed-x - self.last-tap-x);
+                                            let dy = abs(self.pressed-y - self.last-tap-y);
+                                            if (self.last-tap-time > 0ms && dt >= 0ms && dt < 600ms && dx < 80px * Metrics.ui-scale && dy < 80px * Metrics.ui-scale) {
+                                                root.focus-editor();
+                                                self.last-tap-time = 0ms;
+                                            } else {
+                                                self.last-tap-time = now;
+                                                self.last-tap-x = self.pressed-x;
+                                                self.last-tap-y = self.pressed-y;
+                                            }
+                                        }
                                         double-clicked => {
                                             root.focus-editor();
                                         }
@@ -939,40 +953,28 @@ export component EditorScreen inherits Rectangle {
                 }
             }
 
-            // Note sheet view switcher (Body / Properties, ...) and note
-            // history back/forward, grouped as one pair centered at the
-            // body's bottom edge -- deliberately independent of the
-            // Edit/Done FAB's own position: the FAB disappears in
-            // Properties view (nothing to edit there), which left
-            // ViewSwitcher looking orphaned when it was positioned
-            // relative to it instead. See each component's own doc
-            // comment in components.slint for why they're two separate
-            // pills rather than one. Hidden entirely while editing,
-            // since that area is destined to become a toolbar instead.
-            if !root.edit-mode: HorizontalLayout {
-                x: 0px;
+            // Note history back/forward navigation, left-aligned at the
+            // body's bottom edge. Always shown when not in edit mode
+            // (dimmed/untappable when there's nowhere to go -- see NavPill's
+            // own doc comment).
+            if !root.edit-mode: NavPill {
+                x: Metrics.gutter;
                 y: parent.height - root.pill-height - Metrics.gutter;
-                width: 100%;
-                height: root.pill-height;
-                alignment: center;
-                spacing: Metrics.spacing-sm;
+                can-back: root.can-navigate-back;
+                can-forward: root.can-navigate-forward;
+                back => { root.navigate-back(); }
+                forward => { root.navigate-forward(); }
+            }
 
-                if root.has-note: ViewSwitcher {
-                    icons: [TablerIcons.note, TablerIcons.info-circle];
-                    selected: root.note-view;
-                    changed(i) => { root.note-view = i; }
-                }
-
-                // Always shown (dimmed/untappable when there's nowhere
-                // to go -- see NavPill's own doc comment), not gated
-                // behind can-navigate-back/-forward the way ViewSwitcher
-                // is gated behind has-note.
-                NavPill {
-                    can-back: root.can-navigate-back;
-                    can-forward: root.can-navigate-forward;
-                    back => { root.navigate-back(); }
-                    forward => { root.navigate-forward(); }
-                }
+            // Note sheet view switcher (Body / Properties, ...) centered at the
+            // body's bottom edge. Hidden when editing (where that area is
+            // destined to become a toolbar) and gated behind has-note.
+            if !root.edit-mode && root.has-note: ViewSwitcher {
+                x: (parent.width - self.width) / 2;
+                y: parent.height - root.pill-height - Metrics.gutter;
+                icons: [TablerIcons.note, TablerIcons.info-circle];
+                selected: root.note-view;
+                changed(i) => { root.note-view = i; }
             }
         }
     }

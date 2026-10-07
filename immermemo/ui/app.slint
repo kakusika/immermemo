@@ -403,19 +403,14 @@ export component App inherits Window {
     }
 
     property <length> inset-top: root.safe-area-insets.top + root.extra-inset-top;
+    // The on-screen keyboard overlays the app; tracked directly from the
+    // window's virtual keyboard height so safe insets, sheet height, and bottom
+    // bar adapt without depending on transient window height resizes.
     in-out property <length> keyboard: 0px;
     function update-keyboard() {
-        let old_kb = root.keyboard;
-        root.keyboard = root.virtual-keyboard-size.height > 0
-            ? max(0px, root.height - root.virtual-keyboard-position.y)
-            : 0px;
-        if (old_kb > 0px && root.keyboard == 0px && root.note-sheet-open) {
-            pane.unfocus();
-        }
+        root.keyboard = root.virtual-keyboard-size.height;
     }
     changed virtual-keyboard-size => { root.update-keyboard(); }
-    changed virtual-keyboard-position => { root.update-keyboard(); }
-    changed height => { root.update-keyboard(); }
     property <length> inset-bottom: max(root.safe-area-insets.bottom + root.extra-inset-bottom, root.keyboard);
     property <length> bottom-bar-total-height: root.keyboard == 0px
         ? (Metrics.bottom-bar-height + root.safe-area-insets.bottom + root.extra-inset-bottom)
