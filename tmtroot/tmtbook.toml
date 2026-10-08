@@ -1,6 +1,6 @@
 [book]
 title = "Immermemo docs"
-lang = "ja"
+lang = "en"
 dest = "dist"
 
 [build]
