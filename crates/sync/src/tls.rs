@@ -66,7 +66,7 @@ const MAX_AIA_HOPS: u32 = 4;
 const FETCH_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Verifies certificates against a fixed set of trusted roots given as a
-/// PEM bundle (Android: `immermemo/assets/cacert.pem`, curl's own extract
+/// PEM bundle (Android: `app/assets/cacert.pem`, curl's own extract
 /// of Mozilla's root store).
 pub struct ChainVerifier {
     roots: X509Store,
@@ -201,7 +201,7 @@ mod tests {
     /// Reuses the app's vendored root bundle so this proves the exact
     /// bytes that ship in the APK, not a second copy kept in sync by hand.
     fn root_bundle() -> Vec<u8> {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../immermemo/assets/cacert.pem");
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../app/assets/cacert.pem");
         std::fs::read(&path).unwrap_or_else(|e| panic!("reading {path:?}: {e}"))
     }
 

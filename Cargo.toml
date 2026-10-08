@@ -2,7 +2,7 @@
 resolver = "3"
 
 members = [
-  "immermemo",
+  "app",
   "crates/editor",
   "crates/identity",
   "crates/index",
@@ -12,7 +12,7 @@ members = [
   "crates/vault",
 ]
 
-default-members = ["immermemo"]
+default-members = ["app"]
 
 [workspace.package]
 version = "0.1.0"
@@ -47,7 +47,7 @@ loro = "1.16"
 # verification can't work at all (see crates/sync's `tls` module doc).
 openssl = "0.10"
 rusqlite = { version = "0.33", features = ["bundled"] }
-# Target-specific backends and renderers are selected in `immermemo/Cargo.toml`.
+# Target-specific backends and renderers are selected in `app/Cargo.toml`.
 slint = { version = "1.18", default-features = false, features = [
   "compat-1-2",
 ] }

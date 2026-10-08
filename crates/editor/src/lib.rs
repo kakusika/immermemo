@@ -9,7 +9,7 @@
 //! so a crate boundary between them bought nothing.
 //!
 //! This crate never touches `App` (the Slint type `slint::include_modules!()`
-//! generates from `immermemo/ui/app.slint`) or any other Slint-generated
+//! generates from `app/ui/app.slint`) or any other Slint-generated
 //! type. Every function here takes and returns plain data; `immermemo`'s
 //! `src/session.rs` is the thin adapter that calls into this crate and
 //! applies the result to `App`'s setters. That split exists because `App`

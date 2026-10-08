@@ -30,8 +30,7 @@ immermemo/
 │   └── vault/   # vault/note/credential domain logic, UI-framework-agnostic
 ├── vocab/
 │   └── mobile.vocabulary.tmt   # the @mobile.conflict vocabulary
-└── apps/
-    └── slint/                  # the app: desktop + Android, Slint UI
+└── app/     # the app: desktop + Android, Slint UI
 ```
 
 `tomet` itself is never modified by this project -- it's consumed as an

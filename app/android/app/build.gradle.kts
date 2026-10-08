@@ -28,7 +28,7 @@ android {
         jniLibs {
             // The whole point of this migration: cargo-apk writes
             // android:extractNativeLibs="false" to the manifest but still
-            // Deflates the .so (see immermemo/Cargo.toml's old TODO), which
+            // Deflates the .so (see app/Cargo.toml's old TODO), which
             // Android 11+ rejects. AGP has stored libs uncompressed and
             // page-aligned here by default since 3.6.0.
             useLegacyPackaging = false

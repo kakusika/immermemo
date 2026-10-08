@@ -1,7 +1,7 @@
 //! Home-screen widget data bridge.
 //!
 //! Writes a small JSON snapshot of the most recently modified notes for the
-//! Kotlin-side `RemoteViewsService` (`immermemo/android`) to read, then pokes
+//! Kotlin-side `RemoteViewsService` (`app/android`) to read, then pokes
 //! the widget to redraw immediately. Android's own `AppWidgetProviderInfo`
 //! update interval has a 30-minute floor, far too slow to feel right right
 //! after an edit, so freshness instead rides on [`export_recent_notes`]
@@ -120,7 +120,7 @@ pub fn export_recent_notes(_index: &NoteIndex) {
 
 /// Reads the `"note_path"` string extra off the `NativeActivity`'s launch
 /// `Intent`, if present -- set by the home-screen widget's `PendingIntent`
-/// when a specific note was tapped (see `immermemo/android`'s
+/// when a specific note was tapped (see `app/android`'s
 /// `NoteWidgetProvider`/`NoteWidgetFactory`). `None` on any failure (no
 /// extra set, JNI error, ...): same "fall back to the normal startup note"
 /// behavior either way, so nothing here is worth surfacing as an error.
