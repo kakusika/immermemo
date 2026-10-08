@@ -55,6 +55,7 @@ mkShell {
     tomet-lsp
     tmtbook
     twrit
+    deno
     slint-lsp
     slint-viewer
     slint-tr-extractor
