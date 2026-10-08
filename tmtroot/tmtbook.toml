@@ -1,0 +1,8 @@
+[book]
+title = "Immermemo docs"
+lang = "ja"
+dest = "dist"
+
+[build]
+base = "/immermemo"
+kinds = ["*", "!config", "!index"]

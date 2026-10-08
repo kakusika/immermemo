@@ -1,55 +1,71 @@
+<!-- Generated from tmtroot/readme.tmt. Edit that, then `tomet export .`. -->
+
 # Immermemo
 
-A mobile note app for writing [Tomet](https://github.com/tomet-lang/tomet)
-(`.tmt`) notes, synced over git without git ever touching the folder the
-user sees.
+イマーメモ、今メモ!
+日々のメモ体験と、**ノートの保有者がユーザーであること**を意識したモバイルメモアプリ。
 
-## Why this exists
+Immermemoは、構造化マークアップ言語 [Tomet](https://github.com/tomet-lang/tomet) (`.tmt`) を使用してノートを保存します。
+ノートは特定のアプリに閉じ込められず、**Immermemoを使用しなくてもTometファイルとして編集・利用できます**。
 
-Git sync on mobile runs into two problems: cloud file providers
-(iCloud Drive, Google Drive) don't get along with `.git`'s pile of small
-files, and a raw text merge on conflict forces the user into a resolution
-UI no phone screen has room for.
+## 特徴 (Features)
 
-Immermemo's answer to both: the git repository lives in the app's private
-storage, entirely separate from the folder the user's notes are visible
-in (`crates/sync`); and conflicts are resolved at the AST level, not the
-text level, so most concurrent edits never conflict at all -- the ones
-that do get written back into the note itself as a `@mobile.conflict`
-element instead of a duplicated file or a merge-marker mess
-(`crates/merge`, `vocab/mobile.vocabulary.tmt`).
+> [!summary]
+> **いつでも手軽に記録**でき、**書いたノートを自分の手元に置いておける**メモアプリ。
+> **オフラインでも制限なく編集**でき、リッチテキスト編集によって**記法を意識せず書ける**ほか、
+> **同期時の競合も作業を止めずに保持する**ことで、**環境や同期状態を意識せず**、思考をそのまま記録できます。
+> **高度な検索**や**ライブラリ**によって、蓄積したノートも必要なときにすぐ見つけられます。
 
-## Layout
+- 
+  - ソースコードを公開しながら開発されています。
+また、メモに必要のない広告は表示されません。
+- 
+  - 保存できるノートの量に、アプリ側の制限はありません。
+利用可能な容量は、お使いのデバイスや同期サービスに依存します。
+- 
+  - インターネット接続がなくてもノートを編集できます。
+- 
+  - GitHub / Git / Google Drive に対応しています。
+自分のノートを、自分が選んだ場所に保存・同期できます。
+- 
+  - 同期時に競合の解決を強制しません。
+Tometの `@conflict` を使用し、競合状態そのものをノートとして保持します。
+そのため、競合が発生しても作業を中断することなく、記録を続けられます。
+- 
+  - 高度な検索
+ライブラリによるノートの探索・整理
+- 
+  - Tometの記法を意識せず、通常のエディタのようにノートを編集できます。
+- 
+  - 素早くノートにアクセス
+
+## リポジトリ構成 (Layout)
 
 ```
 immermemo/
 ├── crates/
-│   ├── sync/    # git2-backed vault sync -- see its module doc
-│   ├── merge/   # AST-level three-way merge -- see its module doc
+│   ├── sync/    # git2-backed vault sync
+│   ├── merge/   # AST-level three-way merge
 │   ├── index/   # SQLite-backed note index for listing and search
-│   └── vault/   # vault/note/credential domain logic, UI-framework-agnostic
+│   └── vault/   # vault/note/credential domain logic, UI-agnostic
 ├── vocab/
-│   └── mobile.vocabulary.tmt   # the @mobile.conflict vocabulary
-└── app/     # the app: desktop + Android, Slint UI
+│   └── mobile.vocabulary.tmt   # @mobile.conflict vocabulary
+└── app/         # The app: desktop + Android, Slint UI
 ```
 
-`tomet` itself is never modified by this project -- it's consumed as an
-ordinary git dependency (see the workspace `Cargo.toml`). This repository
-is independent of the `tomet` repository.
+## 開発ガイド (Development)
 
-## Finding your way around
-
-How the whole system fits together (sync protocol, what goes into git
-and what doesn't, the conflict pipeline): `docs/design.md`. What a
-crate is and why it exists, below that level: that crate's `//!` module
-doc (`crates/sync/src/lib.rs`, `crates/merge/src/lib.rs`, and so on for
-`crates/index` and `crates/vault`). What the conflict vocabulary means:
-`vocab/mobile.vocabulary.tmt`, written against `tomet`'s own
-`docs/spec/vocabulary.tmt`.
-
-## Building
-
-```bash
-cargo build
-cargo test --workspace
+```sh
+nix develop         # enters the dev shell (or use direnv)
+just avd-create     # 初回のみ: AVD作成 (Pixel 6, API34, x86_64)
+just emulator       # エミュレータ起動
+just run            # ビルド → インストール → 起動
 ```
+
+### 便利なレシピ
+
+- `just logs`: 実行中アプリの logcat を追跡
+- `just screenshot [path]`: 画面キャプチャ取得
+- `just stop`: アプリを強制終了
+- `just emulator-stop`: エミュレータ終了
+
