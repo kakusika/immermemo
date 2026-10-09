@@ -362,7 +362,7 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
 /// to its note's `@meta{ icon: @doc.icon(...) }` image, if it has one --
 /// `directory::DirectoryEntry` itself carries no icon (it's
 /// UI-framework-agnostic, same reasoning as `render::classify` staying
-/// free of `slint`/`origami_icons` types), so this seam resolves it the
+/// free of `slint`/`origiri_icons` types), so this seam resolves it the
 /// same way `render::to_rendered_block` resolves a body-inline occurrence.
 fn to_entry_view(
     e: directory::DirectoryEntry,
@@ -1290,14 +1290,14 @@ pub fn open_icon_picker(app: &App, session: &Rc<RefCell<Session>>, note_index: u
     app.set_icon_picker_open(true);
 }
 
-/// Filters `origami_icons::icon_names(ICON_PICKER_DEFAULT_PKG)` by `query`
+/// Filters `origiri_icons::icon_names(ICON_PICKER_DEFAULT_PKG)` by `query`
 /// (substring, case-insensitive), resolves up to `ICON_PICKER_MAX_RESULTS`
 /// matches into real images, and sets `app.icon-picker-results`. Called on
 /// open (empty query -- the vendored set's first `ICON_PICKER_MAX_RESULTS`
 /// slugs alphabetically) and on every edit of the search field.
 pub fn filter_icon_picker(app: &App, query: &str) {
     let query = query.to_lowercase();
-    let results: Vec<PickerIconEntry> = origami_icons::icon_names(ICON_PICKER_DEFAULT_PKG)
+    let results: Vec<PickerIconEntry> = origiri_icons::icon_names(ICON_PICKER_DEFAULT_PKG)
         .iter()
         .filter(|name| name.contains(&query))
         .take(ICON_PICKER_MAX_RESULTS)

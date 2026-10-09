@@ -18,7 +18,7 @@ slint::include_modules!();
 
 use immermemo::render::classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
 use immermemo::render::flow::{FlowParagraph, NoteBodyItem};
-use origami_richtext_flow::{Fragment, Measure, layout_block};
+use origiri_richtext_flow::{Fragment, Measure, layout_block};
 
 struct Headless {
     main: Rc<MinimalSoftwareWindow>,
@@ -309,7 +309,7 @@ fn main() {
 
     // View mode via the real classify/flow pipeline: a block-level
     // `@conflict`, an unrecognized namespaced element, and -- the common
-    // case that motivated `origami-richtext`/`origami-richtext-flow` in
+    // case that motivated `origiri-richtext`/`origiri-richtext-flow` in
     // the first place -- both sides editing the same sentence, which
     // narrows to an *inline* `@conflict` mid-paragraph rather than a
     // whole-block one (see `src/render/classify.rs`'s
@@ -408,7 +408,7 @@ fn main() {
     render(&window, size, &format!("{prefix}-rename.ppm"));
     app.set_rename_open(false);
 
-    // Icon picker -- real resolved images (origami_icons::icon_svg), not
+    // Icon picker -- real resolved images (origiri_icons::icon_svg), not
     // blank placeholders, so a layout bug in the grid itself would
     // actually show up here.
     let picker_names = ["star", "flag", "heart", "home", "bell", "bookmark"];
@@ -416,7 +416,7 @@ fn main() {
         picker_names
             .iter()
             .map(|&name| {
-                let image = origami_icons::icon_svg("tabler", name)
+                let image = origiri_icons::icon_svg("tabler", name)
                     .and_then(|svg| slint::Image::load_from_svg_data(&svg).ok())
                     .unwrap_or_default();
                 PickerIconEntry {
@@ -502,7 +502,7 @@ struct RealMeasure<'a> {
 
 impl Measure for RealMeasure<'_> {
     fn text_width(&self, content: &str, style: u32) -> f32 {
-        let style = origami_richtext_flow::TextStyle::from_style_id(style);
+        let style = origiri_richtext_flow::TextStyle::from_style_id(style);
         self.app.set_measure_probe_text(content.into());
         self.app.set_measure_probe_font_size(self.font_size);
         self.app
@@ -545,7 +545,7 @@ fn to_rich_text_lines(
 fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> RichTextFragment {
     match fragment {
         Fragment::Text { content, style, .. } => {
-            let style = origami_richtext_flow::TextStyle::from_style_id(style);
+            let style = origiri_richtext_flow::TextStyle::from_style_id(style);
             RichTextFragment {
                 is_element: false,
                 text: content.into(),
@@ -660,7 +660,7 @@ fn to_conflict_side_block(leaf: &ConflictLeafBlock) -> ConflictSideBlock {
 }
 
 fn icon_image(slug: &str, pkg: &str) -> slint::Image {
-    origami_icons::icon_svg(pkg, slug)
+    origiri_icons::icon_svg(pkg, slug)
         .and_then(|svg| slint::Image::load_from_svg_data(&svg).ok())
         .unwrap_or_default()
 }

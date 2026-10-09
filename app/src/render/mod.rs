@@ -19,8 +19,8 @@
 //! other screen).
 //!
 //! A [`flow::NoteBodyItem::Flowed`] paragraph's content goes through
-//! `origami_richtext_flow::layout_block` and comes back out as
-//! `origami-richtext`'s generic `RichTextFragment`s; an element fragment's
+//! `origiri_richtext_flow::layout_block` and comes back out as
+//! `origiri-richtext`'s generic `RichTextFragment`s; an element fragment's
 //! widget is a `RenderedBlockView` instantiated at runtime via
 //! `slint::ComponentFactory` -- the same component a stacked
 //! [`classify::ClassifiedBlock`] renders as its own row, just embedded
@@ -41,7 +41,7 @@ pub mod flow;
 
 use classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
 use flow::{FlowParagraph, NoteBodyItem, note_body_items as classify_note_body_items};
-use origami_richtext_flow::{Fragment, Measure, layout_block};
+use origiri_richtext_flow::{Fragment, Measure, layout_block};
 use slint::{ComponentFactory, ModelRc, VecModel};
 
 use crate::{
@@ -97,7 +97,7 @@ struct RealMeasure<'a> {
 
 impl Measure for RealMeasure<'_> {
     fn text_width(&self, content: &str, style: u32) -> f32 {
-        let style = origami_richtext_flow::TextStyle::from_style_id(style);
+        let style = origiri_richtext_flow::TextStyle::from_style_id(style);
         self.app.set_measure_probe_text(content.into());
         self.app.set_measure_probe_font_size(self.font_size);
         self.app
@@ -140,7 +140,7 @@ fn to_rich_text_lines(
 fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> RichTextFragment {
     match fragment {
         Fragment::Text { content, style, .. } => {
-            let style = origami_richtext_flow::TextStyle::from_style_id(style);
+            let style = origiri_richtext_flow::TextStyle::from_style_id(style);
             RichTextFragment {
                 is_element: false,
                 text: content.into(),
@@ -258,7 +258,7 @@ fn to_conflict_side_block(leaf: &ConflictLeafBlock) -> ConflictSideBlock {
     }
 }
 
-/// `pkg`'s `slug` icon as a Slint image, or a blank one if `origami_icons`
+/// `pkg`'s `slug` icon as a Slint image, or a blank one if `origiri_icons`
 /// doesn't vendor that pair (an unknown/typo'd icon name -- nothing in
 /// `tomet-semantics` validates `@doc.icon`'s `name` against what's actually
 /// vendored, so this has to degrade quietly rather than panic).
@@ -268,7 +268,7 @@ fn to_conflict_side_block(leaf: &ConflictLeafBlock) -> ConflictSideBlock {
 /// `@doc.icon`'s resolution above, rather than re-deriving the same
 /// svg-bytes-to-`slint::Image` conversion twice.
 pub(crate) fn icon_image(slug: &str, pkg: &str) -> slint::Image {
-    origami_icons::icon_svg(pkg, slug)
+    origiri_icons::icon_svg(pkg, slug)
         .and_then(|svg| slint::Image::load_from_svg_data(&svg).ok())
         .unwrap_or_default()
 }

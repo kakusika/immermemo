@@ -1,19 +1,19 @@
 import { LineEdit } from "std-widgets.slint";
-import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { TablerIcons } from "@origami-icons/icons.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { TablerIcons } from "@origiri-icons/icons.slint";
 import {
     IconButton,
     IconTile,
     TopBar,
     AppScrollView,
-} from "@origami-mobile/widgets.slint";
+} from "@origiri-mobile/widgets.slint";
 import { SheetDragArea } from "../components.slint";
 
 // One candidate in the picker's (already filtered, already capped) result
 // list -- `image` is resolved in Rust (`immermemo::render::icon_image`,
-// the same `origami_icons::icon_svg` path `@doc.icon` rendering uses), not
+// the same `origiri_icons::icon_svg` path `@doc.icon` rendering uses), not
 // here: Slint has no way to turn `name` into an `@image-url()` at runtime,
-// only a fixed literal per call site (see `origami-icons`'s own
+// only a fixed literal per call site (see `origiri-icons`'s own
 // `ui/icons.slint` doc comment).
 export struct PickerIconEntry {
     name: string,

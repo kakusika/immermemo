@@ -23,32 +23,32 @@ fn main() {
     };
     let style = std::env::var("SLINT_STYLE").unwrap_or_else(|_| default_style.to_string());
 
-    // `origami-mobile` (from `origami-frameworks`, migrated out of this
-    // repo's own `crates/origami-mobile`) reports its own `ui/` directory
+    // `origiri-mobile` (from `origiri-frameworks`, migrated out of this
+    // repo's own `crates/origiri-mobile`) reports its own `ui/` directory
     // through this `links`-propagated env var (see its `build.rs`); this is
-    // what `@origami-mobile/...` resolves against below. `editor.slint`/
+    // what `@origiri-mobile/...` resolves against below. `editor.slint`/
     // `rendered_block.slint` used to come from a separate `crates/
     // editor-slint` the same way, but that crate had no other consumer and
     // no Rust code of its own, so its `ui/` moved into this crate's own
     // `ui/screens/` directly (see
     // `.agents/tasks/fold-editor-slint-into-apps-slint.md`).
-    let origami_mobile_ui_dir = std::env::var("DEP_ORIGAMI_MOBILE_UI_DIR").unwrap();
-    // `origami-mobile`'s own `.slint` now unconditionally imports
-    // `@origami-icons` (the icon set it shares with `origami-frameworks`'s
-    // desktop `origami` crate), so this app needs it wired too whenever it
-    // needs `origami-mobile`.
-    let origami_icons_ui_dir = std::env::var("DEP_ORIGAMI_ICONS_UI_DIR").unwrap();
-    // `origami-richtext` (from `origami-frameworks`) reports its own `ui/`
+    let origiri_mobile_ui_dir = std::env::var("DEP_ORIGIRI_MOBILE_UI_DIR").unwrap();
+    // `origiri-mobile`'s own `.slint` now unconditionally imports
+    // `@origiri-icons` (the icon set it shares with `origiri-frameworks`'s
+    // desktop `origiri` crate), so this app needs it wired too whenever it
+    // needs `origiri-mobile`.
+    let origiri_icons_ui_dir = std::env::var("DEP_ORIGIRI_ICONS_UI_DIR").unwrap();
+    // `origiri-richtext` (from `origiri-frameworks`) reports its own `ui/`
     // the same way; this is what `@richtext/...` resolves against below.
-    let richtext_ui_dir = std::env::var("DEP_ORIGAMI_RICHTEXT_UI_DIR").unwrap();
+    let richtext_ui_dir = std::env::var("DEP_ORIGIRI_RICHTEXT_UI_DIR").unwrap();
     let mut library_paths = std::collections::HashMap::new();
     library_paths.insert(
-        "origami-mobile".to_string(),
-        std::path::PathBuf::from(origami_mobile_ui_dir),
+        "origiri-mobile".to_string(),
+        std::path::PathBuf::from(origiri_mobile_ui_dir),
     );
     library_paths.insert(
-        "origami-icons".to_string(),
-        std::path::PathBuf::from(origami_icons_ui_dir),
+        "origiri-icons".to_string(),
+        std::path::PathBuf::from(origiri_icons_ui_dir),
     );
     library_paths.insert(
         "richtext".to_string(),

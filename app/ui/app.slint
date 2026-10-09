@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
-import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, TablerIcons } from "@origami-icons/icons.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 import { BottomNavBar, MiniNoteCard } from "components.slint";
 import { EditorScreen } from "screens/editor.slint";
 import { NoteBodyItemView } from "screens/note_body.slint";
@@ -30,7 +30,7 @@ import {
     ConfirmDialog,
     ActionSheet,
     ActionRow,
-} from "@origami-mobile/widgets.slint";
+} from "@origiri-mobile/widgets.slint";
 export { PickerIconEntry } from "sheets/icon_picker.slint";
 
 // Drives one full-screen sheet's "hop up from the bottom, swipe down to
@@ -1383,7 +1383,7 @@ export component App inherits Window {
             }
         }
 
-        // Measurement probes for `origami_richtext_flow::Measure`
+        // Measurement probes for `origiri_richtext_flow::Measure`
         // (`src/render/mod.rs`'s `RealMeasure`): off-screen elements
         // Rust sets properties on and reads `preferred-width` back from,
         // same technique `screens/editor.slint`'s `LineNumberGutter` uses

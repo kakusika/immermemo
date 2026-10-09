@@ -28,11 +28,11 @@ immermemo-sync = { path = "crates/sync" }
 immermemo-tomet-render = { path = "crates/tomet-render" }
 immermemo-vault = { path = "crates/vault" }
 
-#= Origami
-origami-icons = { git = "https://github.com/kakusika/origami-frameworks.git" }
-origami-mobile = { git = "https://github.com/kakusika/origami-frameworks.git" }
-origami-richtext = { git = "https://github.com/kakusika/origami-frameworks.git" }
-origami-richtext-flow = { git = "https://github.com/kakusika/origami-frameworks.git" }
+#= Origiri
+origiri-icons = { git = "https://github.com/kakusika/origiri-frameworks.git" }
+origiri-mobile = { git = "https://github.com/kakusika/origiri-frameworks.git" }
+origiri-richtext = { git = "https://github.com/kakusika/origiri-frameworks.git" }
+origiri-richtext-flow = { git = "https://github.com/kakusika/origiri-frameworks.git" }
 
 #= Tomet
 tomet = { git = "https://github.com/tomet-lang/tomet.git" }

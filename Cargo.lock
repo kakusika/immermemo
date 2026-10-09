@@ -2540,10 +2540,10 @@ dependencies = [
  "immermemo-tomet-render",
  "immermemo-vault",
  "jni 0.21.1",
- "origami-icons",
- "origami-mobile",
- "origami-richtext",
- "origami-richtext-flow",
+ "origiri-icons",
+ "origiri-mobile",
+ "origiri-richtext",
+ "origiri-richtext-flow",
  "slint",
  "slint-build",
  "sys-locale",
@@ -3981,30 +3981,30 @@ dependencies = [
 ]
 
 [[package]]
-name = "origami-icons"
+name = "origiri-icons"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#ca80931cd17bce8ca442f3a87a6cadeaa484ef0f"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#08383a48950710ac90f04ea3e00d1c54300ae29a"
 dependencies = [
  "flate2",
 ]
 
 [[package]]
-name = "origami-mobile"
+name = "origiri-mobile"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#ca80931cd17bce8ca442f3a87a6cadeaa484ef0f"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#08383a48950710ac90f04ea3e00d1c54300ae29a"
 
 [[package]]
-name = "origami-richtext"
+name = "origiri-richtext"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#ca80931cd17bce8ca442f3a87a6cadeaa484ef0f"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#08383a48950710ac90f04ea3e00d1c54300ae29a"
 dependencies = [
- "origami-richtext-flow",
+ "origiri-richtext-flow",
 ]
 
 [[package]]
-name = "origami-richtext-flow"
+name = "origiri-richtext-flow"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origami-frameworks.git#ca80931cd17bce8ca442f3a87a6cadeaa484ef0f"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#08383a48950710ac90f04ea3e00d1c54300ae29a"
 
 [[package]]
 name = "os_pipe"

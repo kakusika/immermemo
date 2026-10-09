@@ -21,11 +21,11 @@ immermemo-sync = { workspace = true }
 immermemo-tomet-render = { workspace = true }
 immermemo-vault = { workspace = true }
 
-#= Origami
-origami-icons = { workspace = true }
-origami-mobile = { workspace = true }
-origami-richtext = { workspace = true }
-origami-richtext-flow = { workspace = true }
+#= Origiri
+origiri-icons = { workspace = true }
+origiri-mobile = { workspace = true }
+origiri-richtext = { workspace = true }
+origiri-richtext-flow = { workspace = true }
 
 #= Crates.io
 anyhow = { workspace = true }

@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
-import { Metrics, Colors } from "@origami-mobile/tokens.slint";
-import { Icon, TablerIcons } from "@origami-icons/icons.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 import {
     IconButton,
     BubbleButton,
@@ -8,7 +8,7 @@ import {
     TopBar,
     AppScrollView,
     PillButton,
-} from "@origami-mobile/widgets.slint";
+} from "@origiri-mobile/widgets.slint";
 import { NoteBodyItemView, NoteBodyView } from "note_body.slint";
 import { ViewSwitcher, NavPill } from "../components.slint";
 import { PropertiesView } from "properties.slint";
@@ -919,7 +919,7 @@ export component EditorScreen inherits Rectangle {
             // opacity fade and y-offset (SheetSurface's `sheet-progress`/
             // `root.sheet-y-offset`) -- a child outside this surface
             // would stay fully visible even while the sheet is collapsed
-            // into the mini-card. Can't reuse origami-mobile's `Fab`
+            // into the mini-card. Can't reuse origiri-mobile's `Fab`
             // directly: its icon is hardcoded to `TablerIcons.plus`, not a
             // parameter, so this matches its visual recipe (size,
             // shape, color, shadow) by hand instead.

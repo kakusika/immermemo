@@ -69,7 +69,7 @@ pub enum BlockShape {
     /// its package, e.g. `"star"`), `reading` is `pkg` (e.g. `"tabler"`,
     /// defaulting to it when absent). Resolving that pair into an actual
     /// image is a Slint concern ([`crate::render::to_rendered_block`]),
-    /// not this crate's -- this module stays free of `slint`/`origami_icons`
+    /// not this crate's -- this module stays free of `slint`/`origiri_icons`
     /// the same way it stays free of every other UI-framework type.
     /// [`icon_look`] is what gives `(Some("doc"), "icon")` this shape.
     Icon,
@@ -77,7 +77,7 @@ pub enum BlockShape {
 
 /// A small, closed palette selector -- not vocabulary-specific, just
 /// which of the app's existing semantic colors (see `Colors` in
-/// `crates/origami-mobile/ui/tokens.slint`) a [`Look`] should draw with.
+/// `crates/origiri-mobile/ui/tokens.slint`) a [`Look`] should draw with.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tone {
     Accent,
@@ -199,7 +199,7 @@ const REGISTRY: &[(Option<&str>, &str, fn(LookInput) -> Look)] = &[
 ];
 
 /// The icon package `@doc.icon(name)` resolves against when it omits
-/// `pkg` -- the only one `origami-icons` vendors today (see that crate's
+/// `pkg` -- the only one `origiri-icons` vendors today (see that crate's
 /// `ui/icons/` -- one subdirectory per package, `tabler` the only one so
 /// far).
 const DEFAULT_ICON_PKG: &str = "tabler";

@@ -1,6 +1,6 @@
 //! Converts one paragraph's `immermemo_tomet_render::RenderItem`s (grouped
 //! by `immermemo_tomet_render::classify_blocks`) into an
-//! `origami_richtext_flow::Block`, preserving the inline positions
+//! `origiri_richtext_flow::Block`, preserving the inline positions
 //! [`super::classify::classify_body`] discards by flattening every item
 //! into its own stacked row (see that module's doc comment, and the test
 //! named `an_inline_merge_conflict_is_recognized_through_the_real_pipeline`
@@ -35,7 +35,7 @@
 //! looks like*.
 
 use immermemo_tomet_render::{RenderItem, TextStyle, classify_blocks};
-use origami_richtext_flow::{Block, Inline};
+use origiri_richtext_flow::{Block, Inline};
 
 use super::classify::{
     BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone, classify_body, to_classified_block,
@@ -43,10 +43,10 @@ use super::classify::{
 
 /// `tomet-render`'s [`TextStyle`] (bold/italic/mark/strikeout -- the same
 /// four flags, just a separate type since `tomet-render` has no
-/// `origami-richtext-flow` dependency to share one with) packed into the
-/// `origami_richtext_flow::TextStyle` convention `FlowView` decodes.
-fn to_richtext_style(style: TextStyle) -> origami_richtext_flow::TextStyle {
-    origami_richtext_flow::TextStyle {
+/// `origiri-richtext-flow` dependency to share one with) packed into the
+/// `origiri_richtext_flow::TextStyle` convention `FlowView` decodes.
+fn to_richtext_style(style: TextStyle) -> origiri_richtext_flow::TextStyle {
+    origiri_richtext_flow::TextStyle {
         bold: style.bold,
         italic: style.italic,
         mark: style.mark,
@@ -104,8 +104,8 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
 
 /// One paragraph's flowed content, plus the element payloads its
 /// `Inline::Element { id }` entries index into. `id` is only an index into
-/// `elements` -- see `origami_richtext_flow::model::ElementId`'s doc for
-/// why this crate, not `origami-richtext-flow`, owns what an id means.
+/// `elements` -- see `origiri_richtext_flow::model::ElementId`'s doc for
+/// why this crate, not `origiri-richtext-flow`, owns what an id means.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FlowParagraph {
     pub block: Block,
@@ -316,7 +316,7 @@ mod tests {
         };
         assert_eq!(
             style,
-            origami_richtext_flow::TextStyle {
+            origiri_richtext_flow::TextStyle {
                 bold: true,
                 ..Default::default()
             }
