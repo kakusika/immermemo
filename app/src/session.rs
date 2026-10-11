@@ -759,6 +759,15 @@ pub fn copy_to_clipboard(app: &App, text: &str) {
         .set_clipboard_text(text, slint::platform::Clipboard::DefaultClipboard);
 }
 
+/// Reads text from the system clipboard using Slint's platform abstraction.
+pub fn read_from_clipboard(app: &App) -> Option<String> {
+    slint::private_unstable_api::re_exports::WindowInner::from_pub(app.window())
+        .context()
+        .platform()
+        .clipboard_text(slint::platform::Clipboard::DefaultClipboard)
+}
+
+
 /// Tells the window whether the undo and redo buttons have anything to do.
 pub fn show_history_state(app: &App, session: &Session) {
     let history = session.editor.history.as_ref();

@@ -18,7 +18,13 @@ pub mod appdata;
 pub mod credentials;
 pub mod notes;
 pub mod token_blob;
+pub mod transfer;
 
 pub use appdata::AppData;
 pub use credentials::{PlainFileTokenStore, TokenStore, TokenStoreFactory};
 pub use notes::{SearchResult, display_name, has_conflict_marker};
+pub use transfer::{
+    ApplyResult, ExportOptions, InterfaceTransfer, SyncTransfer, TransferPayload, apply_payload,
+    build_payload, decode_payload, encode_payload,
+};
+

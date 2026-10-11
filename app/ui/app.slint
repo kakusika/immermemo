@@ -223,6 +223,20 @@ export component App inherits Window {
     in property <string> current-vault-path: "";
     in-out property <bool> settings-sheet-open: false;
     in-out property <bool> settings-open <=> root.settings-sheet-open;
+    in property <image> qr-image;
+    in-out property <bool> export-include-interface: true;
+    in-out property <bool> export-include-remote: true;
+    in-out property <bool> export-include-token: false;
+    in property <bool> transfer-copied: false;
+    in-out property <string> import-draft: "";
+    in property <bool> import-preview-ready: false;
+    in property <bool> preview-has-interface: false;
+    in property <bool> preview-has-remote: false;
+    in property <string> preview-remote-url: "";
+    in property <bool> preview-has-token: false;
+    in property <string> import-status-message: "";
+    in property <bool> import-status-is-error: false;
+
     in-out property <int> font-size-choice: 1;
     in-out property <length> editor-font-size: 17px;
     in-out property <int> theme-choice: 0;
@@ -278,6 +292,14 @@ export component App inherits Window {
     callback status-bar-changed(int);
     callback note-sheet-open-changed(bool);
     callback save-remote(string, string);
+    callback refresh-transfer-qr();
+    callback export-options-changed(bool, bool, bool);
+    callback copy-transfer-link();
+    callback paste-import-clipboard();
+    callback review-import(string);
+    callback apply-import();
+    callback cancel-import-preview();
+
     callback rename-requested(int);
     callback delete-requested(int);
     callback confirm-rename(string);
@@ -1221,6 +1243,27 @@ export component App inherits Window {
                 font-size-changed(c) => { root.font-size-changed(c); }
                 theme-changed(c) => { root.theme-changed(c); }
                 status-bar-changed(c) => { root.status-bar-changed(c); }
+                qr-image: root.qr-image;
+                export-include-interface <=> root.export-include-interface;
+                export-include-remote <=> root.export-include-remote;
+                export-include-token <=> root.export-include-token;
+                transfer-copied: root.transfer-copied;
+                import-draft <=> root.import-draft;
+                import-preview-ready: root.import-preview-ready;
+                preview-has-interface: root.preview-has-interface;
+                preview-has-remote: root.preview-has-remote;
+                preview-remote-url: root.preview-remote-url;
+                preview-has-token: root.preview-has-token;
+                import-status-message: root.import-status-message;
+                import-status-is-error: root.import-status-is-error;
+                refresh-transfer-qr => { root.refresh-transfer-qr(); }
+                export-options-changed(i, r, t) => { root.export-options-changed(i, r, t); }
+                copy-transfer-link => { root.copy-transfer-link(); }
+                paste-import-clipboard => { root.paste-import-clipboard(); }
+                review-import(d) => { root.review-import(d); }
+                apply-import => { root.apply-import(); }
+                cancel-import-preview => { root.cancel-import-preview(); }
+
                 close => {
                     root.settings-sheet-open = false;
                     root.close-settings();

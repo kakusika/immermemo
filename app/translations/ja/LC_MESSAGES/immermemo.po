@@ -706,3 +706,92 @@ msgstr "無題"
 msgctxt "EditorScreen"
 msgid "Tap Edit or double-tap here to write."
 msgstr "「編集」をタップするか、ここをダブルタップして書き始めてください。"
+
+msgctxt "SettingsSheet"
+msgid "Transfer & Share"
+msgstr "設定の引き継ぎ・共有"
+
+msgctxt "SettingsSheet"
+msgid "Export (Show QR)"
+msgstr "書き出し (QR表示)"
+
+msgctxt "SettingsSheet"
+msgid "Import"
+msgstr "取り込み"
+
+msgctxt "SettingsSheet"
+msgid "Select items to include:"
+msgstr "含める項目を選択:"
+
+msgctxt "SettingsSheet"
+msgid "Appearance & UI"
+msgstr "外観・UI設定"
+
+msgctxt "SettingsSheet"
+msgid "Theme, font size, and UI scale"
+msgstr "テーマ、フォントサイズ、UIスケール"
+
+msgctxt "SettingsSheet"
+msgid "Remote Sync URL"
+msgstr "同期先URL"
+
+msgctxt "SettingsSheet"
+msgid "Active vault remote git repository URL"
+msgstr "現在のアクティブボルトのGitリモートURL"
+
+msgctxt "SettingsSheet"
+msgid "Include Access Token"
+msgstr "アクセストークンを含める"
+
+msgctxt "SettingsSheet"
+msgid "⚠️ Contains sensitive personal credentials"
+msgstr "⚠️ 機密情報を含みます"
+
+msgctxt "SettingsSheet"
+msgid "Scan with another device:"
+msgstr "別の端末でスキャン:"
+
+msgctxt "SettingsSheet"
+msgid "Copy Transfer Link"
+msgstr "引き継ぎリンクをコピー"
+
+msgctxt "SettingsSheet"
+msgid "Copied to Clipboard!"
+msgstr "クリップボードにコピーしました！"
+
+msgctxt "SettingsSheet"
+msgid "Import Settings"
+msgstr "設定の取り込み"
+
+msgctxt "SettingsSheet"
+msgid "Paste an immermemo:// transfer link or payload below:"
+msgstr "immermemo:// 引き継ぎリンクまたはデータを貼り付けてください:"
+
+msgctxt "SettingsSheet"
+msgid "Paste Clipboard"
+msgstr "クリップボードから貼付"
+
+msgctxt "SettingsSheet"
+msgid "Review & Apply"
+msgstr "確認して適用"
+
+msgctxt "SettingsSheet"
+msgid "Settings Ready to Import"
+msgstr "取り込み可能な設定"
+
+msgctxt "SettingsSheet"
+msgid "✓ Appearance & UI settings"
+msgstr "✓ 外観・UI設定"
+
+msgctxt "SettingsSheet"
+msgid "✓ Remote URL: "
+msgstr "✓ リモートURL: "
+
+msgctxt "SettingsSheet"
+msgid "⚠️ Access Token (will update saved token)"
+msgstr "⚠️ アクセストークン (保存済みトークンを更新)"
+
+msgctxt "SettingsSheet"
+msgid "Apply Settings"
+msgstr "設定を適用"
+

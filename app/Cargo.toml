@@ -29,8 +29,12 @@ origiri-richtext-flow = { workspace = true }
 
 #= Crates.io
 anyhow = { workspace = true }
+base64 = { workspace = true }
 directories = { workspace = true }
 git2 = { workspace = true }
+qrcode = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 sys-locale = { workspace = true }
 
 # Linux Desktop: winit on Wayland + Skia.

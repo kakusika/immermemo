@@ -67,8 +67,91 @@ component CategoryRow inherits Rectangle {
     }
 }
 
+// A toggle row for selecting which transfer items to include in export.
+component TransferToggleRow inherits Rectangle {
+    in property <image> icon;
+    in property <string> title;
+    in property <string> subtitle: "";
+    in-out property <bool> checked: false;
+    in property <bool> is-warning: false;
+    callback toggled(bool);
+
+    min-height: Metrics.touch;
+    border-radius: Metrics.radius-sm;
+    background: touch.pressed ? Palette.foreground.with-alpha(0.06) : transparent;
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    HorizontalLayout {
+        padding-left: Metrics.spacing-sm;
+        padding-right: Metrics.spacing-sm;
+        spacing: Metrics.spacing-md;
+
+        if root.icon.width > 0: VerticalLayout {
+            alignment: center;
+            Icon {
+                source: root.icon;
+                width: Metrics.icon-md;
+                height: Metrics.icon-md;
+                color: root.is-warning ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Palette.accent-background;
+            }
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: root.title;
+                font-size: Metrics.font-body;
+                color: root.is-warning ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Palette.foreground;
+            }
+
+            if root.subtitle != "": Text {
+                text: root.subtitle;
+                font-size: Metrics.font-sm;
+                color: root.is-warning ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+                wrap: word-wrap;
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 24px;
+                height: 24px;
+                border-radius: 6px;
+                border-width: 1.5px;
+                border-color: root.checked ? Palette.accent-background : Colors.muted;
+                background: root.checked ? Palette.accent-background : transparent;
+                animate background {
+                    duration: 150ms;
+                    easing: ease-out;
+                }
+
+                if root.checked: Icon {
+                    source: TablerIcons.check;
+                    width: 16px;
+                    height: 16px;
+                    color: Palette.accent-foreground;
+                }
+            }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+
 // A full-screen sheet for application settings: a grouped list of rows
-// (Interface; Other -- Sync & Remote, Vaults; Info -- About), each
+// (Interface; Other -- Sync & Remote, Vaults, Transfer & Share; Info -- About), each
 // drilling into its own sub-page -- the common "grouped list -> detail"
 // settings shape, chosen so new settings have an obvious home instead of
 // piling onto one long flat page.
@@ -105,6 +188,22 @@ export component SettingsSheet inherits Rectangle {
     in property <string> app-version: "0.1.0";
     in property <bool> show-back: true;
 
+    // Transfer & Share properties
+    in property <image> qr-image;
+    in-out property <bool> export-include-interface: true;
+    in-out property <bool> export-include-remote: true;
+    in-out property <bool> export-include-token: false;
+    in property <bool> transfer-copied: false;
+    in-out property <string> import-draft: "";
+    in property <bool> import-preview-ready: false;
+    in property <bool> preview-has-interface: false;
+    in property <bool> preview-has-remote: false;
+    in property <string> preview-remote-url: "";
+    in property <bool> preview-has-token: false;
+    in property <string> import-status-message: "";
+    in property <bool> import-status-is-error: false;
+    in-out property <int> transfer-tab: 0;
+
     callback close();
     callback save-remote(string, string);
     callback sync();
@@ -112,8 +211,15 @@ export component SettingsSheet inherits Rectangle {
     callback status-bar-changed(int);
     callback font-size-changed(int);
     callback theme-changed(int);
+    callback refresh-transfer-qr();
+    callback export-options-changed(bool, bool, bool);
+    callback copy-transfer-link();
+    callback paste-import-clipboard();
+    callback review-import(string);
+    callback apply-import();
+    callback cancel-import-preview();
 
-    // 0: list, 1: Interface, 2: Sync & Remote, 3: Vaults, 4: About.
+    // 0: list, 1: Interface, 2: Sync & Remote, 3: Vaults, 4: About, 5: Transfer & Share.
     // in-out so the app-level Back action (hardware button / edge-swipe
     // gesture) can pop a sub-page back to the list -- see app.slint's
     // handle-back().
@@ -123,6 +229,7 @@ export component SettingsSheet inherits Rectangle {
     property <bool> scroll-at-top: root.scroll-content-y >= -1px;
 
     background: Colors.page-background;
+
 
     header-gesture := SheetDragArea {
         x: 0px;
@@ -157,12 +264,14 @@ export component SettingsSheet inherits Rectangle {
                     : root.page == 2 ? @tr("Sync & Remote")
                     : root.page == 3 ? @tr("Vaults")
                     : root.page == 4 ? @tr("About")
+                    : root.page == 5 ? @tr("Transfer & Share")
                     : @tr("Settings");
                 font-size: 20px;
                 font-weight: 600;
                 vertical-alignment: center;
                 color: Palette.foreground;
             }
+
         }
     }
 
@@ -231,6 +340,18 @@ export component SettingsSheet inherits Rectangle {
                                 label-text: @tr("Vaults");
                                 clicked => { root.page = 3; }
                             }
+
+                            Divider { }
+
+                            CategoryRow {
+                                icon: TablerIcons.qrcode;
+                                label-text: @tr("Transfer & Share");
+                                clicked => {
+                                    root.page = 5;
+                                    root.refresh-transfer-qr();
+                                }
+                            }
+
                         }
                     }
 
@@ -514,6 +635,213 @@ export component SettingsSheet inherits Rectangle {
                         }
                     }
                 }
+
+                // --------------------------------------------------------
+                // Transfer & Share
+                // --------------------------------------------------------
+                if root.page == 5: VerticalLayout {
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
+                    spacing: 16px;
+
+                    SegmentedControl {
+                        options: [@tr("Export (Show QR)"), @tr("Import")];
+                        selected: root.transfer-tab;
+                        changed(i) => {
+                            root.transfer-tab = i;
+                            if (i == 0) {
+                                root.refresh-transfer-qr();
+                            }
+                        }
+                    }
+
+                    if root.transfer-tab == 0: VerticalLayout {
+                        spacing: 16px;
+
+                        Card {
+                            content-spacing: Metrics.spacing-md;
+
+                            Text {
+                                text: @tr("Select items to include:");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            TransferToggleRow {
+                                icon: TablerIcons.settings;
+                                title: @tr("Appearance & UI");
+                                subtitle: @tr("Theme, font size, and UI scale");
+                                checked: root.export-include-interface;
+                                toggled(c) => {
+                                    root.export-include-interface = c;
+                                    root.export-options-changed(root.export-include-interface, root.export-include-remote, root.export-include-token);
+                                }
+                            }
+
+                            Divider { }
+
+                            TransferToggleRow {
+                                icon: TablerIcons.cloud;
+                                title: @tr("Remote Sync URL");
+                                subtitle: @tr("Active vault remote git repository URL");
+                                checked: root.export-include-remote;
+                                toggled(c) => {
+                                    root.export-include-remote = c;
+                                    root.export-options-changed(root.export-include-interface, root.export-include-remote, root.export-include-token);
+                                }
+                            }
+
+                            Divider { }
+
+                            TransferToggleRow {
+                                icon: TablerIcons.lock-share;
+                                title: @tr("Include Access Token");
+                                subtitle: @tr("⚠️ Contains sensitive personal credentials");
+                                checked: root.export-include-token;
+                                is-warning: true;
+                                toggled(c) => {
+                                    root.export-include-token = c;
+                                    root.export-options-changed(root.export-include-interface, root.export-include-remote, root.export-include-token);
+                                }
+                            }
+                        }
+
+                        Card {
+                            content-spacing: Metrics.spacing-md;
+
+                            Text {
+                                text: @tr("Scan with another device:");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            HorizontalLayout {
+                                alignment: center;
+                                Rectangle {
+                                    width: 220px;
+                                    height: 220px;
+                                    border-radius: Metrics.radius-md;
+                                    background: white;
+                                    clip: true;
+
+                                    Image {
+                                        width: 200px;
+                                        height: 200px;
+                                        source: root.qr-image;
+                                        image-fit: contain;
+                                    }
+                                }
+                            }
+
+                            HorizontalLayout {
+                                alignment: center;
+                                Button {
+                                    text: root.transfer-copied ? @tr("Copied to Clipboard!") : @tr("Copy Transfer Link");
+                                    clicked => { root.copy-transfer-link(); }
+                                }
+                            }
+                        }
+                    }
+
+                    if root.transfer-tab == 1: VerticalLayout {
+                        spacing: 16px;
+
+                        Card {
+                            content-spacing: Metrics.spacing-md;
+
+                            Text {
+                                text: @tr("Import Settings");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            Text {
+                                text: @tr("Paste an immermemo:// transfer link or payload below:");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+
+                            LineEdit {
+                                height: Metrics.touch;
+                                placeholder-text: @tr("immermemo://import#... or JSON");
+                                text <=> root.import-draft;
+                            }
+
+                            HorizontalLayout {
+                                spacing: 8px;
+                                alignment: end;
+
+                                Button {
+                                    text: @tr("Paste Clipboard");
+                                    clicked => { root.paste-import-clipboard(); }
+                                }
+
+                                Button {
+                                    text: @tr("Review & Apply");
+                                    primary: true;
+                                    enabled: root.import-draft != "";
+                                    clicked => { root.review-import(root.import-draft); }
+                                }
+                            }
+
+                            if root.import-status-message != "": Text {
+                                text: root.import-status-message;
+                                font-size: 13px;
+                                color: root.import-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+
+                        if root.import-preview-ready: Card {
+                            content-spacing: Metrics.spacing-sm;
+
+                            Text {
+                                text: @tr("Settings Ready to Import");
+                                font-size: 15px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                            }
+
+                            Divider { }
+
+                            if root.preview-has-interface: ActionRow {
+                                text: @tr("✓ Appearance & UI settings");
+                            }
+
+                            if root.preview-has-remote: ActionRow {
+                                text: @tr("✓ Remote URL: ") + root.preview-remote-url;
+                            }
+
+                            if root.preview-has-token: ActionRow {
+                                text: @tr("⚠️ Access Token (will update saved token)");
+                                tint: Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500;
+                            }
+
+                            Divider { }
+
+                            HorizontalLayout {
+                                spacing: 8px;
+                                alignment: end;
+
+                                Button {
+                                    text: @tr("Cancel");
+                                    clicked => { root.cancel-import-preview(); }
+                                }
+
+                                Button {
+                                    text: @tr("Apply Settings");
+                                    primary: true;
+                                    clicked => { root.apply-import(); }
+                                }
+                            }
+                        }
+                    }
+                }
+
             }
         }
     }
