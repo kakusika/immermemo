@@ -106,7 +106,7 @@ pub fn apply_restored(state: &EditorState, notes: &[PathBuf], restored: Restored
             .err()
             .map(|e| format!("Save failed: {e}"))
     });
-    let has_conflict = text.contains(immermemo_merge::CONFLICT_MARKER);
+    let has_conflict = text.contains(tomet::merge::CONFLICT_MARKER);
     RestoredNote {
         body: text,
         cursor,

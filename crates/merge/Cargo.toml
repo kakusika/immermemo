@@ -1,7 +1,0 @@
-[package]
-name = "immermemo-merge"
-version.workspace = true
-edition.workspace = true
-
-[dependencies]
-tomet = { workspace = true, features = ["parser", "printer"] }

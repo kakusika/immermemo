@@ -5,11 +5,10 @@ edition.workspace = true
 
 [dependencies]
 immermemo-identity = { workspace = true }
-immermemo-merge = { workspace = true }
 immermemo-vault = { workspace = true }
 
 #= Tomet
-tomet = { workspace = true, features = ["parser", "printer"] }
+tomet = { workspace = true, features = ["parser", "printer", "merge"] }
 
 #= Crates.io
 anyhow = { workspace = true }

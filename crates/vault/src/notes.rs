@@ -52,7 +52,7 @@ pub fn display_name(vault_dir: &Path, path: &Path) -> String {
 /// A cheap textual check for the list badge; the sync report is what says
 /// which notes the merge itself flagged.
 pub fn has_conflict_marker(path: &Path) -> bool {
-    std::fs::read_to_string(path).is_ok_and(|t| t.contains(immermemo_merge::CONFLICT_MARKER))
+    std::fs::read_to_string(path).is_ok_and(|t| t.contains(tomet::merge::CONFLICT_MARKER))
 }
 
 /// Deletes a note file outright. Not recoverable from the UI -- the

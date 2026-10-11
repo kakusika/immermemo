@@ -335,7 +335,7 @@ pub fn run(
                     history.edit(&text);
                 }
                 show_history_state(&app, &s);
-                let has_conflict = text.contains(immermemo_merge::CONFLICT_MARKER);
+                let has_conflict = text.contains(tomet::merge::CONFLICT_MARKER);
                 if app.get_current_has_conflict() != has_conflict {
                     app.set_current_has_conflict(has_conflict);
                     if let Some(idx) = s.editor.current
@@ -1195,12 +1195,12 @@ pub fn run(
                 offset = 0;
             }
             let found = text[offset..]
-                .find(immermemo_merge::CONFLICT_MARKER)
+                .find(tomet::merge::CONFLICT_MARKER)
                 .map(|p| offset + p)
-                .or_else(|| text.find(immermemo_merge::CONFLICT_MARKER));
+                .or_else(|| text.find(tomet::merge::CONFLICT_MARKER));
             if let Some(pos) = found {
                 app.invoke_set_cursor(pos as i32);
-                *jump_pos.borrow_mut() = pos + immermemo_merge::CONFLICT_MARKER.len();
+                *jump_pos.borrow_mut() = pos + tomet::merge::CONFLICT_MARKER.len();
             }
         }
     });
@@ -1407,7 +1407,7 @@ mod tests {
         let base_doc = tomet::parser::parse_document("Original.\n").unwrap();
         let local_doc = tomet::parser::parse_document("Mine.\n").unwrap();
         let remote_doc = tomet::parser::parse_document("Theirs.\n").unwrap();
-        let merged_doc = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc).document;
+        let merged_doc = tomet::merge::merge(&base_doc, &local_doc, &remote_doc).document;
         let conflicted_text = tomet::printer::document_to_tm(&merged_doc);
         std::fs::write(&note_path, &conflicted_text).unwrap();
 
@@ -1458,7 +1458,7 @@ mod tests {
         session: &Rc<RefCell<Session>>,
         note_path: &Path,
     ) {
-        resolve_active_conflict(app, session, immermemo_merge::ConflictResolution::A);
+        resolve_active_conflict(app, session, tomet::merge::ConflictResolution::A);
 
         assert!(!app.get_current_has_conflict());
         assert_eq!(app.get_body(), "Mine.\n");
@@ -1619,7 +1619,7 @@ mod tests {
         let remote_doc =
             tomet::parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n")
                 .unwrap();
-        let merged_doc = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc).document;
+        let merged_doc = tomet::merge::merge(&base_doc, &local_doc, &remote_doc).document;
         let conflicted_text = tomet::printer::document_to_tm(&merged_doc);
         std::fs::write(&multi_note_path, &conflicted_text).unwrap();
 
@@ -1673,7 +1673,7 @@ mod tests {
         assert_eq!(app.get_status(), "All conflicts resolved");
 
         let disk_text = std::fs::read_to_string(&multi_note_path).unwrap();
-        assert!(!disk_text.contains(immermemo_merge::CONFLICT_MARKER));
+        assert!(!disk_text.contains(tomet::merge::CONFLICT_MARKER));
         assert!(disk_text.contains("Alpha min."));
         assert!(disk_text.contains("Middle untouched."));
         assert!(disk_text.contains("Beta mintheirs."));
@@ -1701,7 +1701,7 @@ mod tests {
         let remote_doc =
             tomet::parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n")
                 .unwrap();
-        let merged_doc = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc).document;
+        let merged_doc = tomet::merge::merge(&base_doc, &local_doc, &remote_doc).document;
         let conflicted_text = tomet::printer::document_to_tm(&merged_doc);
         std::fs::write(&note_path, &conflicted_text).unwrap();
 
@@ -1722,7 +1722,7 @@ mod tests {
         resolve_conflict_step(app, session, 0);
         assert!(app.get_current_has_conflict());
         let disk_text = std::fs::read_to_string(&note_path).unwrap();
-        assert!(disk_text.contains(immermemo_merge::CONFLICT_MARKER));
+        assert!(disk_text.contains(tomet::merge::CONFLICT_MARKER));
         assert!(disk_text.contains("Alpha min."));
 
         // `resolve_conflict_step` re-clamps `active-conflict-index` to the
@@ -1731,7 +1731,7 @@ mod tests {
         resolve_conflict_step(app, session, 0);
         assert!(!app.get_current_has_conflict());
         let disk_text = std::fs::read_to_string(&note_path).unwrap();
-        assert!(!disk_text.contains(immermemo_merge::CONFLICT_MARKER));
+        assert!(!disk_text.contains(tomet::merge::CONFLICT_MARKER));
         assert!(disk_text.contains("Alpha min."));
         assert!(disk_text.contains("Beta min."));
     }

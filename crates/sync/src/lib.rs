@@ -36,7 +36,7 @@
 //! diverged, the merge step never uses git's own (textual) merge driver --
 //! [`Vault::sync`] computes the merge base itself, and for every `.tmt` file
 //! that changed on both sides, reads all three blobs (base/local/remote),
-//! parses them, and hands them to [`immermemo_merge::merge`] instead. The
+//! parses them, and hands them to [`tomet::merge::merge`] instead. The
 //! result -- possibly containing `@conflict` markers -- becomes the
 //! new tree, and the merge commit is recorded as a real two-parent git
 //! commit, so history and blame stay intact even though the content-level
@@ -53,7 +53,7 @@
 //!
 //! # What isn't decided yet
 //!
-//! Only `.tmt` files go through [`immermemo_merge::merge`]. A non-`.tmt`
+//! Only `.tmt` files go through [`tomet::merge::merge`]. A non-`.tmt`
 //! file (an attachment) that both sides changed differently currently just
 //! keeps `local`'s bytes -- there is no policy yet for attachments at all
 //! (`docs/design.md` lists this as an open question: Git LFS is the
@@ -1046,3 +1046,5 @@ mod tests {
         assert_eq!(vault_hist.len(), 3);
     }
 }
+
+

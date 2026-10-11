@@ -10,8 +10,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use immermemo_merge::CONFLICT_MARKER;
 use rusqlite::{Connection, Row, params};
+use tomet::merge::CONFLICT_MARKER;
 
 /// Shared by every place that writes a note row: insert it fresh, or
 /// overwrite every column if the path already exists.

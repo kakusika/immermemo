@@ -129,7 +129,7 @@ pub struct ClassifiedBlock {
 /// was resolved), it renders flat/atomic here -- same as any other
 /// not-specially-visualized element -- rather than as a second resolvable
 /// nested chip. That loses nothing that worked before:
-/// `immermemo_merge::find_conflicts`'s own block-sequence walk already
+/// `tomet::merge::find_conflicts`'s own block-sequence walk already
 /// stops at the first `@conflict` it finds and never recurses into that
 /// element's own `a`/`b` content looking for more, so a nested conflict
 /// was never independently reachable from the resolution sheet until the
@@ -215,7 +215,7 @@ const REGISTRY: &[(Option<&str>, &str, fn(LookInput) -> Look)] = &[
 const DEFAULT_ICON_PKG: &str = "tabler";
 
 /// `@conflict(a: [...], b: [...])` -- `a`/`b` are plain structural names,
-/// not "mine"/"theirs" (see `immermemo_merge::find_conflicts`'s own module
+/// not "mine"/"theirs" (see `tomet::merge::find_conflicts`'s own module
 /// doc for why neither carries that meaning). Resolving the conflict is
 /// the resolution sheet's job (`crates/editor/src/conflicts.rs`), not
 /// this one's -- this only classifies each side's content for display,
@@ -605,14 +605,14 @@ mod tests {
         assert!(classify_body("").is_empty());
     }
 
-    // `immermemo_merge::merge_one` always recurses into a
+    // `tomet::merge` always recurses into a
     // Paragraph/Paragraph/Paragraph triple (`merge_inline_seq` never
     // fails), so two sides editing the *same* paragraph differently --
     // the common conflict -- narrows to an *inline* `@conflict`. Only a
     // structural mismatch (here: local turns the block into a different
     // kind of node, which `merge_one` can't narrow across) produces a
     // block-level one instead. This test proves the real
-    // `immermemo_merge::merge` -> `tomet::parser::parse_document` ->
+    // `tomet::merge::merge` -> `tomet::parser::parse_document` ->
     // `classify` pipeline actually reaches `BlockShape::Conflict` for
     // that case, not just a hand-written `@conflict(...)` fixture.
     #[test]
@@ -620,7 +620,7 @@ mod tests {
         let base = tomet::parser::parse_document("The quick fox jumps.\n").unwrap();
         let local = tomet::parser::parse_document("The slow fox jumps.\n").unwrap();
         let remote = tomet::parser::parse_document("The lazy fox jumps.\n").unwrap();
-        let merged = immermemo_merge::merge(&base, &local, &remote).document;
+        let merged = tomet::merge::merge(&base, &local, &remote).document;
         let text = tomet::printer::document_to_tm(&merged);
 
         let blocks = classify_body(&text);
@@ -648,7 +648,7 @@ mod tests {
         let base = tomet::parser::parse_document("Original.\n").unwrap();
         let local = tomet::parser::parse_document("@meta{ x: 1 }\n").unwrap();
         let remote = tomet::parser::parse_document("Theirs.\n").unwrap();
-        let merged = immermemo_merge::merge(&base, &local, &remote).document;
+        let merged = tomet::merge::merge(&base, &local, &remote).document;
         let text = tomet::printer::document_to_tm(&merged);
 
         let blocks = classify_body(&text);

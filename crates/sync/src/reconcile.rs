@@ -122,7 +122,7 @@ impl Vault {
 }
 
 /// Merges one file's three versions. `.tmt` files go through
-/// `immermemo_merge`; anything else keeps `local` (no policy decided yet,
+/// `tomet::merge`; anything else keeps `local` (no policy decided yet,
 /// see the module doc).
 fn merge_bytes(path: &str, base: Option<Vec<u8>>, local: Vec<u8>, remote: Vec<u8>) -> Vec<u8> {
     if !path.ends_with(".tmt") {
@@ -138,7 +138,7 @@ fn merge_bytes(path: &str, base: Option<Vec<u8>>, local: Vec<u8>, remote: Vec<u8
     let base_doc = base.as_deref().map(parse).unwrap_or_default();
     let local_doc = parse(&local);
     let remote_doc = parse(&remote);
-    let result = immermemo_merge::merge(&base_doc, &local_doc, &remote_doc);
+    let result = tomet::merge::merge(&base_doc, &local_doc, &remote_doc);
     tomet::printer::document_to_tm(&result.document).into_bytes()
 }
 

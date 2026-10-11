@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use immermemo_index::NoteIndex;
-use immermemo_merge::ConflictResolution;
+use tomet::merge::ConflictResolution;
 use immermemo_sync::{ConflictSide, Vault};
 use immermemo_vault::appdata::AppData;
 
@@ -49,7 +49,7 @@ pub fn resolve_active_conflict(
     };
     let (resolved_text, _resolved_doc) = resolve_all_lossless(&current_text, &resolution)
         .unwrap_or_else(|| {
-            let resolved_doc = immermemo_merge::resolve_all(&doc, resolution);
+            let resolved_doc = tomet::merge::resolve_all(&doc, resolution);
             let resolved_text = tomet::printer::document_to_tm(&resolved_doc);
             (resolved_text, resolved_doc)
         });
@@ -116,7 +116,7 @@ pub fn resolve_conflict_step(
 
     let (resolved_text, resolved_doc) =
         resolve_single_lossless(&current_text, target_idx, &resolution).unwrap_or_else(|| {
-            let resolved_doc = immermemo_merge::resolve_single(&doc, target_idx, resolution);
+            let resolved_doc = tomet::merge::resolve_single(&doc, target_idx, resolution);
             let resolved_text = tomet::printer::document_to_tm(&resolved_doc);
             (resolved_text, resolved_doc)
         });
@@ -128,7 +128,7 @@ pub fn resolve_conflict_step(
         history.edit(&resolved_text);
     }
 
-    let remaining_conflicts = immermemo_merge::find_conflicts(&resolved_doc);
+    let remaining_conflicts = tomet::merge::find_conflicts(&resolved_doc);
     let has_conflict = !remaining_conflicts.is_empty();
     if let Ok(rel) = path.strip_prefix(vault_dir) {
         let _ = index.record_write(vault_dir, rel, &resolved_text);
@@ -194,7 +194,7 @@ pub fn conflict_sheet_state(
     let Ok(doc) = tomet::parser::parse_document(&current_text) else {
         return ConflictSheetState::NoActiveNote;
     };
-    let items = immermemo_merge::find_conflicts(&doc);
+    let items = tomet::merge::find_conflicts(&doc);
     if items.is_empty() {
         return ConflictSheetState::NoConflicts;
     }
@@ -263,14 +263,14 @@ fn resolve_single_lossless(
         let Some(node) = doc.get(node_id) else {
             continue;
         };
-        if !node.raw.contains(immermemo_merge::CONFLICT_MARKER) {
+        if !node.raw.contains(tomet::merge::CONFLICT_MARKER) {
             continue;
         }
 
         let Ok(parsed) = tomet::parser::parse_document(&node.raw) else {
             continue;
         };
-        let node_conflicts = immermemo_merge::find_conflicts(&parsed);
+        let node_conflicts = tomet::merge::find_conflicts(&parsed);
         let count = node_conflicts.len();
 
         if count == 0 {
@@ -280,7 +280,7 @@ fn resolve_single_lossless(
         if target_idx >= current_conflict_idx && target_idx < current_conflict_idx + count {
             let local_idx = target_idx - current_conflict_idx;
             let resolved_ast =
-                immermemo_merge::resolve_single(&parsed, local_idx, resolution.clone());
+                tomet::merge::resolve_single(&parsed, local_idx, resolution.clone());
             let mut new_text = tomet::printer::document_to_tm(&resolved_ast);
 
             if node.raw.ends_with('\n') && !new_text.ends_with('\n') {
@@ -325,18 +325,18 @@ fn resolve_all_lossless(
         let Some(node) = doc.get(node_id) else {
             continue;
         };
-        if !node.raw.contains(immermemo_merge::CONFLICT_MARKER) {
+        if !node.raw.contains(tomet::merge::CONFLICT_MARKER) {
             continue;
         }
 
         let Ok(parsed) = tomet::parser::parse_document(&node.raw) else {
             continue;
         };
-        if immermemo_merge::find_conflicts(&parsed).is_empty() {
+        if tomet::merge::find_conflicts(&parsed).is_empty() {
             continue;
         }
 
-        let resolved_ast = immermemo_merge::resolve_all(&parsed, resolution.clone());
+        let resolved_ast = tomet::merge::resolve_all(&parsed, resolution.clone());
         let mut new_text = tomet::printer::document_to_tm(&resolved_ast);
         if node.raw.ends_with('\n') && !new_text.ends_with('\n') {
             new_text.push('\n');
@@ -568,7 +568,7 @@ mod tests {
         assert!(!resolved_text.contains("Theirs."));
         assert!(resolved_text.ends_with("\n\n\n// Bottom comment\n"));
 
-        let remaining = immermemo_merge::find_conflicts(&doc);
+        let remaining = tomet::merge::find_conflicts(&doc);
         assert!(remaining.is_empty());
     }
 
@@ -584,7 +584,7 @@ mod tests {
         assert!(!resolved_text.contains("A2."));
         assert!(resolved_text.ends_with("\n\n\n// Bottom comment\n"));
 
-        let remaining = immermemo_merge::find_conflicts(&doc);
+        let remaining = tomet::merge::find_conflicts(&doc);
         assert!(remaining.is_empty());
     }
 }

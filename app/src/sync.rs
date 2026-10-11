@@ -129,7 +129,7 @@ mod tests {
         assert_eq!(conflicted, vec![b.notes.path().join("note.tmt")]);
         assert!(
             b.read("note.tmt")
-                .contains(immermemo_merge::CONFLICT_MARKER)
+                .contains(tomet::merge::CONFLICT_MARKER)
         );
     }
 

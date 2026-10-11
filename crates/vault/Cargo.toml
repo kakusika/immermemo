@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-immermemo-merge = { workspace = true }
+tomet = { workspace = true, features = ["merge"] }
 
 #= Crates.io
 anyhow = { workspace = true }

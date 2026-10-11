@@ -15,7 +15,7 @@
 //! a standalone block-level one correctly (with both sides, however long,
 //! laid out as their own rows -- fine there since there's no running
 //! sentence to break). An *inline* `@conflict` is different: it only
-//! ever reaches here from `immermemo_merge::merge`'s character-level text
+//! ever reaches here from `tomet::merge::merge`'s character-level text
 //! diff (a structural mismatch -- a whole paragraph, an element -- always
 //! narrows to a *block*-level `@conflict` instead, never an inline one),
 //! so its two sides are always short runs, safe to expand right inline

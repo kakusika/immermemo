@@ -12,11 +12,11 @@ Immermemo's answer to both: the git repository lives in the app's private storag
 
 ## Key Features
 
-- **Local-first & User-owned**: Notes are plain `.tmt` files. No vendor lock-in, fully editable with any standard text editor or Tomet tool.
-- **AST-Level 3-Way Merge**: Conflict resolution is deferred into `@mobile.conflict` syntax blocks inside the note, preserving the user's flow without blocking writes.
-- **Silent Git Sync**: Background git repository in private storage keeps sync reliable with cloud sync providers.
-- **Fast Search & Indexing**: SQLite-backed metadata and content index for instant retrieval.
-- **Rich Text Editing**: Distraction-free editing experience while preserving strongly-typed markup semantics.
+- Notes are plain `.tmt` files. No vendor lock-in, fully editable with any standard text editor or Tomet tool.
+- Conflict resolution is deferred into `@mobile.conflict` syntax blocks inside the note, preserving the user's flow without blocking writes.
+- Background git repository in private storage keeps sync reliable with cloud sync providers.
+- SQLite-backed metadata and content index for instant retrieval.
+- Distraction-free editing experience while preserving strongly-typed markup semantics.
 
 ## Repository Layout
 
@@ -43,8 +43,8 @@ just run            # Build -> install -> launch on device
 
 ### Useful Recipes
 
-- `just logs`: Tail logcat output from running app
-- `just screenshot [path]`: Capture device screen
-- `just stop`: Force-stop the app
-- `just emulator-stop`: Terminate emulator
+- Tail logcat output from running app
+- Capture device screen
+- Force-stop the app
+- Terminate emulator
 

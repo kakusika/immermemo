@@ -64,7 +64,7 @@
 //! it, because splitting prose on every unrecognized marker would
 //! fragment a sentence a reader expects to flow as one run. The only
 //! bare element this crate's caller currently cares about beyond
-//! `ruby`/`link` is `tomet`'s own `@conflict` (`immermemo_merge`'s
+//! `ruby`/`link` is `tomet`'s own `@conflict` (`tomet::merge`'s
 //! marker for an unresolved three-way merge), but [`classify`] does not
 //! special-case it either: it reports every element's
 //! [`ElementIdentity`] uniformly, and leaves "do I recognize this
@@ -813,7 +813,7 @@ mod tests {
     #[test]
     fn an_inline_conflict_splits_the_paragraph_around_it() {
         // The common conflict shape: both sides edited the same sentence,
-        // which `immermemo_merge::merge_one` narrows to one inline
+        // which `tomet::merge` narrows to one inline
         // `@conflict` (never a whole-block marker) sitting where the
         // disputed word did.
         let src = "Before @conflict(a: [mine text], b: [their text]) after.\n";

@@ -830,7 +830,7 @@ pub fn apply_restored(
 pub fn resolve_active_conflict(
     app: &App,
     session: &Rc<RefCell<Session>>,
-    resolution: immermemo_merge::ConflictResolution,
+    resolution: tomet::merge::ConflictResolution,
 ) {
     let outcome = {
         let mut guard = session.borrow_mut();

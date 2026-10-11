@@ -6,7 +6,6 @@ members = [
   "crates/editor",
   "crates/identity",
   "crates/index",
-  "crates/merge",
   "crates/provider",
   "crates/sync",
   "crates/tomet-render",
@@ -24,7 +23,6 @@ rust-version = "1.85"
 immermemo-editor = { path = "crates/editor" }
 immermemo-identity = { path = "crates/identity" }
 immermemo-index = { path = "crates/index" }
-immermemo-merge = { path = "crates/merge" }
 immermemo-provider = { path = "crates/provider" }
 immermemo-sync = { path = "crates/sync" }
 immermemo-tomet-render = { path = "crates/tomet-render" }
