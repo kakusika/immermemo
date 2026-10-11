@@ -31,6 +31,9 @@ export enum RenderedBlockShape {
     // Conflict`'s doc). `text`/`reading` unused (empty), same as every
     // other shape whose look doesn't come from them.
     conflict,
+    // A `@task(status)[label]` or `-@task(status) label` -- `text` is the
+    // task label, `checked` is true if status indicates completion (e.g. "x", "done").
+    task,
 }
 
 export enum RenderedBlockTone {
@@ -60,6 +63,7 @@ export struct ConflictSideBlock {
     strikeout: bool,
     reading: string,
     icon-image: image,
+    checked: bool,
 }
 
 export struct RenderedBlock {
@@ -85,6 +89,7 @@ export struct RenderedBlock {
     // own `@image-url()` can only ever resolve a fixed literal per call
     // site, never a runtime string). Empty elsewhere.
     icon-image: image,
+    checked: bool,
     // `@conflict`'s two sides, meaningful only for `conflict`. Empty for
     // every other shape, same convention as `reading`.
     side-a: [ConflictSideBlock],
@@ -197,6 +202,53 @@ export component ConflictSideBlockView inherits VerticalLayout {
             width: root.text-font-size;
             height: root.text-font-size;
             color: Palette.foreground;
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.task: HorizontalLayout {
+        spacing: Metrics.spacing-sm;
+
+        VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border-width: 1.5px;
+                border-color: root.block.checked ? Palette.accent-background : Colors.muted;
+                background: root.block.checked ? Palette.accent-background : transparent;
+
+                if root.block.checked: Path {
+                    width: 10px;
+                    height: 8px;
+                    commands: "M 1 4 L 4 7 L 9 1";
+                    stroke: Palette.accent-foreground;
+                    stroke-width: 1.5px;
+                }
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+
+            leaf-task-text-item := Text {
+                width: 100%;
+                text: root.block.text;
+                font-size: root.text-font-size;
+                font-weight: root.block.bold ? 700 : 400;
+                font-italic: root.block.italic;
+                color: root.block.checked ? Colors.muted : (root.block.tone == RenderedBlockTone.neutral ? Palette.foreground : root.tone-color);
+                vertical-alignment: center;
+                wrap: word-wrap;
+            }
+
+            if root.block.strikeout || root.block.checked: Rectangle {
+                y: leaf-task-text-item.height / 2;
+                width: leaf-task-text-item.preferred-width;
+                height: 1px;
+                background: Colors.muted;
+            }
         }
     }
 }
@@ -366,6 +418,53 @@ export component RenderedBlockView inherits VerticalLayout {
             width: root.text-font-size;
             height: root.text-font-size;
             color: Palette.foreground;
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.task: HorizontalLayout {
+        spacing: Metrics.spacing-sm;
+
+        VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border-width: 1.5px;
+                border-color: root.block.checked ? Palette.accent-background : Colors.muted;
+                background: root.block.checked ? Palette.accent-background : transparent;
+
+                if root.block.checked: Path {
+                    width: 10px;
+                    height: 8px;
+                    commands: "M 1 4 L 4 7 L 9 1";
+                    stroke: Palette.accent-foreground;
+                    stroke-width: 1.5px;
+                }
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+
+            task-text-item := Text {
+                width: 100%;
+                text: root.block.text;
+                font-size: root.text-font-size;
+                font-weight: root.block.bold ? 700 : 400;
+                font-italic: root.block.italic;
+                color: root.block.checked ? Colors.muted : (root.block.tone == RenderedBlockTone.neutral ? Palette.foreground : root.tone-color);
+                vertical-alignment: center;
+                wrap: word-wrap;
+            }
+
+            if root.block.strikeout || root.block.checked: Rectangle {
+                y: task-text-item.height / 2;
+                width: task-text-item.preferred-width;
+                height: 1px;
+                background: Colors.muted;
+            }
         }
     }
 }

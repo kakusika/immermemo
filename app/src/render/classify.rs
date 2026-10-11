@@ -73,6 +73,10 @@ pub enum BlockShape {
     /// the same way it stays free of every other UI-framework type.
     /// [`icon_look`] is what gives `(Some("doc"), "icon")` this shape.
     Icon,
+    /// A `@task(status)[label]` or `-@task(status) label` -- `text` is the
+    /// task label, `secondary_text` is the raw status string, and `checked`
+    /// is true if status indicates completion.
+    Task,
 }
 
 /// A small, closed palette selector -- not vocabulary-specific, just
@@ -100,6 +104,8 @@ pub struct ClassifiedBlock {
     /// straight from the matching [`Look::secondary_text`]. Empty
     /// everywhere else.
     pub reading: String,
+    /// Whether this block represents a completed task (meaningful only for `Task`).
+    pub checked: bool,
     /// `@conflict`'s two sides, meaningful only for `Conflict` -- empty
     /// for every other shape. [`ConflictLeafBlock`], not `ClassifiedBlock`
     /// itself: a side's own content never gets a further `side_a`/`side_b`
@@ -136,6 +142,7 @@ pub struct ConflictLeafBlock {
     pub text: String,
     pub style: TextStyle,
     pub reading: String,
+    pub checked: bool,
 }
 
 impl From<ClassifiedBlock> for ConflictLeafBlock {
@@ -146,6 +153,7 @@ impl From<ClassifiedBlock> for ConflictLeafBlock {
             text: block.text,
             style: block.style,
             reading: block.reading,
+            checked: block.checked,
         }
     }
 }
@@ -159,6 +167,7 @@ pub(super) struct Look {
     /// The reading annotation, meaningful only for [`BlockShape::Ruby`].
     /// Empty for every other shape.
     pub(super) secondary_text: String,
+    pub(super) checked: bool,
     /// `@conflict`'s two sides, meaningful only for [`BlockShape::Conflict`].
     /// Empty for every other shape, same convention as `secondary_text`.
     pub(super) side_a: Vec<ConflictLeafBlock>,
@@ -195,6 +204,7 @@ const REGISTRY: &[(Option<&str>, &str, fn(LookInput) -> Look)] = &[
     (None, "conflict", conflict_look),
     (None, "ruby", ruby_look),
     (None, "link", link_look),
+    (None, "task", task_look),
     (Some("doc"), "icon", icon_look),
 ];
 
@@ -231,6 +241,7 @@ fn conflict_look(input: LookInput) -> Look {
         tone: Tone::Neutral,
         text: String::new(),
         secondary_text: String::new(),
+        checked: false,
         side_a: side("a"),
         side_b: side("b"),
     }
@@ -253,6 +264,7 @@ fn ruby_look(input: LookInput) -> Look {
         tone: Tone::Neutral,
         text: input.content.unwrap_or_default().to_owned(),
         secondary_text: reading,
+        checked: false,
         side_a: Vec::new(),
         side_b: Vec::new(),
     }
@@ -286,6 +298,45 @@ fn link_look(input: LookInput) -> Look {
         tone: Tone::Accent,
         text: input.content.map(str::to_owned).unwrap_or(target),
         secondary_text: String::new(),
+        checked: false,
+        side_a: Vec::new(),
+        side_b: Vec::new(),
+    }
+}
+
+/// Whether a status string indicates completion.
+fn is_status_done(status: &str) -> bool {
+    matches!(
+        status.trim().to_ascii_lowercase().as_str(),
+        "x" | "done" | "completed" | "yes" | "true"
+    )
+}
+
+fn task_status(args: &ElementArgs) -> String {
+    match args {
+        ElementArgs::Positional(status) => status.clone(),
+        ElementArgs::Named(pairs) => pairs
+            .iter()
+            .find(|(k, _)| k == "status" || k.is_empty())
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default(),
+        ElementArgs::None => String::new(),
+    }
+}
+
+/// `@task(status)[label]` or `-@task(status) label` -- `text` is `input.content`
+/// (the task label), `secondary_text` is `status`, and `checked` is true if
+/// `status` indicates completed ("x", "done", etc.).
+fn task_look(input: LookInput) -> Look {
+    let status = task_status(input.args);
+    let done = is_status_done(&status);
+    let text = input.content.unwrap_or_default().to_owned();
+    Look {
+        shape: BlockShape::Task,
+        tone: if done { Tone::Neutral } else { Tone::Accent },
+        text,
+        secondary_text: status,
+        checked: done,
         side_a: Vec::new(),
         side_b: Vec::new(),
     }
@@ -329,6 +380,7 @@ fn icon_look(input: LookInput) -> Look {
         tone: Tone::Neutral,
         text: name,
         secondary_text: pkg,
+        checked: false,
         side_a: Vec::new(),
         side_b: Vec::new(),
     }
@@ -394,6 +446,7 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
             text: body[span.start.offset..span.end.offset].into(),
             style,
             reading: String::new(),
+            checked: false,
             side_a: Vec::new(),
             side_b: Vec::new(),
         },
@@ -420,6 +473,7 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                     text: look.text,
                     style: TextStyle::default(),
                     reading: look.secondary_text,
+                    checked: look.checked,
                     side_a: look.side_a,
                     side_b: look.side_b,
                 },
@@ -433,6 +487,7 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                         text: fallback_label(namespace, &identity.name, &args_summary),
                         style: TextStyle::default(),
                         reading: String::new(),
+                        checked: false,
                         side_a: Vec::new(),
                         side_b: Vec::new(),
                     },
@@ -447,6 +502,7 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                         text: body[span.start.offset..span.end.offset].into(),
                         style: TextStyle::default(),
                         reading: String::new(),
+                        checked: false,
                         side_a: Vec::new(),
                         side_b: Vec::new(),
                     },
@@ -497,6 +553,7 @@ mod tests {
             text: text.to_owned(),
             style: TextStyle::default(),
             reading: String::new(),
+            checked: false,
         };
         assert_eq!(blocks[1].side_a, vec![leaf("Mine text.")]);
         assert_eq!(blocks[1].side_b, vec![leaf("Theirs text.")]);
@@ -656,5 +713,39 @@ mod tests {
         assert_eq!(blocks[0].shape, BlockShape::Icon);
         assert_eq!(blocks[0].text, "star");
         assert_eq!(blocks[0].reading, "tabler");
+    }
+
+    #[test]
+    fn a_task_block_is_recognized_with_status_and_checked_state() {
+        // Open task
+        let blocks = classify_body("@task()[Buy milk]\n");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].shape, BlockShape::Task);
+        assert_eq!(blocks[0].text, "Buy milk");
+        assert!(!blocks[0].checked);
+        assert_eq!(blocks[0].tone, Tone::Accent);
+
+        // Completed task
+        let blocks = classify_body("@task(x)[Clean room]\n");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].shape, BlockShape::Task);
+        assert_eq!(blocks[0].text, "Clean room");
+        assert!(blocks[0].checked);
+        assert_eq!(blocks[0].tone, Tone::Neutral);
+    }
+
+    #[test]
+    fn combine_list_tasks_are_classified_as_tasks() {
+        let src = "-@task(x) Done item\n-@task() Open item\n";
+        let blocks = classify_body(src);
+        assert_eq!(blocks.len(), 2);
+
+        assert_eq!(blocks[0].shape, BlockShape::Task);
+        assert_eq!(blocks[0].text, "Done item");
+        assert!(blocks[0].checked);
+
+        assert_eq!(blocks[1].shape, BlockShape::Task);
+        assert_eq!(blocks[1].text, "Open item");
+        assert!(!blocks[1].checked);
     }
 }

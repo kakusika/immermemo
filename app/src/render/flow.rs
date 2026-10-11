@@ -210,6 +210,7 @@ fn push_conflict_side(
             text: leaf.text,
             style: leaf.style,
             reading: leaf.reading,
+            checked: leaf.checked,
             side_a: Vec::new(),
             side_b: Vec::new(),
         });

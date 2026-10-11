@@ -4,7 +4,9 @@
 //! order merging produced markers in, so resolutions line up with the
 //! right conflict.
 
-use tomet::ast::{Block, Document, ElementValue, Entry, Inline, Paragraph, Text, Value};
+use tomet::ast::{
+    Block, Document, Element, ElementValue, Entry, Inline, List, ListItem, Paragraph, Text, Value,
+};
 
 use crate::markers::{
     coalesce_text, conflict_block_sides, conflict_inline_sides, value_conflict_sides,
@@ -120,7 +122,7 @@ fn resolve_block_seq<'a>(
 /// Resolves every kind of `@conflict` a single block might carry: an
 /// inline marker in a `Paragraph`'s or `Element`'s content, and a
 /// `@conflict(a: ..., b: ...)` value sitting in `args` or `{data}`.
-/// Visits args/content/children/value in that order -- the same order
+/// Visits args/content/value in that order -- the same order
 /// `merge_one` recurses in -- so resolutions line up with the conflicts
 /// `merge` produced.
 fn resolve_block<'a>(
@@ -132,22 +134,8 @@ fn resolve_block<'a>(
             resolve_inline_seq(&p.content, resolutions),
             p.span,
         )),
-        Block::Element(e) => {
-            let mut e = e.clone();
-            if let Some(args) = &e.args {
-                e.args = Some(resolve_value(args, resolutions));
-            }
-            if let Some(content) = &e.content {
-                e.content = Some(resolve_block_seq(content, resolutions));
-            }
-            if let Some(children) = &e.children {
-                e.children = Some(resolve_block_seq(children, resolutions));
-            }
-            if let Some(value) = &e.value {
-                e.value = Some(resolve_element_value(value, resolutions));
-            }
-            Block::Element(e)
-        }
+        Block::Element(e) => Block::Element(resolve_element(e, resolutions)),
+        Block::List(l) => Block::List(resolve_list(l, resolutions)),
         Block::Section(sec) => {
             let mut s = sec.clone();
             s.title = resolve_inline_seq(&s.title, resolutions);
@@ -161,6 +149,42 @@ fn resolve_block<'a>(
             Block::Section(s)
         }
     }
+}
+
+fn resolve_element<'a>(
+    e: &Element,
+    resolutions: &mut impl Iterator<Item = Option<&'a ConflictResolution>>,
+) -> Element {
+    let mut e = e.clone();
+    if let Some(args) = &e.args {
+        e.args = Some(resolve_value(args, resolutions));
+    }
+    if let Some(content) = &e.content {
+        e.content = Some(resolve_block_seq(content, resolutions));
+    }
+    if let Some(value) = &e.value {
+        e.value = Some(resolve_element_value(value, resolutions));
+    }
+    e
+}
+
+fn resolve_list<'a>(
+    l: &List,
+    resolutions: &mut impl Iterator<Item = Option<&'a ConflictResolution>>,
+) -> List {
+    let mut l = l.clone();
+    l.items = l
+        .items
+        .iter()
+        .map(|item| ListItem {
+            element: resolve_element(&item.element, resolutions),
+            sublist: item
+                .sublist
+                .as_ref()
+                .map(|sub| resolve_list(sub, resolutions)),
+        })
+        .collect();
+    l
 }
 
 /// Resolves a `@conflict(a, b)` sitting where a value goes, recursing

@@ -591,6 +591,7 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
         } else {
             slint::Image::default()
         },
+        checked: block.checked,
         side_a: ModelRc::new(VecModel::from(
             block
                 .side_a
@@ -616,6 +617,7 @@ fn to_rendered_block_shape(shape: BlockShape) -> RenderedBlockShape {
         BlockShape::Ruby => RenderedBlockShape::Ruby,
         BlockShape::Link => RenderedBlockShape::Link,
         BlockShape::Icon => RenderedBlockShape::Icon,
+        BlockShape::Task => RenderedBlockShape::Task,
     }
 }
 
@@ -656,6 +658,7 @@ fn to_conflict_side_block(leaf: &ConflictLeafBlock) -> ConflictSideBlock {
         } else {
             slint::Image::default()
         },
+        checked: leaf.checked,
     }
 }
 

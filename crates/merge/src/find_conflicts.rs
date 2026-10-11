@@ -2,11 +2,11 @@
 //! them -- for showing the user what's in conflict (the resolution UI)
 //! and for `immermemo-sync`'s post-sync conflict report.
 
-use tomet::ast::{Block, Document, ElementValue, Entry, Inline, Value};
+use tomet::ast::{Block, Document, Element, ElementValue, Entry, Inline, List, Value};
 
 use crate::markers::{
     blocks_to_text, conflict_block_sides, conflict_inline_sides, inline_is_conflict,
-    inlines_to_text, is_conflict_block, value_conflict_sides, value_to_text,
+    inlines_to_text, is_conflict_block, is_conflict_element, value_conflict_sides, value_to_text,
 };
 
 /// An individual conflict region discovered within a document. `a`/`b`
@@ -49,20 +49,8 @@ fn find_conflicts_block_seq(blocks: &[Block], items: &mut Vec<ConflictItem>) {
 fn find_conflicts_block(block: &Block, items: &mut Vec<ConflictItem>) {
     match block {
         Block::Paragraph(p) => find_conflicts_inline_seq(&p.content, items),
-        Block::Element(e) => {
-            if let Some(args) = &e.args {
-                find_conflicts_value(args, items);
-            }
-            if let Some(content) = &e.content {
-                find_conflicts_block_seq(content, items);
-            }
-            if let Some(children) = &e.children {
-                find_conflicts_block_seq(children, items);
-            }
-            if let Some(value) = &e.value {
-                find_conflicts_element_value(value, items);
-            }
-        }
+        Block::Element(e) => find_conflicts_element(e, items),
+        Block::List(l) => find_conflicts_list(l, items),
         Block::Section(s) => {
             find_conflicts_inline_seq(&s.title, items);
             if let Some(args) = &s.args {
@@ -72,6 +60,27 @@ fn find_conflicts_block(block: &Block, items: &mut Vec<ConflictItem>) {
             if let Some(value) = &s.value {
                 find_conflicts_element_value(value, items);
             }
+        }
+    }
+}
+
+fn find_conflicts_element(e: &Element, items: &mut Vec<ConflictItem>) {
+    if let Some(args) = &e.args {
+        find_conflicts_value(args, items);
+    }
+    if let Some(content) = &e.content {
+        find_conflicts_block_seq(content, items);
+    }
+    if let Some(value) = &e.value {
+        find_conflicts_element_value(value, items);
+    }
+}
+
+fn find_conflicts_list(l: &List, items: &mut Vec<ConflictItem>) {
+    for item in &l.items {
+        find_conflicts_element(&item.element, items);
+        if let Some(sublist) = &item.sublist {
+            find_conflicts_list(sublist, items);
         }
     }
 }
@@ -140,16 +149,8 @@ fn document_or_block_has_conflict(block: &Block) -> bool {
     }
     match block {
         Block::Paragraph(p) => inline_seq_has_conflict(&p.content),
-        Block::Element(e) => {
-            e.args.as_ref().is_some_and(value_has_conflict)
-                || e.content
-                    .as_ref()
-                    .is_some_and(|c| c.iter().any(document_or_block_has_conflict))
-                || e.children
-                    .as_ref()
-                    .is_some_and(|c| c.iter().any(document_or_block_has_conflict))
-                || e.value.as_ref().is_some_and(element_value_has_conflict)
-        }
+        Block::Element(e) => element_has_conflict(e),
+        Block::List(l) => list_has_conflict(l),
         Block::Section(s) => {
             inline_seq_has_conflict(&s.title)
                 || s.args.as_ref().is_some_and(value_has_conflict)
@@ -157,6 +158,23 @@ fn document_or_block_has_conflict(block: &Block) -> bool {
                 || s.value.as_ref().is_some_and(element_value_has_conflict)
         }
     }
+}
+
+fn element_has_conflict(e: &Element) -> bool {
+    if is_conflict_element(e) {
+        return true;
+    }
+    e.args.as_ref().is_some_and(value_has_conflict)
+        || e.content
+            .as_ref()
+            .is_some_and(|c| c.iter().any(document_or_block_has_conflict))
+        || e.value.as_ref().is_some_and(element_value_has_conflict)
+}
+
+fn list_has_conflict(l: &List) -> bool {
+    l.items.iter().any(|item| {
+        element_has_conflict(&item.element) || item.sublist.as_ref().is_some_and(list_has_conflict)
+    })
 }
 
 fn inline_seq_has_conflict(content: &[Inline]) -> bool {

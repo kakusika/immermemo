@@ -3,7 +3,10 @@
 //! giving up and embedding a marker (see the crate's module doc for the
 //! full algorithm).
 
-use tomet::ast::{Block, Document, Element, ElementValue, Entry, Inline, Paragraph, Section, Value};
+use tomet::ast::{
+    Block, Document, Element, ElementValue, Entry, Inline, List, ListItem, Paragraph, Section,
+    Value,
+};
 
 use crate::diff3;
 use crate::markers::{coalesce_text, conflict_block, conflict_inline, push_text, value_conflict};
@@ -108,44 +111,13 @@ fn merge_one(base: &Block, local: &Block, remote: &Block) -> Option<(Block, bool
             let (content, clean) = merge_inline_seq(&b.content, &l.content, &r.content);
             Some((Block::Paragraph(Paragraph::new(content, b.span)), clean))
         }
-        (Block::Element(b), Block::Element(l), Block::Element(r))
-            if b.sigil == l.sigil && l.sigil == r.sigil =>
-        {
-            // `connects` isn't diffed -- bail rather than silently keep
-            // `local`'s and drop a real difference on the floor.
-            if l.connects != r.connects {
-                return None;
-            }
-
-            let (args, args_clean) = merge_optional(&b.args, &l.args, &r.args, |ba, la, ra| {
-                let (merged, clean) = merge_value(Some(ba), la, ra);
-                Some((merged, clean))
-            })?;
-            let (content, content_clean) =
-                merge_optional(&b.content, &l.content, &r.content, |bc, lc, rc| {
-                    let (merged, clean) = merge_block_seq(bc, lc, rc);
-                    Some((merged, clean))
-                })?;
-            let (children, children_clean) =
-                merge_optional(&b.children, &l.children, &r.children, |bc, lc, rc| {
-                    let (merged, clean) = merge_block_seq(bc, lc, rc);
-                    Some((merged, clean))
-                })?;
-            let (value, value_clean) =
-                merge_optional(&b.value, &l.value, &r.value, |bv, lv, rv| {
-                    merge_element_value(bv, lv, rv)
-                })?;
-
-            Some((
-                Block::Element(Element {
-                    args,
-                    content,
-                    children,
-                    value,
-                    ..l.clone()
-                }),
-                args_clean && content_clean && children_clean && value_clean,
-            ))
+        (Block::Element(b), Block::Element(l), Block::Element(r)) => {
+            let (element, clean) = merge_element(b, l, r)?;
+            Some((Block::Element(element), clean))
+        }
+        (Block::List(b), Block::List(l), Block::List(r)) => {
+            let (list, clean) = merge_list(b, l, r)?;
+            Some((Block::List(list), clean))
         }
         (Block::Section(b), Block::Section(l), Block::Section(r))
             if b.level == l.level && l.level == r.level =>
@@ -184,6 +156,91 @@ fn merge_one(base: &Block, local: &Block, remote: &Block) -> Option<(Block, bool
         }
         _ => None,
     }
+}
+
+fn merge_element(b: &Element, l: &Element, r: &Element) -> Option<(Element, bool)> {
+    if b.sigil != l.sigil || l.sigil != r.sigil {
+        return None;
+    }
+    // `connects` isn't diffed -- bail rather than silently keep
+    // `local`'s and drop a real difference on the floor.
+    if l.connects != r.connects {
+        return None;
+    }
+
+    let (args, args_clean) = merge_optional(&b.args, &l.args, &r.args, |ba, la, ra| {
+        let (merged, clean) = merge_value(Some(ba), la, ra);
+        Some((merged, clean))
+    })?;
+    let (content, content_clean) =
+        merge_optional(&b.content, &l.content, &r.content, |bc, lc, rc| {
+            let (merged, clean) = merge_block_seq(bc, lc, rc);
+            Some((merged, clean))
+        })?;
+    let (value, value_clean) = merge_optional(&b.value, &l.value, &r.value, |bv, lv, rv| {
+        merge_element_value(bv, lv, rv)
+    })?;
+
+    Some((
+        Element {
+            args,
+            content,
+            value,
+            ..l.clone()
+        },
+        args_clean && content_clean && value_clean,
+    ))
+}
+
+fn merge_list(b: &List, l: &List, r: &List) -> Option<(List, bool)> {
+    if b.ordered != l.ordered || l.ordered != r.ordered {
+        return None;
+    }
+    if l.connects != r.connects || l.id != r.id {
+        return None;
+    }
+    let (items, clean) = merge_list_item_seq(&b.items, &l.items, &r.items)?;
+    Some((
+        List {
+            ordered: l.ordered,
+            items,
+            id: l.id.clone(),
+            connects: l.connects.clone(),
+            span: b.span,
+        },
+        clean,
+    ))
+}
+
+fn merge_list_item(b: &ListItem, l: &ListItem, r: &ListItem) -> Option<(ListItem, bool)> {
+    let (element, el_clean) = merge_element(&b.element, &l.element, &r.element)?;
+    let (sublist, sub_clean) = merge_optional(&b.sublist, &l.sublist, &r.sublist, |sb, sl, sr| {
+        merge_list(sb, sl, sr)
+    })?;
+    Some((ListItem { element, sublist }, el_clean && sub_clean))
+}
+
+fn merge_list_item_seq(
+    base: &[ListItem],
+    local: &[ListItem],
+    remote: &[ListItem],
+) -> Option<(Vec<ListItem>, bool)> {
+    let mut items = Vec::new();
+    let mut clean = true;
+    for region in diff3::merge3(base, local, remote) {
+        match region {
+            diff3::Region::Same(same_items) => items.extend(same_items),
+            diff3::Region::Conflict { base, mine, theirs } => {
+                let narrowed = match (base.as_slice(), mine.as_slice(), theirs.as_slice()) {
+                    ([b], [m], [t]) => merge_list_item(b, m, t),
+                    _ => None,
+                }?;
+                items.push(narrowed.0);
+                clean &= narrowed.1;
+            }
+        }
+    }
+    Some((items, clean))
 }
 
 /// Narrows a conflict inside an element's `{data}` group, by key rather

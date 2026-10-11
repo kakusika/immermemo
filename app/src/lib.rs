@@ -898,6 +898,7 @@ mod tests {
             &app,
         );
         render::seam_tests::a_doc_icon_resolves_to_a_real_image_and_an_unknown_one_to_empty(&app);
+        render::seam_tests::task_items_convert_into_the_generated_model(&app);
     }
 
     fn status_classification_tracks_is_error(app: &App) {

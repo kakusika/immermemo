@@ -186,6 +186,7 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
         } else {
             slint::Image::default()
         },
+        checked: block.checked,
         side_a: ModelRc::new(VecModel::from(
             block
                 .side_a
@@ -211,6 +212,7 @@ fn to_rendered_block_shape(shape: BlockShape) -> RenderedBlockShape {
         BlockShape::Ruby => RenderedBlockShape::Ruby,
         BlockShape::Link => RenderedBlockShape::Link,
         BlockShape::Icon => RenderedBlockShape::Icon,
+        BlockShape::Task => RenderedBlockShape::Task,
     }
 }
 
@@ -255,6 +257,7 @@ fn to_conflict_side_block(leaf: &ConflictLeafBlock) -> ConflictSideBlock {
         } else {
             slint::Image::default()
         },
+        checked: leaf.checked,
     }
 }
 
@@ -359,5 +362,23 @@ pub(crate) mod seam_tests {
             "expected a narrow width to wrap onto more than one line, got {}",
             item.lines.row_count()
         );
+    }
+
+    pub(crate) fn task_items_convert_into_the_generated_model(app: &App) {
+        let src = "@task()[Open task]\n\n@task(x)[Done task]\n";
+        let model = note_body_items(src, app, 1000.0);
+        assert_eq!(model.row_count(), 2);
+
+        let first = model.row_data(0).unwrap();
+        assert!(!first.is_flow);
+        assert_eq!(first.block.shape, RenderedBlockShape::Task);
+        assert_eq!(first.block.text, "Open task");
+        assert!(!first.block.checked);
+
+        let second = model.row_data(1).unwrap();
+        assert!(!second.is_flow);
+        assert_eq!(second.block.shape, RenderedBlockShape::Task);
+        assert_eq!(second.block.text, "Done task");
+        assert!(second.block.checked);
     }
 }

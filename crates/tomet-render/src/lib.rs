@@ -242,6 +242,43 @@ fn classify_block_groups(block: &Block) -> Vec<(RenderBlockKind, Vec<RenderItem>
             groups.extend(section.blocks.iter().flat_map(classify_block_groups));
             groups
         }
+        Block::List(list) => {
+            let has_named = list
+                .items
+                .iter()
+                .any(|item| matches!(item.element.sigil, Sigil::Named(_)));
+            if !has_named {
+                vec![(
+                    RenderBlockKind::Paragraph,
+                    vec![RenderItem::Text(list.span, TextStyle::default())],
+                )]
+            } else {
+                let mut groups = Vec::new();
+                for item in &list.items {
+                    match &item.element.sigil {
+                        Sigil::Named(_) => {
+                            let items = classify_bare_character_element(&item.element)
+                                .unwrap_or_else(|| {
+                                    vec![element_item(&item.element).unwrap_or_else(|| {
+                                        RenderItem::Text(item.element.span, TextStyle::default())
+                                    })]
+                                });
+                            groups.push((RenderBlockKind::Element, items));
+                        }
+                        _ => {
+                            groups.push((
+                                RenderBlockKind::Paragraph,
+                                vec![RenderItem::Text(item.element.span, TextStyle::default())],
+                            ));
+                        }
+                    }
+                    if let Some(sublist) = &item.sublist {
+                        groups.extend(classify_block_groups(&Block::List(sublist.clone())));
+                    }
+                }
+                groups
+            }
+        }
     }
 }
 
@@ -292,7 +329,7 @@ fn inline_content(el: &Element) -> Option<&[Inline]> {
 /// `link`, so it needs splitting out inline too, not just at the block
 /// level (which every `Block::Element` already gets regardless of this
 /// list -- see `classify_block_groups`).
-const ATOMIC_BARE_ELEMENTS: &[&str] = &["ruby", "link", "conflict"];
+const ATOMIC_BARE_ELEMENTS: &[&str] = &["ruby", "link", "conflict", "task"];
 
 /// Whether `el`'s sigil is a bare (non-`@use`'d) name in
 /// [`ATOMIC_BARE_ELEMENTS`].
@@ -598,7 +635,6 @@ fn summarize_data(value: Option<&ElementValue>) -> String {
             })
             .collect::<Vec<_>>()
             .join(", "),
-        Some(ElementValue::Raw(_)) => "raw".to_string(),
         Some(ElementValue::Interp(_)) => "interp".to_string(),
     }
 }
@@ -678,17 +714,27 @@ mod tests {
 
     #[test]
     fn a_bare_builtin_element_is_identified_with_no_namespace() {
-        // A list is `Block::Element` with a bare (un-namespaced) name --
-        // see the module doc. It's still reported as an `Element`, not
-        // silently folded into `Text`: a caller that wants to give a bare
-        // built-in its own look later needs this identity to key a lookup
-        // on, even though today's caller (`immermemo`'s render::classify) falls back
-        // to showing it exactly as written, same as before this existed.
-        let items = classify("- one\n- two\n");
+        // `@task(x)[Todo]` is a bare (un-namespaced) built-in element.
+        // It's reported as an `Element` with namespace None.
+        let items = classify("@task(x)[Todo]\n");
         assert_eq!(items.len(), 1);
         match &items[0] {
-            RenderItem::Element { identity, .. } => {
+            RenderItem::Element { identity, args, .. } => {
                 assert_eq!(identity.namespace, None);
+                assert_eq!(identity.name, "task");
+                assert_eq!(*args, ElementArgs::Positional("x".to_string()));
+            }
+            _ => panic!("expected an Element item"),
+        }
+
+        // Combine list notation `-@task(x) Todo` is also classified as `@task`.
+        let items = classify("-@task(x) Todo\n");
+        assert_eq!(items.len(), 1);
+        match &items[0] {
+            RenderItem::Element { identity, args, .. } => {
+                assert_eq!(identity.namespace, None);
+                assert_eq!(identity.name, "task");
+                assert_eq!(*args, ElementArgs::Positional("x".to_string()));
             }
             _ => panic!("expected an Element item"),
         }
