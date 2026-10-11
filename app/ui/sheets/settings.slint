@@ -219,6 +219,22 @@ export component SettingsSheet inherits Rectangle {
     callback apply-import();
     callback cancel-import-preview();
 
+    // GitHub Provider & Cloud Sync properties
+    in property <bool> github-connected: false;
+    in property <string> github-username: "";
+    in property <string> github-repo-name: "";
+    in property <bool> github-auth-pending: false;
+    in property <string> github-user-code: "";
+    in property <string> github-verification-uri: "";
+    in property <string> github-auth-status: "";
+    in-out property <bool> show-advanced-remote: false;
+
+    callback connect-github();
+    callback open-github-browser();
+    callback cancel-github-auth();
+    callback disconnect-github();
+
+
     // 0: list, 1: Interface, 2: Sync & Remote, 3: Vaults, 4: About, 5: Transfer & Share.
     // in-out so the app-level Back action (hardware button / edge-swipe
     // gesture) can pop a sub-page back to the list -- see app.slint's
@@ -482,14 +498,180 @@ export component SettingsSheet inherits Rectangle {
             // Sync & Remote
             // --------------------------------------------------------
             if root.page == 2: VerticalLayout {
-                    alignment: start;
-                    padding-left: Metrics.gutter;
-                    padding-right: Metrics.gutter;
-                    padding-top: 16px;
-                    padding-bottom: root.inset-bottom + 24px;
+                alignment: start;
+                padding-left: Metrics.gutter;
+                padding-right: Metrics.gutter;
+                padding-top: 16px;
+                padding-bottom: root.inset-bottom + 24px;
+                spacing: 16px;
 
-                    Card {
-                        content-spacing: Metrics.spacing-md;
+                // Card 1: Cloud Account Sync (Primary)
+                Card {
+                    content-spacing: Metrics.spacing-md;
+
+                    HorizontalLayout {
+                        spacing: Metrics.spacing-md;
+                        VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                source: TablerIcons.brand-github;
+                                width: Metrics.icon-lg;
+                                height: Metrics.icon-lg;
+                                color: Palette.accent-background;
+                            }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            alignment: center;
+                            Text {
+                                text: @tr("GitHub Sync");
+                                font-size: 16px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                            }
+                            Text {
+                                text: @tr("Automatic multi-device synchronization and backup.");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+
+                    Divider { }
+
+                    // State A: Not connected & Not pending
+                    if !root.github-connected && !root.github-auth-pending: VerticalLayout {
+                        spacing: Metrics.spacing-md;
+                        Text {
+                            text: @tr("Sign in to automatically create and sync a private notes repository.");
+                            font-size: Metrics.font-sm;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+                        HorizontalLayout {
+                            alignment: end;
+                            Button {
+                                text: @tr("Connect with GitHub");
+                                primary: true;
+                                clicked => { root.connect-github(); }
+                            }
+                        }
+                    }
+
+                    // State B: Auth pending (Device flow)
+                    if root.github-auth-pending: VerticalLayout {
+                        spacing: Metrics.spacing-md;
+                        Text {
+                            text: @tr("Confirm this one-time code on GitHub:");
+                            font-size: Metrics.font-sm;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+
+                        Rectangle {
+                            height: 52px;
+                            border-radius: Metrics.radius-md;
+                            background: Palette.foreground.with-alpha(0.06);
+
+                            Text {
+                                text: root.github-user-code;
+                                font-size: 22px;
+                                font-weight: 700;
+                                color: Palette.accent-background;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Text {
+                            text: root.github-auth-status != "" ? root.github-auth-status : @tr("Waiting for browser authorization...");
+                            font-size: Metrics.font-sm;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: end;
+                            Button {
+                                text: @tr("Cancel");
+                                clicked => { root.cancel-github-auth(); }
+                            }
+                            Button {
+                                text: @tr("Open in Browser");
+                                primary: true;
+                                clicked => { root.open-github-browser(); }
+                            }
+                        }
+                    }
+
+                    // State C: Connected
+                    if root.github-connected: VerticalLayout {
+                        spacing: Metrics.spacing-sm;
+                        HorizontalLayout {
+                            spacing: 8px;
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    source: TablerIcons.check;
+                                    width: 16px;
+                                    height: 16px;
+                                    color: Palette.color-scheme == ColorScheme.dark ? #55dd88 : #119944;
+                                }
+                            }
+                            Text {
+                                text: @tr("Connected as @{}", root.github-username);
+                                font-size: 15px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        if root.github-repo-name != "": Text {
+                            text: @tr("Repository: {} (Private)", root.github-repo-name);
+                            font-size: 13px;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+
+                        if root.sync-status != "": Text {
+                            text: root.sync-status;
+                            font-size: 13px;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: end;
+                            Button {
+                                text: @tr("Disconnect");
+                                clicked => { root.disconnect-github(); }
+                            }
+                            Button {
+                                text: root.syncing ? @tr("Syncing...") : @tr("Sync Now");
+                                primary: true;
+                                enabled: !root.syncing;
+                                clicked => { root.sync(); }
+                            }
+                        }
+                    }
+                }
+
+                // Card 2: Custom Git Remote (Self-hosted / Advanced)
+                Card {
+                    content-spacing: Metrics.spacing-md;
+
+                    ActionRow {
+                        text: root.show-advanced-remote ? @tr("Hide Custom Git Remote ▲") : @tr("Custom Git Remote (Self-hosted) ▼");
+                        tint: Colors.muted;
+                        clicked => { root.show-advanced-remote = !root.show-advanced-remote; }
+                    }
+
+                    if root.show-advanced-remote: VerticalLayout {
+                        spacing: Metrics.spacing-md;
 
                         VerticalLayout {
                             spacing: 4px;
@@ -547,6 +729,8 @@ export component SettingsSheet inherits Rectangle {
                         }
                     }
                 }
+            }
+
 
                 // --------------------------------------------------------
             // Vaults

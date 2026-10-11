@@ -236,6 +236,15 @@ export component App inherits Window {
     in property <bool> preview-has-token: false;
     in property <string> import-status-message: "";
     in property <bool> import-status-is-error: false;
+    in property <bool> github-connected: false;
+    in property <string> github-username: "";
+    in property <string> github-repo-name: "";
+    in property <bool> github-auth-pending: false;
+    in property <string> github-user-code: "";
+    in property <string> github-verification-uri: "";
+    in property <string> github-auth-status: "";
+    in-out property <bool> show-advanced-remote: false;
+
 
     in-out property <int> font-size-choice: 1;
     in-out property <length> editor-font-size: 17px;
@@ -299,6 +308,10 @@ export component App inherits Window {
     callback review-import(string);
     callback apply-import();
     callback cancel-import-preview();
+    callback connect-github();
+    callback open-github-browser();
+    callback cancel-github-auth();
+    callback disconnect-github();
 
     callback rename-requested(int);
     callback delete-requested(int);
@@ -1263,6 +1276,18 @@ export component App inherits Window {
                 review-import(d) => { root.review-import(d); }
                 apply-import => { root.apply-import(); }
                 cancel-import-preview => { root.cancel-import-preview(); }
+                github-connected: root.github-connected;
+                github-username: root.github-username;
+                github-repo-name: root.github-repo-name;
+                github-auth-pending: root.github-auth-pending;
+                github-user-code: root.github-user-code;
+                github-verification-uri: root.github-verification-uri;
+                github-auth-status: root.github-auth-status;
+                show-advanced-remote <=> root.show-advanced-remote;
+                connect-github => { root.connect-github(); }
+                open-github-browser => { root.open-github-browser(); }
+                cancel-github-auth => { root.cancel-github-auth(); }
+                disconnect-github => { root.disconnect-github(); }
 
                 close => {
                     root.settings-sheet-open = false;

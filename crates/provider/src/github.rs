@@ -243,6 +243,36 @@ impl Provider for GitHubProvider {
             default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
         })
     }
+
+    fn parse_remote_url(&self, url: &str) -> Option<(String, String)> {
+        Self::parse_remote(url)
+    }
+}
+
+impl GitHubProvider {
+    /// Extracts repository owner and repository name from a git remote URL if it belongs to GitHub.
+    /// Handles HTTPS and SSH formats (e.g. `https://github.com/alice/immermemo-notes.git`).
+    pub fn parse_remote(url: &str) -> Option<(String, String)> {
+        let trimmed = url.trim();
+        let path = if let Some(rest) = trimmed.strip_prefix("https://github.com/") {
+            rest
+        } else if let Some(rest) = trimmed.strip_prefix("http://github.com/") {
+            rest
+        } else if let Some(rest) = trimmed.strip_prefix("git@github.com:") {
+            rest
+        } else {
+            return None;
+        };
+        let path = path.trim_end_matches(".git").trim_matches('/');
+        let mut parts = path.split('/');
+        let owner = parts.next()?;
+        let repo = parts.next()?;
+        if parts.next().is_none() && !owner.is_empty() && !repo.is_empty() {
+            Some((owner.to_owned(), repo.to_owned()))
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
@@ -383,6 +413,27 @@ mod tests {
         assert_eq!(user.login, "octocat");
         assert_eq!(user.name, Some("Mona Lisa Octocat".to_owned()));
         assert_eq!(user.email, Some("octocat@github.com".to_owned()));
+    }
+
+    #[test]
+    fn test_parse_remote() {
+        assert_eq!(
+            GitHubProvider::parse_remote("https://github.com/octocat/immermemo-notes.git"),
+            Some(("octocat".to_owned(), "immermemo-notes".to_owned()))
+        );
+        assert_eq!(
+            GitHubProvider::parse_remote("https://github.com/octocat/immermemo-notes"),
+            Some(("octocat".to_owned(), "immermemo-notes".to_owned()))
+        );
+        assert_eq!(
+            GitHubProvider::parse_remote("git@github.com:octocat/immermemo-notes.git"),
+            Some(("octocat".to_owned(), "immermemo-notes".to_owned()))
+        );
+        assert_eq!(
+            GitHubProvider::parse_remote("https://gitlab.com/octocat/immermemo-notes.git"),
+            None
+        );
+        assert_eq!(GitHubProvider::parse_remote(""), None);
     }
 }
 

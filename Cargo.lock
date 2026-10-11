@@ -2582,6 +2582,7 @@ dependencies = [
  "immermemo-identity",
  "immermemo-index",
  "immermemo-merge",
+ "immermemo-provider",
  "immermemo-sync",
  "immermemo-tomet-render",
  "immermemo-vault",
@@ -2598,6 +2599,7 @@ dependencies = [
  "sys-locale",
  "tempfile",
  "tomet",
+ "webbrowser",
 ]
 
 [[package]]

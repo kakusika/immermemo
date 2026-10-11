@@ -17,6 +17,7 @@ immermemo-editor = { workspace = true }
 immermemo-identity = { workspace = true }
 immermemo-index = { workspace = true }
 immermemo-merge = { workspace = true }
+immermemo-provider = { workspace = true }
 immermemo-sync = { workspace = true }
 immermemo-tomet-render = { workspace = true }
 immermemo-vault = { workspace = true }
@@ -36,6 +37,8 @@ qrcode = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sys-locale = { workspace = true }
+webbrowser = { workspace = true }
+
 
 # Linux Desktop: winit on Wayland + Skia.
 [target.'cfg(target_os = "linux")'.dependencies]

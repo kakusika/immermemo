@@ -795,3 +795,51 @@ msgctxt "SettingsSheet"
 msgid "Apply Settings"
 msgstr "設定を適用"
 
+msgctxt "SettingsSheet"
+msgid "GitHub Sync"
+msgstr "GitHub 同期"
+
+msgctxt "SettingsSheet"
+msgid "Automatic multi-device synchronization and backup."
+msgstr "複数端末での自動同期とバックアップ。"
+
+msgctxt "SettingsSheet"
+msgid "Sign in to automatically create and sync a private notes repository."
+msgstr "サインインすると、専用のプライベートリポジトリを自動作成して同期します。"
+
+msgctxt "SettingsSheet"
+msgid "Connect with GitHub"
+msgstr "GitHub と連携"
+
+msgctxt "SettingsSheet"
+msgid "Confirm this one-time code on GitHub:"
+msgstr "GitHub でこの確認コードを承認してください:"
+
+msgctxt "SettingsSheet"
+msgid "Waiting for browser authorization..."
+msgstr "ブラウザでの認証を待機中..."
+
+msgctxt "SettingsSheet"
+msgid "Open in Browser"
+msgstr "ブラウザで開く"
+
+msgctxt "SettingsSheet"
+msgid "Connected as @{}"
+msgstr "@{} として接続中"
+
+msgctxt "SettingsSheet"
+msgid "Repository: {} (Private)"
+msgstr "リポジトリ: {} (Private)"
+
+msgctxt "SettingsSheet"
+msgid "Disconnect"
+msgstr "連携を解除"
+
+msgctxt "SettingsSheet"
+msgid "Hide Custom Git Remote ▲"
+msgstr "カスタム Git リモートを閉じる ▲"
+
+msgctxt "SettingsSheet"
+msgid "Custom Git Remote (Self-hosted) ▼"
+msgstr "カスタム Git リモート (セルフホスト) ▼"
+

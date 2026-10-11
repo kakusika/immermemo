@@ -460,6 +460,7 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     sync_nav_state(app, session);
     app.set_search_query(SharedString::new());
     app.set_remote_configured(remote.is_some());
+    crate::update_github_ui_state(app, remote.as_deref());
     app.set_current_title(SharedString::new());
     update_rendered_body(app, "");
     app.set_last_sync_error(SharedString::new());
