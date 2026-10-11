@@ -20,21 +20,8 @@
 //!
 //! A [`flow::NoteBodyItem::Flowed`] paragraph's content goes through
 //! `origiri_richtext_flow::layout_block` and comes back out as
-//! `origiri-richtext`'s generic `RichTextFragment`s; an element fragment's
-//! widget is a `RenderedBlockView` instantiated at runtime via
-//! `slint::ComponentFactory` -- the same component a stacked
-//! [`classify::ClassifiedBlock`] renders as its own row, just embedded
-//! inline instead.
-//!
-//! `#![allow(deprecated)]`: `ComponentFactory` is `slint`'s own escape
-//! hatch for this (`ComponentContainer`'s `component-factory` property),
-//! but the crate marks it `#[deprecated(note = "Experimental type was made
-//! public by mistake")]` and `#[doc(hidden)]`, and `build.rs` has to opt
-//! the compiler into treating `ComponentContainer`/`component-factory` as
-//! real `.slint` syntax at all (`SLINT_ENABLE_EXPERIMENTAL_FEATURES`,
-//! since Slint's normal compiler path removes both). Known, accepted
-//! risk, not an oversight.
-#![allow(deprecated)]
+//! `RichTextFragment`s; an element fragment directly carries its
+//! `RenderedBlock` data into `flow_view.slint`'s `RenderedBlockView`.
 
 pub mod classify;
 pub mod flow;
@@ -42,10 +29,10 @@ pub mod flow;
 use classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
 use flow::{FlowParagraph, NoteBodyItem, note_body_items as classify_note_body_items};
 use origiri_richtext_flow::{Fragment, Measure, layout_block};
-use slint::{ComponentFactory, ModelRc, VecModel};
+use slint::{ModelRc, VecModel};
 
 use crate::{
-    App, ConflictSideBlock, FlowElementWidget, NoteBodyItemView, RenderedBlock, RenderedBlockShape,
+    App, ConflictSideBlock, NoteBodyItemView, RenderedBlock, RenderedBlockShape,
     RenderedBlockTone, RichTextFragment, RichTextLine,
 };
 
@@ -137,14 +124,17 @@ fn to_rich_text_lines(
     ModelRc::new(VecModel::from(lines))
 }
 
-fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> RichTextFragment {
+fn to_rich_text_fragment(
+    fragment: Fragment,
+    elements: &[ClassifiedBlock],
+) -> RichTextFragment {
     match fragment {
         Fragment::Text { content, style, .. } => {
             let style = origiri_richtext_flow::TextStyle::from_style_id(style);
             RichTextFragment {
                 is_element: false,
                 text: content.into(),
-                factory: ComponentFactory::default(),
+                block: RenderedBlock::default(),
                 bold: style.bold,
                 italic: style.italic,
                 mark: style.mark,
@@ -153,15 +143,10 @@ fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> Ri
         }
         Fragment::Element { id, .. } => {
             let rendered = to_rendered_block(&elements[id as usize]);
-            let factory = ComponentFactory::new(move |_| {
-                let widget = FlowElementWidget::new().ok()?;
-                widget.set_block(rendered.clone());
-                Some(widget)
-            });
             RichTextFragment {
                 is_element: true,
                 text: Default::default(),
-                factory,
+                block: rendered,
                 bold: false,
                 italic: false,
                 mark: false,
@@ -380,5 +365,43 @@ pub(crate) mod seam_tests {
         assert_eq!(second.block.shape, RenderedBlockShape::Task);
         assert_eq!(second.block.text, "Done task");
         assert!(second.block.checked);
+    }
+
+    pub(crate) fn inline_conflict_maintains_identity_and_order_across_resizes(app: &App) {
+        let src = "まえ @conflict(a: [うんこ], b: [うんち]) うしろ\n";
+        for width in [10_000.0, 500.0, 300.0, 180.0, 100.0, 60.0] {
+            let model = note_body_items(src, app, width);
+            assert_eq!(model.row_count(), 1);
+            let item = model.row_data(0).unwrap();
+            assert!(item.is_flow);
+
+            let mut element_blocks = Vec::new();
+            for l in 0..item.lines.row_count() {
+                let line = item.lines.row_data(l).unwrap();
+                for f in 0..line.fragments.row_count() {
+                    let frag = line.fragments.row_data(f).unwrap();
+                    if frag.is_element {
+                        element_blocks.push((frag.block.text.to_string(), frag.block.tone));
+                    }
+                }
+            }
+
+            assert_eq!(
+                element_blocks.len(),
+                2,
+                "At width {width}, expected exactly 2 elements, got {:?}",
+                element_blocks
+            );
+            assert_eq!(
+                element_blocks[0],
+                ("うんこ".to_string(), RenderedBlockTone::Accent),
+                "At width {width}, side A must be 'うんこ' with Accent tone"
+            );
+            assert_eq!(
+                element_blocks[1],
+                ("うんち".to_string(), RenderedBlockTone::Warning),
+                "At width {width}, side B must be 'うんち' with Warning tone"
+            );
+        }
     }
 }

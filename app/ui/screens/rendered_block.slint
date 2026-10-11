@@ -244,8 +244,9 @@ export component ConflictSideBlockView inherits VerticalLayout {
             }
 
             if root.block.strikeout || root.block.checked: Rectangle {
+                x: 0;
                 y: leaf-task-text-item.height / 2;
-                width: leaf-task-text-item.preferred-width;
+                width: min(parent.width, leaf-task-text-item.preferred-width);
                 height: 1px;
                 background: Colors.muted;
             }
@@ -262,12 +263,13 @@ export component ConflictSideBlockView inherits VerticalLayout {
 export component RenderedBlockView inherits VerticalLayout {
     in property <RenderedBlock> block;
     in property <length> text-font-size: Metrics.font-body;
+    in property <bool> is-inline: false;
 
     property <color> tone-color: root.block.tone == RenderedBlockTone.accent ? Palette.accent-background
         : root.block.tone == RenderedBlockTone.warning ? Colors.warning
         : Colors.muted;
 
-    if root.block.shape == RenderedBlockShape.plain-text: Rectangle {
+    if root.block.shape == RenderedBlockShape.plain-text && !root.is-inline: Rectangle {
         // Explicit `width: 100%` on both this wrapper and the `Text`
         // inside it -- a bare `Rectangle` placed directly in the
         // surrounding `VerticalLayout` does not reliably inherit the
@@ -298,10 +300,31 @@ export component RenderedBlockView inherits VerticalLayout {
         // a `word-wrap`-wrapped multi-line one (there's no per-line
         // strike this draws against today).
         if root.block.strikeout: Rectangle {
+            x: 0;
             y: plain-text-item.height / 2;
-            width: plain-text-item.preferred-width;
+            width: min(parent.width, plain-text-item.preferred-width);
             height: 1px;
             background: plain-text-item.color;
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.plain-text && root.is-inline: Rectangle {
+        background: root.block.mark ? Colors.warning.with-alpha(0.25) : transparent;
+
+        inline-plain-text-item := Text {
+            text: root.block.text;
+            font-size: root.text-font-size;
+            font-weight: root.block.bold ? 700 : 400;
+            font-italic: root.block.italic;
+            color: root.block.tone == RenderedBlockTone.neutral ? Palette.foreground : root.tone-color;
+        }
+
+        if root.block.strikeout: Rectangle {
+            x: 0;
+            y: inline-plain-text-item.height / 2;
+            width: inline-plain-text-item.preferred-width;
+            height: 1px;
+            background: inline-plain-text-item.color;
         }
     }
 
@@ -391,7 +414,7 @@ export component RenderedBlockView inherits VerticalLayout {
         }
     }
 
-    if root.block.shape == RenderedBlockShape.link: Rectangle {
+    if root.block.shape == RenderedBlockShape.link && !root.is-inline: Rectangle {
         width: 100%;
 
         link-text-item := Text {
@@ -405,6 +428,21 @@ export component RenderedBlockView inherits VerticalLayout {
         Rectangle {
             y: link-text-item.height - 1px;
             width: link-text-item.preferred-width;
+            height: 1px;
+            background: root.tone-color;
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.link && root.is-inline: Rectangle {
+        inline-link-text-item := Text {
+            text: root.block.text;
+            font-size: root.text-font-size;
+            color: root.tone-color;
+        }
+
+        Rectangle {
+            y: inline-link-text-item.height - 1px;
+            width: inline-link-text-item.preferred-width;
             height: 1px;
             background: root.tone-color;
         }
@@ -460,8 +498,9 @@ export component RenderedBlockView inherits VerticalLayout {
             }
 
             if root.block.strikeout || root.block.checked: Rectangle {
+                x: 0;
                 y: task-text-item.height / 2;
-                width: task-text-item.preferred-width;
+                width: min(parent.width, task-text-item.preferred-width);
                 height: 1px;
                 background: Colors.muted;
             }

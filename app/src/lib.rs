@@ -367,13 +367,20 @@ pub fn run(
                 _ => 17.0,
             };
             app.set_editor_font_size(px);
+            let body = app.get_body();
+            let max_width = app.get_body_content_width();
+            app.set_note_body_items(render::note_body_items(body.as_str(), &app, max_width));
             let _ = session.borrow().app_data.save_font_size(choice);
         }
     });
     app.on_theme_changed({
-        let session = session.clone();
+        let (weak, session) = (app.as_weak(), session.clone());
         move |choice| {
             let _ = session.borrow().app_data.save_theme(choice);
+            let app = weak.unwrap();
+            let body = app.get_body();
+            let max_width = app.get_body_content_width();
+            app.set_note_body_items(render::note_body_items(body.as_str(), &app, max_width));
         }
     });
     app.on_status_bar_changed({
@@ -899,6 +906,7 @@ mod tests {
         );
         render::seam_tests::a_doc_icon_resolves_to_a_real_image_and_an_unknown_one_to_empty(&app);
         render::seam_tests::task_items_convert_into_the_generated_model(&app);
+        render::seam_tests::inline_conflict_maintains_identity_and_order_across_resizes(&app);
     }
 
     fn status_classification_tracks_is_error(app: &App) {

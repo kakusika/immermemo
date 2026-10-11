@@ -1,10 +1,5 @@
 //! Renders the window headlessly at a phone's size and density, to look at the
 //! layout without a device: `snap <out-prefix> [width] [height] [scale]`.
-//!
-//! `#![allow(deprecated)]`: this file's `to_rich_text_fragment` uses
-//! `slint::ComponentFactory`, same known, accepted risk as
-//! `src/render/mod.rs`'s doc comment describes.
-#![allow(deprecated)]
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -13,7 +8,7 @@ use slint::platform::software_renderer::{
     MinimalSoftwareWindow, PremultipliedRgbaColor, RepaintBufferType,
 };
 use slint::platform::{Platform, WindowAdapter, WindowEvent};
-use slint::{ComponentFactory, ComponentHandle, ModelRc, PhysicalSize, VecModel};
+use slint::{ComponentHandle, ModelRc, PhysicalSize, VecModel};
 slint::include_modules!();
 
 use immermemo::render::classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
@@ -341,6 +336,33 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor-note-body.ppm"));
 
+    // User bug scenario verification: inline conflict across multiple window widths
+    let user_body = "テスト: @conflict(a: [うんこ], b: [うんち]) です。";
+    app.set_body(user_body.into());
+    for &(label_w, test_w) in &[("narrow", 280.0), ("mid", 412.0), ("wide", 600.0)] {
+        let test_size = PhysicalSize::new((test_w * scale) as u32, (h * scale) as u32);
+        window.set_size(test_size);
+        let max_w = app.get_body_content_width();
+        app.set_note_body_items(ModelRc::new(VecModel::from(
+            immermemo::render::flow::note_body_items(user_body)
+                .into_iter()
+                .map(|item| to_note_body_item_view(item, &app, max_w))
+                .collect::<Vec<_>>(),
+        )));
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        render(&window, test_size, &format!("{prefix}-resize-{label_w}.ppm"));
+    }
+    // Restore original size and body
+    window.set_size(size);
+    app.set_body(body.into());
+    let max_width = app.get_body_content_width();
+    app.set_note_body_items(ModelRc::new(VecModel::from(
+        immermemo::render::flow::note_body_items(body)
+            .into_iter()
+            .map(|item| to_note_body_item_view(item, &app, max_width))
+            .collect::<Vec<_>>(),
+    )));
+
     // Note Editor Sheet (Edit Mode)
     app.set_editor_edit_mode(true);
     std::thread::sleep(std::time::Duration::from_millis(300));
@@ -464,6 +486,13 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-directory-dark.ppm"));
     app.set_directory_folder_entries(ModelRc::new(VecModel::default()));
+    let max_width = app.get_body_content_width();
+    app.set_note_body_items(ModelRc::new(VecModel::from(
+        immermemo::render::flow::note_body_items(body)
+            .into_iter()
+            .map(|item| to_note_body_item_view(item, &app, max_width))
+            .collect::<Vec<_>>(),
+    )));
     app.set_note_sheet_open(true);
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor-dark.ppm"));
@@ -542,14 +571,17 @@ fn to_rich_text_lines(
     ModelRc::new(VecModel::from(lines))
 }
 
-fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> RichTextFragment {
+fn to_rich_text_fragment(
+    fragment: Fragment,
+    elements: &[ClassifiedBlock],
+) -> RichTextFragment {
     match fragment {
         Fragment::Text { content, style, .. } => {
             let style = origiri_richtext_flow::TextStyle::from_style_id(style);
             RichTextFragment {
                 is_element: false,
                 text: content.into(),
-                factory: ComponentFactory::default(),
+                block: RenderedBlock::default(),
                 bold: style.bold,
                 italic: style.italic,
                 mark: style.mark,
@@ -558,15 +590,10 @@ fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> Ri
         }
         Fragment::Element { id, .. } => {
             let rendered = to_rendered_block(&elements[id as usize]);
-            let factory = ComponentFactory::new(move |_| {
-                let widget = FlowElementWidget::new().ok()?;
-                widget.set_block(rendered.clone());
-                Some(widget)
-            });
             RichTextFragment {
                 is_element: true,
                 text: Default::default(),
-                factory,
+                block: rendered,
                 bold: false,
                 italic: false,
                 mark: false,

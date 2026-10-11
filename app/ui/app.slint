@@ -4,13 +4,6 @@ import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 import { BottomNavBar, MiniNoteCard } from "components.slint";
 import { EditorScreen } from "screens/editor.slint";
 import { NoteBodyItemView } from "screens/note_body.slint";
-// `src/render/mod.rs` needs to construct `FlowElementWidget`
-// directly (it's the `ComponentFactory` product for an inline element
-// fragment), and only an exported *Window-inheriting* component gets a
-// constructible Rust type at all -- see `note_body.slint`'s own doc
-// comment on `FlowElementWidget` for why. It's only used by composition
-// elsewhere, so nothing else forces this re-export.
-export { FlowElementWidget } from "screens/note_body.slint";
 import { RenderedBlock, RenderedBlockView } from "screens/rendered_block.slint";
 import { HomeScreen } from "screens/home.slint";
 import {
@@ -1400,6 +1393,7 @@ export component App inherits Window {
         }
 
         measure-probe-block-item := RenderedBlockView {
+            is-inline: true;
             x: -9999px;
             block: root.measure-probe-block;
         }

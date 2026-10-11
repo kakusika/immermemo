@@ -1,0 +1,61 @@
+import { RenderedBlock, RenderedBlockView } from "rendered_block.slint";
+
+// Generic renderer for lines of mixed text + embedded-element fragments,
+// as produced by `origiri-richtext-flow::layout::layout_block`.
+export struct RichTextFragment {
+    is-element: bool,
+    text: string,
+    block: RenderedBlock,
+    bold: bool,
+    italic: bool,
+    mark: bool,
+    strikeout: bool,
+}
+
+export struct RichTextLine {
+    fragments: [RichTextFragment],
+}
+
+export component FlowView {
+    in property <[RichTextLine]> lines;
+    in property <length> font-size;
+    in property <brush> mark-background: #fff59d80;
+    in property <brush> text-color: #000000;
+
+    VerticalLayout {
+        alignment: start;
+
+        for line in root.lines: HorizontalLayout {
+            alignment: start;
+
+            for frag in line.fragments: HorizontalLayout {
+                if !frag.is-element: Rectangle {
+                    background: frag.mark ? root.mark-background : transparent;
+
+                    HorizontalLayout {
+                        text-item := Text {
+                            text: frag.text;
+                            font-size: root.font-size;
+                            font-weight: frag.bold ? 700 : 400;
+                            font-italic: frag.italic;
+                            color: root.text-color;
+                        }
+                    }
+
+                    if frag.strikeout: Rectangle {
+                        y: parent.height / 2;
+                        width: text-item.preferred-width;
+                        height: 1px;
+                        background: root.text-color;
+                    }
+                }
+
+                if frag.is-element: RenderedBlockView {
+                    is-inline: true;
+                    block: frag.block;
+                    text-font-size: root.font-size;
+                }
+            }
+        }
+    }
+}

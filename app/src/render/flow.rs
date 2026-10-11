@@ -367,4 +367,27 @@ mod tests {
         assert_eq!(items.len(), 2);
         assert!(matches!(items[0], NoteBodyItem::Flowed(_)));
     }
+
+    #[test]
+    fn an_inline_conflict_at_paragraph_start_with_trailing_text_flows() {
+        let src = "@conflict(a: [うんこ], b: [うんち])あいうえお\n";
+        let paragraphs = flow_paragraphs(src);
+        assert_eq!(paragraphs.len(), 1);
+        let p = &paragraphs[0];
+        // side_a, " / ", side_b, "あいうえお"
+        assert_eq!(p.block.content.len(), 4);
+        assert_eq!(p.elements.len(), 2);
+        assert_eq!(p.elements[0].text, "うんこ");
+        assert_eq!(p.elements[0].tone, Tone::Accent);
+        assert_eq!(p.elements[1].text, "うんち");
+        assert_eq!(p.elements[1].tone, Tone::Warning);
+        match &p.block.content[1] {
+            Inline::Text { content, .. } => assert_eq!(content, " / "),
+            Inline::Element { .. } => panic!("expected separator text"),
+        }
+        match &p.block.content[3] {
+            Inline::Text { content, .. } => assert_eq!(content, "あいうえお"),
+            Inline::Element { .. } => panic!("expected trailing text"),
+        }
+    }
 }
