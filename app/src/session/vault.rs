@@ -4,8 +4,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use immermemo_editor::EditorState;
-use immermemo_index::NoteIndex;
+use immermemo_core::{EditorState, NoteIndex};
 use slint::{ModelRc, SharedString, VecModel};
 
 use crate::App;

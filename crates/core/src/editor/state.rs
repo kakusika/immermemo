@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::history::History;
+use super::history::History;
 use immermemo_sync::FileRevision;
 
 /// What the editor is currently showing, independent of which vault it's

@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use immermemo_editor::EditorState;
+use crate::editor::EditorState;
 use immermemo_index::NoteIndex;
 use immermemo_vault::appdata::AppData;
 use immermemo_vault::credentials::TokenStore;
@@ -93,7 +93,212 @@ impl Session {
 
     /// Returns the absolute path of the currently open note, if any.
     pub fn current_path(&self) -> Option<PathBuf> {
-        immermemo_editor::current_path(&self.editor, &self.notes)
+        crate::editor::current_path(&self.editor, &self.notes)
+    }
+
+    /// Opens the note at `index` in `self.notes`.
+    pub fn open_note(&mut self, index: usize) -> Option<Result<crate::editor::OpenedNote, String>> {
+        let vault_dir = self.vault_dir.clone();
+        crate::editor::open_note(
+            &mut self.editor,
+            &self.app_data,
+            &vault_dir,
+            &self.notes,
+            &self.conflicted,
+            &self.filtered_results,
+            index,
+        )
+    }
+
+    /// Selects the first note to open on launch (either last opened or first in list).
+    pub fn open_initial_or_last_note(&mut self) -> Option<Result<crate::editor::OpenedNote, String>> {
+        let idx = crate::editor::initial_or_last_note_index(
+            &self.app_data,
+            &self.vault_dir,
+            &self.notes,
+        )?;
+        self.open_note(idx)
+    }
+
+    /// Opens the first note containing an unresolved conflict marker, if any.
+    pub fn open_first_conflicted_note(&mut self) -> Option<Result<crate::editor::OpenedNote, String>> {
+        let idx = crate::editor::first_conflicted_note_index(
+            &self.editor,
+            &self.conflicted,
+        )?;
+        self.open_note(idx)
+    }
+
+    /// Opens a note by its vault-relative path.
+    pub fn open_note_by_rel_path(&mut self, rel_path: &Path) -> Option<Result<crate::editor::OpenedNote, String>> {
+        let target = self.vault_dir.join(rel_path);
+        let idx = self.notes.iter().position(|p| *p == target)?;
+        self.open_note(idx)
+    }
+
+    /// Creates a new empty note and updates index.
+    pub fn create_note(&mut self) -> anyhow::Result<PathBuf> {
+        let dir = self.vault_dir.clone();
+        let path = notes::create(&dir)?;
+        if let Ok(rel) = path.strip_prefix(&dir) {
+            let _ = self.index.record_write(&dir, rel, "");
+        }
+        self.search_query.clear();
+        let _ = self.refresh_list_data();
+        let _ = self.update_filtered_list_data();
+        Ok(path)
+    }
+
+    /// Renames the note at `target_idx` to `new_name` and updates the index.
+    pub fn rename_note(&mut self, target_idx: usize, new_name: &str) -> anyhow::Result<PathBuf> {
+        let old_path = self
+            .notes
+            .get(target_idx)
+            .ok_or_else(|| anyhow::anyhow!("invalid note index"))?
+            .clone();
+        let new_path = notes::rename(&old_path, new_name)?;
+        if let (Ok(old_rel), Ok(new_rel)) = (
+            old_path.strip_prefix(&self.vault_dir),
+            new_path.strip_prefix(&self.vault_dir),
+        ) {
+            let _ = self.index.record_rename(old_rel, new_rel);
+        }
+        let _ = self.refresh_list_data();
+        let _ = self.update_filtered_list_data();
+        Ok(new_path)
+    }
+
+    /// Deletes the note at `target_idx` and removes it from the index.
+    pub fn delete_note(&mut self, target_idx: usize) -> anyhow::Result<PathBuf> {
+        let path = self
+            .notes
+            .get(target_idx)
+            .ok_or_else(|| anyhow::anyhow!("invalid note index"))?
+            .clone();
+        notes::delete(&path)?;
+        if let Ok(rel) = path.strip_prefix(&self.vault_dir) {
+            let _ = self.index.record_delete(rel);
+        }
+        let _ = self.refresh_list_data();
+        let _ = self.update_filtered_list_data();
+        Ok(path)
+    }
+
+    /// Resolves one conflict step at `step_idx` choosing `side` (0: base, 1: local, 2: remote).
+    pub fn resolve_conflict_step(
+        &mut self,
+        step_idx: i32,
+        side: i32,
+    ) -> Option<Result<crate::editor::ConflictResolved, String>> {
+        let vault_dir = self.vault_dir.clone();
+        crate::editor::resolve_conflict_step(
+            &mut self.editor,
+            &vault_dir,
+            &self.notes,
+            &mut self.conflicted,
+            &mut self.index,
+            step_idx,
+            side,
+        )
+    }
+
+    /// Resolves the active conflict using the specified resolution.
+    pub fn resolve_active_conflict(
+        &mut self,
+        resolution: tomet::merge::ConflictResolution,
+    ) -> Option<Result<crate::editor::ConflictResolved, String>> {
+        let vault_dir = self.vault_dir.clone();
+        crate::editor::resolve_active_conflict(
+            &mut self.editor,
+            &vault_dir,
+            &self.notes,
+            &mut self.conflicted,
+            &mut self.index,
+            resolution,
+        )
+    }
+
+    /// Computes conflict resolution sheet state for the open note.
+    pub fn conflict_sheet_state(&self, requested_index: i32) -> crate::editor::ConflictSheetState {
+        crate::editor::conflict_sheet_state(
+            &self.editor,
+            &self.notes,
+            requested_index,
+            &self.app_data,
+            &self.vault_dir,
+        )
+    }
+
+    /// Sets or updates the note icon meta attribute for `self.icon_picker_target`.
+    pub fn set_note_icon(&mut self, icon_name: &str, pkg: &str) -> anyhow::Result<bool> {
+        let Some(target) = self.icon_picker_target else {
+            return Ok(false);
+        };
+        let Some(path) = self.notes.get(target).cloned() else {
+            return Ok(false);
+        };
+        let body = std::fs::read_to_string(&path)?;
+        let Some(new_body) = crate::editor::set_note_icon(&body, icon_name, pkg) else {
+            return Ok(false);
+        };
+        std::fs::write(&path, &new_body)?;
+        if let Ok(rel) = path.strip_prefix(&self.vault_dir) {
+            let _ = self.index.record_write(&self.vault_dir, rel, &new_body);
+        }
+        Ok(true)
+    }
+
+    /// Loads Git revision history for the open note up to `limit` entries.
+    pub fn load_note_history(&mut self, limit: usize) -> Option<Vec<immermemo_sync::FileRevision>> {
+        let current_path = self.current_path();
+        let revisions = crate::editor::load_note_history(
+            &self.app_data,
+            &self.vault_dir,
+            current_path,
+            limit,
+        )?;
+        self.editor.note_history_revisions = revisions.clone();
+        Some(revisions)
+    }
+
+    /// Restores a historical revision for the open note.
+    pub fn restore_note_version(
+        &mut self,
+        version_idx: usize,
+    ) -> Option<Result<crate::editor::RestoredVersion, String>> {
+        let vault_dir = self.vault_dir.clone();
+        crate::editor::restore_note_version(
+            &mut self.editor,
+            &vault_dir,
+            &self.notes,
+            &mut self.index,
+            version_idx,
+        )
+    }
+
+    /// Applies an undo/redo restored state, writing file changes and updating conflict tracking.
+    pub fn apply_restored(
+        &mut self,
+        restored: crate::editor::Restored,
+    ) -> crate::editor::RestoredNote {
+        let result = crate::editor::apply_restored(&self.editor, &self.notes, restored);
+        if let Some(idx) = self.editor.current
+            && idx < self.conflicted.len()
+        {
+            self.conflicted[idx] = result.has_conflict;
+        }
+        result
+    }
+
+    /// Loads vault-wide Git revision history.
+    pub fn vault_history(&self, limit: usize) -> Vec<immermemo_sync::CommitSummary> {
+        let Ok(gitdir) = self.app_data.gitdir(&self.vault_dir) else {
+            return Vec::new();
+        };
+        match immermemo_sync::Vault::open(&self.vault_dir, &gitdir) {
+            Ok(v) => v.vault_history(limit).unwrap_or_default(),
+            Err(_) => Vec::new(),
+        }
     }
 
     /// Reconciles filesystem notes with the SQLite index and updates internal note lists.
@@ -149,48 +354,6 @@ impl Session {
             snippets,
             ui_current,
         }
-    }
-
-    /// Creates a new note in the vault and indexes it.
-    pub fn create_note(&mut self) -> anyhow::Result<PathBuf> {
-        let path = notes::create(&self.vault_dir)?;
-        if let Ok(rel) = path.strip_prefix(&self.vault_dir) {
-            let _ = self.index.record_write(&self.vault_dir, rel, "");
-        }
-        let _ = self.refresh_list_data();
-        let _ = self.update_filtered_list_data();
-        Ok(path)
-    }
-
-    /// Renames the note at `note_index` to `new_title`.
-    pub fn rename_note(&mut self, note_index: usize, new_title: &str) -> anyhow::Result<PathBuf> {
-        let current_path = self.notes.get(note_index).ok_or_else(|| {
-            anyhow::anyhow!("note index out of bounds")
-        })?.clone();
-        let new_path = notes::rename(&current_path, new_title)?;
-        if let (Ok(old_rel), Ok(new_rel)) = (
-            current_path.strip_prefix(&self.vault_dir),
-            new_path.strip_prefix(&self.vault_dir),
-        ) {
-            let _ = self.index.record_rename(old_rel, new_rel);
-        }
-        let _ = self.refresh_list_data();
-        let _ = self.update_filtered_list_data();
-        Ok(new_path)
-    }
-
-    /// Deletes the note at `note_index`.
-    pub fn delete_note(&mut self, note_index: usize) -> anyhow::Result<()> {
-        let path = self.notes.get(note_index).ok_or_else(|| {
-            anyhow::anyhow!("note index out of bounds")
-        })?.clone();
-        notes::delete(&path)?;
-        if let Ok(rel) = path.strip_prefix(&self.vault_dir) {
-            let _ = self.index.record_delete(rel);
-        }
-        let _ = self.refresh_list_data();
-        let _ = self.update_filtered_list_data();
-        Ok(())
     }
 }
 

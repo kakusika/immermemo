@@ -6,8 +6,8 @@
 //! loading (`/etc/ssl/certs/...`). The bundle is curl's extract of Mozilla's
 //! root store (<https://curl.se/docs/caextract.html>).
 
-use immermemo_sync::CertificateVerifier;
-use immermemo_sync::tls::ChainVerifier;
+use immermemo_core::CertificateVerifier;
+use immermemo_core::tls::ChainVerifier;
 
 const ROOT_BUNDLE: &[u8] = include_bytes!("../assets/cacert.pem");
 

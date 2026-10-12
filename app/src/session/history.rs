@@ -4,9 +4,7 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
 
-use immermemo_editor::History;
-use immermemo_sync::Vault;
-use immermemo_vault::notes;
+use immermemo_core::{History, notes};
 use slint::{ModelRc, SharedString, VecModel};
 
 use crate::{App, NoteBodyItemView};
@@ -51,23 +49,12 @@ pub fn show_history_state(app: &App, session: &Session) {
 pub fn apply_restored(
     app: &App,
     session: &Rc<RefCell<Session>>,
-    restored: Option<immermemo_editor::Restored>,
+    restored: Option<immermemo_core::Restored>,
 ) {
     let Some(restored) = restored else {
         return;
     };
-    let result = {
-        let s = session.borrow();
-        immermemo_editor::apply_restored(&s.editor, &s.notes, restored)
-    };
-    {
-        let mut s = session.borrow_mut();
-        if let Some(idx) = s.editor.current
-            && idx < s.conflicted.len()
-        {
-            s.conflicted[idx] = result.has_conflict;
-        }
-    }
+    let result = session.borrow_mut().apply_restored(restored);
     match &result.write_error {
         Some(e) => set_status(app, e.clone()),
         None => {
@@ -92,11 +79,7 @@ pub fn apply_restored(
 }
 
 pub fn open_note_history(app: &App, session: &Rc<RefCell<Session>>) {
-    let revisions = {
-        let s = session.borrow();
-        let current_path = s.current_path();
-        immermemo_editor::load_note_history(&s.app_data, &s.vault_dir, current_path, 50)
-    };
+    let revisions = session.borrow_mut().load_note_history(50);
     let Some(revisions) = revisions else { return };
 
     let mut commit_ids = Vec::with_capacity(revisions.len());
@@ -112,8 +95,6 @@ pub fn open_note_history(app: &App, session: &Rc<RefCell<Session>>) {
         previews.push(SharedString::from(&rev.content));
     }
 
-    session.borrow_mut().editor.note_history_revisions = revisions;
-
     app.set_history_commits(ModelRc::new(VecModel::from(commit_ids)));
     app.set_history_dates(ModelRc::new(VecModel::from(dates)));
     app.set_history_previews(ModelRc::new(VecModel::from(previews)));
@@ -122,18 +103,7 @@ pub fn open_note_history(app: &App, session: &Rc<RefCell<Session>>) {
 }
 
 pub fn restore_note_version(app: &App, session: &Rc<RefCell<Session>>, rev_idx: usize) {
-    let outcome = {
-        let mut guard = session.borrow_mut();
-        let s = &mut guard.core;
-        let vault_dir = s.vault_dir.clone();
-        immermemo_editor::restore_note_version(
-            &mut s.editor,
-            &vault_dir,
-            &s.notes,
-            &mut s.index,
-            rev_idx,
-        )
-    };
+    let outcome = session.borrow_mut().restore_note_version(rev_idx);
     let Some(outcome) = outcome else { return };
     match outcome {
         Err(msg) => set_status(app, msg),
@@ -150,17 +120,7 @@ pub fn restore_note_version(app: &App, session: &Rc<RefCell<Session>>, rev_idx: 
 }
 
 pub fn open_vault_history(app: &App, session: &Rc<RefCell<Session>>) {
-    let s = session.borrow();
-    let vault_dir = s.vault_dir.clone();
-    let Ok(gitdir) = s.app_data.gitdir(&vault_dir) else {
-        return;
-    };
-    drop(s);
-
-    let commits = match Vault::open(&vault_dir, &gitdir) {
-        Ok(vault) => vault.vault_history(50).unwrap_or_default(),
-        Err(_) => Vec::new(),
-    };
+    let commits = session.borrow().vault_history(50);
 
     let mut commit_summaries = Vec::with_capacity(commits.len());
     let mut dates = Vec::with_capacity(commits.len());

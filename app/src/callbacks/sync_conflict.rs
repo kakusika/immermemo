@@ -34,12 +34,12 @@ pub fn bind_sync_conflict_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                 offset = 0;
             }
             let found = text[offset..]
-                .find(tomet::merge::CONFLICT_MARKER)
+                .find(immermemo_core::CONFLICT_MARKER)
                 .map(|p| offset + p)
-                .or_else(|| text.find(tomet::merge::CONFLICT_MARKER));
+                .or_else(|| text.find(immermemo_core::CONFLICT_MARKER));
             if let Some(pos) = found {
                 app.invoke_set_cursor(pos as i32);
-                *jump_pos.borrow_mut() = pos + tomet::merge::CONFLICT_MARKER.len();
+                *jump_pos.borrow_mut() = pos + immermemo_core::CONFLICT_MARKER.len();
             }
         }
     });

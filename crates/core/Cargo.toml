@@ -4,18 +4,20 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-immermemo-editor = { workspace = true }
 immermemo-identity = { workspace = true }
 immermemo-index = { workspace = true }
 immermemo-sync = { workspace = true }
 immermemo-vault = { workspace = true }
 #= Tomet
-tomet = { workspace = true }
+tomet = { workspace = true, features = ["edit", "merge", "parser", "printer", "stats"] }
 
 #= Crates.io
 anyhow = { workspace = true }
 directories = { workspace = true }
+git2 = { workspace = true }
+loro = { workspace = true }
 serde = { workspace = true }
 
 [dev-dependencies]
+immermemo-tomet-render = { workspace = true }
 tempfile = "3"

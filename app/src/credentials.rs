@@ -6,8 +6,9 @@
 //! An `ssh://` remote goes through the desktop's ssh-agent instead; Android
 //! has no agent to ask, so an ssh remote there is not supported yet.
 
-use immermemo_sync::CredentialProvider;
-pub use immermemo_vault::credentials::{PlainFileTokenStore, TokenStore, TokenStoreFactory};
+pub use immermemo_core::{
+    CredentialProvider, PlainFileTokenStore, TokenStore, TokenStoreFactory,
+};
 
 /// Credentials backed by whatever [`TokenStore`] the platform provides.
 pub struct TokenCredentials<S> {

@@ -3,8 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use immermemo_editor::History;
-use immermemo_vault::notes;
+use immermemo_core::History;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::session::{
@@ -33,13 +32,8 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
             let app = weak.unwrap();
-            let dir = session.borrow().vault_dir.clone();
-            match notes::create(&dir) {
+            match session.borrow_mut().create_note() {
                 Ok(path) => {
-                    if let Ok(rel) = path.strip_prefix(&dir) {
-                        let _ = session.borrow_mut().index.record_write(&dir, rel, "");
-                    }
-                    session.borrow_mut().search_query.clear();
                     app.set_search_query(SharedString::new());
                     refresh_list(&app, &session);
                     let index = session.borrow().notes.iter().position(|p| *p == path);
@@ -73,7 +67,7 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                     history.edit(&text);
                 }
                 show_history_state(&app, &s);
-                let has_conflict = text.contains(tomet::merge::CONFLICT_MARKER);
+                let has_conflict = text.contains(immermemo_core::CONFLICT_MARKER);
                 if app.get_current_has_conflict() != has_conflict {
                     app.set_current_has_conflict(has_conflict);
                     if let Some(idx) = s.editor.current
@@ -197,16 +191,9 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
             let Some(path) = session.borrow().notes.get(index).cloned() else {
                 return;
             };
-            let was_current = session.borrow().current_path() == Some(path.clone());
-            match notes::rename(&path, &new_name) {
+            let was_current = session.borrow().current_path() == Some(path);
+            match session.borrow_mut().rename_note(index, &new_name) {
                 Ok(new_path) => {
-                    let vault_dir = session.borrow().vault_dir.clone();
-                    if let (Ok(old_rel), Ok(new_rel)) = (
-                        path.strip_prefix(&vault_dir),
-                        new_path.strip_prefix(&vault_dir),
-                    ) {
-                        let _ = session.borrow_mut().index.record_rename(old_rel, new_rel);
-                    }
                     refresh_list(&app, &session);
                     if was_current {
                         let index = session.borrow().notes.iter().position(|p| *p == new_path);
@@ -257,11 +244,10 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                 .filtered_results
                 .get(ui_index as usize)
                 .map(|r| r.note_index);
-            let Some(index) = note_index else {
-                return;
-            };
-            session.borrow_mut().delete_target = Some(index);
-            app.set_delete_confirm_open(true);
+            if let Some(index) = note_index {
+                session.borrow_mut().delete_target = Some(index);
+                app.set_delete_confirm_open(true);
+            }
         }
     });
     app.on_confirm_delete({
@@ -275,20 +261,17 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
             let Some(path) = session.borrow().notes.get(index).cloned() else {
                 return;
             };
-            let vault_dir = session.borrow().vault_dir.clone();
-            if let Err(e) = notes::delete(&path) {
-                set_status(&app, format!("Could not delete the note: {e}"));
-                return;
-            }
-            if let Ok(rel) = path.strip_prefix(&vault_dir) {
-                let _ = session.borrow_mut().index.record_delete(rel);
-            }
-            let was_current = session.borrow().current_path() == Some(path.clone());
-            refresh_list(&app, &session);
-            if was_current {
-                session::close_current_note_and_show_list_or_reopen(&app, &session, true);
-            } else if session.borrow().notes.is_empty() {
-                session::show_list_or_reopen(&app, &session, true);
+            let was_current = session.borrow().current_path() == Some(path);
+            match session.borrow_mut().delete_note(index) {
+                Ok(_) => {
+                    refresh_list(&app, &session);
+                    if was_current {
+                        session::close_current_note_and_show_list_or_reopen(&app, &session, true);
+                    } else if session.borrow().notes.is_empty() {
+                        session::show_list_or_reopen(&app, &session, true);
+                    }
+                }
+                Err(e) => set_status(&app, format!("Could not delete the note: {e}")),
             }
         }
     });

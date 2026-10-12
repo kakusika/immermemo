@@ -15,21 +15,9 @@ use super::{
 pub fn resolve_active_conflict(
     app: &App,
     session: &Rc<RefCell<Session>>,
-    resolution: tomet::merge::ConflictResolution,
+    resolution: immermemo_core::ConflictResolution,
 ) {
-    let outcome = {
-        let mut guard = session.borrow_mut();
-        let s = &mut guard.core;
-        let vault_dir = s.vault_dir.clone();
-        immermemo_editor::resolve_active_conflict(
-            &mut s.editor,
-            &vault_dir,
-            &s.notes,
-            &mut s.conflicted,
-            &mut s.index,
-            resolution,
-        )
-    };
+    let outcome = session.borrow_mut().resolve_active_conflict(resolution);
     let Some(outcome) = outcome else { return };
     match outcome {
         Err(msg) => set_status(app, msg),
@@ -56,44 +44,35 @@ pub fn resolve_active_conflict(
 
 /// `(header label, button label)` for one side of a conflict, from
 /// what `immermemo_sync::Vault::conflict_authorship` could determine.
-fn conflict_side_labels(side: immermemo_sync::ConflictSide, letter: &str) -> (String, String) {
+fn conflict_side_labels(side: immermemo_core::ConflictSide, letter: &str) -> (String, String) {
     match side {
-        immermemo_sync::ConflictSide::Mine => {
+        immermemo_core::ConflictSide::Mine => {
             ("📱 Your changes".to_owned(), "Keep Mine".to_owned())
         }
-        immermemo_sync::ConflictSide::NotMine => {
+        immermemo_core::ConflictSide::NotMine => {
             ("☁️ Their changes".to_owned(), "Keep Theirs".to_owned())
         }
-        immermemo_sync::ConflictSide::Unknown => {
+        immermemo_core::ConflictSide::Unknown => {
             (format!("Version {letter}"), format!("Keep {letter}"))
         }
     }
 }
 
 pub fn sync_conflict_sheet_state(app: &App, session: &Rc<RefCell<Session>>) {
-    let state = {
-        let s = session.borrow();
-        immermemo_editor::conflict_sheet_state(
-            &s.editor,
-            &s.notes,
-            app.get_active_conflict_index(),
-            &s.app_data,
-            &s.vault_dir,
-        )
-    };
+    let state = session.borrow().conflict_sheet_state(app.get_active_conflict_index());
     match state {
-        immermemo_editor::ConflictSheetState::NoActiveNote => {
+        immermemo_core::ConflictSheetState::NoActiveNote => {
             app.set_active_conflict_total(0);
             app.set_conflict_sheet_open(false);
         }
-        immermemo_editor::ConflictSheetState::NoConflicts => {
+        immermemo_core::ConflictSheetState::NoConflicts => {
             app.set_active_conflict_total(0);
             app.set_conflict_sheet_open(false);
             app.set_current_has_conflict(false);
             app.set_active_conflict_a(SharedString::new());
             app.set_active_conflict_b(SharedString::new());
         }
-        immermemo_editor::ConflictSheetState::Active {
+        immermemo_core::ConflictSheetState::Active {
             total,
             index,
             a,
@@ -117,20 +96,7 @@ pub fn sync_conflict_sheet_state(app: &App, session: &Rc<RefCell<Session>>) {
 
 pub fn resolve_conflict_step(app: &App, session: &Rc<RefCell<Session>>, choice: i32) {
     let active_conflict_index = app.get_active_conflict_index();
-    let outcome = {
-        let mut guard = session.borrow_mut();
-        let s = &mut guard.core;
-        let vault_dir = s.vault_dir.clone();
-        immermemo_editor::resolve_conflict_step(
-            &mut s.editor,
-            &vault_dir,
-            &s.notes,
-            &mut s.conflicted,
-            &mut s.index,
-            active_conflict_index,
-            choice,
-        )
-    };
+    let outcome = session.borrow_mut().resolve_conflict_step(active_conflict_index, choice);
     let Some(outcome) = outcome else { return };
     match outcome {
         Err(msg) => set_status(app, msg),
@@ -158,7 +124,7 @@ pub fn resolve_conflict_step(app: &App, session: &Rc<RefCell<Session>>, choice: 
 pub fn open_first_conflicted_note(app: &App, session: &Rc<RefCell<Session>>) {
     let target_idx = {
         let s = session.borrow();
-        immermemo_editor::first_conflicted_note_index(&s.editor, &s.conflicted)
+        immermemo_core::editor::first_conflicted_note_index(&s.editor, &s.conflicted)
     };
     if let Some(idx) = target_idx {
         open_note(app, session, idx);

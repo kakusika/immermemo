@@ -5,7 +5,7 @@ use tomet::merge::ConflictResolution;
 use immermemo_sync::{ConflictSide, Vault};
 use immermemo_vault::appdata::AppData;
 
-use crate::state::{EditorState, current_path};
+use super::state::{EditorState, current_path};
 
 pub struct ConflictResolved {
     pub body: String,

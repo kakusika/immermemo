@@ -2579,13 +2579,8 @@ dependencies = [
  "directories",
  "git2",
  "immermemo-core",
- "immermemo-editor",
- "immermemo-identity",
- "immermemo-index",
  "immermemo-provider",
- "immermemo-sync",
  "immermemo-tomet-render",
- "immermemo-vault",
  "jni 0.21.1",
  "origiri-icons",
  "origiri-mobile",
@@ -2608,21 +2603,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "directories",
- "immermemo-editor",
- "immermemo-identity",
- "immermemo-index",
- "immermemo-sync",
- "immermemo-vault",
- "serde",
- "tempfile",
- "tomet",
-]
-
-[[package]]
-name = "immermemo-editor"
-version = "0.1.0"
-dependencies = [
- "anyhow",
  "git2",
  "immermemo-identity",
  "immermemo-index",
@@ -2630,6 +2610,7 @@ dependencies = [
  "immermemo-tomet-render",
  "immermemo-vault",
  "loro",
+ "serde",
  "tempfile",
  "tomet",
 ]

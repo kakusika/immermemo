@@ -9,7 +9,9 @@
 //!
 //! On other platforms (e.g. desktop), this is a graceful no-op.
 
-use immermemo_index::NoteIndex;
+#[cfg(any(target_os = "android", test))]
+use immermemo_core::IndexedNote;
+use immermemo_core::NoteIndex;
 
 #[cfg(target_os = "android")]
 static ANDROID_APP_VM: std::sync::OnceLock<(
@@ -163,7 +165,7 @@ pub unsafe fn read_launch_note_path(
 /// Android-only code above, but kept free of that `cfg` itself (`test` only)
 /// so it's unit-testable on desktop.
 #[cfg(any(target_os = "android", test))]
-fn notes_to_json(notes: &[immermemo_index::IndexedNote]) -> String {
+fn notes_to_json(notes: &[IndexedNote]) -> String {
     let mut out = String::from("[");
     for (i, note) in notes.iter().enumerate() {
         if i > 0 {
@@ -201,7 +203,7 @@ mod tests {
 
     #[test]
     fn escapes_quotes_backslashes_and_unicode() {
-        let notes = [immermemo_index::IndexedNote {
+        let notes = [IndexedNote {
             path: PathBuf::from("a\"b\\c.tmt"),
             title: "日本語\ttitle".to_string(),
             has_conflict: false,

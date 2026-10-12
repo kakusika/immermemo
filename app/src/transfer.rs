@@ -11,18 +11,18 @@ use crate::update_provider_ui_state;
 
 thread_local! {
     static APP_WEAK: RefCell<Option<slint::Weak<App>>> = const { RefCell::new(None) };
-    static PENDING_IMPORT_PAYLOAD: RefCell<Option<Rc<RefCell<Option<immermemo_vault::transfer::TransferPayload>>>>> = const { RefCell::new(None) };
+    static PENDING_IMPORT_PAYLOAD: RefCell<Option<Rc<RefCell<Option<immermemo_core::transfer::TransferPayload>>>>> = const { RefCell::new(None) };
 }
 
 /// Populates and displays the transfer import preview in SettingsSheet given a transfer URI or JSON.
 pub(crate) fn open_import_preview(
     app: &App,
-    pending_payload: &Rc<RefCell<Option<immermemo_vault::transfer::TransferPayload>>>,
+    pending_payload: &Rc<RefCell<Option<immermemo_core::transfer::TransferPayload>>>,
     input: &str,
 ) {
     let trimmed = input.trim();
     app.set_import_draft(trimmed.into());
-    match immermemo_vault::transfer::decode_payload(trimmed) {
+    match immermemo_core::transfer::decode_payload(trimmed) {
         Ok(payload) => {
             app.set_import_status_message(SharedString::new());
             app.set_import_status_is_error(false);
@@ -79,7 +79,7 @@ pub fn bind_transfer_callbacks(
 ) {
     let cached_export_uri = Rc::new(RefCell::new(None::<String>));
     let pending_imported_payload = Rc::new(RefCell::new(
-        None::<immermemo_vault::transfer::TransferPayload>,
+        None::<immermemo_core::transfer::TransferPayload>,
     ));
     APP_WEAK.with(|a| *a.borrow_mut() = Some(app.as_weak()));
     PENDING_IMPORT_PAYLOAD.with(|p| *p.borrow_mut() = Some(pending_imported_payload.clone()));
@@ -87,7 +87,7 @@ pub fn bind_transfer_callbacks(
     let update_transfer_qr = {
         let cached_export_uri = cached_export_uri.clone();
         move |app: &App, session: &Rc<RefCell<Session>>| {
-            let options = immermemo_vault::transfer::ExportOptions {
+            let options = immermemo_core::transfer::ExportOptions {
                 include_interface: app.get_export_include_interface(),
                 include_remote: app.get_export_include_remote(),
                 include_token: app.get_export_include_token(),
@@ -95,7 +95,7 @@ pub fn bind_transfer_callbacks(
             let s = session.borrow();
             let vault_name = Some(session::vault_display_name(&s.vault_dir));
             let ui_scale = Some(app.get_ui_scale());
-            let payload_res = immermemo_vault::transfer::build_payload(
+            let payload_res = immermemo_core::transfer::build_payload(
                 &s.app_data,
                 &s.vault_dir,
                 &*s.token_store,
@@ -105,7 +105,7 @@ pub fn bind_transfer_callbacks(
             );
             drop(s);
             match payload_res {
-                Ok(payload) => match immermemo_vault::transfer::encode_payload(&payload) {
+                Ok(payload) => match immermemo_core::transfer::encode_payload(&payload) {
                     Ok(uri) => {
                         *cached_export_uri.borrow_mut() = Some(uri.clone());
                         match crate::qr::generate_qr_image(&uri, 260) {
@@ -193,7 +193,7 @@ pub fn bind_transfer_callbacks(
                 return;
             };
             let mut s = session.borrow_mut();
-            match immermemo_vault::transfer::apply_payload(
+            match immermemo_core::transfer::apply_payload(
                 &s.app_data,
                 &s.vault_dir,
                 &*s.token_store,

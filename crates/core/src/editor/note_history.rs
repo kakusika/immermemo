@@ -4,8 +4,8 @@ use immermemo_index::NoteIndex;
 use immermemo_sync::{FileRevision, Vault};
 use immermemo_vault::appdata::AppData;
 
-use crate::history::History;
-use crate::state::{EditorState, current_path};
+use super::history::History;
+use super::state::{EditorState, current_path};
 
 /// The current note's revision history (newest-first, up to `limit`
 /// entries), or `None` if there's no current note / its vault location

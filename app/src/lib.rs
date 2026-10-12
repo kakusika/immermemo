@@ -24,8 +24,8 @@ use slint::ComponentHandle;
 
 pub use forgejo::update_forgejo_ui_state;
 pub use github::update_github_ui_state;
-use immermemo_vault::appdata::AppData;
-pub use immermemo_vault::credentials::{TokenStore, TokenStoreFactory};
+use immermemo_core::AppData;
+pub use immermemo_core::{TokenStore, TokenStoreFactory};
 pub use transfer::handle_incoming_import_uri;
 #[cfg(test)]
 pub(crate) use transfer::open_import_preview;
@@ -145,8 +145,8 @@ pub fn run(
     let index = app_data
         .index_path(&vault_dir)
         .ok()
-        .and_then(|p| immermemo_index::NoteIndex::open(&p).ok())
-        .unwrap_or_else(|| immermemo_index::NoteIndex::open_in_memory().unwrap());
+        .and_then(|p| immermemo_core::NoteIndex::open(&p).ok())
+        .unwrap_or_else(|| immermemo_core::NoteIndex::open_in_memory().unwrap());
     let core = immermemo_core::Session::new(
         vault_dir,
         app_data,
@@ -200,8 +200,7 @@ mod tests {
         open_first_conflicted_note, open_icon_picker, resolve_active_conflict,
         resolve_conflict_step, set_status, sync_conflict_sheet_state, update_filtered_list,
     };
-    use immermemo_editor::History;
-    use immermemo_vault::notes;
+    use immermemo_core::{History, notes};
     use slint::{Model, SharedString};
     use std::sync::Arc;
 
@@ -287,7 +286,7 @@ mod tests {
             Box::new(move |_| Ok(token_store.clone())),
             vec![vault_dir.clone()],
             None,
-            immermemo_index::NoteIndex::open_in_memory().unwrap(),
+            immermemo_core::NoteIndex::open_in_memory().unwrap(),
         );
         core.notes = vec![note_path.clone()];
         core.conflicted = vec![true];
@@ -295,7 +294,7 @@ mod tests {
             note_index: 0,
             snippet: None,
         }];
-        core.editor = immermemo_editor::EditorState {
+        core.editor = immermemo_core::EditorState {
             current: Some(0),
             history: Some(History::new(&conflicted_text)),
             note_history_revisions: Vec::new(),
@@ -313,7 +312,7 @@ mod tests {
         session: &Rc<RefCell<Session>>,
         note_path: &Path,
     ) {
-        resolve_active_conflict(app, session, tomet::merge::ConflictResolution::A);
+        resolve_active_conflict(app, session, immermemo_core::ConflictResolution::A);
 
         assert!(!app.get_current_has_conflict());
         assert_eq!(app.get_body(), "Mine.\n");
@@ -398,8 +397,8 @@ mod tests {
     /// (`a_note_s_meta_icon_reaches_its_directory_entry` above) only ever
     /// exercised a hand-written fixture; this is the one place proving a
     /// picker selection actually produces a body `meta_element` can read
-    /// back, not just that `immermemo_editor::set_note_icon` can in
-    /// isolation (that's `crates/editor`'s own unit tests' job).
+    /// back, not just that `immermemo_core::set_note_icon` can in
+    /// isolation (that's `crates/core`'s own unit tests' job).
     fn icon_picker_selection_saves_and_is_reflected_in_the_note_list(
         app: &App,
         session: &Rc<RefCell<Session>>,
@@ -619,7 +618,7 @@ mod tests {
         // Successful sync clears error and updates last_synced_at
         finish_sync(app, session, Err("some error".to_string()));
         assert_eq!(app.get_last_sync_error(), "Sync failed: some error");
-        finish_sync(app, session, Ok(immermemo_sync::SyncReport::default()));
+        finish_sync(app, session, Ok(immermemo_core::SyncReport::default()));
         assert_eq!(app.get_last_sync_error(), "");
         assert_eq!(app.get_status(), "Synced");
         assert!(!app.get_status_is_error());
@@ -634,7 +633,7 @@ mod tests {
         let ts = session::format_timestamp(1700000000);
         assert!(ts.contains("2023-11-14"));
 
-        let rev1 = immermemo_sync::FileRevision {
+        let rev1 = immermemo_core::FileRevision {
             commit_id: "1111111111111111111111111111111111111111".to_string(),
             short_id: "1111111".to_string(),
             timestamp_secs: 1700000000,
@@ -657,9 +656,9 @@ mod tests {
         assert!(session.borrow().pending_auto_sync);
 
         // When sync finishes, pending_auto_sync is cleared and next sync is scheduled
-        finish_sync(app, session, Ok(immermemo_sync::SyncReport::default()));
+        finish_sync(app, session, Ok(immermemo_core::SyncReport::default()));
         assert!(app.get_syncing());
-        finish_sync(app, session, Ok(immermemo_sync::SyncReport::default()));
+        finish_sync(app, session, Ok(immermemo_core::SyncReport::default()));
         assert!(!app.get_syncing());
     }
 
@@ -672,9 +671,9 @@ mod tests {
         session::schedule_auto_sync(app, std::time::Duration::from_millis(50));
         session::trigger_auto_sync(app, session);
         assert!(session.borrow().pending_auto_sync);
-        finish_sync(app, session, Ok(immermemo_sync::SyncReport::default()));
+        finish_sync(app, session, Ok(immermemo_core::SyncReport::default()));
         assert!(app.get_syncing());
-        finish_sync(app, session, Ok(immermemo_sync::SyncReport::default()));
+        finish_sync(app, session, Ok(immermemo_core::SyncReport::default()));
         assert!(!app.get_syncing());
     }
 
@@ -693,22 +692,22 @@ mod tests {
 
     fn deep_link_import_preview_opens_settings_sheet(app: &App) {
         let pending = Rc::new(RefCell::new(None));
-        let valid_payload = immermemo_vault::transfer::TransferPayload {
+        let valid_payload = immermemo_core::transfer::TransferPayload {
             v: 1,
             app: "immermemo".to_string(),
-            interface: Some(immermemo_vault::transfer::InterfaceTransfer {
+            interface: Some(immermemo_core::transfer::InterfaceTransfer {
                 font_size: Some(2),
                 theme: Some(1),
                 status_bar: Some(0),
                 ui_scale: Some(1.2),
             }),
-            sync: Some(immermemo_vault::transfer::SyncTransfer {
+            sync: Some(immermemo_core::transfer::SyncTransfer {
                 vault_name: Some("test-vault".to_string()),
                 remote_url: Some("https://example.com/notes.git".to_string()),
                 token: Some("secret123".to_string()),
             }),
         };
-        let uri = immermemo_vault::transfer::encode_payload(&valid_payload).unwrap();
+        let uri = immermemo_core::transfer::encode_payload(&valid_payload).unwrap();
         open_import_preview(app, &pending, &uri);
 
         assert!(app.get_settings_sheet_open());

@@ -25,21 +25,7 @@ pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
 /// Switches the editor to `notes[index]`. Returns the opened note's
 /// vault-relative path on success.
 fn open_note_inner(app: &App, session: &Rc<RefCell<Session>>, index: usize) -> Option<String> {
-    let outcome = {
-        let mut guard = session.borrow_mut();
-        let s = &mut guard.core;
-        let vault_dir = s.vault_dir.clone();
-        immermemo_editor::open_note(
-            &mut s.editor,
-            &s.app_data,
-            &vault_dir,
-            &s.notes,
-            &s.conflicted,
-            &s.filtered_results,
-            index,
-        )
-    };
-    let outcome = outcome?;
+    let outcome = session.borrow_mut().open_note(index)?;
     match outcome {
         Err(msg) => {
             set_status(app, msg);
@@ -140,7 +126,7 @@ pub fn sync_nav_state(app: &App, session: &Rc<RefCell<Session>>) {
 pub fn open_initial_or_last_note(app: &App, session: &Rc<RefCell<Session>>) {
     let index = {
         let s = session.borrow();
-        immermemo_editor::initial_or_last_note_index(&s.app_data, &s.vault_dir, &s.notes)
+        immermemo_core::editor::initial_or_last_note_index(&s.app_data, &s.vault_dir, &s.notes)
     };
     if let Some(index) = index {
         open_note(app, session, index);

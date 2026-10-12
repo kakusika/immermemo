@@ -7,8 +7,7 @@ pub mod system_ui;
 
 use std::sync::Arc;
 
-use immermemo_vault::appdata::AppData;
-use immermemo_vault::credentials::TokenStore;
+use immermemo_core::{AppData, TokenStore};
 
 use crate::haptic;
 use crate::{TokenStoreFactory, run};

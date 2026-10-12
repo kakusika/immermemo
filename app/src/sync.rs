@@ -6,8 +6,9 @@
 
 use std::path::Path;
 
-use immermemo_identity::DeviceIdentity;
-use immermemo_sync::{CertificateVerifier, CredentialProvider, SyncReport, Vault};
+use immermemo_core::{
+    CertificateVerifier, CredentialProvider, DeviceIdentity, SyncReport, Vault,
+};
 
 /// Runs a sync against `remote` and returns the resulting `SyncReport`.
 /// `identity` (plain data, loaded by the caller before this runs --
@@ -36,7 +37,7 @@ pub fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use immermemo_vault::appdata::AppData;
+    use immermemo_core::AppData;
     use std::path::PathBuf;
     use tempfile::TempDir;
 
@@ -129,7 +130,7 @@ mod tests {
         assert_eq!(conflicted, vec![b.notes.path().join("note.tmt")]);
         assert!(
             b.read("note.tmt")
-                .contains(tomet::merge::CONFLICT_MARKER)
+                .contains(immermemo_core::CONFLICT_MARKER)
         );
     }
 

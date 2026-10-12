@@ -48,7 +48,7 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
             }
         };
         let identity =
-            immermemo_identity::DeviceIdentity::load_or_init(&s.app_data.identity_path()).ok();
+            immermemo_core::DeviceIdentity::load_or_init(&s.app_data.identity_path()).ok();
         (
             s.vault_dir.clone(),
             gitdir,
@@ -68,7 +68,7 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
         #[cfg(any(target_os = "android", target_os = "ios"))]
         let verifier = cert::verifier().map(Some);
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
-        let verifier: anyhow::Result<Option<Box<dyn immermemo_sync::CertificateVerifier>>> =
+        let verifier: anyhow::Result<Option<Box<dyn immermemo_core::CertificateVerifier>>> =
             Ok(None);
         let result = verifier
             .and_then(|verifier| {
@@ -95,7 +95,7 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
 pub fn finish_sync(
     app: &App,
     session: &Rc<RefCell<Session>>,
-    result: Result<immermemo_sync::SyncReport, String>,
+    result: Result<immermemo_core::SyncReport, String>,
 ) {
     app.set_syncing(false);
     let mut should_sync_again = false;

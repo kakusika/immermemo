@@ -9,7 +9,7 @@
 //! - [`credentials`]: Pluggable authentication token storage ([`TokenStore`]).
 //! - [`token_blob`]: Format definition and validation for encrypted token payloads.
 //!
-//! Undo/redo (`History`) lives in `immermemo-editor` instead -- every
+//! Undo/redo (`History`) lives in `immermemo-core::editor` instead -- every
 //! consumer of it is there, not here; it only sat in this crate as a
 //! leftover from the batch extraction that created it, before `editor`
 //! existed to hold editor-session state specifically.

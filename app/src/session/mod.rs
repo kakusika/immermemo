@@ -162,7 +162,7 @@ pub fn update_rendered_body(app: &App, text: &str) {
 }
 
 pub fn update_note_stats(app: &App, text: &str) {
-    let stats = immermemo_editor::note_stats(text);
+    let stats = immermemo_core::note_stats(text);
     app.set_char_count(stats.char_count);
     app.set_word_count(stats.word_count);
     app.set_line_count(stats.line_count);

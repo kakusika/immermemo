@@ -52,7 +52,7 @@ pub fn apply_icon_selection(app: &App, session: &Rc<RefCell<Session>>, name: &st
         set_status(app, "Could not read this note");
         return;
     };
-    let Some(new_body) = immermemo_editor::set_note_icon(&body, name, ICON_PICKER_DEFAULT_PKG)
+    let Some(new_body) = immermemo_core::set_note_icon(&body, name, ICON_PICKER_DEFAULT_PKG)
     else {
         set_status(app, "Could not update this note's icon");
         return;

@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use immermemo_vault::appdata::AppData;
 use immermemo_vault::notes::{self, SearchResult};
 
-use crate::history::{History, Restored};
-use crate::state::{EditorState, current_path};
+use super::history::{History, Restored};
+use super::state::{EditorState, current_path};
 
 pub struct OpenedNote {
     /// Index into the filtered list the Files/Home screens show, if the
