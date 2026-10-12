@@ -424,6 +424,31 @@ fn main() {
     render(&window, size, &format!("{prefix}-note-menu.ppm"));
     app.set_note_menu_index(-1);
 
+    app.set_quick_actions_open(true);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-quick-actions.ppm"));
+    app.set_quick_actions_open(false);
+
+    // Mini card swipe gesture with history preview bubble (Back)
+    app.set_can_navigate_back(true);
+    app.set_history_back_title("前回のメモ: アイデア出し".into());
+    app.set_is_dragging_mini_reveal(true);
+    app.set_mini_card_reveal_dx(42.0);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-mini-card-history-bubble.ppm"));
+    app.set_mini_card_reveal_dx(0.0);
+    app.set_is_dragging_mini_reveal(false);
+
+    // Mini card swipe gesture with history preview bubble (Forward)
+    app.set_can_navigate_forward(true);
+    app.set_history_forward_title("次のメモ: 買い物リスト".into());
+    app.set_is_dragging_mini_reveal(true);
+    app.set_mini_card_reveal_dx(-42.0);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-mini-card-forward-bubble.ppm"));
+    app.set_mini_card_reveal_dx(0.0);
+    app.set_is_dragging_mini_reveal(false);
+
     app.set_rename_open(true);
     app.set_rename_draft("ideas".into());
     std::thread::sleep(std::time::Duration::from_millis(300));

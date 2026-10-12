@@ -1,7 +1,7 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
-import { BottomNavBar } from "components.slint";
+import { BottomNavBar, IconActionRow } from "components.slint";
 import { MiniNoteBar } from "widgets/mini_note_bar.slint";
 import { EditorScreen } from "screens/editor.slint";
 import { NoteBodyItemView } from "screens/note_body.slint";
@@ -199,6 +199,7 @@ export component App inherits Window {
     out property <length> measure-probe-block-width: measure-probe-block-item.preferred-width;
     in property <bool> remote-configured;
     in-out property <int> note-menu-index: -1;
+    in-out property <bool> quick-actions-open: false;
     // Library Directory's List/Grid views -- see `files.slint`'s
     // `DirectoryEntry`/`BreadcrumbSegment` and
     // `app/src/directory.rs`'s module doc.
@@ -215,6 +216,8 @@ export component App inherits Window {
     in-out property <string> icon-picker-query;
     in property <[PickerIconEntry]> icon-picker-results: [];
     in-out property <bool> delete-confirm-open: false;
+    in-out property <length> mini-card-reveal-dx: 0px;
+    in-out property <bool> is-dragging-mini-reveal: false;
     in-out property <bool> delete-vault-confirm-open: false;
     in-out property <bool> vault-sheet-open: false;
     in property <[string]> vaults;
@@ -330,6 +333,10 @@ export component App inherits Window {
             root.note-menu-index = -1;
             return true;
         }
+        if (root.quick-actions-open) {
+            root.quick-actions-open = false;
+            return true;
+        }
 
         // 2. Close open sheets
         if (root.conflict-sheet-open) {
@@ -408,8 +415,9 @@ export component App inherits Window {
     }
     changed virtual-keyboard-size => { root.update-keyboard(); }
     property <length> inset-bottom: max(root.safe-area-insets.bottom + root.extra-inset-bottom, root.keyboard);
+    property <length> bottom-bar-extra-inset: max(0px, (root.safe-area-insets.bottom + root.extra-inset-bottom) - 12px * Metrics.ui-scale);
     property <length> bottom-bar-total-height: root.keyboard == 0px
-        ? (Metrics.bottom-bar-height + root.safe-area-insets.bottom + root.extra-inset-bottom)
+        ? (Metrics.bottom-bar-height + root.bottom-bar-extra-inset)
         : 0px;
     property <length> mini-card-resting-y: root.height - root.bottom-bar-total-height - Metrics.mini-card-height - 8px * Metrics.ui-scale;
     property <length> mini-card-extra-inset: (root.current >= 0 && root.keyboard == 0px)
@@ -438,10 +446,6 @@ export component App inherits Window {
         duration: root.is-dragging-sheet ? 0ms : 240ms;
         easing: ease-out;
     }
-
-    // Horizontal swipe gesture tracking for tab navigation
-    property <bool> is-swiping: false;
-    property <length> swipe-dx: 0px;
 
     // One `SheetDragState` per note-sheet-style full-screen sheet (see
     // that component's own doc comment) -- independent from each other
@@ -498,7 +502,7 @@ export component App inherits Window {
             return reject;
         }
 
-        // Layer 1: Content Area with 5 swipeable screens
+        // Layer 1: Content Area with 3 screens (swiping disabled to free gestures)
         content-box := Rectangle {
             x: 0px;
             y: 0px;
@@ -506,146 +510,112 @@ export component App inherits Window {
             height: 100%;
             clip: true;
 
-            SwipeGestureHandler {
-                width: 100%;
-                height: 100%;
-                enabled: root.narrow && root.keyboard == 0px && !root.note-sheet-open && !root.is-dragging-sheet && !root.settings-sheet-open;
-                handle-swipe-left: root.active-tab < 2;
-                handle-swipe-right: root.active-tab > 0;
-
-                moved => {
-                    if (self.swiping) {
-                        root.is-swiping = true;
-                        let dx = self.current-position.x - self.pressed-position.x;
-                        root.swipe-dx = dx;
-                    }
+            // Screen 0: Home
+            home-screen := HomeScreen {
+                x: (0 - root.active-tab) * parent.width;
+                y: 0px;
+                width: parent.width;
+                height: parent.height;
+                inset-top: root.inset-top;
+                inset-bottom: root.screen-inset-bottom;
+                vault-name: root.current-vault-name;
+                vault-path: root.current-vault-path;
+                note-count: root.notes.length;
+                conflict-count: root.conflict-count;
+                status: root.status;
+                syncing: root.syncing;
+                remote-configured: root.remote-configured;
+                last-sync-error: root.last-sync-error;
+                sync-error-copied: root.sync-error-copied;
+                last-synced-at: root.last-synced-at;
+                new-note => {
+                    root.new-note();
+                    root.open-note-sheet();
+                    pane.focus-editor();
+                }
+                sync => { root.sync(); }
+                open-vaults => { root.open-vault-sheet(); }
+                open-settings => {
+                    root.open-settings-sheet();
+                }
+                open-vault-history => { root.open-vault-history(); }
+                open-conflict-note => {
+                    root.open-conflict-note();
+                    root.open-note-sheet();
+                }
+                copy-sync-error => {
+                    root.copy-sync-error();
+                }
+                dismiss-sync-error => {
+                    root.dismiss-sync-error();
                 }
 
-                swiped => {
-                    root.is-swiping = false;
-                    let dx = self.current-position.x - self.pressed-position.x;
-                    if (dx < -40px && root.active-tab < 2) {
-                        root.active-tab += 1;
-                        root.trigger-haptic();
-                    } else if (dx > 40px && root.active-tab > 0) {
-                        root.active-tab -= 1;
-                        root.trigger-haptic();
-                    }
-                    root.swipe-dx = 0px;
+                animate x {
+                    duration: 220ms;
+                    easing: ease-out;
+                }
+            }
+
+            // Screen 1: Files / Notes list
+            files-screen := FilesScreen {
+                x: (1 - root.active-tab) * parent.width;
+                y: 0px;
+                width: parent.width;
+                height: parent.height;
+                current: root.current;
+                status: root.status;
+                syncing: root.syncing;
+                inset-top: root.inset-top;
+                inset-bottom: root.screen-inset-bottom;
+                highlight-current: true;
+                remote-configured: root.remote-configured;
+                folder-entries: root.directory-folder-entries;
+                breadcrumb: root.directory-breadcrumb;
+                select(i) => {
+                    root.select(i);
+                    root.open-note-sheet();
+                }
+                new-note => {
+                    root.new-note();
+                    root.open-note-sheet();
+                    pane.focus-editor();
+                }
+                sync => { root.sync(); }
+                open-settings => {
+                    root.open-settings-sheet();
+                }
+                note-menu-requested(i) => { root.note-menu-index = i; }
+                navigate-folder(key) => { root.navigate-directory-folder(key); }
+                trigger-haptic => { root.trigger-haptic(); }
+                trigger-heavy-haptic => { root.trigger-heavy-haptic(); }
+
+                animate x {
+                    duration: 220ms;
+                    easing: ease-out;
+                }
+            }
+
+            // Screen 2: Search
+            search-screen := SearchScreen {
+                x: (2 - root.active-tab) * parent.width;
+                y: 0px;
+                width: parent.width;
+                height: parent.height;
+                inset-top: root.inset-top;
+                inset-bottom: root.screen-inset-bottom;
+                query <=> root.search-query;
+                notes: root.notes;
+                snippets: root.snippets;
+                conflicted: root.conflicted;
+                query-changed(q) => { root.search-query-changed(q); }
+                select(i) => {
+                    root.select(i);
+                    root.open-note-sheet();
                 }
 
-                cancelled => {
-                    root.is-swiping = false;
-                    root.swipe-dx = 0px;
-                }
-
-                // Screen 0: Home
-                home-screen := HomeScreen {
-                    x: (0 - root.active-tab) * parent.width + root.swipe-dx;
-                    y: 0px;
-                    width: parent.width;
-                    height: parent.height;
-                    inset-top: root.inset-top;
-                    inset-bottom: root.screen-inset-bottom;
-                    vault-name: root.current-vault-name;
-                    vault-path: root.current-vault-path;
-                    note-count: root.notes.length;
-                    conflict-count: root.conflict-count;
-                    status: root.status;
-                    syncing: root.syncing;
-                    remote-configured: root.remote-configured;
-                    last-sync-error: root.last-sync-error;
-                    sync-error-copied: root.sync-error-copied;
-                    last-synced-at: root.last-synced-at;
-                    new-note => {
-                        root.new-note();
-                        root.open-note-sheet();
-                        pane.focus-editor();
-                    }
-                    sync => { root.sync(); }
-                    open-vaults => { root.open-vault-sheet(); }
-                    open-settings => {
-                        root.open-settings-sheet();
-                    }
-                    open-vault-history => { root.open-vault-history(); }
-                    open-conflict-note => {
-                        root.open-conflict-note();
-                        root.open-note-sheet();
-                    }
-                    copy-sync-error => {
-                        root.copy-sync-error();
-                    }
-                    dismiss-sync-error => {
-                        root.dismiss-sync-error();
-                    }
-
-                    animate x {
-                        duration: root.is-swiping ? 0ms : 220ms;
-                        easing: ease-out;
-                    }
-                }
-
-                // Screen 1: Files / Notes list
-                files-screen := FilesScreen {
-                    x: (1 - root.active-tab) * parent.width + root.swipe-dx;
-                    y: 0px;
-                    width: parent.width;
-                    height: parent.height;
-                    current: root.current;
-                    status: root.status;
-                    syncing: root.syncing;
-                    inset-top: root.inset-top;
-                    inset-bottom: root.screen-inset-bottom;
-                    highlight-current: true;
-                    remote-configured: root.remote-configured;
-                    folder-entries: root.directory-folder-entries;
-                    breadcrumb: root.directory-breadcrumb;
-                    select(i) => {
-                        root.select(i);
-                        root.open-note-sheet();
-                    }
-                    new-note => {
-                        root.new-note();
-                        root.open-note-sheet();
-                        pane.focus-editor();
-                    }
-                    sync => { root.sync(); }
-                    open-settings => {
-                        root.open-settings-sheet();
-                    }
-                    note-menu-requested(i) => { root.note-menu-index = i; }
-                    navigate-folder(key) => { root.navigate-directory-folder(key); }
-                    trigger-haptic => { root.trigger-haptic(); }
-                    trigger-heavy-haptic => { root.trigger-heavy-haptic(); }
-
-                    animate x {
-                        duration: root.is-swiping ? 0ms : 220ms;
-                        easing: ease-out;
-                    }
-                }
-
-                // Screen 2: Search
-                search-screen := SearchScreen {
-                    x: (2 - root.active-tab) * parent.width + root.swipe-dx;
-                    y: 0px;
-                    width: parent.width;
-                    height: parent.height;
-                    inset-top: root.inset-top;
-                    inset-bottom: root.screen-inset-bottom;
-                    query <=> root.search-query;
-                    notes: root.notes;
-                    snippets: root.snippets;
-                    conflicted: root.conflicted;
-                    query-changed(q) => { root.search-query-changed(q); }
-                    select(i) => {
-                        root.select(i);
-                        root.open-note-sheet();
-                    }
-
-                    animate x {
-                        duration: root.is-swiping ? 0ms : 220ms;
-                        easing: ease-out;
-                    }
+                animate x {
+                    duration: 220ms;
+                    easing: ease-out;
                 }
             }
         }
@@ -813,6 +783,10 @@ export component App inherits Window {
 
             can-navigate-back: root.can-navigate-back;
             can-navigate-forward: root.can-navigate-forward;
+            history-back-title: root.history-back-title;
+            history-forward-title: root.history-forward-title;
+            mini-card-reveal-dx <=> root.mini-card-reveal-dx;
+            is-dragging-mini-reveal <=> root.is-dragging-mini-reveal;
 
             resting-y: root.mini-card-resting-y;
             sheet-progress: root.sheet-progress;
@@ -859,6 +833,57 @@ export component App inherits Window {
             tab-selected(idx) => {
                 root.active-tab = idx;
                 root.trigger-haptic();
+            }
+            quick-action => {
+                root.trigger-haptic();
+                root.quick-actions-open = true;
+            }
+        }
+
+        if root.quick-actions-open: ActionSheet {
+            open: true;
+            narrow: root.narrow;
+            title: @tr("Quick Actions");
+            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+            cancel => { root.quick-actions-open = false; }
+
+            IconActionRow {
+                icon: TablerIcons.plus;
+                text: @tr("New Note");
+                tint: Palette.accent-background;
+                clicked => {
+                    root.quick-actions-open = false;
+                    root.new-note();
+                    root.open-note-sheet();
+                    pane.focus-editor();
+                }
+            }
+
+            IconActionRow {
+                icon: TablerIcons.cloud;
+                text: @tr("Sync Now");
+                clicked => {
+                    root.quick-actions-open = false;
+                    root.sync();
+                }
+            }
+
+            IconActionRow {
+                icon: TablerIcons.folder;
+                text: @tr("Switch Vault");
+                clicked => {
+                    root.quick-actions-open = false;
+                    root.open-vault-sheet();
+                }
+            }
+
+            IconActionRow {
+                icon: TablerIcons.settings;
+                text: @tr("Settings");
+                clicked => {
+                    root.quick-actions-open = false;
+                    root.open-settings-sheet();
+                }
             }
         }
 

@@ -69,9 +69,9 @@ component NavItem inherits Rectangle {
         width: 100%;
         height: 100%;
         alignment: center;
-        spacing: 3px * Metrics.ui-scale;
-        padding-top: 4px * Metrics.ui-scale;
-        padding-bottom: 4px * Metrics.ui-scale;
+        spacing: 2px * Metrics.ui-scale;
+        padding-top: 2px * Metrics.ui-scale;
+        padding-bottom: 2px * Metrics.ui-scale;
 
         // Centered pill indicator
         HorizontalLayout {
@@ -255,8 +255,10 @@ export component BottomNavBar inherits Rectangle {
     in property <int> conflict-count: 0;
     in property <bool> current-has-conflict: false;
     callback tab-selected(int);
+    callback quick-action();
 
-    height: Metrics.bottom-bar-height + root.inset-bottom;
+    property <length> extra-inset-bottom: max(0px, root.inset-bottom - 12px * Metrics.ui-scale);
+    height: Metrics.bottom-bar-height + root.extra-inset-bottom;
     background: Colors.surface-elevated;
     drop-shadow-blur: 10px * Metrics.ui-scale;
     drop-shadow-offset-y: -2px * Metrics.ui-scale;
@@ -301,6 +303,58 @@ export component BottomNavBar inherits Rectangle {
                 root.active-tab = 2;
                 root.tab-selected(2);
             }
+        }
+
+        NavItem {
+            icon: TablerIcons.bolt;
+            label: @tr("Quick");
+            active: false;
+            clicked => {
+                root.quick-action();
+            }
+        }
+    }
+}
+
+export component IconActionRow inherits Rectangle {
+    in property <image> icon;
+    in property <string> text;
+    in property <color> tint: Palette.foreground;
+    callback clicked();
+
+    height: Metrics.touch;
+    border-radius: Metrics.radius-sm + 2px * Metrics.ui-scale;
+    background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding-left: Metrics.gutter;
+        padding-right: Metrics.gutter;
+        spacing: Metrics.spacing-md;
+
+        VerticalLayout {
+            alignment: center;
+            Icon {
+                source: root.icon;
+                color: root.tint;
+                width: Metrics.icon-md;
+                height: Metrics.icon-md;
+            }
+        }
+
+        Text {
+            text: root.text;
+            color: root.tint;
+            font-size: Metrics.font-body + 1px * Metrics.ui-scale;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
         }
     }
 }

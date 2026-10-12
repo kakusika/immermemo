@@ -35,6 +35,46 @@ msgctxt "BottomNavBar"
 msgid "Search"
 msgstr "検索"
 
+#: ui/components.slint:310
+msgctxt "BottomNavBar"
+msgid "Quick"
+msgstr "クイック"
+
+#: ui/app.slint:842
+msgctxt "App"
+msgid "Quick Actions"
+msgstr "クイックアクション"
+
+#: ui/app.slint:850
+msgctxt "App"
+msgid "New Note"
+msgstr "新しいノート"
+
+#: ui/app.slint:860
+msgctxt "App"
+msgid "Sync Now"
+msgstr "今すぐ同期"
+
+#: ui/app.slint:870
+msgctxt "App"
+msgid "Switch Vault"
+msgstr "保管庫の切り替え"
+
+#: ui/app.slint:880
+msgctxt "App"
+msgid "Settings"
+msgstr "設定"
+
+#: ui/widgets/mini_note_bar.slint:110
+msgctxt "MiniNoteBar"
+msgid "Previous Note"
+msgstr "前のノート"
+
+#: ui/widgets/mini_note_bar.slint:111
+msgctxt "MiniNoteBar"
+msgid "Next Note"
+msgstr "次のノート"
+
 #: ui/components.slint:662
 msgctxt "BottomNavBar"
 msgid "Properties"
