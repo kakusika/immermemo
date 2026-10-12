@@ -1,6 +1,7 @@
 mod callbacks;
 pub mod cert;
 pub mod credentials;
+pub mod forgejo;
 pub mod github;
 mod haptic;
 pub mod qr;
@@ -21,12 +22,19 @@ use std::rc::Rc;
 
 use slint::ComponentHandle;
 
+pub use forgejo::update_forgejo_ui_state;
 pub use github::update_github_ui_state;
 use immermemo_vault::appdata::AppData;
 pub use immermemo_vault::credentials::{TokenStore, TokenStoreFactory};
 pub use transfer::handle_incoming_import_uri;
 #[cfg(test)]
 pub(crate) use transfer::open_import_preview;
+
+/// Updates UI connection state for all supported Git hosting providers (GitHub, Forgejo/Gitea).
+pub fn update_provider_ui_state(app: &App, remote: Option<&str>) {
+    github::update_github_ui_state(app, remote);
+    forgejo::update_forgejo_ui_state(app, remote);
+}
 
 use session::{
     SESSION, Session, open_initial_or_last_note, open_note_by_rel_path, refresh_list,
@@ -133,7 +141,7 @@ pub fn run(
     app.set_current_vault_name(vault_display_name(&vault_dir).into());
     app.set_current_vault_path(vault_dir.display().to_string().into());
     app.set_remote_configured(remote.is_some());
-    update_github_ui_state(&app, remote.as_deref());
+    update_provider_ui_state(&app, remote.as_deref());
     let index = app_data
         .index_path(&vault_dir)
         .ok()
@@ -177,6 +185,7 @@ pub fn run(
     );
     callbacks::bind_sync_conflict_callbacks(&app, &session);
     github::bind_github_callbacks(&app, &session);
+    forgejo::bind_forgejo_callbacks(&app, &session);
     transfer::bind_transfer_callbacks(&app, &session, initial_import_uri);
 
     app.run()?;
@@ -223,6 +232,7 @@ mod tests {
         bundled_japanese_translation_is_discoverable_at_runtime();
         desktop_app_data_dir_resolves_sensible_path();
         deep_link_import_preview_opens_settings_sheet(&app);
+        provider_ui_state_tracks_github_and_forgejo(&app);
 
         // `render::seam_tests` needs the same shared `app` for the same
         // one-event-loop-per-process reason -- see that module's doc.
@@ -713,5 +723,35 @@ mod tests {
         );
         assert!(app.get_preview_has_token());
         assert!(pending.borrow().is_some());
+    }
+
+    fn provider_ui_state_tracks_github_and_forgejo(app: &App) {
+        // GitHub remote
+        update_provider_ui_state(app, Some("https://github.com/octocat/notes.git"));
+        assert!(app.get_github_connected());
+        assert_eq!(app.get_github_username(), "octocat");
+        assert_eq!(app.get_github_repo_name(), "notes");
+        assert!(!app.get_forgejo_connected());
+
+        // Forgejo / Codeberg remote
+        update_provider_ui_state(app, Some("https://codeberg.org/alice/immermemo-vault.git"));
+        assert!(!app.get_github_connected());
+        assert!(app.get_forgejo_connected());
+        assert_eq!(app.get_forgejo_username(), "alice");
+        assert_eq!(app.get_forgejo_instance(), "codeberg.org");
+        assert_eq!(app.get_forgejo_repo_name(), "immermemo-vault");
+
+        // Custom self-hosted Forgejo remote
+        update_provider_ui_state(app, Some("https://git.example.com:3000/bob/my-notes"));
+        assert!(!app.get_github_connected());
+        assert!(app.get_forgejo_connected());
+        assert_eq!(app.get_forgejo_username(), "bob");
+        assert_eq!(app.get_forgejo_instance(), "git.example.com:3000");
+        assert_eq!(app.get_forgejo_repo_name(), "my-notes");
+
+        // Disconnected
+        update_provider_ui_state(app, None);
+        assert!(!app.get_github_connected());
+        assert!(!app.get_forgejo_connected());
     }
 }

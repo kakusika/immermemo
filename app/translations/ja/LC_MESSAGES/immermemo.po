@@ -843,3 +843,52 @@ msgctxt "SettingsSheet"
 msgid "Custom Git Remote (Self-hosted) ▼"
 msgstr "カスタム Git リモート (セルフホスト) ▼"
 
+msgctxt "SettingsSheet"
+msgid "Forgejo / Gitea Sync"
+msgstr "Forgejo / Gitea 同期"
+
+msgctxt "SettingsSheet"
+msgid "Cloud Git Sync"
+msgstr "クラウド Git 同期"
+
+msgctxt "SettingsSheet"
+msgid "Connected as @{} on GitHub"
+msgstr "GitHub に @{} として接続中"
+
+msgctxt "SettingsSheet"
+msgid "Connected as @{} on {}"
+msgstr "{} に @{} として接続中"
+
+msgctxt "SettingsSheet"
+msgid "Connect Codeberg or your self-hosted Forgejo/Gitea instance using a Personal Access Token."
+msgstr "Personal Access Token を使用して Codeberg またはセルフホストの Forgejo/Gitea インスタンスに接続します。"
+
+msgctxt "SettingsSheet"
+msgid "Instance URL"
+msgstr "インスタンス URL"
+
+msgctxt "SettingsSheet"
+msgid "Personal Access Token"
+msgstr "Personal Access Token"
+
+msgctxt "SettingsSheet"
+msgid "Token with repo and user permissions"
+msgstr "repo および user 権限を持つトークン"
+
+msgctxt "SettingsSheet"
+msgid "Repository Name"
+msgstr "リポジトリ名"
+
+msgctxt "SettingsSheet"
+msgid "Connecting..."
+msgstr "接続中..."
+
+msgctxt "SettingsSheet"
+msgid "Connect Account"
+msgstr "アカウントを接続"
+
+msgctxt "SettingsSheet"
+msgid "Forgejo / Gitea"
+msgstr "Forgejo / Gitea"
+
+

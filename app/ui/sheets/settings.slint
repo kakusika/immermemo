@@ -219,7 +219,7 @@ export component SettingsSheet inherits Rectangle {
     callback apply-import();
     callback cancel-import-preview();
 
-    // GitHub Provider & Cloud Sync properties
+    // Cloud Provider Sync properties
     in property <bool> github-connected: false;
     in property <string> github-username: "";
     in property <string> github-repo-name: "";
@@ -227,12 +227,29 @@ export component SettingsSheet inherits Rectangle {
     in property <string> github-user-code: "";
     in property <string> github-verification-uri: "";
     in property <string> github-auth-status: "";
+
+    in property <bool> forgejo-connected: false;
+    in property <string> forgejo-username: "";
+    in property <string> forgejo-instance: "";
+    in property <string> forgejo-repo-name: "";
+    in property <bool> forgejo-connecting: false;
+    in property <string> forgejo-status-message: "";
+    in property <bool> forgejo-status-is-error: false;
+
+    in-out property <int> sync-provider-tab: 0; // 0: GitHub, 1: Forgejo / Gitea
+    in-out property <string> forgejo-instance-draft: "https://codeberg.org";
+    in-out property <string> forgejo-token-draft: "";
+    in-out property <string> forgejo-repo-draft: "immermemo-notes";
+
     in-out property <bool> show-advanced-remote: false;
 
     callback connect-github();
     callback open-github-browser();
     callback cancel-github-auth();
     callback disconnect-github();
+
+    callback connect-forgejo(string, string, string);
+    callback disconnect-forgejo();
 
 
     // 0: list, 1: Interface, 2: Sync & Remote, 3: Vaults, 4: About, 5: Transfer & Share.
@@ -514,7 +531,7 @@ export component SettingsSheet inherits Rectangle {
                         VerticalLayout {
                             alignment: center;
                             Icon {
-                                source: TablerIcons.brand-github;
+                                source: root.forgejo-connected ? TablerIcons.brand-git : TablerIcons.brand-github;
                                 width: Metrics.icon-lg;
                                 height: Metrics.icon-lg;
                                 color: Palette.accent-background;
@@ -524,7 +541,7 @@ export component SettingsSheet inherits Rectangle {
                             horizontal-stretch: 1;
                             alignment: center;
                             Text {
-                                text: @tr("GitHub Sync");
+                                text: root.forgejo-connected ? @tr("Forgejo / Gitea Sync") : (root.github-connected ? @tr("GitHub Sync") : @tr("Cloud Git Sync"));
                                 font-size: 16px;
                                 font-weight: 600;
                                 color: Palette.foreground;
@@ -540,73 +557,7 @@ export component SettingsSheet inherits Rectangle {
 
                     Divider { }
 
-                    // State A: Not connected & Not pending
-                    if !root.github-connected && !root.github-auth-pending: VerticalLayout {
-                        spacing: Metrics.spacing-md;
-                        Text {
-                            text: @tr("Sign in to automatically create and sync a private notes repository.");
-                            font-size: Metrics.font-sm;
-                            color: Colors.muted;
-                            wrap: word-wrap;
-                        }
-                        HorizontalLayout {
-                            alignment: end;
-                            Button {
-                                text: @tr("Connect with GitHub");
-                                primary: true;
-                                clicked => { root.connect-github(); }
-                            }
-                        }
-                    }
-
-                    // State B: Auth pending (Device flow)
-                    if root.github-auth-pending: VerticalLayout {
-                        spacing: Metrics.spacing-md;
-                        Text {
-                            text: @tr("Confirm this one-time code on GitHub:");
-                            font-size: Metrics.font-sm;
-                            color: Colors.muted;
-                            wrap: word-wrap;
-                        }
-
-                        Rectangle {
-                            height: 52px;
-                            border-radius: Metrics.radius-md;
-                            background: Palette.foreground.with-alpha(0.06);
-
-                            Text {
-                                text: root.github-user-code;
-                                font-size: 22px;
-                                font-weight: 700;
-                                color: Palette.accent-background;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
-                            }
-                        }
-
-                        Text {
-                            text: root.github-auth-status != "" ? root.github-auth-status : @tr("Waiting for browser authorization...");
-                            font-size: Metrics.font-sm;
-                            color: Colors.muted;
-                            wrap: word-wrap;
-                        }
-
-                        HorizontalLayout {
-                            spacing: 8px;
-                            alignment: end;
-                            Button {
-                                text: @tr("Cancel");
-                                clicked => { root.cancel-github-auth(); }
-                            }
-                            Button {
-                                text: @tr("Open in Browser");
-                                primary: true;
-                                clicked => { root.open-github-browser(); }
-                            }
-                        }
-                    }
-
-                    // State C: Connected
+                    // State A: GitHub Connected
                     if root.github-connected: VerticalLayout {
                         spacing: Metrics.spacing-sm;
                         HorizontalLayout {
@@ -621,7 +572,7 @@ export component SettingsSheet inherits Rectangle {
                                 }
                             }
                             Text {
-                                text: @tr("Connected as @{}", root.github-username);
+                                text: @tr("Connected as @{} on GitHub", root.github-username);
                                 font-size: 15px;
                                 font-weight: 600;
                                 color: Palette.foreground;
@@ -655,6 +606,217 @@ export component SettingsSheet inherits Rectangle {
                                 primary: true;
                                 enabled: !root.syncing;
                                 clicked => { root.sync(); }
+                            }
+                        }
+                    }
+
+                    // State B: Forgejo Connected
+                    if root.forgejo-connected: VerticalLayout {
+                        spacing: Metrics.spacing-sm;
+                        HorizontalLayout {
+                            spacing: 8px;
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    source: TablerIcons.check;
+                                    width: 16px;
+                                    height: 16px;
+                                    color: Palette.color-scheme == ColorScheme.dark ? #55dd88 : #119944;
+                                }
+                            }
+                            Text {
+                                text: @tr("Connected as @{} on {}", root.forgejo-username, root.forgejo-instance);
+                                font-size: 15px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        if root.forgejo-repo-name != "": Text {
+                            text: @tr("Repository: {} (Private)", root.forgejo-repo-name);
+                            font-size: 13px;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+
+                        if root.sync-status != "": Text {
+                            text: root.sync-status;
+                            font-size: 13px;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: end;
+                            Button {
+                                text: @tr("Disconnect");
+                                clicked => { root.disconnect-forgejo(); }
+                            }
+                            Button {
+                                text: root.syncing ? @tr("Syncing...") : @tr("Sync Now");
+                                primary: true;
+                                enabled: !root.syncing;
+                                clicked => { root.sync(); }
+                            }
+                        }
+                    }
+
+                    // State C: Not Connected (Provider Selection)
+                    if !root.github-connected && !root.forgejo-connected: VerticalLayout {
+                        spacing: Metrics.spacing-md;
+
+                        SegmentedControl {
+                            options: [@tr("GitHub"), @tr("Forgejo / Gitea")];
+                            selected: root.sync-provider-tab;
+                            changed(i) => { root.sync-provider-tab = i; }
+                        }
+
+                        // Tab 0: GitHub
+                        if root.sync-provider-tab == 0: VerticalLayout {
+                            spacing: Metrics.spacing-md;
+
+                            if !root.github-auth-pending: VerticalLayout {
+                                spacing: Metrics.spacing-md;
+                                Text {
+                                    text: @tr("Sign in to automatically create and sync a private notes repository.");
+                                    font-size: Metrics.font-sm;
+                                    color: Colors.muted;
+                                    wrap: word-wrap;
+                                }
+                                HorizontalLayout {
+                                    alignment: end;
+                                    Button {
+                                        text: @tr("Connect with GitHub");
+                                        primary: true;
+                                        clicked => { root.connect-github(); }
+                                    }
+                                }
+                            }
+
+                            if root.github-auth-pending: VerticalLayout {
+                                spacing: Metrics.spacing-md;
+                                Text {
+                                    text: @tr("Confirm this one-time code on GitHub:");
+                                    font-size: Metrics.font-sm;
+                                    color: Colors.muted;
+                                    wrap: word-wrap;
+                                }
+
+                                Rectangle {
+                                    height: 52px;
+                                    border-radius: Metrics.radius-md;
+                                    background: Palette.foreground.with-alpha(0.06);
+
+                                    Text {
+                                        text: root.github-user-code;
+                                        font-size: 22px;
+                                        font-weight: 700;
+                                        color: Palette.accent-background;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                Text {
+                                    text: root.github-auth-status != "" ? root.github-auth-status : @tr("Waiting for browser authorization...");
+                                    font-size: Metrics.font-sm;
+                                    color: Colors.muted;
+                                    wrap: word-wrap;
+                                }
+
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    alignment: end;
+                                    Button {
+                                        text: @tr("Cancel");
+                                        clicked => { root.cancel-github-auth(); }
+                                    }
+                                    Button {
+                                        text: @tr("Open in Browser");
+                                        primary: true;
+                                        clicked => { root.open-github-browser(); }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Tab 1: Forgejo / Gitea
+                        if root.sync-provider-tab == 1: VerticalLayout {
+                            spacing: Metrics.spacing-md;
+
+                            Text {
+                                text: @tr("Connect Codeberg or your self-hosted Forgejo/Gitea instance using a Personal Access Token.");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+
+                            VerticalLayout {
+                                spacing: 4px;
+                                Text {
+                                    text: @tr("Instance URL");
+                                    font-size: 13px;
+                                    color: Colors.muted;
+                                }
+                                LineEdit {
+                                    height: Metrics.touch;
+                                    placeholder-text: "https://codeberg.org";
+                                    text <=> root.forgejo-instance-draft;
+                                }
+                            }
+
+                            VerticalLayout {
+                                spacing: 4px;
+                                Text {
+                                    text: @tr("Personal Access Token");
+                                    font-size: 13px;
+                                    color: Colors.muted;
+                                }
+                                LineEdit {
+                                    height: Metrics.touch;
+                                    placeholder-text: @tr("Token with repo and user permissions");
+                                    text <=> root.forgejo-token-draft;
+                                    input-type: password;
+                                }
+                            }
+
+                            VerticalLayout {
+                                spacing: 4px;
+                                Text {
+                                    text: @tr("Repository Name");
+                                    font-size: 13px;
+                                    color: Colors.muted;
+                                }
+                                LineEdit {
+                                    height: Metrics.touch;
+                                    placeholder-text: "immermemo-notes";
+                                    text <=> root.forgejo-repo-draft;
+                                }
+                            }
+
+                            if root.forgejo-status-message != "": Text {
+                                text: root.forgejo-status-message;
+                                color: root.forgejo-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+                                font-size: 13px;
+                                wrap: word-wrap;
+                            }
+
+                            HorizontalLayout {
+                                alignment: end;
+                                Button {
+                                    text: root.forgejo-connecting ? @tr("Connecting...") : @tr("Connect Account");
+                                    primary: true;
+                                    enabled: !root.forgejo-connecting && root.forgejo-token-draft != "";
+                                    clicked => {
+                                        root.connect-forgejo(
+                                            root.forgejo-instance-draft,
+                                            root.forgejo-token-draft,
+                                            root.forgejo-repo-draft,
+                                        );
+                                    }
+                                }
                             }
                         }
                     }

@@ -245,6 +245,19 @@ export component App inherits Window {
     in property <string> github-user-code: "";
     in property <string> github-verification-uri: "";
     in property <string> github-auth-status: "";
+
+    in property <bool> forgejo-connected: false;
+    in property <string> forgejo-username: "";
+    in property <string> forgejo-instance: "";
+    in property <string> forgejo-repo-name: "";
+    in property <bool> forgejo-connecting: false;
+    in property <string> forgejo-status-message: "";
+    in property <bool> forgejo-status-is-error: false;
+    in-out property <int> sync-provider-tab: 0;
+    in-out property <string> forgejo-instance-draft: "https://codeberg.org";
+    in-out property <string> forgejo-token-draft: "";
+    in-out property <string> forgejo-repo-draft: "immermemo-notes";
+
     in-out property <bool> show-advanced-remote: false;
 
 
@@ -314,6 +327,9 @@ export component App inherits Window {
     callback open-github-browser();
     callback cancel-github-auth();
     callback disconnect-github();
+
+    callback connect-forgejo(string, string, string);
+    callback disconnect-forgejo();
 
     callback rename-requested(int);
     callback delete-requested(int);
@@ -1287,11 +1303,27 @@ export component App inherits Window {
                 github-user-code: root.github-user-code;
                 github-verification-uri: root.github-verification-uri;
                 github-auth-status: root.github-auth-status;
+
+                forgejo-connected: root.forgejo-connected;
+                forgejo-username: root.forgejo-username;
+                forgejo-instance: root.forgejo-instance;
+                forgejo-repo-name: root.forgejo-repo-name;
+                forgejo-connecting: root.forgejo-connecting;
+                forgejo-status-message: root.forgejo-status-message;
+                forgejo-status-is-error: root.forgejo-status-is-error;
+                sync-provider-tab <=> root.sync-provider-tab;
+                forgejo-instance-draft <=> root.forgejo-instance-draft;
+                forgejo-token-draft <=> root.forgejo-token-draft;
+                forgejo-repo-draft <=> root.forgejo-repo-draft;
+
                 show-advanced-remote <=> root.show-advanced-remote;
                 connect-github => { root.connect-github(); }
                 open-github-browser => { root.open-github-browser(); }
                 cancel-github-auth => { root.cancel-github-auth(); }
                 disconnect-github => { root.disconnect-github(); }
+
+                connect-forgejo(inst, tok, rep) => { root.connect-forgejo(inst, tok, rep); }
+                disconnect-forgejo => { root.disconnect-forgejo(); }
 
                 close => {
                     root.settings-sheet-open = false;

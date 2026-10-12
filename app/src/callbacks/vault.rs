@@ -8,9 +8,9 @@ use std::rc::Rc;
 use slint::{ComponentHandle, SharedString};
 
 use crate::App;
-use crate::github::update_github_ui_state;
 use crate::haptic;
 use crate::render;
+use crate::update_provider_ui_state;
 use crate::session::{
     Session, refresh_vault_list, set_status, start_sync, switch_vault, vault_display_name,
     vault_path_from_input,
@@ -40,7 +40,7 @@ pub fn bind_vault_callbacks(
             app.set_remote_has_token(s.token_store.load().unwrap_or_default().is_some());
             app.set_current_vault_name(vault_display_name(&s.vault_dir).into());
             app.set_current_vault_path(s.vault_dir.display().to_string().into());
-            update_github_ui_state(&app, s.remote.as_deref());
+            update_provider_ui_state(&app, s.remote.as_deref());
             app.set_settings_page(0);
             app.set_settings_open(true);
         }
@@ -114,7 +114,7 @@ pub fn bind_vault_callbacks(
             app.set_remote_has_token(s.token_store.load().unwrap_or_default().is_some());
             app.set_current_vault_name(vault_display_name(&s.vault_dir).into());
             app.set_current_vault_path(s.vault_dir.display().to_string().into());
-            update_github_ui_state(&app, s.remote.as_deref());
+            update_provider_ui_state(&app, s.remote.as_deref());
             app.set_settings_page(2);
             app.set_settings_open(true);
         }
@@ -255,7 +255,7 @@ pub fn bind_vault_callbacks(
             s.remote = Some(url.to_owned());
             drop(s);
             app.set_remote_configured(true);
-            update_github_ui_state(&app, Some(url));
+            update_provider_ui_state(&app, Some(url));
             app.set_settings_open(false);
             start_sync(&app, &session);
         }

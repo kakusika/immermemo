@@ -4,8 +4,10 @@
 //! RFC 8628) and automated repository setup (provisioning and clone URL resolution),
 //! isolating external network and HTTP dependencies from local vault storage.
 
+pub mod forgejo;
 pub mod github;
 
+pub use forgejo::{DEFAULT_CODEBERG_INSTANCE, ForgejoProvider};
 pub use github::GitHubProvider;
 
 use serde::{Deserialize, Serialize};

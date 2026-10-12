@@ -6,8 +6,8 @@ use std::rc::Rc;
 use slint::{ComponentHandle, SharedString};
 
 use crate::App;
-use crate::github::update_github_ui_state;
 use crate::session::{self, Session};
+use crate::update_provider_ui_state;
 
 thread_local! {
     static APP_WEAK: RefCell<Option<slint::Weak<App>>> = const { RefCell::new(None) };
@@ -227,7 +227,7 @@ pub fn bind_transfer_callbacks(
                     if result.remote_updated {
                         s.remote = s.app_data.load_remote(&s.vault_dir);
                         app.set_remote_configured(s.remote.is_some());
-                        update_github_ui_state(&app, s.remote.as_deref());
+                        update_provider_ui_state(&app, s.remote.as_deref());
                         app.set_remote_url_draft(s.remote.clone().unwrap_or_default().into());
                     }
                     if result.token_updated {
