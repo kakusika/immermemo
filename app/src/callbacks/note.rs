@@ -58,51 +58,22 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
         let (weak, session) = (app.as_weak(), session.clone());
         move |text| {
             let app = weak.unwrap();
-            let max_width = app.get_body_content_width();
-            app.set_note_body_items(render::note_body_items(text.as_str(), &app, max_width));
-            session::update_note_stats(&app, text.as_str());
-            {
-                let mut s = session.borrow_mut();
-                if let Some(history) = s.editor.history.as_mut() {
-                    history.edit(&text);
-                }
-                show_history_state(&app, &s);
-                let has_conflict = text.contains(immermemo_core::CONFLICT_MARKER);
-                if app.get_current_has_conflict() != has_conflict {
-                    app.set_current_has_conflict(has_conflict);
-                    if let Some(idx) = s.editor.current
-                        && idx < s.conflicted.len()
-                    {
-                        s.conflicted[idx] = has_conflict;
-                        let conflicted: Vec<bool> = s
-                            .filtered_results
-                            .iter()
-                            .map(|r| s.conflicted[r.note_index])
-                            .collect();
-                        app.set_conflicted(ModelRc::new(VecModel::from(conflicted)));
-                        let conflict_count = s.conflicted.iter().filter(|&&c| c).count();
-                        app.set_conflict_count(conflict_count as i32);
-                    }
-                }
-                if let Some(path) = s.current_path() {
-                    match std::fs::write(&path, text.as_str()) {
-                        Ok(_) => {
-                            let vault_dir = s.vault_dir.clone();
-                            if let Ok(rel) = path.strip_prefix(&vault_dir) {
-                                let _ = s.index.record_write(&vault_dir, rel, text.as_str());
-                                s.history_preview_cache.remove(&rel.display().to_string());
-                            }
-                            if app.get_status_is_error()
-                                && app.get_status().starts_with("Save failed")
-                            {
-                                set_status(&app, "");
-                            }
-                        }
-                        Err(e) => set_status(&app, format!("Save failed: {e}")),
-                    }
-                }
-            }
-            session::schedule_auto_sync(&app, std::time::Duration::from_secs(5));
+            handle_edit(&app, &session, text.as_str());
+        }
+    });
+
+    app.on_insert_symbol({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |sym, cursor_offset, anchor_offset| {
+            let app = weak.unwrap();
+            let body = app.get_body();
+            let c_pos = if cursor_offset < 0 { body.len() } else { (cursor_offset as usize).min(body.len()) };
+            let a_pos = if anchor_offset < 0 { body.len() } else { (anchor_offset as usize).min(body.len()) };
+
+            let (new_body, new_cursor) = apply_symbol_insertion(body.as_str(), sym.as_str(), c_pos, a_pos);
+            app.set_body(new_body.clone().into());
+            handle_edit(&app, &session, &new_body);
+            app.invoke_set_cursor(new_cursor as i32);
         }
     });
 
@@ -275,4 +246,87 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
             }
         }
     });
+}
+
+fn clamp_to_char_boundary(s: &str, mut idx: usize) -> usize {
+    if idx >= s.len() {
+        return s.len();
+    }
+    while idx > 0 && !s.is_char_boundary(idx) {
+        idx -= 1;
+    }
+    idx
+}
+
+fn apply_symbol_insertion(body: &str, sym: &str, cursor: usize, anchor: usize) -> (String, usize) {
+    let c = clamp_to_char_boundary(body, cursor);
+    let a = clamp_to_char_boundary(body, anchor);
+    let (sel_start, sel_end) = if c <= a { (c, a) } else { (a, c) };
+
+    if sym == "- " || sym == "# " {
+        // Line-based insertion: insert at the beginning of the line containing sel_start
+        let line_start = body[..sel_start].rfind('\n').map_or(0, |idx| idx + 1);
+        let mut new_body = String::with_capacity(body.len() + sym.len());
+        new_body.push_str(&body[..line_start]);
+        new_body.push_str(sym);
+        new_body.push_str(&body[line_start..]);
+        let new_cursor = c + sym.len();
+        (new_body, new_cursor)
+    } else {
+        // Inline insertion: insert at cursor or replace selection
+        let mut new_body = String::with_capacity(body.len() + sym.len());
+        new_body.push_str(&body[..sel_start]);
+        new_body.push_str(sym);
+        new_body.push_str(&body[sel_end..]);
+        let new_cursor = sel_start + sym.len();
+        (new_body, new_cursor)
+    }
+}
+
+fn handle_edit(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>>, text: &str) {
+    let max_width = app.get_body_content_width();
+    app.set_note_body_items(render::note_body_items(text, app, max_width));
+    session::update_note_stats(app, text);
+    {
+        let mut s = session.borrow_mut();
+        if let Some(history) = s.editor.history.as_mut() {
+            history.edit(text);
+        }
+        show_history_state(app, &s);
+        let has_conflict = text.contains(immermemo_core::CONFLICT_MARKER);
+        if app.get_current_has_conflict() != has_conflict {
+            app.set_current_has_conflict(has_conflict);
+            if let Some(idx) = s.editor.current
+                && idx < s.conflicted.len()
+            {
+                s.conflicted[idx] = has_conflict;
+                let conflicted: Vec<bool> = s
+                    .filtered_results
+                    .iter()
+                    .map(|r| s.conflicted[r.note_index])
+                    .collect();
+                app.set_conflicted(ModelRc::new(VecModel::from(conflicted)));
+                let conflict_count = s.conflicted.iter().filter(|&&c| c).count();
+                app.set_conflict_count(conflict_count as i32);
+            }
+        }
+        if let Some(path) = s.current_path() {
+            match std::fs::write(&path, text) {
+                Ok(_) => {
+                    let vault_dir = s.vault_dir.clone();
+                    if let Ok(rel) = path.strip_prefix(&vault_dir) {
+                        let _ = s.index.record_write(&vault_dir, rel, text);
+                        s.history_preview_cache.remove(&rel.display().to_string());
+                    }
+                    if app.get_status_is_error()
+                        && app.get_status().starts_with("Save failed")
+                    {
+                        set_status(app, "");
+                    }
+                }
+                Err(e) => set_status(app, format!("Save failed: {e}")),
+            }
+        }
+    }
+    session::schedule_auto_sync(app, std::time::Duration::from_secs(5));
 }

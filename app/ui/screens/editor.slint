@@ -4,7 +4,6 @@ import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 import {
     IconButton,
     BubbleButton,
-    UndoRedoBubble,
     TopBar,
     AppScrollView,
     PillButton,
@@ -12,6 +11,7 @@ import {
 import { NoteBodyItemView, NoteBodyView } from "note_body.slint";
 import { ViewSwitcher, NavPill } from "../components.slint";
 import { PropertiesView } from "properties.slint";
+import { EditorToolbar } from "editor_toolbar.slint";
 
 // Elevation + the open/close corner-radius morph, shared by the header and
 // body halves of the note sheet so they read as one continuous card. No
@@ -366,13 +366,17 @@ export component EditorScreen inherits Rectangle {
     callback manual-sync();
     callback open-history();
     callback note-menu-requested();
+    callback insert-symbol(string, int, int);
 
     // Moves the caret after Rust restores text from the undo history.
     public function set-cursor(offset: int) {
         if (root.edit-mode) {
             editor.set-selection-offsets(offset, offset);
+            editor.focus();
         }
     }
+
+    out property <int> cursor-offset: editor.cursor-position-byte-offset;
 
     // Claims focus on the text editor
     public function focus-editor() {
@@ -458,13 +462,6 @@ export component EditorScreen inherits Rectangle {
                 if root.has-note: BubbleButton {
                     icon: TablerIcons.history;
                     clicked => { root.open-history(); }
-                }
-
-                if root.has-note && root.edit-mode: UndoRedoBubble {
-                    can-undo: root.can-undo;
-                    can-redo: root.can-redo;
-                    undo => { root.undo(); }
-                    redo => { root.redo(); }
                 }
 
                 // Overflow menu (rename/delete) -- the Edit/Done toggle
@@ -775,7 +772,7 @@ export component EditorScreen inherits Rectangle {
                                 padding-left: Metrics.gutter;
                                 padding-right: Metrics.gutter;
                                 padding-top: Metrics.spacing-lg;
-                                padding-bottom: Metrics.spacing-3xl;
+                                padding-bottom: Metrics.spacing-3xl + (root.edit-mode ? 48px : 0px);
                                 spacing: Metrics.spacing-md;
                                 min-height: editor-scroll.visible-height + 1px;
 
@@ -926,35 +923,47 @@ export component EditorScreen inherits Rectangle {
             // directly: its icon is hardcoded to `TablerIcons.plus`, not a
             // parameter, so this matches its visual recipe (size,
             // shape, color, shadow) by hand instead.
-            if root.has-note && root.note-view == 0: Rectangle {
+            // Edit FAB -- shown when in view mode (matches Done pill size)
+            if root.has-note && root.note-view == 0 && !root.edit-mode: Rectangle {
                 x: parent.width - self.width - Metrics.gutter;
                 y: parent.height - self.height - Metrics.gutter;
-                width: root.fab-size;
-                height: root.fab-size;
-                border-radius: self.width / 2;
+                width: root.pill-height;
+                height: root.pill-height;
+                border-radius: self.height / 2;
                 background: Palette.accent-background;
-                drop-shadow-blur: 8px * Metrics.ui-scale;
+                drop-shadow-blur: 6px * Metrics.ui-scale;
                 drop-shadow-offset-y: 2px * Metrics.ui-scale;
-                drop-shadow-color: #00000055;
+                drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #00000080 : #00000024;
 
                 Icon {
-                    source: root.edit-mode ? TablerIcons.check : TablerIcons.pencil;
+                    source: TablerIcons.pencil;
                     color: Palette.accent-foreground;
-                    width: Metrics.icon-lg * 1.4;
-                    height: Metrics.icon-lg * 1.4;
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;
                 }
 
                 TouchArea {
                     clicked => {
-                        if (root.edit-mode) {
-                            root.view-mode();
-                        } else {
-                            root.focus-editor();
-                        }
+                        root.focus-editor();
                     }
                 }
+            }
+
+            // Input Toolbar -- shown when editing
+            if root.has-note && root.note-view == 0 && root.edit-mode: EditorToolbar {
+                x: 0px;
+                y: parent.height - self.height - Metrics.gutter;
+                width: parent.width;
+                can-undo: root.can-undo;
+                can-redo: root.can-redo;
+                undo => { root.undo(); }
+                redo => { root.redo(); }
+                done => { root.view-mode(); }
+                action-at => { root.insert-symbol("@", editor.cursor-position-byte-offset, editor.anchor-position-byte-offset); }
+                action-list => { root.insert-symbol("- ", editor.cursor-position-byte-offset, editor.anchor-position-byte-offset); }
+                action-heading => { root.insert-symbol("# ", editor.cursor-position-byte-offset, editor.anchor-position-byte-offset); }
             }
 
             // Note history back/forward navigation, left-aligned at the

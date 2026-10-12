@@ -321,6 +321,7 @@ export component App inherits Window {
     callback reflow-note-body(length);
     callback undo();
     callback redo();
+    callback insert-symbol(string, int, int);
     callback sync();
     callback new-note();
     callback link();
@@ -870,6 +871,7 @@ export component App inherits Window {
                 reflow-note-body(w) => { root.reflow-note-body(w); }
                 undo => { root.undo(); }
                 redo => { root.redo(); }
+                insert-symbol(sym, cpos, apos) => { root.insert-symbol(sym, cpos, apos); }
                 dismiss-status => {
                     root.status = "";
                     root.status-is-error = false;

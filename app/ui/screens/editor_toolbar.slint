@@ -1,0 +1,269 @@
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+
+// Grouped pill for Undo and Redo actions
+export component UndoRedoPill inherits Rectangle {
+    in property <bool> can-undo: false;
+    in property <bool> can-redo: false;
+    callback undo();
+    callback redo();
+
+    height: Metrics.bubble-button-size + 2 * Metrics.spacing-xs;
+    border-radius: self.height / 2;
+    background: Colors.surface-elevated;
+    drop-shadow-blur: 6px * Metrics.ui-scale;
+    drop-shadow-offset-y: 2px * Metrics.ui-scale;
+    drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #00000080 : #00000024;
+
+    row := HorizontalLayout {
+        padding: Metrics.spacing-xs;
+        spacing: Metrics.spacing-xs;
+
+        Rectangle {
+            width: Metrics.bubble-button-size;
+            height: Metrics.bubble-button-size;
+            border-radius: self.height / 2;
+            background: root.can-undo && undo-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+            animate background {
+                duration: 120ms;
+                easing: ease-out;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                Icon {
+                    source: TablerIcons.arrow-back-up;
+                    color: root.can-undo ? Palette.foreground : Colors.muted.with-alpha(0.35);
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
+                    x: (parent.width - self.width) / 2;
+                }
+            }
+
+            undo-touch := TouchArea {
+                enabled: root.can-undo;
+                clicked => { root.undo(); }
+            }
+        }
+
+        Rectangle {
+            width: Metrics.bubble-button-size;
+            height: Metrics.bubble-button-size;
+            border-radius: self.height / 2;
+            background: root.can-redo && redo-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+            animate background {
+                duration: 120ms;
+                easing: ease-out;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                Icon {
+                    source: TablerIcons.arrow-forward-up;
+                    color: root.can-redo ? Palette.foreground : Colors.muted.with-alpha(0.35);
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
+                    x: (parent.width - self.width) / 2;
+                }
+            }
+
+            redo-touch := TouchArea {
+                enabled: root.can-redo;
+                clicked => { root.redo(); }
+            }
+        }
+    }
+
+    width: row.preferred-width;
+}
+
+// Grouped pill for context-aware editing actions (@, list, heading)
+export component ContextActionsPill inherits Rectangle {
+    callback action-at();
+    callback action-list();
+    callback action-heading();
+
+    height: Metrics.bubble-button-size + 2 * Metrics.spacing-xs;
+    border-radius: self.height / 2;
+    background: Colors.surface-elevated;
+    drop-shadow-blur: 6px * Metrics.ui-scale;
+    drop-shadow-offset-y: 2px * Metrics.ui-scale;
+    drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #00000080 : #00000024;
+
+    row := HorizontalLayout {
+        padding: Metrics.spacing-xs;
+        spacing: Metrics.spacing-xs;
+
+        // @ directive button
+        Rectangle {
+            width: Metrics.bubble-button-size;
+            height: Metrics.bubble-button-size;
+            border-radius: self.height / 2;
+            background: at-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+            animate background {
+                duration: 120ms;
+                easing: ease-out;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                Icon {
+                    source: TablerIcons.at;
+                    color: Palette.foreground;
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
+                    x: (parent.width - self.width) / 2;
+                }
+            }
+
+            at-touch := TouchArea {
+                clicked => { root.action-at(); }
+            }
+        }
+
+        // List button
+        Rectangle {
+            width: Metrics.bubble-button-size;
+            height: Metrics.bubble-button-size;
+            border-radius: self.height / 2;
+            background: list-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+            animate background {
+                duration: 120ms;
+                easing: ease-out;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                Icon {
+                    source: TablerIcons.list;
+                    color: Palette.foreground;
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
+                    x: (parent.width - self.width) / 2;
+                }
+            }
+
+            list-touch := TouchArea {
+                clicked => { root.action-list(); }
+            }
+        }
+
+        // Heading button
+        Rectangle {
+            width: Metrics.bubble-button-size;
+            height: Metrics.bubble-button-size;
+            border-radius: self.height / 2;
+            background: heading-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+            animate background {
+                duration: 120ms;
+                easing: ease-out;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                Icon {
+                    source: TablerIcons.heading;
+                    color: Palette.foreground;
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
+                    x: (parent.width - self.width) / 2;
+                }
+            }
+
+            heading-touch := TouchArea {
+                clicked => { root.action-heading(); }
+            }
+        }
+    }
+
+    width: row.preferred-width;
+}
+
+// Done action pill (circle pill with accent background)
+export component DonePill inherits Rectangle {
+    callback clicked();
+
+    height: Metrics.bubble-button-size + 2 * Metrics.spacing-xs;
+    width: self.height;
+    border-radius: self.height / 2;
+    background: touch.pressed ? Palette.accent-background.darker(10%) : Palette.accent-background;
+    drop-shadow-blur: 6px * Metrics.ui-scale;
+    drop-shadow-offset-y: 2px * Metrics.ui-scale;
+    drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #00000080 : #00000024;
+
+    animate background {
+        duration: 120ms;
+        easing: ease-out;
+    }
+
+    VerticalLayout {
+        alignment: center;
+        Icon {
+            source: TablerIcons.check;
+            color: Palette.accent-foreground;
+            width: Metrics.icon-md;
+            height: Metrics.icon-md;
+            x: (parent.width - self.width) / 2;
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+// The main input toolbar appearing directly above the keyboard or bottom of the editor.
+// Left: Undo/Redo pill
+// Center: Context-aware actions pill
+// Right: Done pill
+export component EditorToolbar inherits Rectangle {
+    in property <bool> can-undo: false;
+    in property <bool> can-redo: false;
+
+    callback undo();
+    callback redo();
+    callback done();
+    callback action-at();
+    callback action-list();
+    callback action-heading();
+
+    height: Metrics.bubble-button-size + 2 * Metrics.spacing-xs;
+    background: transparent;
+
+    HorizontalLayout {
+        alignment: space-between;
+        padding-left: Metrics.gutter;
+        padding-right: Metrics.gutter;
+        spacing: Metrics.spacing-sm;
+
+        // Left section: Undo / Redo
+        VerticalLayout {
+            alignment: center;
+            UndoRedoPill {
+                can-undo: root.can-undo;
+                can-redo: root.can-redo;
+                undo => { root.undo(); }
+                redo => { root.redo(); }
+            }
+        }
+
+        // Center section: Context pills (combined pill)
+        VerticalLayout {
+            alignment: center;
+            ContextActionsPill {
+                action-at => { root.action-at(); }
+                action-list => { root.action-list(); }
+                action-heading => { root.action-heading(); }
+            }
+        }
+
+        // Right section: Done
+        VerticalLayout {
+            alignment: center;
+            DonePill {
+                clicked => { root.done(); }
+            }
+        }
+    }
+}
