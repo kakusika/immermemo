@@ -9,8 +9,10 @@ immermemo-identity = { workspace = true }
 immermemo-index = { workspace = true }
 immermemo-sync = { workspace = true }
 immermemo-vault = { workspace = true }
+#= Tomet
 tomet = { workspace = true }
 
+#= Crates.io
 anyhow = { workspace = true }
 directories = { workspace = true }
 serde = { workspace = true }

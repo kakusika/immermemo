@@ -42,7 +42,6 @@ serde_json = { workspace = true }
 sys-locale = { workspace = true }
 webbrowser = { workspace = true }
 
-
 # Linux Desktop: winit on Wayland + Skia.
 [target.'cfg(target_os = "linux")'.dependencies]
 slint = { workspace = true, features = [
