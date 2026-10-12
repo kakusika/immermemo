@@ -124,9 +124,9 @@ fn main() {
     render(&window, size, &format!("{prefix}-home-sync-error.ppm"));
     app.set_last_sync_error("".into());
 
-    // Tab 1: Files / Directory -- List view (default mode) at the vault
+    // Tab 2: Files / Directory -- List view (default mode) at the vault
     // root: a folder, a second folder, and two root-level notes.
-    app.set_active_tab(1);
+    app.set_active_tab(2);
     app.set_files_page(1);
     let root_entries = || {
         ModelRc::new(VecModel::from(vec![
@@ -260,8 +260,8 @@ fn main() {
     app.set_directory_folder_entries(ModelRc::new(VecModel::default()));
     app.set_directory_breadcrumb(ModelRc::new(VecModel::default()));
 
-    // Tab 2: Search query with snippet preview
-    app.set_active_tab(2);
+    // Tab 1: Search query with snippet preview
+    app.set_active_tab(1);
     app.set_search_query("計画".into());
     app.set_notes(ModelRc::new(VecModel::from(vec!["旅行の計画".into()])));
     app.set_conflicted(ModelRc::new(VecModel::from(vec![false])));
@@ -506,7 +506,7 @@ fn main() {
     app.set_theme_choice(2); // Dark theme
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-home-dark.ppm"));
-    app.set_active_tab(1);
+    app.set_active_tab(2);
     app.set_directory_folder_entries(root_entries());
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-directory-dark.ppm"));

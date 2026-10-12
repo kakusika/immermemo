@@ -157,7 +157,7 @@ pub fn show_list_or_reopen(app: &App, session: &Rc<RefCell<Session>>, switch_to_
         drop(s);
         clear_note_stats(app);
         if switch_to_files_tab {
-            app.set_active_tab(1);
+            app.set_active_tab(2);
         }
         app.set_list_open(true);
     } else {

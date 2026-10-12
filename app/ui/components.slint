@@ -285,10 +285,9 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: TablerIcons.files;
-            label: @tr("Library");
+            icon: TablerIcons.search;
+            label: @tr("Search");
             active: root.active-tab == 1;
-            badge-count: root.conflict-count;
             clicked => {
                 root.active-tab = 1;
                 root.tab-selected(1);
@@ -296,9 +295,10 @@ export component BottomNavBar inherits Rectangle {
         }
 
         NavItem {
-            icon: TablerIcons.search;
-            label: @tr("Search");
+            icon: TablerIcons.files;
+            label: @tr("Library");
             active: root.active-tab == 2;
+            badge-count: root.conflict-count;
             clicked => {
                 root.active-tab = 2;
                 root.tab-selected(2);

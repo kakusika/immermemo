@@ -45,7 +45,7 @@ export component MiniNoteBar inherits Rectangle {
 
     in-out property <length> mini-card-reveal-dx: 0px;
     in-out property <bool> is-dragging-mini-reveal: false;
-    property <length> mini-card-reveal-max: 110px * Metrics.ui-scale;
+    property <length> mini-card-reveal-max: 100px * Metrics.ui-scale;
 
     animate mini-card-reveal-dx {
         duration: root.is-dragging-mini-reveal ? 0ms : 200ms;
@@ -82,8 +82,8 @@ export component MiniNoteBar inherits Rectangle {
         }
     }
 
-    property <length> back-bounce-x: root.mini-reveal-back-committable ? 6px * Metrics.ui-scale : 0px;
-    property <length> forward-bounce-x: root.mini-reveal-forward-committable ? -6px * Metrics.ui-scale : 0px;
+    property <length> back-bounce-x: root.mini-reveal-back-committable ? 5px * Metrics.ui-scale : 0px;
+    property <length> forward-bounce-x: root.mini-reveal-forward-committable ? -5px * Metrics.ui-scale : 0px;
 
     animate back-bounce-x {
         duration: 240ms;
@@ -184,9 +184,9 @@ export component MiniNoteBar inherits Rectangle {
 
         // History back affordance (pinned close to the left edge with bounce physics, behind card)
         VerticalLayout {
-            x: 4px * Metrics.ui-scale + root.back-bounce-x;
+            x: 5px * Metrics.ui-scale + root.back-bounce-x;
             y: 20px * Metrics.ui-scale;
-            width: 38px * Metrics.ui-scale;
+            width: 36px * Metrics.ui-scale;
             height: Metrics.mini-card-height;
             alignment: center;
 
@@ -223,9 +223,9 @@ export component MiniNoteBar inherits Rectangle {
 
         // History forward affordance (pinned close to the right edge with bounce physics, behind card)
         VerticalLayout {
-            x: parent.width - 42px * Metrics.ui-scale + root.forward-bounce-x;
+            x: parent.width - 41px * Metrics.ui-scale + root.forward-bounce-x;
             y: 20px * Metrics.ui-scale;
-            width: 38px * Metrics.ui-scale;
+            width: 36px * Metrics.ui-scale;
             height: Metrics.mini-card-height;
             alignment: center;
 
