@@ -240,6 +240,7 @@ impl Vault {
     /// the vault's local history. A no-op if nothing changed since HEAD.
     fn commit_working_tree(&self) -> anyhow::Result<()> {
         let mut index = self.repo.index()?;
+        let initial_index_len = index.len();
         fs::stage_dir(
             &self.repo,
             &mut index,
@@ -256,6 +257,29 @@ impl Vault {
             // history with whatever the remote already has, and the
             // next merge_base lookup would fail outright.
             return Ok(());
+        }
+
+        // Safety Guard: Empty Vault Wipeout Protection
+        // Protect against accidental wipeout of the remote vault when syncing
+        // from an empty or unhydrated local directory.
+        if let Some(parent) = &parent {
+            if let Ok(parent_tree) = parent.tree() {
+                if parent_tree.len() > 0 {
+                    // 1. If index had 0 entries before staging, the working tree was
+                    //    never hydrated/checked out on this device. Do not commit an empty tree!
+                    if initial_index_len == 0 && index.len() == 0 {
+                        return Ok(());
+                    }
+
+                    // 2. Total Wipeout Protection: If HEAD has multiple notes (>= 2),
+                    //    but the working tree now has 0 files, refuse to commit a total wipeout.
+                    //    Wiping out an entire multi-file vault in a single sync is almost
+                    //    always an unhydrated folder, unmounted drive, or accidental clear.
+                    if parent_tree.len() >= 2 && index.len() == 0 {
+                        return Ok(());
+                    }
+                }
+            }
         }
 
         let tree_oid = index.write_tree_to(&self.repo)?;
@@ -1045,6 +1069,92 @@ mod tests {
         let vault_hist = a.vault.vault_history(10).unwrap();
         assert_eq!(vault_hist.len(), 3);
     }
+
+    #[test]
+    fn empty_working_tree_with_existing_head_does_not_wipe_out_notes() {
+        let remote = shared_remote();
+
+        let mut a = open_vault();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        write_note(&a, "note1.tmt", "Content 1\n");
+        write_note(&a, "note2.tmt", "Content 2\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        // Simulate a scenario where a vault has an existing gitdir with history,
+        // but its working tree is completely empty (e.g. unhydrated vault,
+        // deleted local notes folder, or fresh link onto existing gitdir).
+        let empty_wt = TempDir::new().unwrap();
+        let mut b = Vault::open(empty_wt.path(), a._gitdir.path()).unwrap();
+        b.set_remote(remote.path().to_str().unwrap()).unwrap();
+
+        // Verify the working tree is empty before sync.
+        assert_eq!(std::fs::read_dir(empty_wt.path()).unwrap().count(), 0);
+
+        // Sync must NOT wipe out the remote! Instead, it must hydrate the files.
+        let report = b.sync(&NoCredentials).unwrap();
+        assert_eq!(report.deleted_notes.len(), 0);
+        assert!(report.updated_notes.contains(&PathBuf::from("note1.tmt")));
+        assert!(report.updated_notes.contains(&PathBuf::from("note2.tmt")));
+
+        // Working tree should now have the files restored.
+        assert_eq!(
+            std::fs::read_to_string(empty_wt.path().join("note1.tmt")).unwrap(),
+            "Content 1\n"
+        );
+        assert_eq!(
+            std::fs::read_to_string(empty_wt.path().join("note2.tmt")).unwrap(),
+            "Content 2\n"
+        );
+
+        // Verify remote repository still has all notes intact.
+        let remote_repo = Repository::open_bare(remote.path()).unwrap();
+        let remote_head = remote_repo
+            .find_reference("refs/heads/main")
+            .unwrap()
+            .peel_to_commit()
+            .unwrap();
+        assert_eq!(remote_head.tree().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn legitimate_single_note_deletion_is_still_committed() {
+        let remote = shared_remote();
+
+        let mut a = open_vault();
+        a.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        write_note(&a, "keep.tmt", "Keep me\n");
+        write_note(&a, "delete.tmt", "Delete me\n");
+        a.vault.sync(&NoCredentials).unwrap();
+
+        // Client B syncs both notes
+        let mut b = open_vault();
+        b.vault.set_remote(remote.path().to_str().unwrap()).unwrap();
+        b.vault.sync(&NoCredentials).unwrap();
+        assert_eq!(read_note(&b, "delete.tmt"), "Delete me\n");
+
+        // Client A intentionally deletes one note, keeping the other
+        std::fs::remove_file(a.working_tree.path().join("delete.tmt")).unwrap();
+        a.vault.sync(&NoCredentials).unwrap();
+
+        // Client B syncs and receives the deletion
+        let report_b = b.vault.sync(&NoCredentials).unwrap();
+        assert_eq!(report_b.deleted_notes, vec![PathBuf::from("delete.tmt")]);
+        assert!(!b.working_tree.path().join("delete.tmt").exists());
+        assert_eq!(read_note(&b, "keep.tmt"), "Keep me\n");
+
+        // Remote also reflects this deletion
+        let remote_repo = Repository::open_bare(remote.path()).unwrap();
+        let remote_head = remote_repo
+            .find_reference("refs/heads/main")
+            .unwrap()
+            .peel_to_commit()
+            .unwrap();
+        assert_eq!(remote_head.tree().unwrap().len(), 1);
+        assert!(remote_head.tree().unwrap().get_name("keep.tmt").is_some());
+        assert!(remote_head.tree().unwrap().get_name("delete.tmt").is_none());
+    }
 }
+
+
 
 

@@ -17,7 +17,8 @@ impl Vault {
     ///
     /// Computes a tree-to-tree diff and applies only added, modified, and deleted files,
     /// leaving unmodified files and their timestamps untouched on disk. If `old_tree_oid`
-    /// is None, writes all files in HEAD (initial checkout).
+    /// is None, writes all files in HEAD (initial checkout). If the working tree is
+    /// completely empty, writes all files in HEAD to ensure proper hydration.
     pub(crate) fn checkout_differential(
         &self,
         old_tree_oid: Option<Oid>,
@@ -27,13 +28,19 @@ impl Vault {
         };
         let new_tree = commit.tree()?;
 
-        if Some(new_tree.id()) == old_tree_oid {
+        let empty_worktree = self.is_working_tree_empty();
+
+        if !empty_worktree && Some(new_tree.id()) == old_tree_oid {
             return Ok(CheckoutReport::default());
         }
 
-        let old_tree = match old_tree_oid {
-            Some(oid) => self.repo.find_tree(oid).ok(),
-            None => None,
+        let old_tree = if empty_worktree {
+            None
+        } else {
+            match old_tree_oid {
+                Some(oid) => self.repo.find_tree(oid).ok(),
+                None => None,
+            }
         };
 
         let diff = self
@@ -122,6 +129,20 @@ impl Vault {
             })
             .cloned()
             .collect()
+    }
+
+    pub(crate) fn is_working_tree_empty(&self) -> bool {
+        let Ok(read_dir) = std::fs::read_dir(&self.working_tree) else {
+            return true;
+        };
+        for entry in read_dir.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if name_str != ".git" && name_str != ".DS_Store" && name_str != "Thumbs.db" {
+                return false;
+            }
+        }
+        true
     }
 }
 

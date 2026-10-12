@@ -178,6 +178,9 @@ impl Session {
 /// Spawns a sync in the background, unless no remote is linked yet -- then
 /// it just opens the sheet to ask for one instead of failing.
 pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
+    if app.get_syncing() {
+        return;
+    }
     let (vault_dir, gitdir, remote, token_store, identity) = {
         let s = session.borrow();
         let Some(remote) = s.remote.clone() else {
