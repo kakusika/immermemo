@@ -124,6 +124,7 @@ mkShell {
     export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
 
     export ANDROID_AVD_HOME="$HOME/.android/avd"
+    export ANDROID_BUILD_TOOLS_VERSION="34.0.0"
 
     echo "🧪 Rust Android Tomet"
   '';
