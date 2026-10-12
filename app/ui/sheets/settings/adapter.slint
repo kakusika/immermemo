@@ -20,6 +20,17 @@ export global SettingsAdapter {
     // 0: show (default), 1: hide while editing a note, 2: always hide
     in-out property <int> status-bar-choice: 0;
 
+    // Bottom bar navigation items
+    in-out property <bool> nav-show-home: true;
+    in-out property <bool> nav-show-search: true;
+    in-out property <bool> nav-show-library: true;
+    in-out property <bool> nav-show-directory: false;
+    in-out property <bool> nav-show-daily: false;
+    in-out property <bool> nav-show-starred: false;
+    in-out property <bool> nav-show-recent: false;
+    in-out property <bool> nav-show-graph: false;
+    in-out property <bool> nav-show-quick: true;
+
     // App info
     in property <string> app-version: "0.1.0";
 
@@ -85,6 +96,7 @@ export global SettingsAdapter {
     callback sync();
     callback open-vaults();
     callback status-bar-changed(int);
+    callback bottom-bar-changed();
     callback font-size-changed(int);
     callback theme-changed(int);
     callback refresh-transfer-qr();

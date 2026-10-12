@@ -990,3 +990,302 @@ msgstr "SSH 鍵を生成"
 
 
 
+
+#: app/ui/sheets/icon_picker.slint:76
+msgctxt "IconPickerSheet"
+msgid "Choose an icon"
+msgstr "アイコンを選択"
+
+#: app/ui/sheets/icon_picker.slint:111
+msgctxt "IconPickerSheet"
+msgid "Search icons"
+msgstr "アイコンを検索"
+
+#: app/ui/sheets/icon_picker.slint:146
+msgctxt "IconPickerSheet"
+msgid "No icons match"
+msgstr "一致するアイコンがありません"
+
+#: app/ui/sheets/conflict.slint:243
+msgctxt "ConflictSheet"
+msgid "+ Keep Both (A → B)"
+msgstr "+ 両方を残す (A → B)"
+
+#: app/ui/sheets/settings/settings.slint:493
+msgctxt "SettingsSheet"
+msgid "Status Bar"
+msgstr "ステータスバー"
+
+#: app/ui/sheets/settings/settings.slint:499
+msgctxt "SettingsSheet"
+msgid "Hide it while editing a note (for a less distracting full-screen view), or everywhere in the app."
+msgstr "ノート編集中に非表示にして執筆に集中するか、アプリ全体で常に非表示にします。"
+
+#: app/ui/sheets/settings/settings.slint:506
+msgctxt "SettingsSheet"
+msgid "Show"
+msgstr "常に表示"
+
+#: app/ui/sheets/settings/settings.slint:506
+msgctxt "SettingsSheet"
+msgid "Hide While Editing"
+msgstr "編集中のみ非表示"
+
+#: app/ui/sheets/settings/settings.slint:506
+msgctxt "SettingsSheet"
+msgid "Always Hide"
+msgstr "常に非表示"
+
+#: app/ui/sheets/settings/settings.slint:523
+msgctxt "SettingsSheet"
+msgid "Bottom Navigation Bar"
+msgstr "ボトムナビゲーションバー"
+
+#: app/ui/sheets/settings/settings.slint:530
+msgctxt "SettingsSheet"
+msgid "Choose which items appear on the bottom navigation bar."
+msgstr "ボトムナビゲーションバーに表示する項目を選択します。"
+
+#: app/ui/sheets/settings/settings.slint:541
+msgctxt "SettingsSheet"
+msgid "Home"
+msgstr "ホーム"
+
+#: app/ui/sheets/settings/settings.slint:542
+msgctxt "SettingsSheet"
+msgid "Vault overview and status hub"
+msgstr "保管庫の概要と同期状態ハブ"
+
+#: app/ui/sheets/settings/settings.slint:549
+msgctxt "SettingsSheet"
+msgid "Search"
+msgstr "検索"
+
+#: app/ui/sheets/settings/settings.slint:550
+msgctxt "SettingsSheet"
+msgid "Full-text search with live snippets"
+msgstr "プレビュー付きの全文検索"
+
+#: app/ui/sheets/settings/settings.slint:557
+msgctxt "SettingsSheet"
+msgid "Library"
+msgstr "ライブラリ"
+
+#: app/ui/sheets/settings/settings.slint:558
+msgctxt "SettingsSheet"
+msgid "All sections hub"
+msgstr "全セクションのハブ"
+
+#: app/ui/sheets/settings/settings.slint:565
+msgctxt "SettingsSheet"
+msgid "Directory"
+msgstr "ディレクトリ"
+
+#: app/ui/sheets/settings/settings.slint:566
+msgctxt "SettingsSheet"
+msgid "Direct folder and file browser"
+msgstr "フォルダとファイルの直接ブラウザ"
+
+#: app/ui/sheets/settings/settings.slint:573
+msgctxt "SettingsSheet"
+msgid "Daily Notes"
+msgstr "デイリーノート"
+
+#: app/ui/sheets/settings/settings.slint:574
+msgctxt "SettingsSheet"
+msgid "Daily journal and calendar notes"
+msgstr "デイリージャーナルとカレンダーノート"
+
+#: app/ui/sheets/settings/settings.slint:581
+msgctxt "SettingsSheet"
+msgid "Starred"
+msgstr "スター付き"
+
+#: app/ui/sheets/settings/settings.slint:582
+msgctxt "SettingsSheet"
+msgid "Pinned and favorite notes"
+msgstr "ピン留め・お気に入りのノート"
+
+#: app/ui/sheets/settings/settings.slint:589
+msgctxt "SettingsSheet"
+msgid "Recent"
+msgstr "最近の更新"
+
+#: app/ui/sheets/settings/settings.slint:590
+msgctxt "SettingsSheet"
+msgid "Chronological edit timeline"
+msgstr "更新日時のタイムライン"
+
+#: app/ui/sheets/settings/settings.slint:597
+msgctxt "SettingsSheet"
+msgid "Graph View"
+msgstr "グラフビュー"
+
+#: app/ui/sheets/settings/settings.slint:598
+msgctxt "SettingsSheet"
+msgid "Interactive note backlink graph"
+msgstr "ノート間のリンク関係のインタラクティブ図"
+
+#: app/ui/sheets/settings/settings.slint:605
+msgctxt "SettingsSheet"
+msgid "Quick Actions"
+msgstr "クイックアクション"
+
+#: app/ui/sheets/settings/settings.slint:606
+msgctxt "SettingsSheet"
+msgid "Popup sheet for rapid tasks"
+msgstr "素早いタスク用のポップアップシート"
+
+#: app/ui/sheets/settings/settings.slint:816
+msgctxt "SettingsSheet"
+msgid "GitHub"
+msgstr "GitHub"
+
+#: app/ui/sheets/settings/settings.slint:878
+#: app/ui/sheets/settings/settings.slint:878
+msgctxt "SettingsSheet"
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: app/ui/sheets/settings/settings.slint:1445
+msgctxt "SettingsSheet"
+msgid "immermemo://import#... or JSON"
+msgstr "immermemo://import#... または JSON"
+
+#: app/ui/app.slint:924
+msgctxt "App"
+msgid "Set Icon"
+msgstr "アイコンを設定"
+
+#: app/ui/components.slint:323
+msgctxt "BottomNavBar"
+msgid "Directory"
+msgstr "ディレクトリ"
+
+#: app/ui/components.slint:335
+msgctxt "BottomNavBar"
+msgid "Daily"
+msgstr "デイリー"
+
+#: app/ui/components.slint:347
+msgctxt "BottomNavBar"
+msgid "Starred"
+msgstr "スター付き"
+
+#: app/ui/components.slint:359
+msgctxt "BottomNavBar"
+msgid "Recent"
+msgstr "最近"
+
+#: app/ui/components.slint:371
+msgctxt "BottomNavBar"
+msgid "Graph"
+msgstr "グラフ"
+
+#: app/ui/pages/editor/editor.slint:138
+msgctxt "HistoryPreviewPanel"
+msgid "Untitled"
+msgstr "無題"
+
+#: app/ui/pages/editor/properties.slint:44
+msgctxt "PropertiesView"
+msgid "No note is currently open."
+msgstr "現在開いているノートはありません。"
+
+#: app/ui/pages/editor/properties.slint:76
+msgctxt "PropertiesView"
+msgid "Note Info"
+msgstr "ノート情報"
+
+#: app/ui/pages/editor/properties.slint:111
+msgctxt "PropertiesView"
+msgid "Characters"
+msgstr "文字数"
+
+#: app/ui/pages/editor/properties.slint:128
+msgctxt "PropertiesView"
+msgid "Words"
+msgstr "単語数"
+
+#: app/ui/pages/editor/properties.slint:145
+msgctxt "PropertiesView"
+msgid "Lines"
+msgstr "行数"
+
+#: app/ui/pages/editor/properties.slint:188
+msgctxt "PropertiesView"
+msgid "Conflict detected"
+msgstr "競合が検出されました"
+
+#: app/ui/pages/editor/properties.slint:261
+msgctxt "PropertiesView"
+msgid "🔍 Open resolution sheet"
+msgstr "🔍 競合解決シートを開く"
+
+#: app/ui/pages/files.slint:145 app/ui/pages/files.slint:190
+#: app/ui/pages/files.slint:145 app/ui/pages/files.slint:190
+msgctxt "FilesScreen"
+msgid "Daily Notes"
+msgstr "デイリーノート"
+
+#: app/ui/pages/files.slint:146 app/ui/pages/files.slint:201
+msgctxt "FilesScreen"
+msgid "Starred"
+msgstr "スター付き"
+
+#: app/ui/pages/files.slint:147 app/ui/pages/files.slint:208
+msgctxt "FilesScreen"
+msgid "Recent"
+msgstr "最近の更新"
+
+#: app/ui/pages/files.slint:148 app/ui/pages/files.slint:219
+#: app/ui/pages/files.slint:148 app/ui/pages/files.slint:219
+msgctxt "FilesScreen"
+msgid "Graph View"
+msgstr "グラフビュー"
+
+#: app/ui/pages/files.slint:149 app/ui/pages/files.slint:226
+#: app/ui/pages/files.slint:149 app/ui/pages/files.slint:226
+msgctxt "FilesScreen"
+msgid "All Notes"
+msgstr "すべてのノート"
+
+#: app/ui/pages/files.slint:395
+msgctxt "FilesScreen"
+msgid "Starred Notes"
+msgstr "スター付きノート"
+
+#: app/ui/pages/files.slint:396
+msgctxt "FilesScreen"
+msgid "Recent Notes"
+msgstr "最近のノート"
+
+#: app/ui/pages/files.slint:406
+msgctxt "FilesScreen"
+msgid "Automatic daily journals and calendar log."
+msgstr "自動生成されるデイリージャーナルとカレンダーログ。"
+
+#: app/ui/pages/files.slint:407
+msgctxt "FilesScreen"
+msgid "Pinned and frequently referenced master notes."
+msgstr "ピン留めされた参照頻度の高いマスターノート。"
+
+#: app/ui/pages/files.slint:408
+msgctxt "FilesScreen"
+msgid "Chronological timeline of your recent note edits."
+msgstr "最近編集したノートの時系列タイムライン。"
+
+#: app/ui/pages/files.slint:409
+msgctxt "FilesScreen"
+msgid "Visual interactive graph of note connections and backlinks."
+msgstr "ノートの相互リンクとバックリンクの関係図。"
+
+#: app/ui/pages/files.slint:410
+msgctxt "FilesScreen"
+msgid "Alphabetical index of all notes across the vault."
+msgstr "保管庫内の全ノートをアルファベット順に一覧表示します。"
+
+#: app/ui/pages/files.slint:431
+msgctxt "FilesScreen"
+msgid "Placeholder · Coming Soon"
+msgstr "プレイスホルダー · 準備中"

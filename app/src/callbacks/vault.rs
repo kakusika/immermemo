@@ -134,6 +134,49 @@ pub fn bind_vault_callbacks(
             }
         }
     });
+    settings.on_bottom_bar_changed({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            let settings = app.global::<SettingsAdapter>();
+            let mut items = Vec::new();
+            if settings.get_nav_show_home() {
+                items.push("home");
+            }
+            if settings.get_nav_show_search() {
+                items.push("search");
+            }
+            if settings.get_nav_show_library() {
+                items.push("library");
+            }
+            if settings.get_nav_show_directory() {
+                items.push("directory");
+            }
+            if settings.get_nav_show_daily() {
+                items.push("daily");
+            }
+            if settings.get_nav_show_starred() {
+                items.push("starred");
+            }
+            if settings.get_nav_show_recent() {
+                items.push("recent");
+            }
+            if settings.get_nav_show_graph() {
+                items.push("graph");
+            }
+            if settings.get_nav_show_quick() {
+                items.push("quick");
+            }
+            if items.is_empty() {
+                items.push("home");
+                settings.set_nav_show_home(true);
+            }
+            let _ = session
+                .borrow()
+                .app_data
+                .save_bottom_bar_config(&items.join(","));
+        }
+    });
     settings.on_open_vaults({
         let (weak, session) = (app.as_weak(), session.clone());
         move || {

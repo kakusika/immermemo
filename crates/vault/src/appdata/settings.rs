@@ -127,4 +127,16 @@ impl AppData {
     pub fn save_status_bar_choice(&self, choice: i32) -> anyhow::Result<()> {
         write(&self.status_bar_file(), &choice.to_string())
     }
+
+    fn bottom_bar_file(&self) -> PathBuf {
+        self.base.join("bottom_bar.txt")
+    }
+
+    pub fn load_bottom_bar_config(&self) -> Option<String> {
+        read_trimmed(&self.bottom_bar_file())
+    }
+
+    pub fn save_bottom_bar_config(&self, config: &str) -> anyhow::Result<()> {
+        write(&self.bottom_bar_file(), config)
+    }
 }

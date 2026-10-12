@@ -151,6 +151,91 @@ component TransferToggleRow inherits Rectangle {
     }
 }
 
+// A toggle row for configuring bottom navigation bar items.
+component NavToggleRow inherits Rectangle {
+    in property <image> icon;
+    in property <string> title;
+    in property <string> subtitle: "";
+    in-out property <bool> checked: false;
+    callback toggled(bool);
+
+    min-height: Metrics.touch;
+    border-radius: Metrics.radius-sm;
+    background: touch.pressed ? Palette.foreground.with-alpha(0.06) : transparent;
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    HorizontalLayout {
+        padding-left: Metrics.spacing-sm;
+        padding-right: Metrics.spacing-sm;
+        spacing: Metrics.spacing-md;
+
+        if root.icon.width > 0: VerticalLayout {
+            alignment: center;
+            Icon {
+                source: root.icon;
+                width: Metrics.icon-md;
+                height: Metrics.icon-md;
+                color: root.checked ? Palette.accent-background : Colors.muted;
+            }
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: root.title;
+                font-size: Metrics.font-body;
+                font-weight: root.checked ? 600 : 400;
+                color: Palette.foreground;
+            }
+
+            if root.subtitle != "": Text {
+                text: root.subtitle;
+                font-size: Metrics.font-sm;
+                color: Colors.muted;
+                wrap: word-wrap;
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 24px;
+                height: 24px;
+                border-radius: 6px;
+                border-width: 1.5px;
+                border-color: root.checked ? Palette.accent-background : Colors.muted;
+                background: root.checked ? Palette.accent-background : transparent;
+                animate background, border-color {
+                    duration: 120ms;
+                    easing: ease-out;
+                }
+
+                if root.checked: Icon {
+                    source: TablerIcons.check;
+                    width: 16px;
+                    height: 16px;
+                    color: Palette.accent-foreground;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+
 // A full-screen sheet for application settings: a grouped list of rows
 // (Interface; Other -- Sync & Remote, Vaults, Transfer & Share; Info -- About), each
 // drilling into its own sub-page -- the common "grouped list -> detail"
@@ -330,6 +415,7 @@ export component SettingsSheet inherits Rectangle {
                     padding-right: Metrics.gutter;
                     padding-top: 16px;
                     padding-bottom: root.inset-bottom + 24px;
+                    spacing: 16px;
 
                     Card {
                         content-spacing: Metrics.spacing-lg;
@@ -424,6 +510,102 @@ export component SettingsSheet inherits Rectangle {
                                     SettingsAdapter.status-bar-changed(i);
                                 }
                             }
+                        }
+                    }
+
+                    Card {
+                        content-spacing: Metrics.spacing-md;
+
+                        VerticalLayout {
+                            spacing: 4px;
+
+                            Text {
+                                text: @tr("Bottom Navigation Bar");
+                                font-size: Metrics.font-sub;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                            }
+
+                            Text {
+                                text: @tr("Choose which items appear on the bottom navigation bar.");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+
+                        Divider { }
+
+                        NavToggleRow {
+                            icon: TablerIcons.home;
+                            title: @tr("Home");
+                            subtitle: @tr("Vault overview and status hub");
+                            checked <=> SettingsAdapter.nav-show-home;
+                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+                        }
+
+                        NavToggleRow {
+                            icon: TablerIcons.search;
+                            title: @tr("Search");
+                            subtitle: @tr("Full-text search with live snippets");
+                            checked <=> SettingsAdapter.nav-show-search;
+                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+                        }
+
+                        NavToggleRow {
+                            icon: TablerIcons.files;
+                            title: @tr("Library");
+                            subtitle: @tr("All sections hub");
+                            checked <=> SettingsAdapter.nav-show-library;
+                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+                        }
+
+                        NavToggleRow {
+                            icon: TablerIcons.folder;
+                            title: @tr("Directory");
+                            subtitle: @tr("Direct folder and file browser");
+                            checked <=> SettingsAdapter.nav-show-directory;
+                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+                        }
+
+                        NavToggleRow {
+                            icon: TablerIcons.calendar;
+                            title: @tr("Daily Notes");
+                            subtitle: @tr("Daily journal and calendar notes");
+                            checked <=> SettingsAdapter.nav-show-daily;
+                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+                        }
+
+                        NavToggleRow {
+                            icon: TablerIcons.star;
+                            title: @tr("Starred");
+                            subtitle: @tr("Pinned and favorite notes");
+                            checked <=> SettingsAdapter.nav-show-starred;
+                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+                        }
+
+                        NavToggleRow {
+                            icon: TablerIcons.clock;
+                            title: @tr("Recent");
+                            subtitle: @tr("Chronological edit timeline");
+                            checked <=> SettingsAdapter.nav-show-recent;
+                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+                        }
+
+                        NavToggleRow {
+                            icon: TablerIcons.git-fork;
+                            title: @tr("Graph View");
+                            subtitle: @tr("Interactive note backlink graph");
+                            checked <=> SettingsAdapter.nav-show-graph;
+                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+                        }
+
+                        NavToggleRow {
+                            icon: TablerIcons.bolt;
+                            title: @tr("Quick Actions");
+                            subtitle: @tr("Popup sheet for rapid tasks");
+                            checked <=> SettingsAdapter.nav-show-quick;
+                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
                         }
                     }
                 }

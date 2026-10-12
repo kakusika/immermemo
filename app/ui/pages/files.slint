@@ -141,7 +141,13 @@ export component FilesScreen inherits Rectangle {
 
             Text {
                 horizontal-stretch: 1;
-                text: root.page == 1 ? @tr("Directory") : @tr("Library");
+                text: root.page == 1 ? @tr("Directory")
+                    : root.page == 2 ? @tr("Daily Notes")
+                    : root.page == 3 ? @tr("Starred")
+                    : root.page == 4 ? @tr("Recent")
+                    : root.page == 5 ? @tr("Graph View")
+                    : root.page == 6 ? @tr("All Notes")
+                    : @tr("Library");
                 font-size: Metrics.font-title;
                 font-weight: 700;
                 color: Palette.foreground;
@@ -180,9 +186,9 @@ export component FilesScreen inherits Rectangle {
 
                 IconTile {
                     tile-height: 88px * Metrics.ui-scale;
-                    icon: TablerIcons.list;
-                    label-text: @tr("List");
-                    enabled: false;
+                    icon: TablerIcons.calendar;
+                    label-text: @tr("Daily Notes");
+                    clicked => { root.page = 2; }
                 }
             }
 
@@ -191,14 +197,34 @@ export component FilesScreen inherits Rectangle {
 
                 IconTile {
                     tile-height: 88px * Metrics.ui-scale;
-                    icon: TablerIcons.calendar;
-                    label-text: @tr("Diary");
-                    enabled: false;
+                    icon: TablerIcons.star;
+                    label-text: @tr("Starred");
+                    clicked => { root.page = 3; }
                 }
 
-                // Reserved grid slot for a future section.
-                Rectangle {
-                    horizontal-stretch: 1;
+                IconTile {
+                    tile-height: 88px * Metrics.ui-scale;
+                    icon: TablerIcons.clock;
+                    label-text: @tr("Recent");
+                    clicked => { root.page = 4; }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: Metrics.spacing-sm;
+
+                IconTile {
+                    tile-height: 88px * Metrics.ui-scale;
+                    icon: TablerIcons.git-fork;
+                    label-text: @tr("Graph View");
+                    clicked => { root.page = 5; }
+                }
+
+                IconTile {
+                    tile-height: 88px * Metrics.ui-scale;
+                    icon: TablerIcons.list;
+                    label-text: @tr("All Notes");
+                    clicked => { root.page = 6; }
                 }
             }
         }
@@ -323,6 +349,91 @@ export component FilesScreen inherits Rectangle {
                             height: Metrics.spacing-sm;
                             border-radius: Metrics.spacing-sm / 2;
                             background: Colors.warning;
+                        }
+                    }
+                }
+            }
+        }
+
+        if root.page >= 2: Rectangle {
+            vertical-stretch: 1;
+            VerticalLayout {
+                alignment: center;
+                spacing: Metrics.spacing-lg;
+                padding-left: Metrics.gutter * 2;
+                padding-right: Metrics.gutter * 2;
+
+                HorizontalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 72px * Metrics.ui-scale;
+                        height: 72px * Metrics.ui-scale;
+                        border-radius: self.width / 2;
+                        background: Palette.accent-background.with-alpha(0.12);
+
+                        Icon {
+                            source: root.page == 2 ? TablerIcons.calendar
+                                : root.page == 3 ? TablerIcons.star
+                                : root.page == 4 ? TablerIcons.clock
+                                : root.page == 5 ? TablerIcons.git-fork
+                                : TablerIcons.list;
+                            color: Palette.accent-background;
+                            width: Metrics.icon-xl;
+                            height: Metrics.icon-xl;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: Metrics.spacing-xs;
+                    alignment: center;
+
+                    Text {
+                        text: root.page == 2 ? @tr("Daily Notes")
+                            : root.page == 3 ? @tr("Starred Notes")
+                            : root.page == 4 ? @tr("Recent Notes")
+                            : root.page == 5 ? @tr("Graph View")
+                            : @tr("All Notes");
+                        font-size: Metrics.font-title;
+                        font-weight: 700;
+                        color: Palette.foreground;
+                        horizontal-alignment: center;
+                    }
+
+                    Text {
+                        text: root.page == 2 ? @tr("Automatic daily journals and calendar log.")
+                            : root.page == 3 ? @tr("Pinned and frequently referenced master notes.")
+                            : root.page == 4 ? @tr("Chronological timeline of your recent note edits.")
+                            : root.page == 5 ? @tr("Visual interactive graph of note connections and backlinks.")
+                            : @tr("Alphabetical index of all notes across the vault.");
+                        font-size: Metrics.font-sub;
+                        color: Colors.muted;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
+                    }
+                }
+
+                HorizontalLayout {
+                    alignment: center;
+                    Rectangle {
+                        height: 28px * Metrics.ui-scale;
+                        border-radius: 14px * Metrics.ui-scale;
+                        background: Palette.foreground.with-alpha(0.06);
+
+                        HorizontalLayout {
+                            padding-left: 14px;
+                            padding-right: 14px;
+                            alignment: center;
+
+                            Text {
+                                text: @tr("Placeholder · Coming Soon");
+                                font-size: Metrics.font-sm;
+                                font-weight: 600;
+                                color: Colors.muted;
+                                vertical-alignment: center;
+                            }
                         }
                     }
                 }

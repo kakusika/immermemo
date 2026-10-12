@@ -39,6 +39,20 @@ pub fn update_provider_ui_state(app: &App, remote: Option<&str>) {
     gitlab::update_gitlab_ui_state(app, remote);
 }
 
+/// Applies comma-separated bottom bar configuration keys to the SettingsAdapter.
+pub fn apply_bottom_bar_config(settings: &SettingsAdapter, config: &str) {
+    let items: std::collections::HashSet<&str> = config.split(',').map(str::trim).collect();
+    settings.set_nav_show_home(items.contains("home"));
+    settings.set_nav_show_search(items.contains("search"));
+    settings.set_nav_show_library(items.contains("library"));
+    settings.set_nav_show_directory(items.contains("directory"));
+    settings.set_nav_show_daily(items.contains("daily"));
+    settings.set_nav_show_starred(items.contains("starred"));
+    settings.set_nav_show_recent(items.contains("recent"));
+    settings.set_nav_show_graph(items.contains("graph"));
+    settings.set_nav_show_quick(items.contains("quick"));
+}
+
 use session::{
     SESSION, Session, open_initial_or_last_note, open_note_by_rel_path, refresh_list,
     refresh_vault_list, vault_display_name,
@@ -136,6 +150,10 @@ pub fn run(
     let status_bar_choice = app_data.load_status_bar_choice().unwrap_or(0);
     settings.set_status_bar_choice(status_bar_choice);
     app.set_status_bar_choice(status_bar_choice);
+    let bottom_bar_config = app_data
+        .load_bottom_bar_config()
+        .unwrap_or_else(|| "home,search,library,quick".to_string());
+    apply_bottom_bar_config(&settings, &bottom_bar_config);
     #[cfg(target_os = "android")]
     let status_bar_choice_cell = Rc::new(Cell::new(status_bar_choice));
     // 2 (always hidden) takes effect immediately; 0/1 don't need an
@@ -246,6 +264,7 @@ mod tests {
         desktop_app_data_dir_resolves_sensible_path();
         deep_link_import_preview_opens_settings_sheet(&app);
         provider_ui_state_tracks_github_forgejo_and_gitlab(&app);
+        bottom_bar_config_applies_to_settings(&app);
 
         // `render::seam_tests` needs the same shared `app` for the same
         // one-event-loop-per-process reason -- see that module's doc.
@@ -790,5 +809,33 @@ mod tests {
         assert!(!settings.get_github_connected());
         assert!(!settings.get_forgejo_connected());
         assert!(!settings.get_gitlab_connected());
+    }
+
+    fn bottom_bar_config_applies_to_settings(app: &App) {
+        let settings = app.global::<SettingsAdapter>();
+
+        apply_bottom_bar_config(&settings, "home,search,library,quick");
+        assert!(settings.get_nav_show_home());
+        assert!(settings.get_nav_show_search());
+        assert!(settings.get_nav_show_library());
+        assert!(!settings.get_nav_show_directory());
+        assert!(!settings.get_nav_show_daily());
+        assert!(!settings.get_nav_show_starred());
+        assert!(!settings.get_nav_show_recent());
+        assert!(!settings.get_nav_show_graph());
+        assert!(settings.get_nav_show_quick());
+
+        apply_bottom_bar_config(&settings, "home,daily,starred,recent,graph");
+        assert!(settings.get_nav_show_home());
+        assert!(!settings.get_nav_show_search());
+        assert!(!settings.get_nav_show_library());
+        assert!(settings.get_nav_show_daily());
+        assert!(settings.get_nav_show_starred());
+        assert!(settings.get_nav_show_recent());
+        assert!(settings.get_nav_show_graph());
+        assert!(!settings.get_nav_show_quick());
+
+        // Restore default
+        apply_bottom_bar_config(&settings, "home,search,library,quick");
     }
 }

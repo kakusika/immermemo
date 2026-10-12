@@ -202,6 +202,19 @@ mod tests {
     }
 
     #[test]
+    fn bottom_bar_config_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().to_owned());
+        assert_eq!(data.load_bottom_bar_config(), None);
+
+        data.save_bottom_bar_config("home,search,library,daily,quick").unwrap();
+        assert_eq!(
+            data.load_bottom_bar_config(),
+            Some("home,search,library,daily,quick".to_string())
+        );
+    }
+
+    #[test]
     fn in_tree_gitdir_is_used_when_present() {
         let dir = tempfile::tempdir().unwrap();
         let data = AppData::new(dir.path().join("appdata"));

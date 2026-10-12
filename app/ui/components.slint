@@ -254,7 +254,18 @@ export component BottomNavBar inherits Rectangle {
     in property <length> inset-bottom: 0px;
     in property <int> conflict-count: 0;
     in property <bool> current-has-conflict: false;
+    in property <bool> has-home: true;
+    in property <bool> has-search: true;
+    in property <bool> has-library: true;
+    in property <bool> has-directory: false;
+    in property <bool> has-daily: false;
+    in property <bool> has-starred: false;
+    in property <bool> has-recent: false;
+    in property <bool> has-graph: false;
+    in property <bool> has-quick: true;
+    in-out property <int> files-page: 0;
     callback tab-selected(int);
+    callback open-library-page(int);
     callback quick-action();
 
     property <length> extra-inset-bottom: max(0px, root.inset-bottom - 6px * Metrics.ui-scale);
@@ -274,7 +285,7 @@ export component BottomNavBar inherits Rectangle {
         padding-bottom: 0px;
         spacing: 0px;
 
-        NavItem {
+        if root.has-home: NavItem {
             icon: TablerIcons.home;
             label: @tr("Home");
             active: root.active-tab == 0;
@@ -284,7 +295,7 @@ export component BottomNavBar inherits Rectangle {
             }
         }
 
-        NavItem {
+        if root.has-search: NavItem {
             icon: TablerIcons.search;
             label: @tr("Search");
             active: root.active-tab == 1;
@@ -294,18 +305,80 @@ export component BottomNavBar inherits Rectangle {
             }
         }
 
-        NavItem {
+        if root.has-library: NavItem {
             icon: TablerIcons.files;
             label: @tr("Library");
-            active: root.active-tab == 2;
+            active: root.active-tab == 2 && (root.files-page == 0 || (!root.has-directory && root.files-page == 1) || (!root.has-daily && root.files-page == 2) || (!root.has-starred && root.files-page == 3) || (!root.has-recent && root.files-page == 4) || (!root.has-graph && root.files-page == 5));
             badge-count: root.conflict-count;
             clicked => {
                 root.active-tab = 2;
+                root.files-page = 0;
+                root.open-library-page(0);
                 root.tab-selected(2);
             }
         }
 
-        NavItem {
+        if root.has-directory: NavItem {
+            icon: TablerIcons.folder;
+            label: @tr("Directory");
+            active: root.active-tab == 2 && root.files-page == 1;
+            clicked => {
+                root.active-tab = 2;
+                root.files-page = 1;
+                root.open-library-page(1);
+                root.tab-selected(2);
+            }
+        }
+
+        if root.has-daily: NavItem {
+            icon: TablerIcons.calendar;
+            label: @tr("Daily");
+            active: root.active-tab == 2 && root.files-page == 2;
+            clicked => {
+                root.active-tab = 2;
+                root.files-page = 2;
+                root.open-library-page(2);
+                root.tab-selected(2);
+            }
+        }
+
+        if root.has-starred: NavItem {
+            icon: TablerIcons.star;
+            label: @tr("Starred");
+            active: root.active-tab == 2 && root.files-page == 3;
+            clicked => {
+                root.active-tab = 2;
+                root.files-page = 3;
+                root.open-library-page(3);
+                root.tab-selected(2);
+            }
+        }
+
+        if root.has-recent: NavItem {
+            icon: TablerIcons.clock;
+            label: @tr("Recent");
+            active: root.active-tab == 2 && root.files-page == 4;
+            clicked => {
+                root.active-tab = 2;
+                root.files-page = 4;
+                root.open-library-page(4);
+                root.tab-selected(2);
+            }
+        }
+
+        if root.has-graph: NavItem {
+            icon: TablerIcons.git-fork;
+            label: @tr("Graph");
+            active: root.active-tab == 2 && root.files-page == 5;
+            clicked => {
+                root.active-tab = 2;
+                root.files-page = 5;
+                root.open-library-page(5);
+                root.tab-selected(2);
+            }
+        }
+
+        if root.has-quick: NavItem {
             icon: TablerIcons.bolt;
             label: @tr("Quick");
             active: false;

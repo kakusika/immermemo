@@ -379,6 +379,10 @@ export component App inherits Window {
         // falling back to the hub. The parent is the breadcrumb's
         // second-to-last segment, or the vault root if there isn't one.
         if (root.active-tab == 2 && files-screen.page != 0) {
+            if (files-screen.page >= 2) {
+                files-screen.page = 0;
+                return true;
+            }
             if (root.directory-breadcrumb.length > 0) {
                 root.navigate-directory-folder(root.directory-breadcrumb.length >= 2
                     ? root.directory-breadcrumb[root.directory-breadcrumb.length - 2].key
@@ -827,9 +831,22 @@ export component App inherits Window {
             height: root.bottom-bar-total-height;
             visible: root.keyboard == 0px && root.sheet-progress < 0.99;
             active-tab <=> root.active-tab;
+            files-page <=> files-screen.page;
             conflict-count: root.conflict-count;
             current-has-conflict: root.current-has-conflict;
+            has-home: SettingsAdapter.nav-show-home;
+            has-search: SettingsAdapter.nav-show-search;
+            has-library: SettingsAdapter.nav-show-library;
+            has-directory: SettingsAdapter.nav-show-directory;
+            has-daily: SettingsAdapter.nav-show-daily;
+            has-starred: SettingsAdapter.nav-show-starred;
+            has-recent: SettingsAdapter.nav-show-recent;
+            has-graph: SettingsAdapter.nav-show-graph;
+            has-quick: SettingsAdapter.nav-show-quick;
             inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+            open-library-page(p) => {
+                files-screen.page = p;
+            }
             tab-selected(idx) => {
                 root.active-tab = idx;
                 root.trigger-haptic();
