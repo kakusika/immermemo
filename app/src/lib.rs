@@ -96,6 +96,68 @@ pub(crate) fn update_github_ui_state(app: &App, remote: Option<&str>) {
     app.set_github_repo_name(SharedString::new());
 }
 
+thread_local! {
+    static APP_WEAK: RefCell<Option<slint::Weak<App>>> = const { RefCell::new(None) };
+    static PENDING_IMPORT_PAYLOAD: RefCell<Option<Rc<RefCell<Option<immermemo_vault::transfer::TransferPayload>>>>> = const { RefCell::new(None) };
+}
+
+/// Populates and displays the transfer import preview in SettingsSheet given a transfer URI or JSON.
+pub(crate) fn open_import_preview(
+    app: &App,
+    pending_payload: &Rc<RefCell<Option<immermemo_vault::transfer::TransferPayload>>>,
+    input: &str,
+) {
+    let trimmed = input.trim();
+    app.set_import_draft(trimmed.into());
+    match immermemo_vault::transfer::decode_payload(trimmed) {
+        Ok(payload) => {
+            app.set_import_status_message(SharedString::new());
+            app.set_import_status_is_error(false);
+            app.set_preview_has_interface(payload.interface.is_some());
+            let has_remote = payload
+                .sync
+                .as_ref()
+                .and_then(|s| s.remote_url.as_ref())
+                .is_some();
+            let remote_url = payload
+                .sync
+                .as_ref()
+                .and_then(|s| s.remote_url.clone())
+                .unwrap_or_default();
+            let has_token = payload
+                .sync
+                .as_ref()
+                .and_then(|s| s.token.as_ref())
+                .is_some();
+            app.set_preview_has_remote(has_remote);
+            app.set_preview_remote_url(remote_url.into());
+            app.set_preview_has_token(has_token);
+            app.set_import_preview_ready(true);
+            *pending_payload.borrow_mut() = Some(payload);
+        }
+        Err(e) => {
+            app.set_import_preview_ready(false);
+            app.set_import_status_is_error(true);
+            app.set_import_status_message(format!("Could not read transfer data: {e}").into());
+        }
+    }
+    // Sub-page 5: Transfer & Share, Tab 1: Import
+    app.set_settings_page(5);
+    app.set_settings_transfer_tab(1);
+    app.set_settings_open(true);
+}
+
+/// Called when a deep-link URI (`immermemo://...`) is received either at launch or during runtime.
+pub fn handle_incoming_import_uri(uri: &str) {
+    let weak = APP_WEAK.with(|a| a.borrow().clone());
+    let pending = PENDING_IMPORT_PAYLOAD.with(|p| p.borrow().clone());
+    if let (Some(weak), Some(pending)) = (weak, pending) {
+        if let Some(app) = weak.upgrade() {
+            open_import_preview(&app, &pending, uri);
+        }
+    }
+}
+
 /// Opens the window and runs until it is closed.
 ///
 /// `default_vault_dir` only matters the very first time the app ever
@@ -118,6 +180,7 @@ pub fn run(
     app_data_base: PathBuf,
     token_store_for: TokenStoreFactory,
     initial_note_path: Option<PathBuf>,
+    initial_import_uri: Option<String>,
 ) -> anyhow::Result<()> {
     let app_data = AppData::new(app_data_base);
     let mut known_vaults = app_data.known_vaults();
@@ -371,6 +434,7 @@ pub fn run(
             app.set_current_vault_name(vault_display_name(&s.vault_dir).into());
             app.set_current_vault_path(s.vault_dir.display().to_string().into());
             update_github_ui_state(&app, s.remote.as_deref());
+            app.set_settings_page(0);
             app.set_settings_open(true);
         }
     });
@@ -444,6 +508,7 @@ pub fn run(
             app.set_current_vault_name(vault_display_name(&s.vault_dir).into());
             app.set_current_vault_path(s.vault_dir.display().to_string().into());
             update_github_ui_state(&app, s.remote.as_deref());
+            app.set_settings_page(2);
             app.set_settings_open(true);
         }
     });
@@ -953,6 +1018,8 @@ pub fn run(
 
     let cached_export_uri = Rc::new(RefCell::new(None::<String>));
     let pending_imported_payload = Rc::new(RefCell::new(None::<immermemo_vault::transfer::TransferPayload>));
+    APP_WEAK.with(|a| *a.borrow_mut() = Some(app.as_weak()));
+    PENDING_IMPORT_PAYLOAD.with(|p| *p.borrow_mut() = Some(pending_imported_payload.clone()));
 
     let update_transfer_qr = {
         let cached_export_uri = cached_export_uri.clone();
@@ -1038,41 +1105,7 @@ pub fn run(
         let (weak, pending_payload) = (app.as_weak(), pending_imported_payload.clone());
         move |input| {
             let app = weak.unwrap();
-            let trimmed = input.trim();
-            match immermemo_vault::transfer::decode_payload(trimmed) {
-                Ok(payload) => {
-                    app.set_import_status_message(SharedString::new());
-                    app.set_import_status_is_error(false);
-                    app.set_preview_has_interface(payload.interface.is_some());
-                    let has_remote = payload
-                        .sync
-                        .as_ref()
-                        .and_then(|s| s.remote_url.as_ref())
-                        .is_some();
-                    let remote_url = payload
-                        .sync
-                        .as_ref()
-                        .and_then(|s| s.remote_url.clone())
-                        .unwrap_or_default();
-                    let has_token = payload
-                        .sync
-                        .as_ref()
-                        .and_then(|s| s.token.as_ref())
-                        .is_some();
-                    app.set_preview_has_remote(has_remote);
-                    app.set_preview_remote_url(remote_url.into());
-                    app.set_preview_has_token(has_token);
-                    app.set_import_preview_ready(true);
-                    *pending_payload.borrow_mut() = Some(payload);
-                }
-                Err(e) => {
-                    app.set_import_preview_ready(false);
-                    app.set_import_status_is_error(true);
-                    app.set_import_status_message(
-                        format!("Could not read transfer data: {e}").into(),
-                    );
-                }
-            }
+            open_import_preview(&app, &pending_payload, &input);
         }
     });
 
@@ -1293,6 +1326,10 @@ pub fn run(
         }
     });
 
+    if let Some(uri) = initial_import_uri {
+        open_import_preview(&app, &pending_imported_payload, &uri);
+    }
+
     app.run()?;
     Ok(())
 }
@@ -1330,6 +1367,7 @@ mod tests {
         editing_while_a_sync_is_running_does_not_panic_on_reentrant_borrow(&app, &session);
         bundled_japanese_translation_is_discoverable_at_runtime();
         desktop_app_data_dir_resolves_sensible_path();
+        deep_link_import_preview_opens_settings_sheet(&app);
 
         // `render::seam_tests` needs the same shared `app` for the same
         // one-event-loop-per-process reason -- see that module's doc.
@@ -1796,5 +1834,36 @@ mod tests {
     fn desktop_app_data_dir_resolves_sensible_path() {
         let dir = desktop_app_data_dir().expect("desktop app data dir should resolve");
         assert!(dir.ends_with("immermemo"));
+    }
+
+    fn deep_link_import_preview_opens_settings_sheet(app: &App) {
+        let pending = Rc::new(RefCell::new(None));
+        let valid_payload = immermemo_vault::transfer::TransferPayload {
+            v: 1,
+            app: "immermemo".to_string(),
+            interface: Some(immermemo_vault::transfer::InterfaceTransfer {
+                font_size: Some(2),
+                theme: Some(1),
+                status_bar: Some(0),
+                ui_scale: Some(1.2),
+            }),
+            sync: Some(immermemo_vault::transfer::SyncTransfer {
+                vault_name: Some("test-vault".to_string()),
+                remote_url: Some("https://example.com/notes.git".to_string()),
+                token: Some("secret123".to_string()),
+            }),
+        };
+        let uri = immermemo_vault::transfer::encode_payload(&valid_payload).unwrap();
+        open_import_preview(app, &pending, &uri);
+
+        assert!(app.get_settings_sheet_open());
+        assert_eq!(app.get_settings_page(), 5);
+        assert_eq!(app.get_settings_transfer_tab(), 1);
+        assert!(app.get_import_preview_ready());
+        assert!(app.get_preview_has_interface());
+        assert!(app.get_preview_has_remote());
+        assert_eq!(app.get_preview_remote_url(), "https://example.com/notes.git");
+        assert!(app.get_preview_has_token());
+        assert!(pending.borrow().is_some());
     }
 }

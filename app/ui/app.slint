@@ -223,6 +223,8 @@ export component App inherits Window {
     in property <string> current-vault-path: "";
     in-out property <bool> settings-sheet-open: false;
     in-out property <bool> settings-open <=> root.settings-sheet-open;
+    in-out property <int> settings-page: 0;
+    in-out property <int> settings-transfer-tab: 0;
     in property <image> qr-image;
     in-out property <bool> export-include-interface: true;
     in-out property <bool> export-include-remote: true;
@@ -1248,6 +1250,8 @@ export component App inherits Window {
                 font-size-choice <=> root.font-size-choice;
                 theme-choice <=> root.theme-choice;
                 status-bar-choice <=> root.status-bar-choice;
+                page <=> root.settings-page;
+                transfer-tab <=> root.settings-transfer-tab;
                 inset-top: root.inset-top;
                 inset-bottom: root.inset-bottom;
                 save-remote(url, token) => { root.save-remote(url, token); }

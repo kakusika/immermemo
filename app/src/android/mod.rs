@@ -34,12 +34,58 @@ pub fn android_main(app: slint::android::AndroidApp) {
         Ok(Arc::new(store) as Arc<dyn TokenStore>)
     });
     slint::android::init(app).expect("initialize the Android backend");
-    let initial_note_path = unsafe {
+    let (initial_note_path, initial_import_uri) = unsafe {
         haptic::init_android_haptics(vm_ptr, activity_ptr);
         splash::init(vm_ptr, activity_ptr);
         system_ui::init(vm_ptr, activity_ptr);
         crate::widget::init_android_widget_bridge(vm_ptr, activity_ptr, &base);
-        crate::widget::read_launch_note_path(vm_ptr, activity_ptr)
+        (
+            crate::widget::read_launch_note_path(vm_ptr, activity_ptr),
+            read_launch_import_uri(vm_ptr, activity_ptr),
+        )
     };
-    run(default_vault_dir, base, token_store_for, initial_note_path).expect("run the app");
+    run(
+        default_vault_dir,
+        base,
+        token_store_for,
+        initial_note_path,
+        initial_import_uri,
+    )
+    .expect("run the app");
+}
+
+/// Reads the deep-link import URI (`immermemo://...`) off `MainActivity`'s intent, if present.
+pub unsafe fn read_launch_import_uri(
+    vm_ptr: *mut std::ffi::c_void,
+    activity_ptr: *mut std::ffi::c_void,
+) -> Option<String> {
+    let vm = unsafe { jni::JavaVM::from_raw(vm_ptr.cast()) }.ok()?;
+    let mut env = vm.attach_current_thread().ok()?;
+    let activity = unsafe { jni::objects::JObject::from_raw(activity_ptr.cast()) };
+    let result: jni::errors::Result<Option<String>> = (|| {
+        let value = env
+            .call_method(&activity, "consumeImportUri", "()Ljava/lang/String;", &[])?
+            .l()?;
+        if value.is_null() {
+            return Ok(None);
+        }
+        let jstring = jni::objects::JString::from(value);
+        Ok(Some(env.get_string(&jstring)?.into()))
+    })();
+    result.ok().flatten()
+}
+
+/// Called from `MainActivity.onNewIntent` when the user opens a deep-link while the app is running.
+#[unsafe(no_mangle)]
+pub extern "C" fn Java_dev_immermemo_app_MainActivity_notifyDeepLink(
+    mut env: jni::JNIEnv,
+    _activity: jni::objects::JObject,
+    uri: jni::objects::JString,
+) {
+    if let Ok(uri_jstr) = env.get_string(&uri) {
+        let uri_str: String = uri_jstr.into();
+        let _ = slint::invoke_from_event_loop(move || {
+            crate::handle_incoming_import_uri(&uri_str);
+        });
+    }
 }

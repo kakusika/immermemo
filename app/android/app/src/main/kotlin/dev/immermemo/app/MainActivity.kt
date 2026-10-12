@@ -1,6 +1,7 @@
 package dev.immermemo.app
 
 import android.app.NativeActivity
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -63,6 +64,36 @@ class MainActivity : NativeActivity() {
         }
         super.onCreate(savedInstanceState)
     }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val uri = intent?.dataString
+        if (uri != null && uri.startsWith("immermemo://")) {
+            intent.data = null
+            try {
+                notifyDeepLink(uri)
+            } catch (_: UnsatisfiedLinkError) {
+                // Native runtime not loaded yet
+            }
+        }
+    }
+
+    /**
+     * Consumes and returns any pending import URI string from the launch intent.
+     * Clears intent.data after reading to prevent re-importing on subsequent resumes.
+     */
+    @Suppress("unused")
+    fun consumeImportUri(): String? {
+        val uri = intent?.dataString ?: return null
+        if (uri.startsWith("immermemo://")) {
+            intent.data = null
+            return uri
+        }
+        return null
+    }
+
+    private external fun notifyDeepLink(uri: String)
 
     @Suppress("unused")
     fun markFirstFrameRendered() {
