@@ -1,13 +1,10 @@
-//! Undo/redo for one editing session, kept in a Loro document.
+//! Undo/redo for one editing session, kept as a lightweight in-memory snapshot stack.
 //!
-//! Loro is used here for nothing but the operation history: the `.tmt` text
-//! on disk stays the only source of truth, and the document is never
-//! written anywhere. A [`History`] lives as long as one note stays open and
-//! unchanged from outside; when a sync rewrites the note, the caller drops
-//! it and starts a new one, so nothing from before the sync can be undone
-//! into content that no longer matches the file.
+//! A [`History`] lives as long as one note stays open and unchanged from outside;
+//! when a sync rewrites the note, the caller drops it and starts a new one, so nothing
+//! from before the sync can be undone into content that no longer matches the file.
 
-use loro::{LoroDoc, LoroText, UndoManager};
+use std::time::{Duration, Instant};
 
 /// The state the editor should show after an undo or redo.
 #[derive(Debug, PartialEq, Eq)]
@@ -18,78 +15,95 @@ pub struct Restored {
 }
 
 pub struct History {
-    doc: LoroDoc,
-    text: LoroText,
-    undo: UndoManager,
+    /// Past text states that can be restored via `undo()`.
+    undo_stack: Vec<String>,
+    /// Future text states that can be restored via `redo()`.
+    redo_stack: Vec<String>,
+    /// The current document text.
     current: String,
+    /// Minimum pause required between edits to form a new undo checkpoint.
+    merge_interval: Duration,
+    /// When the last edit occurred.
+    last_edit_time: Option<Instant>,
+    /// Whether the current edit burst has already saved an undo checkpoint.
+    in_merge_burst: bool,
 }
 
 impl History {
     /// Typing bursts closer together than this become one undo step.
-    const MERGE_INTERVAL_MS: i64 = 500;
+    const MERGE_INTERVAL_MS: u64 = 500;
+    /// Maximum undo steps kept in memory.
+    const MAX_STACK_DEPTH: usize = 1000;
 
     pub fn new(initial: &str) -> Self {
-        Self::with_merge_interval(initial, Self::MERGE_INTERVAL_MS)
+        Self::with_merge_interval(initial, Self::MERGE_INTERVAL_MS as i64)
     }
 
     pub fn with_merge_interval(initial: &str, interval_ms: i64) -> Self {
-        let doc = LoroDoc::new();
-        let text = doc.get_text("text");
-        text.insert(0, initial).expect("insert into a fresh text");
-        doc.commit();
-        // Created after the initial insert, so loading the note is not
-        // itself an undo step.
-        let mut undo = UndoManager::new(&doc);
-        undo.set_merge_interval(interval_ms);
+        let merge_interval = if interval_ms > 0 {
+            Duration::from_millis(interval_ms as u64)
+        } else {
+            Duration::ZERO
+        };
         Self {
-            doc,
-            text,
-            undo,
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
             current: initial.to_owned(),
+            merge_interval,
+            last_edit_time: None,
+            in_merge_burst: false,
         }
     }
 
     /// Records the editor's new full text as an edit on top of the last one.
     pub fn edit(&mut self, new_text: &str) {
-        let (start, delete, insert) = diff(&self.current, new_text);
-        if delete > 0 {
-            self.text
-                .delete(start, delete)
-                .expect("delete within bounds");
+        if new_text == self.current {
+            return;
         }
-        if !insert.is_empty() {
-            self.text
-                .insert(start, insert)
-                .expect("insert within bounds");
+        let now = Instant::now();
+        let is_burst = !self.merge_interval.is_zero()
+            && self.in_merge_burst
+            && self
+                .last_edit_time
+                .is_some_and(|t| now.duration_since(t) < self.merge_interval);
+
+        if !is_burst {
+            if self.undo_stack.len() >= Self::MAX_STACK_DEPTH {
+                self.undo_stack.remove(0);
+            }
+            self.undo_stack.push(self.current.clone());
+            self.in_merge_burst = true;
         }
-        self.doc.commit();
+        self.redo_stack.clear();
+        self.last_edit_time = Some(now);
         self.current = new_text.to_owned();
     }
 
     pub fn can_undo(&self) -> bool {
-        self.undo.can_undo()
+        !self.undo_stack.is_empty()
     }
 
     pub fn can_redo(&self) -> bool {
-        self.undo.can_redo()
+        !self.redo_stack.is_empty()
     }
 
     pub fn undo(&mut self) -> Option<Restored> {
-        if !self.undo.undo().ok()? {
-            return None;
-        }
-        Some(self.restored())
+        let prev = self.undo_stack.pop()?;
+        self.redo_stack.push(self.current.clone());
+        self.in_merge_burst = false;
+        self.last_edit_time = None;
+        Some(self.restored_to(prev))
     }
 
     pub fn redo(&mut self) -> Option<Restored> {
-        if !self.undo.redo().ok()? {
-            return None;
-        }
-        Some(self.restored())
+        let next = self.redo_stack.pop()?;
+        self.undo_stack.push(self.current.clone());
+        self.in_merge_burst = false;
+        self.last_edit_time = None;
+        Some(self.restored_to(next))
     }
 
-    fn restored(&mut self) -> Restored {
-        let text = self.text.to_string();
+    fn restored_to(&mut self, text: String) -> Restored {
         let (start, _, insert) = diff(&self.current, &text);
         let cursor = byte_offset(&text, start + insert.chars().count());
         self.current = text.clone();
