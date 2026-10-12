@@ -68,10 +68,24 @@ apk-arm:
     cd app && cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo
     cd app/android && gradle assembleRelease
 
+# Build a slim release APK with software renderer for real devices (aarch64, no Skia)
+apk-arm-soft: apk-arm-software
+apk-arm-software:
+    cd app && rm -rf {{jniLibs}}
+    cd app && cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-software
+    cd app/android && gradle assembleRelease
+
 # Build a slim release APK for the emulator only (x86_64, ~26 MB on-device)
 apk-x86:
     cd app && rm -rf {{jniLibs}}
     cd app && cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
+    cd app/android && gradle assembleRelease
+
+# Build a slim release APK with software renderer for emulator (x86_64, no Skia)
+apk-x86-soft: apk-x86-software
+apk-x86-software:
+    cd app && rm -rf {{jniLibs}}
+    cd app && cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-software
     cd app/android && gradle assembleRelease
 
 # Build for whatever single device/emulator adb currently sees, picking

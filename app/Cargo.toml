@@ -46,31 +46,20 @@ slint = { workspace = true, features = [
 [target.'cfg(target_os = "ios")'.dependencies]
 slint = { workspace = true, features = ["backend-winit", "renderer-skia"] }
 
+[features]
+default = ["renderer-skia"]
+renderer-skia = ["i-slint-backend-android-activity/renderer-skia"]
+renderer-software = ["i-slint-backend-android-activity/renderer-software"]
+
 [target.'cfg(target_os = "android")'.dependencies]
 # For the Android Keystore token store: plain JNI calls into java.security /
 # javax.crypto, no Gradle-managed dependency needed.
 jni = "0.21"
-# `renderer-femtovg` is requested and is what actually draws -- but it does
-# NOT mean Skia is absent from the Android build, despite that being the
-# intent. `i-slint-backend-android-activity` 1.18.1's own (published, not
-# this repo's) Cargo.toml has an unconditional
-# `[target.'cfg(target_os = "android")'.dependencies.i-slint-renderer-skia]`
-# with no feature gate -- so Skia's GPU (Ganesh/OpenGL) backend and SkSL
-# shader compiler get linked into every Android build regardless, confirmed
-# by `strings` on the built .so (`GrProgramDesc.cpp`, `GrGLSLVarying.cpp`,
-# SkSL symbols all present) and accounting for essentially all of its
-# ~24 MB. This is NOT github.com/slint-ui/slint#13011 (that one's about
-# skia-safe's own default features -- pdf/jpeg/embedded-ICU -- being left
-# enabled; those specifically are *not* present here, since
-# i-slint-renderer-skia's Android dependency already sets
-# `default-features = false`, confirmed by their total absence from the
-# built .so's strings). No cargo-level feature flag avoids the Skia core
-# itself; as of 2026-10-04 no upstream issue covers that specific gap.
 slint = { version = "1.18", default-features = false, features = [
   "backend-android-activity-06",
   "compat-1-2",
-  "renderer-femtovg",
 ] }
+i-slint-backend-android-activity = { version = "=1.18.1", default-features = false }
 
 [build-dependencies]
 slint-build = { workspace = true }
