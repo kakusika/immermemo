@@ -45,6 +45,9 @@ emulator:
 emulator-stop:
     adb emu kill
 
+android_cflags := "-fno-unwind-tables -fno-asynchronous-unwind-tables"
+android_rustflags := "-C force-unwind-tables=no"
+
 # Build one fat APK with both aarch64 (a real phone) and x86_64 (the
 # emulator) native libraries, see app/Cargo.toml. Native libs are
 # stored uncompressed and page-aligned (Gradle's
@@ -58,34 +61,34 @@ emulator-stop:
 # the crate's desktop `[[bin]]` target, which doesn't link for Android.
 apk:
     cd app && rm -rf {{jniLibs}}
-    cd app && cargo ndk -t arm64-v8a -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
+    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
     cd app/android && gradle assembleRelease
 
 # Build a slim release APK for real devices only (aarch64, ~24 MB on-device,
 # no duplicate extracted copy -- see the `apk` recipe's comment)
 apk-arm:
     cd app && rm -rf {{jniLibs}}
-    cd app && cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo
+    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo
     cd app/android && gradle assembleRelease
 
 # Build a slim release APK with software renderer for real devices (aarch64, no Skia)
 apk-arm-soft: apk-arm-software
 apk-arm-software:
     cd app && rm -rf {{jniLibs}}
-    cd app && cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-software
+    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-software
     cd app/android && gradle assembleRelease
 
 # Build a slim release APK for the emulator only (x86_64, ~26 MB on-device)
 apk-x86:
     cd app && rm -rf {{jniLibs}}
-    cd app && cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
+    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
     cd app/android && gradle assembleRelease
 
 # Build a slim release APK with software renderer for emulator (x86_64, no Skia)
 apk-x86-soft: apk-x86-software
 apk-x86-software:
     cd app && rm -rf {{jniLibs}}
-    cd app && cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-software
+    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-software
     cd app/android && gradle assembleRelease
 
 # Build for whatever single device/emulator adb currently sees, picking

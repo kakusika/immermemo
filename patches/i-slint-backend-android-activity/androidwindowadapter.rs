@@ -223,7 +223,8 @@ impl AndroidWindowAdapter {
             PollEvent::Main(MainEvent::InputAvailable) => self.process_inputs()?,
             PollEvent::Main(MainEvent::InitWindow { .. }) => {
                 if let Some(w) = self.app.native_window() {
-                    let _size = PhysicalSize { width: w.width() as u32, height: w.height() as u32 };
+                    #[allow(unused_variables)]
+                    let size = PhysicalSize { width: w.width() as u32, height: w.height() as u32 };
 
                     let scale_factor =
                         self.app.config().density().map(|dpi| dpi as f32 / 160.0).unwrap_or(1.0);
