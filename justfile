@@ -45,8 +45,8 @@ emulator:
 emulator-stop:
     adb emu kill
 
-android_cflags := "-fno-unwind-tables -fno-asynchronous-unwind-tables -DOPENSSL_NO_SM2_PRECOMP -DSQLITE_OMIT_JSON -DSQLITE_OMIT_SHARED_CACHE -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_LIKE_DOESNT_MATCH_BLOBS"
-android_rustflags := "-C force-unwind-tables=no"
+android_cflags := "-fno-unwind-tables -fno-asynchronous-unwind-tables -ffunction-sections -fdata-sections -DOPENSSL_NO_SM2_PRECOMP -DSQLITE_OMIT_JSON -DSQLITE_OMIT_SHARED_CACHE -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_LIKE_DOESNT_MATCH_BLOBS"
+android_rustflags := "-C force-unwind-tables=no -C link-arg=-Wl,--icf=all"
 
 # Build one fat APK with both aarch64 (a real phone) and x86_64 (the
 # emulator) native libraries, see app/Cargo.toml. Native libs are
