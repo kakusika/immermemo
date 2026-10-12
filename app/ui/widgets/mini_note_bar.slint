@@ -45,7 +45,7 @@ export component MiniNoteBar inherits Rectangle {
 
     in-out property <length> mini-card-reveal-dx: 0px;
     in-out property <bool> is-dragging-mini-reveal: false;
-    property <length> mini-card-reveal-max: Metrics.touch * 1.3;
+    property <length> mini-card-reveal-max: 110px * Metrics.ui-scale;
 
     animate mini-card-reveal-dx {
         duration: root.is-dragging-mini-reveal ? 0ms : 200ms;
@@ -53,7 +53,9 @@ export component MiniNoteBar inherits Rectangle {
     }
 
     pure function rubber-band(dx: length, limit: length) -> length {
-        let coefficient = 0.55;
+        // Guaranteed strictly d(card) <= d(touch) everywhere:
+        // derivative at 0 is 1.0, and decreases monotonically with ratio / (1 + ratio).
+        let coefficient = 1.0;
         let ratio = (abs(dx) / limit) * coefficient;
         let eased = limit * (ratio / (1.0 + ratio));
         return dx < 0px ? -eased : eased;
@@ -80,8 +82,8 @@ export component MiniNoteBar inherits Rectangle {
         }
     }
 
-    property <length> back-bounce-x: root.mini-reveal-back-committable ? 8px * Metrics.ui-scale : 0px;
-    property <length> forward-bounce-x: root.mini-reveal-forward-committable ? -8px * Metrics.ui-scale : 0px;
+    property <length> back-bounce-x: root.mini-reveal-back-committable ? 6px * Metrics.ui-scale : 0px;
+    property <length> forward-bounce-x: root.mini-reveal-forward-committable ? -6px * Metrics.ui-scale : 0px;
 
     animate back-bounce-x {
         duration: 240ms;
@@ -93,11 +95,11 @@ export component MiniNoteBar inherits Rectangle {
     }
 
     property <length> back-pill-size: root.mini-reveal-back-committable
-        ? 38px * Metrics.ui-scale
-        : (28px * Metrics.ui-scale + 4px * Metrics.ui-scale * root.mini-reveal-back-progress);
+        ? 35px * Metrics.ui-scale
+        : (26px * Metrics.ui-scale + 6px * Metrics.ui-scale * root.mini-reveal-back-progress);
     property <length> forward-pill-size: root.mini-reveal-forward-committable
-        ? 38px * Metrics.ui-scale
-        : (28px * Metrics.ui-scale + 4px * Metrics.ui-scale * root.mini-reveal-forward-progress);
+        ? 35px * Metrics.ui-scale
+        : (26px * Metrics.ui-scale + 6px * Metrics.ui-scale * root.mini-reveal-forward-progress);
 
     animate back-pill-size, forward-pill-size {
         duration: 240ms;
@@ -180,28 +182,11 @@ export component MiniNoteBar inherits Rectangle {
             }
         }
 
-        MiniNoteCard {
-            x: 12px * Metrics.ui-scale + root.mini-card-reveal-dx;
-            width: parent.width - 24px * Metrics.ui-scale;
-            height: Metrics.mini-card-height;
-            y: 20px * Metrics.ui-scale - root.sheet-progress * root.resting-y;
-            opacity: max(0.0, 1.0 - root.sheet-progress * 10.0);
-            title: root.title;
-            preview: root.preview;
-            has-conflict: root.has-conflict;
-            syncing: root.syncing;
-            remote-configured: root.remote-configured;
-            status: root.status;
-            status-is-error: root.status-is-error;
-            clicked => { root.open-sheet(); }
-            sync => { root.sync(); }
-        }
-
-        // History back affordance (pinned close to the left edge with bounce physics)
+        // History back affordance (pinned close to the left edge with bounce physics, behind card)
         VerticalLayout {
             x: 4px * Metrics.ui-scale + root.back-bounce-x;
             y: 20px * Metrics.ui-scale;
-            width: 44px * Metrics.ui-scale;
+            width: 38px * Metrics.ui-scale;
             height: Metrics.mini-card-height;
             alignment: center;
 
@@ -222,7 +207,7 @@ export component MiniNoteBar inherits Rectangle {
                         source: TablerIcons.chevron-left;
                         color: Palette.accent-background;
                         width: root.mini-reveal-back-committable
-                            ? Metrics.icon-md * 1.35 : Metrics.icon-md;
+                            ? Metrics.icon-md * 1.25 : Metrics.icon-md;
                         height: self.width;
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
@@ -236,11 +221,11 @@ export component MiniNoteBar inherits Rectangle {
             }
         }
 
-        // History forward affordance (pinned close to the right edge with bounce physics)
+        // History forward affordance (pinned close to the right edge with bounce physics, behind card)
         VerticalLayout {
-            x: parent.width - 48px * Metrics.ui-scale + root.forward-bounce-x;
+            x: parent.width - 42px * Metrics.ui-scale + root.forward-bounce-x;
             y: 20px * Metrics.ui-scale;
-            width: 44px * Metrics.ui-scale;
+            width: 38px * Metrics.ui-scale;
             height: Metrics.mini-card-height;
             alignment: center;
 
@@ -261,7 +246,7 @@ export component MiniNoteBar inherits Rectangle {
                         source: TablerIcons.chevron-right;
                         color: Palette.accent-background;
                         width: root.mini-reveal-forward-committable
-                            ? Metrics.icon-md * 1.35 : Metrics.icon-md;
+                            ? Metrics.icon-md * 1.25 : Metrics.icon-md;
                         height: self.width;
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
@@ -273,6 +258,23 @@ export component MiniNoteBar inherits Rectangle {
                     }
                 }
             }
+        }
+
+        MiniNoteCard {
+            x: 12px * Metrics.ui-scale + root.mini-card-reveal-dx;
+            width: parent.width - 24px * Metrics.ui-scale;
+            height: Metrics.mini-card-height;
+            y: 20px * Metrics.ui-scale - root.sheet-progress * root.resting-y;
+            opacity: max(0.0, 1.0 - root.sheet-progress * 10.0);
+            title: root.title;
+            preview: root.preview;
+            has-conflict: root.has-conflict;
+            syncing: root.syncing;
+            remote-configured: root.remote-configured;
+            status: root.status;
+            status-is-error: root.status-is-error;
+            clicked => { root.open-sheet(); }
+            sync => { root.sync(); }
         }
 
         // History target note bubble (speech bubble floating above the mini card when triggered)

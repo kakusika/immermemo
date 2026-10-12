@@ -456,7 +456,7 @@ mod tests {
         );
 
         let saved = std::fs::read_to_string(&plain).unwrap();
-        let (identity, _) = immermemo_tomet_render::meta_element(&saved, "icon")
+        let (identity, _) = immermemo_render_tomet::meta_element(&saved, "icon")
             .expect("the saved note now has a meta icon entry");
         assert_eq!(identity.namespace.as_deref(), Some("doc"));
         assert_eq!(identity.name, "icon");

@@ -16,7 +16,7 @@ path = "src/main.rs"
 immermemo-core = { workspace = true }
 immermemo-credentials = { workspace = true }
 immermemo-provider = { workspace = true }
-immermemo-tomet-render = { workspace = true }
+immermemo-render-tomet = { workspace = true }
 
 #= Origiri
 origiri-icons = { workspace = true }

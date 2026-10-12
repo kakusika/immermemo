@@ -19,5 +19,5 @@ git2 = { workspace = true }
 serde = { workspace = true }
 
 [dev-dependencies]
-immermemo-tomet-render = { workspace = true }
+immermemo-render-tomet = { workspace = true }
 tempfile = "3"

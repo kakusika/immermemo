@@ -2498,7 +2498,7 @@ dependencies = [
  "immermemo-core",
  "immermemo-credentials",
  "immermemo-provider",
- "immermemo-tomet-render",
+ "immermemo-render-tomet",
  "jni 0.21.1",
  "origiri-icons",
  "origiri-mobile",
@@ -2525,8 +2525,8 @@ dependencies = [
  "immermemo-credentials",
  "immermemo-identity",
  "immermemo-index",
+ "immermemo-render-tomet",
  "immermemo-sync",
- "immermemo-tomet-render",
  "immermemo-vault",
  "serde",
  "tempfile",
@@ -2576,6 +2576,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "immermemo-render-tomet"
+version = "0.1.0"
+dependencies = [
+ "tomet",
+]
+
+[[package]]
 name = "immermemo-sync"
 version = "0.1.0"
 dependencies = [
@@ -2585,13 +2592,6 @@ dependencies = [
  "immermemo-vault",
  "openssl",
  "tempfile",
- "tomet",
-]
-
-[[package]]
-name = "immermemo-tomet-render"
-version = "0.1.0"
-dependencies = [
  "tomet",
 ]
 

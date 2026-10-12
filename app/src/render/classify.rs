@@ -6,10 +6,10 @@
 //! converts [`ClassifiedBlock`] into the Slint-generated `RenderedBlock`
 //! model `EditorScreen`'s `rendered-blocks` property expects.
 //!
-//! `immermemo-tomet-render`'s `classify()` reports every named element's
+//! `immermemo-render-tomet`'s `classify()` reports every named element's
 //! `(namespace, name)` identity uniformly -- `@use`'d ones and Tomet's own
 //! bare built-ins alike (`namespace` is `None` for the latter, including
-//! `ruby`/`link` -- `tomet-render` doesn't treat those as a thing apart
+//! `ruby`/`link` -- `render-tomet` doesn't treat those as a thing apart
 //! from any other element either). Deciding what a given identity *means*,
 //! visually, is left to whoever renders it. [`REGISTRY`] below is that
 //! decision for this app: it maps a recognized identity to a [`Look`] (a
@@ -33,14 +33,14 @@
 //!   nothing this app hasn't explicitly opted into should change how it
 //!   looks.
 
-use immermemo_tomet_render::{ElementArgs, ElementIdentity, RenderItem, TextStyle, classify};
+use immermemo_render_tomet::{ElementArgs, ElementIdentity, RenderItem, TextStyle, classify};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockShape {
     /// A paragraph's plain content, shown as-is -- `style` may still mark
     /// the whole thing bold/italic/mark/strikeout if it was a single
     /// `em`/`strong`/`mark`/`strikeout`-wrapped block with nothing else
-    /// sharing its line (see `immermemo_tomet_render`'s
+    /// sharing its line (see `immermemo_render_tomet`'s
     /// `classify_bare_character_element`).
     PlainText,
     /// A `@conflict(a: [...], b: [...])` -- `ClassifiedBlock::side_a`/
@@ -175,14 +175,14 @@ pub(super) struct Look {
 }
 
 /// What a [`REGISTRY`] entry's lookup function gets to decide a [`Look`]
-/// from: `args` is `immermemo_tomet_render::RenderItem::Element::args`
+/// from: `args` is `immermemo_render_tomet::RenderItem::Element::args`
 /// unchanged, `content` is the same item's `content` span already
 /// resolved against the note body (so a lookup function never needs to
 /// know what a [`tomet::ast::Span`] is or where the body string lives).
 /// `block_args`/`body` are for [`conflict_look`] alone -- a lookup
 /// function that wants to classify a `key: [...]` arg's own content
 /// (rather than just read it as a string, like `args` offers) needs both:
-/// `immermemo_tomet_render::RenderItem::Element::block_args` unchanged,
+/// `immermemo_render_tomet::RenderItem::Element::block_args` unchanged,
 /// and `body` to resolve its items' spans against, the same way
 /// [`to_classified_block`] always has.
 pub(super) struct LookInput<'a> {
@@ -195,7 +195,7 @@ pub(super) struct LookInput<'a> {
 /// Which `(namespace, name)` pairs this app recognizes, and how each
 /// should look. `namespace: None` registers a look for one of Tomet's own
 /// bare built-in elements -- `conflict`/`ruby`/`link` are all three bare,
-/// and ordinary entries here: `immermemo_tomet_render` doesn't treat any
+/// and ordinary entries here: `immermemo_render_tomet` doesn't treat any
 /// of them as a thing apart from any other element (see its module doc),
 /// and neither does this table. A future vocabulary -- `@use`'d or bare
 /// built-in -- gets its own presentation by adding a row here, not by
@@ -249,7 +249,7 @@ fn conflict_look(input: LookInput) -> Look {
 
 /// `@ruby[base](rt:"reading")` -- `base` is `input.content`, `reading` is
 /// the `rt` named arg (empty if missing or non-string, same
-/// "検証は未実装" scope decision `tomet-render` already makes).
+/// "検証は未実装" scope decision `render-tomet` already makes).
 fn ruby_look(input: LookInput) -> Look {
     let reading = match input.args {
         ElementArgs::Named(pairs) => pairs
@@ -276,7 +276,7 @@ fn ruby_look(input: LookInput) -> Look {
 /// explicit `target:` named arg; the typed shortcuts (`url:`/`file:`/
 /// `tm:`/`id:`/`ref:`) are normalized into a prefixed `target` string by
 /// `tomet-semantics`, which this crate deliberately does not depend on
-/// (same reasoning as `immermemo_tomet_render`'s module doc) -- so those
+/// (same reasoning as `immermemo_render_tomet`'s module doc) -- so those
 /// are read back as whatever raw value sits under the key, unprefixed.
 fn link_look(input: LookInput) -> Look {
     let target = match input.args {
@@ -395,7 +395,7 @@ fn icon_look(input: LookInput) -> Look {
 /// already filters to "is the value an element at all"; this narrows
 /// further).
 pub(crate) fn note_icon(body: &str) -> Option<(String, String)> {
-    let (identity, args) = immermemo_tomet_render::meta_element(body, "icon")?;
+    let (identity, args) = immermemo_render_tomet::meta_element(body, "icon")?;
     (identity.namespace.as_deref() == Some("doc") && identity.name == "icon")
         .then(|| icon_name_pkg(&args))
 }
@@ -583,7 +583,7 @@ mod tests {
         assert_eq!(blocks[0].text, "deck.bookmark: label");
     }
 
-    // `immermemo-tomet-render` now identifies bare built-in elements too
+    // `immermemo-render-tomet` now identifies bare built-in elements too
     // (not just `@use`'d ones -- see its module doc), so the registry
     // mechanism above can already be extended to give one of them a
     // custom look by adding a `REGISTRY` row. Nothing has opted in yet,
@@ -663,7 +663,7 @@ mod tests {
     fn a_whole_paragraph_wrapped_in_strong_is_plain_text_tagged_bold() {
         // Nothing else shares this line, so it's its own `Block::Element`
         // -- the rarer path, still handled (see `classify_block`'s own
-        // test coverage in `immermemo-tomet-render`).
+        // test coverage in `immermemo-render-tomet`).
         let blocks = classify_body("@strong[whole line]\n");
         assert_eq!(blocks.len(), 1);
         assert_eq!(blocks[0].shape, BlockShape::PlainText);

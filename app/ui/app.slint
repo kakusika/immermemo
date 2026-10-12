@@ -415,7 +415,7 @@ export component App inherits Window {
     }
     changed virtual-keyboard-size => { root.update-keyboard(); }
     property <length> inset-bottom: max(root.safe-area-insets.bottom + root.extra-inset-bottom, root.keyboard);
-    property <length> bottom-bar-extra-inset: max(0px, (root.safe-area-insets.bottom + root.extra-inset-bottom) - 12px * Metrics.ui-scale);
+    property <length> bottom-bar-extra-inset: max(0px, (root.safe-area-insets.bottom + root.extra-inset-bottom) - 6px * Metrics.ui-scale);
     property <length> bottom-bar-total-height: root.keyboard == 0px
         ? (Metrics.bottom-bar-height + root.bottom-bar-extra-inset)
         : 0px;

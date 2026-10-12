@@ -9,7 +9,7 @@ members = [
   "crates/index",
   "crates/provider",
   "crates/sync",
-  "crates/tomet-render",
+  "crates/render-tomet",
   "crates/vault",
 ]
 
@@ -27,7 +27,7 @@ immermemo-identity = { path = "crates/identity" }
 immermemo-index = { path = "crates/index" }
 immermemo-provider = { path = "crates/provider" }
 immermemo-sync = { path = "crates/sync" }
-immermemo-tomet-render = { path = "crates/tomet-render" }
+immermemo-render-tomet = { path = "crates/render-tomet" }
 immermemo-vault = { path = "crates/vault" }
 
 #= Origiri

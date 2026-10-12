@@ -70,8 +70,8 @@ component NavItem inherits Rectangle {
         height: 100%;
         alignment: center;
         spacing: 2px * Metrics.ui-scale;
-        padding-top: 2px * Metrics.ui-scale;
-        padding-bottom: 2px * Metrics.ui-scale;
+        padding-top: 3px * Metrics.ui-scale;
+        padding-bottom: 3px * Metrics.ui-scale;
 
         // Centered pill indicator
         HorizontalLayout {
@@ -257,7 +257,7 @@ export component BottomNavBar inherits Rectangle {
     callback tab-selected(int);
     callback quick-action();
 
-    property <length> extra-inset-bottom: max(0px, root.inset-bottom - 12px * Metrics.ui-scale);
+    property <length> extra-inset-bottom: max(0px, root.inset-bottom - 6px * Metrics.ui-scale);
     height: Metrics.bottom-bar-height + root.extra-inset-bottom;
     background: Colors.surface-elevated;
     drop-shadow-blur: 10px * Metrics.ui-scale;

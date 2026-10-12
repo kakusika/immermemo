@@ -75,7 +75,7 @@ export struct RenderedBlock {
     text: string,
     // Meaningful only for `plain-text` -- `em`/`strong`/`mark`/`strikeout`
     // tagging a whole block with nothing else sharing its line (see
-    // `immermemo_tomet_render`'s `classify_bare_character_element`).
+    // `immermemo_render_tomet`'s `classify_bare_character_element`).
     // `false` everywhere else.
     bold: bool,
     italic: bool,

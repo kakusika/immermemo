@@ -386,7 +386,7 @@ impl NoteIndex {
     /// without paying for a full `reconcile_filesystem` walk. The only
     /// caller today is `immermemo`'s note-list icon (`@meta{ icon:
     /// @doc.icon(...) }`): this crate stays a plain path/title/mtime
-    /// cache, so the `.tmt` parsing that reads lives in `immermemo-tomet-render`
+    /// cache, so the `.tmt` parsing that reads lives in `immermemo-render-tomet`
     /// instead, downstream of this.
     pub fn bodies(&self) -> anyhow::Result<Vec<(PathBuf, String)>> {
         let mut stmt = self.conn.prepare("SELECT path, body FROM notes")?;

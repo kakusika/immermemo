@@ -1,5 +1,5 @@
-//! Converts one paragraph's `immermemo_tomet_render::RenderItem`s (grouped
-//! by `immermemo_tomet_render::classify_blocks`) into an
+//! Converts one paragraph's `immermemo_render_tomet::RenderItem`s (grouped
+//! by `immermemo_render_tomet::classify_blocks`) into an
 //! `origiri_richtext_flow::Block`, preserving the inline positions
 //! [`super::classify::classify_body`] discards by flattening every item
 //! into its own stacked row (see that module's doc comment, and the test
@@ -23,7 +23,7 @@
 //!
 //! A `Heading` group *is* flowed exactly like a `Paragraph` when it has
 //! more than one item (a heading can carry a link or a bold word same as
-//! any other prose -- see `immermemo_tomet_render`'s module doc) --
+//! any other prose -- see `immermemo_render_tomet`'s module doc) --
 //! `RenderBlockKind::Element` is the only kind that never does, since it
 //! always holds exactly one item.
 //!
@@ -34,15 +34,15 @@
 //! `elements` and referenced by `Inline::Element { id }`), not *what it
 //! looks like*.
 
-use immermemo_tomet_render::{RenderItem, TextStyle, classify_blocks};
+use immermemo_render_tomet::{RenderItem, TextStyle, classify_blocks};
 use origiri_richtext_flow::{Block, Inline};
 
 use super::classify::{
     BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone, classify_body, to_classified_block,
 };
 
-/// `tomet-render`'s [`TextStyle`] (bold/italic/mark/strikeout -- the same
-/// four flags, just a separate type since `tomet-render` has no
+/// `render-tomet`'s [`TextStyle`] (bold/italic/mark/strikeout -- the same
+/// four flags, just a separate type since `render-tomet` has no
 /// `origiri-richtext-flow` dependency to share one with) packed into the
 /// `origiri_richtext_flow::TextStyle` convention `FlowView` decodes.
 fn to_richtext_style(style: TextStyle) -> origiri_richtext_flow::TextStyle {
@@ -88,7 +88,7 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
             if items.len() > 1 {
                 // Only `Paragraph`/`Heading` groups ever hold more than
                 // one item -- an `Element` group always holds exactly one
-                // (see `tomet-render`'s `classify_block_groups`) -- so
+                // (see `render-tomet`'s `classify_block_groups`) -- so
                 // this condition alone is enough to tell them apart.
                 NoteBodyItem::Flowed(to_flow_paragraph(body, items))
             } else {

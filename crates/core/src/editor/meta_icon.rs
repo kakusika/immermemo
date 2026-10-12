@@ -1,5 +1,5 @@
 //! Writes a note's `@meta{ icon: @doc.icon(name, pkg) }` -- the save-side
-//! counterpart of `immermemo_tomet_render::meta_element`/`note_icon`
+//! counterpart of `immermemo_render_tomet::meta_element`/`note_icon`
 //! (`immermemo`'s `render::classify`), which only read it.
 //!
 //! Uses `tomet::edit` to mutate only the `@meta{}` block while preserving 100% of
@@ -58,18 +58,18 @@ mod tests {
     }
 
     /// `set_note_icon`'s own output round-trips back through
-    /// `immermemo_tomet_render::meta_element` (the read side) to the same
+    /// `immermemo_render_tomet::meta_element` (the read side) to the same
     /// `(name, pkg)` -- the thing that actually matters, more than the
     /// exact printed spelling the other tests above pin down.
     #[test]
     fn written_icon_reads_back_correctly() {
         let result = set_note_icon("Just a note.\n", "star", "tabler").unwrap();
-        let (identity, args) = immermemo_tomet_render::meta_element(&result, "icon").unwrap();
+        let (identity, args) = immermemo_render_tomet::meta_element(&result, "icon").unwrap();
         assert_eq!(identity.namespace.as_deref(), Some("doc"));
         assert_eq!(identity.name, "icon");
         assert_eq!(
             args,
-            immermemo_tomet_render::ElementArgs::Named(vec![
+            immermemo_render_tomet::ElementArgs::Named(vec![
                 (String::new(), "star".to_owned()),
                 ("pkg".to_owned(), "tabler".to_owned()),
             ])
