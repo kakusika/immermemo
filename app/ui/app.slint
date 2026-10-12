@@ -3,18 +3,18 @@ import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 import { BottomNavBar, IconActionRow } from "components.slint";
 import { MiniNoteBar } from "widgets/mini_note_bar.slint";
-import { EditorScreen } from "screens/editor.slint";
-import { NoteBodyItemView } from "screens/note_body.slint";
-import { RenderedBlock, RenderedBlockView } from "screens/rendered_block.slint";
-import { HomeScreen } from "screens/home.slint";
+import { EditorScreen } from "pages/editor/editor.slint";
+import { NoteBodyItemView } from "render/note_body.slint";
+import { RenderedBlock, RenderedBlockView } from "render/rendered_block.slint";
+import { HomeScreen } from "pages/home.slint";
 import {
     FilesScreen,
     DirectoryEntry,
     BreadcrumbSegment,
-} from "screens/files.slint";
-import { SearchScreen } from "screens/search.slint";
+} from "pages/files.slint";
+import { SearchScreen } from "pages/search.slint";
 import { VaultSheet } from "sheets/vault.slint";
-import { SettingsSheet } from "sheets/settings.slint";
+import { SettingsSheet } from "sheets/settings/settings.slint";
 import { ConflictSheet } from "sheets/conflict.slint";
 import { HistorySheet } from "sheets/history.slint";
 import { VaultHistorySheet } from "sheets/vault_history.slint";
@@ -26,7 +26,7 @@ import {
     ActionRow,
 } from "@origiri-mobile/widgets.slint";
 export { PickerIconEntry } from "sheets/icon_picker.slint";
-import { SettingsAdapter } from "settings_adapter.slint";
+import { SettingsAdapter } from "sheets/settings/adapter.slint";
 export { SettingsAdapter }
 
 // Drives one full-screen sheet's "hop up from the bottom, swipe down to
@@ -502,7 +502,7 @@ export component App inherits Window {
             return reject;
         }
 
-        // Layer 1: Content Area with 3 screens (swiping disabled to free gestures)
+        // Layer 1: Content Area with 3 pages (swiping disabled to free gestures)
         content-box := Rectangle {
             x: 0px;
             y: 0px;
@@ -1125,7 +1125,7 @@ export component App inherits Window {
         // Measurement probes for `origiri_richtext_flow::Measure`
         // (`src/render/mod.rs`'s `RealMeasure`): off-screen elements
         // Rust sets properties on and reads `preferred-width` back from,
-        // same technique `screens/editor.slint`'s `LineNumberGutter` uses
+        // same technique `pages/editor/editor.slint`'s `LineNumberGutter` uses
         // for line-height, parameterized via properties instead of a fixed
         // probe string so Rust can ask about arbitrary text/elements.
         // Always present (not behind an `if`) so they're never torn down

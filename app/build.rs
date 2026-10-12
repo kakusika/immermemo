@@ -30,7 +30,7 @@ fn main() {
     // `rendered_block.slint` used to come from a separate `crates/
     // editor-slint` the same way, but that crate had no other consumer and
     // no Rust code of its own, so its `ui/` moved into this crate's own
-    // `ui/screens/` directly (see
+    // `ui/pages/editor/` and `ui/render/` directly (see
     // `.agents/tasks/fold-editor-slint-into-apps-slint.md`).
     let origiri_mobile_ui_dir = std::env::var("DEP_ORIGIRI_MOBILE_UI_DIR").unwrap();
     // `origiri-mobile`'s own `.slint` now unconditionally imports

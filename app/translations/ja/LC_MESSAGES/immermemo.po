@@ -277,472 +277,472 @@ msgctxt "VaultHistorySheet"
 msgid "Creating or syncing notes will record the vault's history here."
 msgstr "ノートを作成または同期すると、保管庫の履歴がここに表示されます。"
 
-#: ui/sheets/settings.slint:125
+#: ui/sheets/settings/settings.slint:125
 msgctxt "SettingsSheet"
 msgid "Interface"
 msgstr "インターフェース"
 
-#: ui/sheets/settings.slint:126
+#: ui/sheets/settings/settings.slint:126
 msgctxt "SettingsSheet"
 msgid "Sync & Remote"
 msgstr "同期とリモート"
 
-#: ui/sheets/settings.slint:127
+#: ui/sheets/settings/settings.slint:127
 msgctxt "SettingsSheet"
 msgid "Vaults"
 msgstr "保管庫"
 
-#: ui/sheets/settings.slint:128
+#: ui/sheets/settings/settings.slint:128
 msgctxt "SettingsSheet"
 msgid "About"
 msgstr "このアプリ"
 
-#: ui/sheets/settings.slint:129
+#: ui/sheets/settings/settings.slint:129
 msgctxt "SettingsSheet"
 msgid "Settings"
 msgstr "設定"
 
-#: ui/sheets/settings.slint:179
+#: ui/sheets/settings/settings.slint:179
 msgctxt "SettingsSheet"
 msgid "Other"
 msgstr "その他"
 
-#: ui/sheets/settings.slint:217
+#: ui/sheets/settings/settings.slint:217
 msgctxt "SettingsSheet"
 msgid "Info"
 msgstr "情報"
 
-#: ui/sheets/settings.slint:264
+#: ui/sheets/settings/settings.slint:264
 msgctxt "SettingsSheet"
 msgid "Theme"
 msgstr "テーマ"
 
-#: ui/sheets/settings.slint:270
+#: ui/sheets/settings/settings.slint:270
 msgctxt "SettingsSheet"
 msgid "System"
 msgstr "システム"
 
-#: ui/sheets/settings.slint:270
+#: ui/sheets/settings/settings.slint:270
 msgctxt "SettingsSheet"
 msgid "Light"
 msgstr "ライト"
 
-#: ui/sheets/settings.slint:270
+#: ui/sheets/settings/settings.slint:270
 msgctxt "SettingsSheet"
 msgid "Dark"
 msgstr "ダーク"
 
-#: ui/sheets/settings.slint:289
+#: ui/sheets/settings/settings.slint:289
 msgctxt "SettingsSheet"
 msgid "Editor Font Size"
 msgstr "エディタのフォントサイズ"
 
-#: ui/sheets/settings.slint:295
+#: ui/sheets/settings/settings.slint:295
 msgctxt "SettingsSheet"
 msgid "Small (14)"
 msgstr "小 (14)"
 
-#: ui/sheets/settings.slint:295
+#: ui/sheets/settings/settings.slint:295
 msgctxt "SettingsSheet"
 msgid "Medium (17)"
 msgstr "中 (17)"
 
-#: ui/sheets/settings.slint:295
+#: ui/sheets/settings/settings.slint:295
 msgctxt "SettingsSheet"
 msgid "Large (20)"
 msgstr "大 (20)"
 
-#: ui/sheets/settings.slint:314
+#: ui/sheets/settings/settings.slint:314
 msgctxt "SettingsSheet"
 msgid "UI Scale"
 msgstr "UIの拡大率"
 
-#: ui/sheets/settings.slint:352
+#: ui/sheets/settings/settings.slint:352
 msgctxt "SettingsSheet"
 msgid "Remote repository URL"
 msgstr "リモートリポジトリのURL"
 
-#: ui/sheets/settings.slint:359
+#: ui/sheets/settings/settings.slint:359
 msgctxt "SettingsSheet"
 msgid "https://github.com/you/notes.git"
 msgstr "https://github.com/you/notes.git"
 
-#: ui/sheets/settings.slint:367
+#: ui/sheets/settings/settings.slint:367
 msgctxt "SettingsSheet"
 msgid "Access token"
 msgstr "アクセストークン"
 
-#: ui/sheets/settings.slint:374
+#: ui/sheets/settings/settings.slint:374
 msgctxt "SettingsSheet"
 msgid "Leave blank to keep the saved token"
 msgstr "保存済みのトークンを使う場合は空欄のまま"
 
-#: ui/sheets/settings.slint:374
+#: ui/sheets/settings/settings.slint:374
 msgctxt "SettingsSheet"
 msgid "Personal access token"
 msgstr "パーソナルアクセストークン"
 
-#: ui/sheets/settings.slint:392
+#: ui/sheets/settings/settings.slint:392
 msgctxt "SettingsSheet"
 msgid "Syncing..."
 msgstr "同期中..."
 
-#: ui/sheets/settings.slint:392
+#: ui/sheets/settings/settings.slint:392
 msgctxt "SettingsSheet"
 msgid "Sync Now"
 msgstr "今すぐ同期"
 
-#: ui/sheets/settings.slint:398
+#: ui/sheets/settings/settings.slint:398
 msgctxt "SettingsSheet"
 msgid "Save Remote"
 msgstr "リモートを保存"
 
-#: ui/sheets/settings.slint:427
+#: ui/sheets/settings/settings.slint:427
 msgctxt "SettingsSheet"
 msgid "Active Vault"
 msgstr "現在の保管庫"
 
-#: ui/sheets/settings.slint:436
+#: ui/sheets/settings/settings.slint:436
 msgctxt "SettingsSheet"
 msgid "Default"
 msgstr "デフォルト"
 
-#: ui/sheets/settings.slint:456
+#: ui/sheets/settings/settings.slint:456
 msgctxt "SettingsSheet"
 msgid "Manage & Switch Vaults →"
 msgstr "保管庫の管理・切り替え →"
 
-#: ui/sheets/settings.slint:483
+#: ui/sheets/settings/settings.slint:483
 msgctxt "SettingsSheet"
 msgid "Immermemo v{}"
 msgstr "Immermemo v{}"
 
-#: ui/sheets/settings.slint:490
+#: ui/sheets/settings/settings.slint:490
 msgctxt "SettingsSheet"
 msgid ""
 "A mobile note app for writing Tomet (.tmt) notes, synced over git without "
 "git touching user files."
 msgstr "Tomet (.tmt) 形式のノートを書くモバイルノートアプリ。gitがユーザーのファイルに触れることなく同期します。"
 
-#: ui/sheets/settings.slint:501
+#: ui/sheets/settings/settings.slint:501
 msgctxt "SettingsSheet"
 msgid "AST-level three-way merge with conflict tracking (@conflict)."
 msgstr "AST単位の3-wayマージと競合追跡 (@conflict) に対応しています。"
 
-#: ui/screens/search.slint:60
+#: ui/pages/search.slint:60
 msgctxt "SearchScreen"
 msgid "Search note titles and contents..."
 msgstr "ノートのタイトルや本文を検索..."
 
-#: ui/screens/search.slint:139
+#: ui/pages/search.slint:139
 msgctxt "SearchScreen"
 msgid "No notes match \"{}\""
 msgstr "\"{}\" に一致するノートはありません"
 
-#: ui/screens/search.slint:163
+#: ui/pages/search.slint:163
 msgctxt "SearchScreen"
 msgid "Search notes by title or contents"
 msgstr "タイトルや本文でノートを検索できます"
 
-#: ui/screens/files.slint:101
+#: ui/pages/files.slint:101
 msgctxt "FilesScreen"
 msgid "Library"
 msgstr "ライブラリ"
 
-#: ui/screens/files.slint:101 ui/screens/files.slint:133
+#: ui/pages/files.slint:101 ui/pages/files.slint:133
 msgctxt "FilesScreen"
 msgid "Directory"
 msgstr "ディレクトリ"
 
-#: ui/screens/files.slint:317 ui/screens/files.slint:346
+#: ui/pages/files.slint:317 ui/pages/files.slint:346
 msgctxt "FilesScreen"
 msgid "List"
 msgstr "リスト"
 
-#: ui/screens/files.slint:154
+#: ui/pages/files.slint:154
 msgctxt "FilesScreen"
 msgid "Diary"
 msgstr "日記"
 
-#: ui/screens/files.slint:102
+#: ui/pages/files.slint:102
 msgctxt "FilesScreen"
 msgid "No notes yet"
 msgstr "ノートがありません"
 
-#: ui/screens/files.slint:110
+#: ui/pages/files.slint:110
 msgctxt "FilesScreen"
 msgid "Tap + below to create your first note"
 msgstr "下の＋をタップして最初のノートを作成しましょう"
 
-#: ui/screens/files.slint:375
+#: ui/pages/files.slint:375
 msgctxt "FilesScreen"
 msgid "This folder is empty"
 msgstr "このフォルダは空です"
 
-#: ui/screens/files.slint:346
+#: ui/pages/files.slint:346
 msgctxt "FilesScreen"
 msgid "Grid"
 msgstr "グリッド"
 
 #. Vault info
-#: ui/screens/home.slint:63
+#: ui/pages/home.slint:63
 msgctxt "HomeScreen"
 msgid "Default"
 msgstr "デフォルト"
 
-#: ui/screens/home.slint:91
+#: ui/pages/home.slint:91
 msgctxt "HomeScreen"
 msgid "Home"
 msgstr "ホーム"
 
-#: ui/screens/home.slint:149
+#: ui/pages/home.slint:149
 msgctxt "HomeScreen"
 msgid "Current Vault"
 msgstr "現在の保管庫"
 
-#: ui/screens/home.slint:157 ui/screens/home.slint:188
+#: ui/pages/home.slint:157 ui/pages/home.slint:188
 msgctxt "HomeScreen"
 msgid "Notes"
 msgstr "ノート数"
 
-#: ui/screens/home.slint:204
+#: ui/pages/home.slint:204
 msgctxt "HomeScreen"
 msgid "Conflicts"
 msgstr "競合"
 
-#: ui/screens/home.slint:231
+#: ui/pages/home.slint:231
 msgctxt "HomeScreen"
 msgid "Sync Status"
 msgstr "同期ステータス"
 
-#: ui/screens/home.slint:254 ui/screens/home.slint:532
+#: ui/pages/home.slint:254 ui/pages/home.slint:532
 msgctxt "HomeScreen"
 msgid "Syncing..."
 msgstr "同期中..."
 
-#: ui/screens/home.slint:312
+#: ui/pages/home.slint:312
 msgctxt "HomeScreen"
 msgid "Sync failed"
 msgstr "同期に失敗しました"
 
-#: ui/screens/home.slint:399
+#: ui/pages/home.slint:399
 msgctxt "HomeScreen"
 msgid "Copied"
 msgstr "コピーしました"
 
-#: ui/screens/home.slint:399
+#: ui/pages/home.slint:399
 msgctxt "HomeScreen"
 msgid "Copy Error"
 msgstr "エラーをコピー"
 
-#: ui/screens/home.slint:435
+#: ui/pages/home.slint:435
 msgctxt "HomeScreen"
 msgid "Retry"
 msgstr "再試行"
 
-#: ui/screens/home.slint:474
+#: ui/pages/home.slint:474
 msgctxt "HomeScreen"
 msgid "No remote configured"
 msgstr "リモート未設定"
 
-#: ui/screens/home.slint:481
+#: ui/pages/home.slint:481
 msgctxt "HomeScreen"
 msgid "Set a git remote to enable automatic sync"
 msgstr "Gitリモートを設定すると自動同期できます"
 
-#: ui/screens/home.slint:503
+#: ui/pages/home.slint:503
 msgctxt "HomeScreen"
 msgid "Settings"
 msgstr "設定"
 
-#: ui/screens/home.slint:532
+#: ui/pages/home.slint:532
 msgctxt "HomeScreen"
 msgid "Up to date"
 msgstr "同期完了"
 
-#: ui/screens/home.slint:540
+#: ui/pages/home.slint:540
 msgctxt "HomeScreen"
 msgid "Checking for changes with the remote"
 msgstr "リモートとの差分を確認しています"
 
-#: ui/screens/home.slint:541
+#: ui/pages/home.slint:541
 msgctxt "HomeScreen"
 msgid "Last synced: {}"
 msgstr "最終同期: {}"
 
-#: ui/screens/home.slint:541
+#: ui/pages/home.slint:541
 msgctxt "HomeScreen"
 msgid "Local and remote are in sync"
 msgstr "ローカルとリモートは同期済みです"
 
-#: ui/screens/home.slint:576
+#: ui/pages/home.slint:576
 msgctxt "HomeScreen"
 msgid "Sync"
 msgstr "同期"
 
-#: ui/screens/home.slint:597
+#: ui/pages/home.slint:597
 msgctxt "HomeScreen"
 msgid "Unresolved Conflicts"
 msgstr "未解決のコンフリクト"
 
-#: ui/screens/home.slint:630
+#: ui/pages/home.slint:630
 msgctxt "HomeScreen"
 msgid "{n} note has a conflict"
 msgid_plural "{n} notes have conflicts"
 msgstr[0] "{n} 件のノートに競合があります"
 
-#: ui/screens/home.slint:639
+#: ui/pages/home.slint:639
 msgctxt "HomeScreen"
 msgid "Tap to open and resolve conflicted notes →"
 msgstr "タップして競合ノートを開く・解決する →"
 
-#: ui/screens/home.slint:658
+#: ui/pages/home.slint:658
 msgctxt "HomeScreen"
 msgid "Quick Actions"
 msgstr "クイックアクション"
 
-#: ui/screens/home.slint:670
+#: ui/pages/home.slint:670
 msgctxt "HomeScreen"
 msgid "New Note"
 msgstr "新しいノート"
 
-#: ui/screens/properties.slint:40
+#: ui/pages/editor/properties.slint:40
 msgctxt "PropertiesScreen"
 msgid "Properties"
 msgstr "プロパティ"
 
-#: ui/screens/properties.slint:59
+#: ui/pages/editor/properties.slint:59
 msgctxt "PropertiesScreen"
 msgid "No note is currently open."
 msgstr "現在開いているノートはありません。"
 
-#: ui/screens/properties.slint:91
+#: ui/pages/editor/properties.slint:91
 msgctxt "PropertiesScreen"
 msgid "Note Info"
 msgstr "ノート情報"
 
-#: ui/screens/properties.slint:126
+#: ui/pages/editor/properties.slint:126
 msgctxt "PropertiesScreen"
 msgid "Characters"
 msgstr "文字数"
 
-#: ui/screens/properties.slint:143
+#: ui/pages/editor/properties.slint:143
 msgctxt "PropertiesScreen"
 msgid "Words"
 msgstr "単語数"
 
-#: ui/screens/properties.slint:160
+#: ui/pages/editor/properties.slint:160
 msgctxt "PropertiesScreen"
 msgid "Lines"
 msgstr "行数"
 
-#: ui/screens/properties.slint:202
+#: ui/pages/editor/properties.slint:202
 msgctxt "PropertiesScreen"
 msgid "{n} conflict found"
 msgid_plural "{n} conflicts found"
 msgstr[0] "{n} 箇所の競合があります"
 
-#: ui/screens/properties.slint:203
+#: ui/pages/editor/properties.slint:203
 msgctxt "PropertiesScreen"
 msgid "Conflict detected"
 msgstr "競合が発生しています"
 
-#: ui/screens/properties.slint:225
+#: ui/pages/editor/properties.slint:225
 msgctxt "PropertiesScreen"
 msgid "📱 Your changes (Local):"
 msgstr "📱 あなたの変更 (Local):"
 
-#: ui/screens/properties.slint:250
+#: ui/pages/editor/properties.slint:250
 msgctxt "PropertiesScreen"
 msgid "☁️ Remote changes (Remote):"
 msgstr "☁️ リモートの変更 (Remote):"
 
-#: ui/screens/properties.slint:276
+#: ui/pages/editor/properties.slint:276
 msgctxt "PropertiesScreen"
 msgid "🔍 Open resolution sheet"
 msgstr "🔍 解決シートを開いて確認・解決"
 
-#: ui/screens/properties.slint:294
+#: ui/pages/editor/properties.slint:294
 msgctxt "PropertiesScreen"
 msgid "Keep Mine"
 msgstr "自分の変更を採用"
 
-#: ui/screens/properties.slint:300
+#: ui/pages/editor/properties.slint:300
 msgctxt "PropertiesScreen"
 msgid "Keep Theirs"
 msgstr "相手の変更を採用"
 
-#: ui/screens/properties.slint:314
+#: ui/pages/editor/properties.slint:314
 msgctxt "PropertiesScreen"
 msgid "Actions"
 msgstr "操作"
 
-#: ui/screens/properties.slint:330
+#: ui/pages/editor/properties.slint:330
 msgctxt "PropertiesScreen"
 msgid "Rename..."
 msgstr "名前を変更..."
 
-#: ui/screens/properties.slint:335
+#: ui/pages/editor/properties.slint:335
 msgctxt "PropertiesScreen"
 msgid "Delete Note..."
 msgstr "ノートを削除..."
 
-#: ui/screens/editor.slint:193
+#: ui/pages/editor/editor.slint:193
 msgctxt "EditorScreen"
 msgid "Conflict"
 msgstr "競合"
 
-#: ui/screens/editor.slint:214
+#: ui/pages/editor/editor.slint:214
 msgctxt "EditorScreen"
 msgid "Open Resolution"
 msgstr "解決シートを開く"
 
-#: ui/screens/editor.slint:237
+#: ui/pages/editor/editor.slint:237
 msgctxt "EditorScreen"
 msgid "Next"
 msgstr "次へ"
 
-#: ui/screens/editor.slint:260
+#: ui/pages/editor/editor.slint:260
 msgctxt "EditorScreen"
 msgid "Keep Mine"
 msgstr "自分の変更を採用"
 
-#: ui/screens/editor.slint:283
+#: ui/pages/editor/editor.slint:283
 msgctxt "EditorScreen"
 msgid "Keep Theirs"
 msgstr "相手の変更を採用"
 
-#: ui/screens/editor.slint:310
+#: ui/pages/editor/editor.slint:310
 msgctxt "EditorScreen"
 msgid "No notes yet"
 msgstr "ノートがありません"
 
-#: ui/screens/editor.slint:310
+#: ui/pages/editor/editor.slint:310
 msgctxt "EditorScreen"
 msgid "No note selected"
 msgstr "ノートが選択されていません"
 
-#: ui/screens/editor.slint:319
+#: ui/pages/editor/editor.slint:319
 msgctxt "EditorScreen"
 msgid "Create your first note to start writing."
 msgstr "最初のノートを作成して書き始めましょう。"
 
-#: ui/screens/editor.slint:320
+#: ui/pages/editor/editor.slint:320
 msgctxt "EditorScreen"
 msgid "Choose a note from the list, or create a new one."
 msgstr "一覧からノートを選ぶか、新しいノートを作成してください。"
 
-#: ui/screens/editor.slint:344
+#: ui/pages/editor/editor.slint:344
 msgctxt "EditorScreen"
 msgid "+ New Note"
 msgstr "＋ 新しいノート"
 
-#: ui/screens/editor.slint:419
+#: ui/pages/editor/editor.slint:419
 msgctxt "EditorScreen"
 msgid "Untitled"
 msgstr "無題"
 
-#: ui/screens/editor.slint:435
+#: ui/pages/editor/editor.slint:435
 msgctxt "EditorScreen"
 msgid "Tap Edit or double-tap here to write."
 msgstr "「編集」をタップするか、ここをダブルタップして書き始めてください。"

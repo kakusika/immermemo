@@ -1,6 +1,6 @@
 //! Converts [`flow::note_body_items`]'s plain-data items into the
-//! Slint-generated `NoteBodyItemView` model `ui/screens/editor.slint`'s
-//! view-mode display draws (see `ui/screens/note_body.slint`'s
+//! Slint-generated `NoteBodyItemView` model `ui/pages/editor/editor.slint`'s
+//! view-mode display draws (see `ui/render/note_body.slint`'s
 //! `NoteBodyView`). The classification decision -- including which
 //! identity looks like what -- lives in [`classify`] (its own `REGISTRY`),
 //! which knows nothing about Slint; this module is just the seam between
@@ -15,8 +15,8 @@
 //! `NoteBodyItemView`/`RenderedBlock`/etc. are only real Rust types inside
 //! whichever crate's `slint::include_modules!()` call compiled a tree
 //! that imports them, and this crate is the only one that does
-//! (`ui/screens/` is source checked directly into it, same as every
-//! other screen).
+//! (`ui/` is source checked directly into it, same as every
+//! other page).
 //!
 //! A [`flow::NoteBodyItem::Flowed`] paragraph's content goes through
 //! `origiri_richtext_flow::layout_block` and comes back out as
@@ -70,7 +70,7 @@ fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> Note
 /// Measures against `app`'s hidden probe elements (`app.slint`'s
 /// `measure-probe-text-item`/`measure-probe-block-item`): set a probe
 /// property, read the matching `preferred-width`-derived property right
-/// back, synchronously. Same technique `screens/editor.slint`'s
+/// back, synchronously. Same technique `pages/editor/editor.slint`'s
 /// `LineNumberGutter` uses for line-height, just parameterized via
 /// properties instead of a fixed probe string. `font_size` and `elements`
 /// are fixed for the lifetime of one `layout_block` call (one paragraph,
