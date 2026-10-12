@@ -7,7 +7,7 @@ use slint::{ComponentHandle, SharedString};
 
 use crate::credentials::TokenCredentials;
 use crate::sync;
-use crate::App;
+use crate::{App, SettingsAdapter};
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use crate::cert;
 
@@ -31,11 +31,12 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
         let s = session.borrow();
         let Some(remote) = s.remote.clone() else {
             set_status(app, "No remote linked yet");
-            app.set_remote_url_draft(SharedString::new());
-            app.set_remote_token_draft(SharedString::new());
-            app.set_remote_has_token(false);
-            app.set_current_vault_name(vault_display_name(&s.vault_dir).into());
-            app.set_current_vault_path(s.vault_dir.display().to_string().into());
+            let settings = app.global::<SettingsAdapter>();
+            settings.set_url_draft(SharedString::new());
+            settings.set_token_draft(SharedString::new());
+            settings.set_has_token(false);
+            settings.set_current_vault_name(vault_display_name(&s.vault_dir).into());
+            settings.set_current_vault_path(s.vault_dir.display().to_string().into());
             app.set_settings_open(true);
             return;
         };

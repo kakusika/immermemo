@@ -121,16 +121,20 @@ pub fn run(
     #[cfg(target_os = "android")]
     android::splash::notify_on_first_frame(&app);
     select_system_translation();
+    let settings = app.global::<SettingsAdapter>();
     let font_size_choice = app_data.load_font_size().unwrap_or(1);
     let theme_choice = app_data.load_theme().unwrap_or(0);
+    settings.set_font_size_choice(font_size_choice);
     app.set_font_size_choice(font_size_choice);
     app.set_editor_font_size(match font_size_choice {
         0 => 14.0,
         2 => 20.0,
         _ => 17.0,
     });
+    settings.set_theme_choice(theme_choice);
     app.set_theme_choice(theme_choice);
     let status_bar_choice = app_data.load_status_bar_choice().unwrap_or(0);
+    settings.set_status_bar_choice(status_bar_choice);
     app.set_status_bar_choice(status_bar_choice);
     #[cfg(target_os = "android")]
     let status_bar_choice_cell = Rc::new(Cell::new(status_bar_choice));
@@ -141,14 +145,16 @@ pub fn run(
     if status_bar_choice == 2 {
         android::system_ui::set_status_bar_visible(false);
     }
+    settings.set_current_vault_name(vault_display_name(&vault_dir).into());
+    settings.set_current_vault_path(vault_dir.display().to_string().into());
     app.set_current_vault_name(vault_display_name(&vault_dir).into());
     app.set_current_vault_path(vault_dir.display().to_string().into());
     app.set_remote_configured(remote.is_some());
     update_provider_ui_state(&app, remote.as_deref());
     let ssh_pub = app_data.load_ssh_public_key();
-    app.set_ssh_key_present(ssh_pub.is_some());
-    app.set_ssh_public_key(ssh_pub.unwrap_or_default().into());
-    app.set_ssh_key_copied(false);
+    settings.set_ssh_key_present(ssh_pub.is_some());
+    settings.set_ssh_public_key(ssh_pub.unwrap_or_default().into());
+    settings.set_ssh_key_copied(false);
     let index = app_data
         .index_path(&vault_dir)
         .ok()
@@ -699,6 +705,7 @@ mod tests {
     }
 
     fn deep_link_import_preview_opens_settings_sheet(app: &App) {
+        let settings = app.global::<SettingsAdapter>();
         let pending = Rc::new(RefCell::new(None));
         let valid_payload = immermemo_core::transfer::TransferPayload {
             v: 1,
@@ -720,67 +727,68 @@ mod tests {
 
         assert!(app.get_settings_sheet_open());
         assert_eq!(app.get_settings_page(), 5);
-        assert_eq!(app.get_settings_transfer_tab(), 1);
-        assert!(app.get_import_preview_ready());
-        assert!(app.get_preview_has_interface());
-        assert!(app.get_preview_has_remote());
+        assert_eq!(settings.get_transfer_tab(), 1);
+        assert!(settings.get_import_preview_ready());
+        assert!(settings.get_preview_has_interface());
+        assert!(settings.get_preview_has_remote());
         assert_eq!(
-            app.get_preview_remote_url(),
+            settings.get_preview_remote_url(),
             "https://example.com/notes.git"
         );
-        assert!(app.get_preview_has_token());
+        assert!(settings.get_preview_has_token());
         assert!(pending.borrow().is_some());
     }
 
     fn provider_ui_state_tracks_github_forgejo_and_gitlab(app: &App) {
+        let settings = app.global::<SettingsAdapter>();
         // GitHub remote
         update_provider_ui_state(app, Some("https://github.com/octocat/notes.git"));
-        assert!(app.get_github_connected());
-        assert_eq!(app.get_github_username(), "octocat");
-        assert_eq!(app.get_github_repo_name(), "notes");
-        assert!(!app.get_forgejo_connected());
-        assert!(!app.get_gitlab_connected());
+        assert!(settings.get_github_connected());
+        assert_eq!(settings.get_github_username(), "octocat");
+        assert_eq!(settings.get_github_repo_name(), "notes");
+        assert!(!settings.get_forgejo_connected());
+        assert!(!settings.get_gitlab_connected());
 
         // Forgejo / Codeberg remote
         update_provider_ui_state(app, Some("https://codeberg.org/alice/immermemo-vault.git"));
-        assert!(!app.get_github_connected());
-        assert!(app.get_forgejo_connected());
-        assert_eq!(app.get_forgejo_username(), "alice");
-        assert_eq!(app.get_forgejo_instance(), "codeberg.org");
-        assert_eq!(app.get_forgejo_repo_name(), "immermemo-vault");
-        assert!(!app.get_gitlab_connected());
+        assert!(!settings.get_github_connected());
+        assert!(settings.get_forgejo_connected());
+        assert_eq!(settings.get_forgejo_username(), "alice");
+        assert_eq!(settings.get_forgejo_instance(), "codeberg.org");
+        assert_eq!(settings.get_forgejo_repo_name(), "immermemo-vault");
+        assert!(!settings.get_gitlab_connected());
 
         // Custom self-hosted Forgejo remote
         update_provider_ui_state(app, Some("https://git.example.com:3000/bob/my-notes"));
-        assert!(!app.get_github_connected());
-        assert!(app.get_forgejo_connected());
-        assert_eq!(app.get_forgejo_username(), "bob");
-        assert_eq!(app.get_forgejo_instance(), "git.example.com:3000");
-        assert_eq!(app.get_forgejo_repo_name(), "my-notes");
-        assert!(!app.get_gitlab_connected());
+        assert!(!settings.get_github_connected());
+        assert!(settings.get_forgejo_connected());
+        assert_eq!(settings.get_forgejo_username(), "bob");
+        assert_eq!(settings.get_forgejo_instance(), "git.example.com:3000");
+        assert_eq!(settings.get_forgejo_repo_name(), "my-notes");
+        assert!(!settings.get_gitlab_connected());
 
         // GitLab.com remote
         update_provider_ui_state(app, Some("https://gitlab.com/charlie/notes.git"));
-        assert!(!app.get_github_connected());
-        assert!(!app.get_forgejo_connected());
-        assert!(app.get_gitlab_connected());
-        assert_eq!(app.get_gitlab_username(), "charlie");
-        assert_eq!(app.get_gitlab_instance(), "gitlab.com");
-        assert_eq!(app.get_gitlab_repo_name(), "notes");
+        assert!(!settings.get_github_connected());
+        assert!(!settings.get_forgejo_connected());
+        assert!(settings.get_gitlab_connected());
+        assert_eq!(settings.get_gitlab_username(), "charlie");
+        assert_eq!(settings.get_gitlab_instance(), "gitlab.com");
+        assert_eq!(settings.get_gitlab_repo_name(), "notes");
 
         // Self-hosted GitLab remote with nested groups
         update_provider_ui_state(app, Some("git@gitlab.company.org:subgroup/team/notes.git"));
-        assert!(!app.get_github_connected());
-        assert!(!app.get_forgejo_connected());
-        assert!(app.get_gitlab_connected());
-        assert_eq!(app.get_gitlab_username(), "subgroup/team");
-        assert_eq!(app.get_gitlab_instance(), "gitlab.company.org");
-        assert_eq!(app.get_gitlab_repo_name(), "notes");
+        assert!(!settings.get_github_connected());
+        assert!(!settings.get_forgejo_connected());
+        assert!(settings.get_gitlab_connected());
+        assert_eq!(settings.get_gitlab_username(), "subgroup/team");
+        assert_eq!(settings.get_gitlab_instance(), "gitlab.company.org");
+        assert_eq!(settings.get_gitlab_repo_name(), "notes");
 
         // Disconnected
         update_provider_ui_state(app, None);
-        assert!(!app.get_github_connected());
-        assert!(!app.get_forgejo_connected());
-        assert!(!app.get_gitlab_connected());
+        assert!(!settings.get_github_connected());
+        assert!(!settings.get_forgejo_connected());
+        assert!(!settings.get_gitlab_connected());
     }
 }

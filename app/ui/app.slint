@@ -1,7 +1,8 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
-import { BottomNavBar, MiniNoteCard } from "components.slint";
+import { BottomNavBar } from "components.slint";
+import { MiniNoteBar } from "widgets/mini_note_bar.slint";
 import { EditorScreen } from "screens/editor.slint";
 import { NoteBodyItemView } from "screens/note_body.slint";
 import { RenderedBlock, RenderedBlockView } from "screens/rendered_block.slint";
@@ -25,6 +26,8 @@ import {
     ActionRow,
 } from "@origiri-mobile/widgets.slint";
 export { PickerIconEntry } from "sheets/icon_picker.slint";
+import { SettingsAdapter } from "settings_adapter.slint";
+export { SettingsAdapter }
 
 // Drives one full-screen sheet's "hop up from the bottom, swipe down to
 // dismiss" animation -- the same drag math `App` already runs for the
@@ -195,9 +198,6 @@ export component App inherits Window {
     in property <RenderedBlock> measure-probe-block;
     out property <length> measure-probe-block-width: measure-probe-block-item.preferred-width;
     in property <bool> remote-configured;
-    in-out property <string> remote-url-draft;
-    in-out property <string> remote-token-draft;
-    in property <bool> remote-has-token;
     in-out property <int> note-menu-index: -1;
     // Library Directory's List/Grid views -- see `files.slint`'s
     // `DirectoryEntry`/`BreadcrumbSegment` and
@@ -224,62 +224,10 @@ export component App inherits Window {
     in-out property <bool> settings-sheet-open: false;
     in-out property <bool> settings-open <=> root.settings-sheet-open;
     in-out property <int> settings-page: 0;
-    in-out property <int> settings-transfer-tab: 0;
-    in property <image> qr-image;
-    in-out property <bool> export-include-interface: true;
-    in-out property <bool> export-include-remote: true;
-    in-out property <bool> export-include-token: false;
-    in property <bool> transfer-copied: false;
-    in-out property <string> import-draft: "";
-    in property <bool> import-preview-ready: false;
-    in property <bool> preview-has-interface: false;
-    in property <bool> preview-has-remote: false;
-    in property <string> preview-remote-url: "";
-    in property <bool> preview-has-token: false;
-    in property <string> import-status-message: "";
-    in property <bool> import-status-is-error: false;
-    in property <bool> github-connected: false;
-    in property <string> github-username: "";
-    in property <string> github-repo-name: "";
-    in property <bool> github-auth-pending: false;
-    in property <string> github-user-code: "";
-    in property <string> github-verification-uri: "";
-    in property <string> github-auth-status: "";
-
-    in property <bool> forgejo-connected: false;
-    in property <string> forgejo-username: "";
-    in property <string> forgejo-instance: "";
-    in property <string> forgejo-repo-name: "";
-    in property <bool> forgejo-connecting: false;
-    in property <string> forgejo-status-message: "";
-    in property <bool> forgejo-status-is-error: false;
-    in-out property <int> sync-provider-tab: 0;
-    in-out property <string> forgejo-instance-draft: "https://codeberg.org";
-    in-out property <string> forgejo-token-draft: "";
-    in-out property <string> forgejo-repo-draft: "immermemo-notes";
-
-    in property <bool> gitlab-connected: false;
-    in property <string> gitlab-username: "";
-    in property <string> gitlab-instance: "";
-    in property <string> gitlab-repo-name: "";
-    in property <bool> gitlab-connecting: false;
-    in property <string> gitlab-status-message: "";
-    in property <bool> gitlab-status-is-error: false;
-    in-out property <string> gitlab-instance-draft: "https://gitlab.com";
-    in-out property <string> gitlab-token-draft: "";
-    in-out property <string> gitlab-repo-draft: "immermemo-notes";
-
-    in property <bool> ssh-key-present: false;
-    in property <string> ssh-public-key: "";
-    in property <bool> ssh-key-copied: false;
-
-    in-out property <bool> show-advanced-remote: false;
-
-
-    in-out property <int> font-size-choice: 1;
+    in-out property <int> font-size-choice <=> SettingsAdapter.font-size-choice;
     in-out property <length> editor-font-size: 17px;
-    in-out property <int> theme-choice: 0;
-    in-out property <int> status-bar-choice: 0;
+    in-out property <int> theme-choice <=> SettingsAdapter.theme-choice;
+    in-out property <int> status-bar-choice <=> SettingsAdapter.status-bar-choice;
     in-out property <float> ui-scale <=> Metrics.ui-scale;
     in-out property <bool> editor-edit-mode <=> pane.edit-mode;
     in-out property <int> directory-mode <=> files-screen.directory-mode;
@@ -327,32 +275,7 @@ export component App inherits Window {
     callback link();
     callback open-settings();
     callback close-settings();
-    callback font-size-changed(int);
-    callback theme-changed(int);
-    callback status-bar-changed(int);
     callback note-sheet-open-changed(bool);
-    callback save-remote(string, string);
-    callback refresh-transfer-qr();
-    callback export-options-changed(bool, bool, bool);
-    callback copy-transfer-link();
-    callback paste-import-clipboard();
-    callback review-import(string);
-    callback apply-import();
-    callback cancel-import-preview();
-    callback connect-github();
-    callback open-github-browser();
-    callback cancel-github-auth();
-    callback disconnect-github();
-
-    callback connect-forgejo(string, string, string);
-    callback disconnect-forgejo();
-
-    callback connect-gitlab(string, string, string);
-    callback disconnect-gitlab();
-
-    callback generate-ssh-key();
-    callback copy-ssh-public-key();
-
     callback rename-requested(int);
     callback delete-requested(int);
     callback confirm-rename(string);
@@ -507,77 +430,6 @@ export component App inherits Window {
     // drag's speed without needing to be as low as it was while the
     // measurement itself was still unreliable.
     property <float> fast-swipe-velocity: 0.6;
-    // mini-card-container never moves during its own gesture (see its own
-    // doc comment), so raw self.pressed-position/self.current-position are
-    // trustworthy here -- unlike the note sheet's header/body gestures,
-    // this one only needs a timestamp for velocity.
-    property <duration> mini-drag-start-time: 0ms;
-    // Which axis `mini-card-gesture`'s current drag locked onto, decided
-    // once at the first `moved` call of a gesture (by then `swiping` is
-    // already true, so 8px past the threshold in whichever direction won
-    // -- comparing dx/dy at that moment is reliable and doesn't need to
-    // be re-decided every frame). `handle-swipe-up` (open the note sheet)
-    // and `handle-swipe-left`/`-right` (reveal back/forward, below) share
-    // one `SwipeGestureHandler`, so `moved`/`swiped` need this to know
-    // which behavior the drag in progress means.
-    property <bool> mini-drag-locked: false;
-    property <bool> mini-drag-horizontal: false;
-    // How far `MiniNoteCard` has been dragged off its resting position to
-    // reveal the back/forward affordance fixed underneath it (see
-    // `mini-card-container`'s own doc comment). Rubber-banded (iOS
-    // overscroll's own formula: `limit * ratio / (1 + ratio)`, `ratio`
-    // being the raw drag scaled by a 0.55 resistance coefficient) rather
-    // than hard-clamped, so the drag visibly slows down the further past
-    // `mini-card-reveal-max` it goes instead of tracking the finger 1:1
-    // up to a wall -- never actually reaches `mini-card-reveal-max`
-    // itself (asymptotic), which is why the progress/committable
-    // properties below normalize against the *commit* threshold instead.
-    property <length> mini-card-reveal-dx: 0px;
-    // 1.3x a touch target -- the swipe itself is always available in
-    // both directions (see `mini-card-gesture`'s `handle-swipe-left/
-    // -right` below) regardless of `can-navigate-back`/`-forward`, so
-    // there's room to drag even when it won't do anything; the chevron
-    // not being drawn at all in that case (see below) is what tells the
-    // difference, not whether dragging responds.
-    property <length> mini-card-reveal-max: Metrics.touch * 1.3;
-    property <bool> is-dragging-mini-reveal: false;
-    animate mini-card-reveal-dx {
-        duration: root.is-dragging-mini-reveal ? 0ms : 200ms;
-        easing: ease-out;
-    }
-    pure function mini-reveal-rubber-band(dx: length, limit: length) -> length {
-        let coefficient = 0.55;
-        let ratio = (abs(dx) / limit) * coefficient;
-        let eased = limit * (ratio / (1.0 + ratio));
-        return dx < 0px ? -eased : eased;
-    }
-    // 0 at rest, 1.0 right at the drag distance that commits the
-    // navigation on release (`mini-card-reveal-threshold` below) --
-    // drives the revealed icon's opacity continuously the whole drag,
-    // on purpose: it's `-committable` below (separately gated on
-    // `can-navigate-back`/`-forward`) that marks the moment release
-    // would actually act, via the icon's own highlight/bounce.
-    property <float> mini-card-reveal-threshold: 0.6;
-    property <float> mini-reveal-back-progress: root.mini-card-reveal-dx > 0px
-        ? clamp((root.mini-card-reveal-dx / root.mini-card-reveal-max) / root.mini-card-reveal-threshold, 0.0, 1.0)
-        : 0.0;
-    property <float> mini-reveal-forward-progress: root.mini-card-reveal-dx < 0px
-        ? clamp((-root.mini-card-reveal-dx / root.mini-card-reveal-max) / root.mini-card-reveal-threshold, 0.0, 1.0)
-        : 0.0;
-    property <bool> mini-reveal-back-committable: root.can-navigate-back && root.mini-reveal-back-progress >= 1.0;
-    property <bool> mini-reveal-forward-committable: root.can-navigate-forward && root.mini-reveal-forward-progress >= 1.0;
-    // A discrete tick right as a drag crosses into "letting go now acts",
-    // same idea as `SheetDragState`'s own `threshold-passed` haptic.
-    changed mini-reveal-back-committable => {
-        if (root.mini-reveal-back-committable) {
-            root.trigger-haptic();
-        }
-    }
-    changed mini-reveal-forward-committable => {
-        if (root.mini-reveal-forward-committable) {
-            root.trigger-haptic();
-        }
-    }
     property <float> sheet-progress: root.is-dragging-sheet
         ? root.drag-sheet-progress
         : (root.note-sheet-open ? 1.0 : 0.0);
@@ -943,244 +795,52 @@ export component App inherits Window {
         }
 
         // Mini note card container (anchored above the bottom nav bar)
-        // Fixed at resting position so upward swipe gesture coordinates never shift.
-        // Fades out quickly as sheet progress increases (editor sheet expands over it).
-        // The hit-test area is deliberately bigger than MiniNoteCard's own
-        // visual bounds (more room above than to the sides/below, since
-        // that's the direction being swiped, and bottom stays modest to
-        // avoid stealing taps from the nav bar ~8px below). A thumb swipe
-        // starting just outside the visible pill otherwise reaches nothing
-        // at all -- mini-card-gesture never sees the press, so it doesn't
-        // even get a chance to recognize or reject it.
-        mini-card-container := Rectangle {
+        mini-note-bar := MiniNoteBar {
             x: Metrics.spacing-sm - 12px * Metrics.ui-scale;
             y: root.mini-card-resting-y - 20px * Metrics.ui-scale;
             width: parent.width - 2 * Metrics.spacing-sm + 24px * Metrics.ui-scale;
             height: Metrics.mini-card-height + 26px * Metrics.ui-scale;
             visible: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open && !root.settings-sheet-open;
+            gesture-enabled: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open && !root.settings-sheet-open;
 
-            mini-card-gesture := SwipeGestureHandler {
-                width: 100%;
-                height: 100%;
-                enabled: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open && !root.settings-sheet-open;
-                handle-swipe-up: true;
-                // Always recognized in both directions, even with no
-                // history to go to that way -- unlike the tab swiper
-                // (which disables whichever edge is already at its end),
-                // a swipe that does nothing here still needs to *feel*
-                // recognized (the card still drags, just a muted icon
-                // with no highlight/bounce comes up, see below) rather
-                // than silently not responding at all.
-                handle-swipe-right: true;
-                handle-swipe-left: true;
+            title: root.current-title;
+            preview: root.snippets.length > root.current && root.current >= 0 ? root.snippets[root.current] : "";
+            has-conflict: root.current-has-conflict;
+            syncing: root.syncing;
+            remote-configured: root.remote-configured;
+            status: root.status;
+            status-is-error: root.status-is-error;
 
-                changed pressed-position => {
-                    root.mini-drag-start-time = animation-tick();
-                    root.mini-drag-locked = false;
+            can-navigate-back: root.can-navigate-back;
+            can-navigate-forward: root.can-navigate-forward;
+
+            resting-y: root.mini-card-resting-y;
+            sheet-progress: root.sheet-progress;
+            fast-swipe-velocity: root.fast-swipe-velocity;
+
+            open-sheet => { root.open-note-sheet(); }
+            sync => { root.sync(); }
+            navigate-back => { root.navigate-back(); }
+            navigate-forward => { root.navigate-forward(); }
+            trigger-haptic => { root.trigger-haptic(); }
+
+            sheet-drag-started => { root.is-dragging-sheet = true; }
+            sheet-drag-moved(p) => {
+                root.is-dragging-sheet = true;
+                root.drag-sheet-progress = p;
+            }
+            sheet-drag-ended(v, should-open) => {
+                root.is-dragging-sheet = false;
+                if (should-open || root.drag-sheet-progress > 0.25) {
+                    root.open-note-sheet();
+                } else {
+                    root.note-sheet-open = false;
+                    root.drag-sheet-progress = 0.0;
                 }
-
-                moved => {
-                    if (self.swiping) {
-                        let dx = self.current-position.x - self.pressed-position.x;
-                        let dy = self.current-position.y - self.pressed-position.y;
-                        if (!root.mini-drag-locked) {
-                            root.mini-drag-locked = true;
-                            root.mini-drag-horizontal = abs(dx) > abs(dy);
-                        }
-                        if (root.mini-drag-horizontal) {
-                            root.is-dragging-mini-reveal = true;
-                            root.mini-card-reveal-dx = root.mini-reveal-rubber-band(dx, root.mini-card-reveal-max);
-                        } else {
-                            root.is-dragging-sheet = true;
-                            let upward = max(0px, -dy);
-                            let travel = max(100px, root.mini-card-resting-y);
-                            root.drag-sheet-progress = clamp(upward / travel, 0.0, 1.0);
-                        }
-                    }
-                }
-
-                swiped => {
-                    if (root.mini-drag-horizontal) {
-                        let dx = self.current-position.x - self.pressed-position.x;
-                        let elapsed-ms = max(1.0, (animation-tick() - root.mini-drag-start-time) / 1ms);
-                        let velocity = (dx / 1px) / elapsed-ms;
-                        let fast = abs(velocity) > root.fast-swipe-velocity * Metrics.ui-scale;
-                        if (dx > 0 && root.can-navigate-back && (root.mini-reveal-back-committable || fast)) {
-                            root.trigger-haptic();
-                            root.navigate-back();
-                        } else if (dx < 0 && root.can-navigate-forward && (root.mini-reveal-forward-committable || fast)) {
-                            root.trigger-haptic();
-                            root.navigate-forward();
-                        }
-                        root.is-dragging-mini-reveal = false;
-                        root.mini-card-reveal-dx = 0px;
-                    } else {
-                        root.is-dragging-sheet = false;
-                        let dy = self.current-position.y - self.pressed-position.y;
-                        let elapsed-ms = max(1.0, (animation-tick() - root.mini-drag-start-time) / 1ms);
-                        let velocity = (-dy / 1px) / elapsed-ms;
-                        // Same reasoning as the note sheet's close gesture: no
-                        // extra minimum-distance guard, `swiped` already means
-                        // SwipeGestureHandler recognized this as a swipe.
-                        if (velocity > root.fast-swipe-velocity * Metrics.ui-scale || root.drag-sheet-progress > 0.25) {
-                            root.open-note-sheet();
-                        } else {
-                            root.note-sheet-open = false;
-                            root.drag-sheet-progress = 0.0;
-                        }
-                    }
-                }
-
-                cancelled => {
-                    if (root.mini-drag-horizontal) {
-                        root.is-dragging-mini-reveal = false;
-                        root.mini-card-reveal-dx = 0px;
-                    } else {
-                        root.is-dragging-sheet = false;
-                        root.drag-sheet-progress = 0.0;
-                    }
-                }
-
-                MiniNoteCard {
-                    x: 12px * Metrics.ui-scale + root.mini-card-reveal-dx;
-                    width: parent.width - 24px * Metrics.ui-scale;
-                    height: Metrics.mini-card-height;
-                    // Tracks toward the sheet's open (fully-on-screen)
-                    // position as it opens, same way editor-sheet's header
-                    // does -- this is the mirror image of its offset, since
-                    // mini-card-container (before its hit-area margin) sits
-                    // exactly where editor-sheet rests when fully closed. A
-                    // passive visual property like any other here:
-                    // mini-card-gesture (the thing that measures the
-                    // swipe-up gesture) never reads this, so there's no
-                    // feedback loop into its own coordinates. The leading
-                    // term re-centers it within the enlarged hit area.
-                    y: 20px * Metrics.ui-scale - root.sheet-progress * root.mini-card-resting-y;
-                    opacity: max(0.0, 1.0 - root.sheet-progress * 10.0);
-                    title: root.current-title;
-                    preview: root.snippets.length > root.current && root.current >= 0 ? root.snippets[root.current] : "";
-                    has-conflict: root.current-has-conflict;
-                    syncing: root.syncing;
-                    remote-configured: root.remote-configured;
-                    status: root.status;
-                    status-is-error: root.status-is-error;
-                    clicked => { root.open-note-sheet(); }
-                    sync => { root.sync(); }
-                }
-
-                // Fixed-position back/forward affordances for the
-                // history swipe above: never move, and aren't themselves
-                // tappable (the swipe commits directly on release, same
-                // as the note sheet's own close gesture). Drawn after
-                // (so on top of) `MiniNoteCard` above and shown purely
-                // through `opacity` -- `MiniNoteCard`'s own `x` sliding
-                // by `mini-card-reveal-dx` is a complementary "something
-                // is happening" motion, not what hides/reveals these: an
-                // opaque sibling drawn *under* an icon would clip it
-                // wherever it still happened to overlap, fighting the
-                // fade instead of just letting it fade. The chevron
-                // itself is gated on `can-navigate-back`/`-forward`
-                // (`if`, not just `opacity`) so a swipe that can't do
-                // anything shows nothing rather than a muted chevron --
-                // clearer that the gesture is a no-op. `y`/`height`
-                // match `MiniNoteCard`'s own *resting* span (not this
-                // whole gesture area's 100%, which has extra margin above
-                // than below for its own touch target -- centering
-                // against that taller box would visibly sit off-center
-                // from the card itself); sheet-progress-driven movement
-                // doesn't need accounting for here since both this
-                // gesture and `mini-card-container` itself are only
-                // enabled/visible while the note sheet is closed, i.e.
-                // sheet-progress 0.
-                VerticalLayout {
-                    x: 12px * Metrics.ui-scale;
-                    y: 20px * Metrics.ui-scale;
-                    width: root.mini-card-reveal-max;
-                    height: Metrics.mini-card-height;
-                    alignment: center;
-
-                    // `VerticalLayout`'s cross axis (horizontal) has no
-                    // alignment of its own -- same quirk AGENTS.md
-                    // documents for `HorizontalLayout`'s cross axis,
-                    // mirrored. Without this wrapper the fixed-width
-                    // `Rectangle` below sat at this layout's x: 0 (its
-                    // left edge) instead of centered in the reveal slot.
-                    HorizontalLayout {
-                        alignment: center;
-
-                        Rectangle {
-                            width: Metrics.icon-md + 16px * Metrics.ui-scale;
-                            height: self.width;
-                            border-radius: self.width / 2;
-                            // No highlight at all once it's clear this swipe
-                            // can't do anything -- the chevron not being
-                            // drawn below already says that, this would just
-                            // repeat it.
-                            background: root.can-navigate-back
-                                ? Palette.accent-background.with-alpha(0.18 * root.mini-reveal-back-progress)
-                                : transparent;
-
-                            // Not drawn at all when navigation isn't possible
-                            // -- a muted chevron still reads as "something I
-                            // could maybe do", nothing reads as "this gesture
-                            // does nothing".
-                            if root.can-navigate-back: Icon {
-                                source: TablerIcons.chevron-left;
-                                color: Palette.accent-background;
-                                // Stays put while merely dragging (the fade-in
-                                // via `opacity` below is the whole story up to
-                                // that point); a bouncy overshoot ("easeOutBack")
-                                // right at the moment release would commit.
-                                width: root.mini-reveal-back-committable
-                                    ? Metrics.icon-md * 1.45 : Metrics.icon-md;
-                                height: self.width;
-                                x: (parent.width - self.width) / 2;
-                                y: (parent.height - self.height) / 2;
-                                opacity: root.mini-reveal-back-progress;
-                                animate width, height {
-                                    duration: 420ms;
-                                    easing: cubic-bezier(0.34, 1.56, 0.64, 1.0);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                VerticalLayout {
-                    x: parent.width - 12px * Metrics.ui-scale - root.mini-card-reveal-max;
-                    y: 20px * Metrics.ui-scale;
-                    width: root.mini-card-reveal-max;
-                    height: Metrics.mini-card-height;
-                    alignment: center;
-
-                    HorizontalLayout {
-                        alignment: center;
-
-                        Rectangle {
-                            width: Metrics.icon-md + 16px * Metrics.ui-scale;
-                            height: self.width;
-                            border-radius: self.width / 2;
-                            background: root.can-navigate-forward
-                                ? Palette.accent-background.with-alpha(0.18 * root.mini-reveal-forward-progress)
-                                : transparent;
-
-                            if root.can-navigate-forward: Icon {
-                                source: TablerIcons.chevron-right;
-                                color: Palette.accent-background;
-                                width: root.mini-reveal-forward-committable
-                                    ? Metrics.icon-md * 1.45 : Metrics.icon-md;
-                                height: self.width;
-                                x: (parent.width - self.width) / 2;
-                                y: (parent.height - self.height) / 2;
-                                opacity: root.mini-reveal-forward-progress;
-                                animate width, height {
-                                    duration: 420ms;
-                                    easing: cubic-bezier(0.34, 1.56, 0.64, 1.0);
-                                }
-                            }
-                        }
-                    }
-                }
+            }
+            sheet-drag-cancelled => {
+                root.is-dragging-sheet = false;
+                root.drag-sheet-progress = 0.0;
             }
         }
 
@@ -1279,95 +939,9 @@ export component App inherits Window {
                 sheet-drag-swiped(dy, v) => { settings-sheet-drag.swiped(dy, v); }
                 sheet-drag-cancelled => { settings-sheet-drag.cancelled(); }
                 show-back: true;
-                has-token: root.remote-has-token;
-                url-draft <=> root.remote-url-draft;
-                token-draft <=> root.remote-token-draft;
-                syncing: root.syncing;
-                sync-status: root.status;
-                current-vault-name: root.current-vault-name;
-                current-vault-path: root.current-vault-path;
-                font-size-choice <=> root.font-size-choice;
-                theme-choice <=> root.theme-choice;
-                status-bar-choice <=> root.status-bar-choice;
                 page <=> root.settings-page;
-                transfer-tab <=> root.settings-transfer-tab;
                 inset-top: root.inset-top;
                 inset-bottom: root.inset-bottom;
-                save-remote(url, token) => { root.save-remote(url, token); }
-                sync => { root.sync(); }
-                open-vaults => { root.open-vault-sheet(); }
-                font-size-changed(c) => { root.font-size-changed(c); }
-                theme-changed(c) => { root.theme-changed(c); }
-                status-bar-changed(c) => { root.status-bar-changed(c); }
-                qr-image: root.qr-image;
-                export-include-interface <=> root.export-include-interface;
-                export-include-remote <=> root.export-include-remote;
-                export-include-token <=> root.export-include-token;
-                transfer-copied: root.transfer-copied;
-                import-draft <=> root.import-draft;
-                import-preview-ready: root.import-preview-ready;
-                preview-has-interface: root.preview-has-interface;
-                preview-has-remote: root.preview-has-remote;
-                preview-remote-url: root.preview-remote-url;
-                preview-has-token: root.preview-has-token;
-                import-status-message: root.import-status-message;
-                import-status-is-error: root.import-status-is-error;
-                refresh-transfer-qr => { root.refresh-transfer-qr(); }
-                export-options-changed(i, r, t) => { root.export-options-changed(i, r, t); }
-                copy-transfer-link => { root.copy-transfer-link(); }
-                paste-import-clipboard => { root.paste-import-clipboard(); }
-                review-import(d) => { root.review-import(d); }
-                apply-import => { root.apply-import(); }
-                cancel-import-preview => { root.cancel-import-preview(); }
-                github-connected: root.github-connected;
-                github-username: root.github-username;
-                github-repo-name: root.github-repo-name;
-                github-auth-pending: root.github-auth-pending;
-                github-user-code: root.github-user-code;
-                github-verification-uri: root.github-verification-uri;
-                github-auth-status: root.github-auth-status;
-
-                forgejo-connected: root.forgejo-connected;
-                forgejo-username: root.forgejo-username;
-                forgejo-instance: root.forgejo-instance;
-                forgejo-repo-name: root.forgejo-repo-name;
-                forgejo-connecting: root.forgejo-connecting;
-                forgejo-status-message: root.forgejo-status-message;
-                forgejo-status-is-error: root.forgejo-status-is-error;
-                sync-provider-tab <=> root.sync-provider-tab;
-                forgejo-instance-draft <=> root.forgejo-instance-draft;
-                forgejo-token-draft <=> root.forgejo-token-draft;
-                forgejo-repo-draft <=> root.forgejo-repo-draft;
-
-                gitlab-connected: root.gitlab-connected;
-                gitlab-username: root.gitlab-username;
-                gitlab-instance: root.gitlab-instance;
-                gitlab-repo-name: root.gitlab-repo-name;
-                gitlab-connecting: root.gitlab-connecting;
-                gitlab-status-message: root.gitlab-status-message;
-                gitlab-status-is-error: root.gitlab-status-is-error;
-                gitlab-instance-draft <=> root.gitlab-instance-draft;
-                gitlab-token-draft <=> root.gitlab-token-draft;
-                gitlab-repo-draft <=> root.gitlab-repo-draft;
-
-                show-advanced-remote <=> root.show-advanced-remote;
-                connect-github => { root.connect-github(); }
-                open-github-browser => { root.open-github-browser(); }
-                cancel-github-auth => { root.cancel-github-auth(); }
-                disconnect-github => { root.disconnect-github(); }
-
-                connect-forgejo(inst, tok, rep) => { root.connect-forgejo(inst, tok, rep); }
-                disconnect-forgejo => { root.disconnect-forgejo(); }
-
-                connect-gitlab(inst, tok, rep) => { root.connect-gitlab(inst, tok, rep); }
-                disconnect-gitlab => { root.disconnect-gitlab(); }
-
-                ssh-key-present: root.ssh-key-present;
-                ssh-public-key: root.ssh-public-key;
-                ssh-key-copied: root.ssh-key-copied;
-                generate-ssh-key => { root.generate-ssh-key(); }
-                copy-ssh-public-key => { root.copy-ssh-public-key(); }
-
                 close => {
                     root.settings-sheet-open = false;
                     root.close-settings();

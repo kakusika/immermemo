@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use slint::{ComponentHandle, SharedString};
 
-use crate::App;
+use crate::{App, SettingsAdapter};
 use crate::session::{self, Session};
 use crate::update_provider_ui_state;
 
@@ -20,13 +20,14 @@ pub(crate) fn open_import_preview(
     pending_payload: &Rc<RefCell<Option<immermemo_core::transfer::TransferPayload>>>,
     input: &str,
 ) {
+    let settings = app.global::<SettingsAdapter>();
     let trimmed = input.trim();
-    app.set_import_draft(trimmed.into());
+    settings.set_import_draft(trimmed.into());
     match immermemo_core::transfer::decode_payload(trimmed) {
         Ok(payload) => {
-            app.set_import_status_message(SharedString::new());
-            app.set_import_status_is_error(false);
-            app.set_preview_has_interface(payload.interface.is_some());
+            settings.set_import_status_message(SharedString::new());
+            settings.set_import_status_is_error(false);
+            settings.set_preview_has_interface(payload.interface.is_some());
             let has_remote = payload
                 .sync
                 .as_ref()
@@ -42,21 +43,21 @@ pub(crate) fn open_import_preview(
                 .as_ref()
                 .and_then(|s| s.token.as_ref())
                 .is_some();
-            app.set_preview_has_remote(has_remote);
-            app.set_preview_remote_url(remote_url.into());
-            app.set_preview_has_token(has_token);
-            app.set_import_preview_ready(true);
+            settings.set_preview_has_remote(has_remote);
+            settings.set_preview_remote_url(remote_url.into());
+            settings.set_preview_has_token(has_token);
+            settings.set_import_preview_ready(true);
             *pending_payload.borrow_mut() = Some(payload);
         }
         Err(e) => {
-            app.set_import_preview_ready(false);
-            app.set_import_status_is_error(true);
-            app.set_import_status_message(format!("Could not read transfer data: {e}").into());
+            settings.set_import_preview_ready(false);
+            settings.set_import_status_is_error(true);
+            settings.set_import_status_message(format!("Could not read transfer data: {e}").into());
         }
     }
     // Sub-page 5: Transfer & Share, Tab 1: Import
     app.set_settings_page(5);
-    app.set_settings_transfer_tab(1);
+    settings.set_transfer_tab(1);
     app.set_settings_open(true);
 }
 
@@ -87,10 +88,11 @@ pub fn bind_transfer_callbacks(
     let update_transfer_qr = {
         let cached_export_uri = cached_export_uri.clone();
         move |app: &App, session: &Rc<RefCell<Session>>| {
+            let settings = app.global::<SettingsAdapter>();
             let options = immermemo_core::transfer::ExportOptions {
-                include_interface: app.get_export_include_interface(),
-                include_remote: app.get_export_include_remote(),
-                include_token: app.get_export_include_token(),
+                include_interface: settings.get_export_include_interface(),
+                include_remote: settings.get_export_include_remote(),
+                include_token: settings.get_export_include_token(),
             };
             let s = session.borrow();
             let vault_name = Some(session::vault_display_name(&s.vault_dir));
@@ -109,61 +111,67 @@ pub fn bind_transfer_callbacks(
                     Ok(uri) => {
                         *cached_export_uri.borrow_mut() = Some(uri.clone());
                         match crate::qr::generate_qr_image(&uri, 260) {
-                            Ok(img) => app.set_qr_image(img),
-                            Err(_) => app.set_qr_image(slint::Image::default()),
+                            Ok(img) => settings.set_qr_image(img),
+                            Err(_) => settings.set_qr_image(slint::Image::default()),
                         }
                     }
-                    Err(_) => app.set_qr_image(slint::Image::default()),
+                    Err(_) => settings.set_qr_image(slint::Image::default()),
                 },
-                Err(_) => app.set_qr_image(slint::Image::default()),
+                Err(_) => settings.set_qr_image(slint::Image::default()),
             }
         }
     };
 
-    app.on_refresh_transfer_qr({
+    let settings = app.global::<SettingsAdapter>();
+
+    settings.on_refresh_transfer_qr({
         let (weak, session, update_qr) =
             (app.as_weak(), session.clone(), update_transfer_qr.clone());
         move || {
             let app = weak.unwrap();
-            app.set_transfer_copied(false);
+            let settings = app.global::<SettingsAdapter>();
+            settings.set_transfer_copied(false);
             update_qr(&app, &session);
         }
     });
 
-    app.on_export_options_changed({
+    settings.on_export_options_changed({
         let (weak, session, update_qr) = (app.as_weak(), session.clone(), update_transfer_qr);
         move |include_interface, include_remote, include_token| {
             let app = weak.unwrap();
-            app.set_export_include_interface(include_interface);
-            app.set_export_include_remote(include_remote);
-            app.set_export_include_token(include_token);
-            app.set_transfer_copied(false);
+            let settings = app.global::<SettingsAdapter>();
+            settings.set_export_include_interface(include_interface);
+            settings.set_export_include_remote(include_remote);
+            settings.set_export_include_token(include_token);
+            settings.set_transfer_copied(false);
             update_qr(&app, &session);
         }
     });
 
-    app.on_copy_transfer_link({
+    settings.on_copy_transfer_link({
         let (weak, cached_export_uri) = (app.as_weak(), cached_export_uri);
         move || {
             let app = weak.unwrap();
+            let settings = app.global::<SettingsAdapter>();
             if let Some(uri) = cached_export_uri.borrow().as_deref() {
                 session::copy_to_clipboard(&app, uri);
-                app.set_transfer_copied(true);
+                settings.set_transfer_copied(true);
             }
         }
     });
 
-    app.on_paste_import_clipboard({
+    settings.on_paste_import_clipboard({
         let weak = app.as_weak();
         move || {
             let app = weak.unwrap();
+            let settings = app.global::<SettingsAdapter>();
             if let Some(text) = session::read_from_clipboard(&app) {
-                app.set_import_draft(text.trim().into());
+                settings.set_import_draft(text.trim().into());
             }
         }
     });
 
-    app.on_review_import({
+    settings.on_review_import({
         let (weak, pending_payload) = (app.as_weak(), pending_imported_payload.clone());
         move |input| {
             let app = weak.unwrap();
@@ -171,16 +179,17 @@ pub fn bind_transfer_callbacks(
         }
     });
 
-    app.on_cancel_import_preview({
+    settings.on_cancel_import_preview({
         let (weak, pending_payload) = (app.as_weak(), pending_imported_payload.clone());
         move || {
             let app = weak.unwrap();
-            app.set_import_preview_ready(false);
+            let settings = app.global::<SettingsAdapter>();
+            settings.set_import_preview_ready(false);
             *pending_payload.borrow_mut() = None;
         }
     });
 
-    app.on_apply_import({
+    settings.on_apply_import({
         let (weak, session, pending_payload) = (
             app.as_weak(),
             session.clone(),
@@ -188,6 +197,7 @@ pub fn bind_transfer_callbacks(
         );
         move || {
             let app = weak.unwrap();
+            let settings = app.global::<SettingsAdapter>();
             let payload = pending_payload.borrow_mut().take();
             let Some(payload) = payload else {
                 return;
@@ -200,14 +210,16 @@ pub fn bind_transfer_callbacks(
                 &payload,
             ) {
                 Ok(result) => {
-                    app.set_import_preview_ready(false);
-                    app.set_import_status_is_error(false);
-                    app.set_import_status_message("Settings applied successfully!".into());
+                    settings.set_import_preview_ready(false);
+                    settings.set_import_status_is_error(false);
+                    settings.set_import_status_message("Settings applied successfully!".into());
                     if result.interface_updated {
                         if let Some(theme) = s.app_data.load_theme() {
+                            settings.set_theme_choice(theme);
                             app.set_theme_choice(theme);
                         }
                         if let Some(font_choice) = s.app_data.load_font_size() {
+                            settings.set_font_size_choice(font_choice);
                             app.set_font_size_choice(font_choice);
                             app.set_editor_font_size(match font_choice {
                                 0 => 14.0,
@@ -216,6 +228,7 @@ pub fn bind_transfer_callbacks(
                             });
                         }
                         if let Some(status_bar) = s.app_data.load_status_bar_choice() {
+                            settings.set_status_bar_choice(status_bar);
                             app.set_status_bar_choice(status_bar);
                         }
                         if let Some(interface) = &payload.interface
@@ -228,15 +241,15 @@ pub fn bind_transfer_callbacks(
                         s.remote = s.app_data.load_remote(&s.vault_dir);
                         app.set_remote_configured(s.remote.is_some());
                         update_provider_ui_state(&app, s.remote.as_deref());
-                        app.set_remote_url_draft(s.remote.clone().unwrap_or_default().into());
+                        settings.set_url_draft(s.remote.clone().unwrap_or_default().into());
                     }
                     if result.token_updated {
-                        app.set_remote_has_token(true);
+                        settings.set_has_token(true);
                     }
                 }
                 Err(e) => {
-                    app.set_import_status_is_error(true);
-                    app.set_import_status_message(format!("Failed to apply settings: {e}").into());
+                    settings.set_import_status_is_error(true);
+                    settings.set_import_status_message(format!("Failed to apply settings: {e}").into());
                 }
             }
         }

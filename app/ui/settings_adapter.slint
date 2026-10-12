@@ -1,0 +1,111 @@
+// Global adapter managing settings, remote sync configurations,
+// cloud hosting providers (GitHub, Forgejo, GitLab), QR transfer, and SSH keys.
+export global SettingsAdapter {
+    // Remote sync properties
+    in property <bool> has-token: false;
+    in-out property <string> url-draft: "";
+    in-out property <string> token-draft: "";
+    in property <bool> syncing: false;
+    in property <string> sync-status: "";
+
+    // Vault properties
+    in property <string> current-vault-name: "";
+    in property <string> current-vault-path: "";
+
+    // Appearance properties
+    // 0: Small (14px), 1: Medium (17px), 2: Large (20px)
+    in-out property <int> font-size-choice: 1;
+    // 0: System, 1: Light, 2: Dark
+    in-out property <int> theme-choice: 0;
+    // 0: show (default), 1: hide while editing a note, 2: always hide
+    in-out property <int> status-bar-choice: 0;
+
+    // App info
+    in property <string> app-version: "0.1.0";
+
+    // Transfer & Share properties
+    in property <image> qr-image;
+    in-out property <bool> export-include-interface: true;
+    in-out property <bool> export-include-remote: true;
+    in-out property <bool> export-include-token: false;
+    in property <bool> transfer-copied: false;
+    in-out property <string> import-draft: "";
+    in property <bool> import-preview-ready: false;
+    in property <bool> preview-has-interface: false;
+    in property <bool> preview-has-remote: false;
+    in property <string> preview-remote-url: "";
+    in property <bool> preview-has-token: false;
+    in property <string> import-status-message: "";
+    in property <bool> import-status-is-error: false;
+    in-out property <int> transfer-tab: 0;
+
+    // Cloud Provider Sync properties
+    in property <bool> github-connected: false;
+    in property <string> github-username: "";
+    in property <string> github-repo-name: "";
+    in property <bool> github-auth-pending: false;
+    in property <string> github-user-code: "";
+    in property <string> github-verification-uri: "";
+    in property <string> github-auth-status: "";
+
+    in property <bool> forgejo-connected: false;
+    in property <string> forgejo-username: "";
+    in property <string> forgejo-instance: "";
+    in property <string> forgejo-repo-name: "";
+    in property <bool> forgejo-connecting: false;
+    in property <string> forgejo-status-message: "";
+    in property <bool> forgejo-status-is-error: false;
+
+    in property <bool> gitlab-connected: false;
+    in property <string> gitlab-username: "";
+    in property <string> gitlab-instance: "";
+    in property <string> gitlab-repo-name: "";
+    in property <bool> gitlab-connecting: false;
+    in property <string> gitlab-status-message: "";
+    in property <bool> gitlab-status-is-error: false;
+
+    in-out property <int> sync-provider-tab: 0; // 0: GitHub, 1: Forgejo / Gitea, 2: GitLab
+    in-out property <string> forgejo-instance-draft: "https://codeberg.org";
+    in-out property <string> forgejo-token-draft: "";
+    in-out property <string> forgejo-repo-draft: "immermemo-notes";
+
+    in-out property <string> gitlab-instance-draft: "https://gitlab.com";
+    in-out property <string> gitlab-token-draft: "";
+    in-out property <string> gitlab-repo-draft: "immermemo-notes";
+
+    in-out property <bool> show-advanced-remote: false;
+
+    // In-app SSH key
+    in property <bool> ssh-key-present: false;
+    in property <string> ssh-public-key: "";
+    in property <bool> ssh-key-copied: false;
+
+    // Callbacks
+    callback save-remote(string, string);
+    callback sync();
+    callback open-vaults();
+    callback status-bar-changed(int);
+    callback font-size-changed(int);
+    callback theme-changed(int);
+    callback refresh-transfer-qr();
+    callback export-options-changed(bool, bool, bool);
+    callback copy-transfer-link();
+    callback paste-import-clipboard();
+    callback review-import(string);
+    callback apply-import();
+    callback cancel-import-preview();
+
+    callback connect-github();
+    callback open-github-browser();
+    callback cancel-github-auth();
+    callback disconnect-github();
+
+    callback connect-forgejo(string, string, string);
+    callback disconnect-forgejo();
+
+    callback connect-gitlab(string, string, string);
+    callback disconnect-gitlab();
+
+    callback generate-ssh-key();
+    callback copy-ssh-public-key();
+}

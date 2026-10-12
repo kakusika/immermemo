@@ -1,3 +1,4 @@
+import { SettingsAdapter } from "../settings_adapter.slint";
 import { Palette, LineEdit, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
@@ -165,114 +166,8 @@ export component SettingsSheet inherits Rectangle {
     callback sheet-drag-swiped(length, float);
     callback sheet-drag-cancelled();
 
-    // Remote sync properties
-    in property <bool> has-token;
-    in-out property <string> url-draft;
-    in-out property <string> token-draft;
-    in property <bool> syncing: false;
-    in property <string> sync-status: "";
-
-    // Vault properties
-    in property <string> current-vault-name: "";
-    in property <string> current-vault-path: "";
-
-    // Appearance properties
-    // 0: Small (14px), 1: Medium (17px), 2: Large (20px)
-    in-out property <int> font-size-choice: 1;
-    // 0: System, 1: Light, 2: Dark
-    in-out property <int> theme-choice: 0;
-    // 0: show (default), 1: hide while editing a note, 2: always hide
-    in-out property <int> status-bar-choice: 0;
-
-    // App info
-    in property <string> app-version: "0.1.0";
-    in property <bool> show-back: true;
-
-    // Transfer & Share properties
-    in property <image> qr-image;
-    in-out property <bool> export-include-interface: true;
-    in-out property <bool> export-include-remote: true;
-    in-out property <bool> export-include-token: false;
-    in property <bool> transfer-copied: false;
-    in-out property <string> import-draft: "";
-    in property <bool> import-preview-ready: false;
-    in property <bool> preview-has-interface: false;
-    in property <bool> preview-has-remote: false;
-    in property <string> preview-remote-url: "";
-    in property <bool> preview-has-token: false;
-    in property <string> import-status-message: "";
-    in property <bool> import-status-is-error: false;
-    in-out property <int> transfer-tab: 0;
-
     callback close();
-    callback save-remote(string, string);
-    callback sync();
-    callback open-vaults();
-    callback status-bar-changed(int);
-    callback font-size-changed(int);
-    callback theme-changed(int);
-    callback refresh-transfer-qr();
-    callback export-options-changed(bool, bool, bool);
-    callback copy-transfer-link();
-    callback paste-import-clipboard();
-    callback review-import(string);
-    callback apply-import();
-    callback cancel-import-preview();
-
-    // Cloud Provider Sync properties
-    in property <bool> github-connected: false;
-    in property <string> github-username: "";
-    in property <string> github-repo-name: "";
-    in property <bool> github-auth-pending: false;
-    in property <string> github-user-code: "";
-    in property <string> github-verification-uri: "";
-    in property <string> github-auth-status: "";
-
-    in property <bool> forgejo-connected: false;
-    in property <string> forgejo-username: "";
-    in property <string> forgejo-instance: "";
-    in property <string> forgejo-repo-name: "";
-    in property <bool> forgejo-connecting: false;
-    in property <string> forgejo-status-message: "";
-    in property <bool> forgejo-status-is-error: false;
-
-    in property <bool> gitlab-connected: false;
-    in property <string> gitlab-username: "";
-    in property <string> gitlab-instance: "";
-    in property <string> gitlab-repo-name: "";
-    in property <bool> gitlab-connecting: false;
-    in property <string> gitlab-status-message: "";
-    in property <bool> gitlab-status-is-error: false;
-
-    in-out property <int> sync-provider-tab: 0; // 0: GitHub, 1: Forgejo / Gitea, 2: GitLab
-    in-out property <string> forgejo-instance-draft: "https://codeberg.org";
-    in-out property <string> forgejo-token-draft: "";
-    in-out property <string> forgejo-repo-draft: "immermemo-notes";
-
-    in-out property <string> gitlab-instance-draft: "https://gitlab.com";
-    in-out property <string> gitlab-token-draft: "";
-    in-out property <string> gitlab-repo-draft: "immermemo-notes";
-
-    in-out property <bool> show-advanced-remote: false;
-
-    callback connect-github();
-    callback open-github-browser();
-    callback cancel-github-auth();
-    callback disconnect-github();
-
-    callback connect-forgejo(string, string, string);
-    callback disconnect-forgejo();
-
-    callback connect-gitlab(string, string, string);
-    callback disconnect-gitlab();
-
-    in property <bool> ssh-key-present: false;
-    in property <string> ssh-public-key: "";
-    in property <bool> ssh-key-copied: false;
-
-    callback generate-ssh-key();
-    callback copy-ssh-public-key();
-
+    in property <bool> show-back: true;
 
     // 0: list, 1: Interface, 2: Sync & Remote, 3: Vaults, 4: About, 5: Transfer & Share.
     // in-out so the app-level Back action (hardware button / edge-swipe
@@ -403,7 +298,7 @@ export component SettingsSheet inherits Rectangle {
                                 label-text: @tr("Transfer & Share");
                                 clicked => {
                                     root.page = 5;
-                                    root.refresh-transfer-qr();
+                                    SettingsAdapter.refresh-transfer-qr();
                                 }
                             }
 
@@ -451,10 +346,10 @@ export component SettingsSheet inherits Rectangle {
 
                             SegmentedControl {
                                 options: [@tr("System"), @tr("Light"), @tr("Dark")];
-                                selected: root.theme-choice;
+                                selected: SettingsAdapter.theme-choice;
                                 changed(i) => {
-                                    root.theme-choice = i;
-                                    root.theme-changed(i);
+                                    SettingsAdapter.theme-choice = i;
+                                    SettingsAdapter.theme-changed(i);
                                 }
                             }
                         }
@@ -473,10 +368,10 @@ export component SettingsSheet inherits Rectangle {
 
                             SegmentedControl {
                                 options: [@tr("Small (14)"), @tr("Medium (17)"), @tr("Large (20)")];
-                                selected: root.font-size-choice;
+                                selected: SettingsAdapter.font-size-choice;
                                 changed(i) => {
-                                    root.font-size-choice = i;
-                                    root.font-size-changed(i);
+                                    SettingsAdapter.font-size-choice = i;
+                                    SettingsAdapter.font-size-changed(i);
                                 }
                             }
                         }
@@ -523,10 +418,10 @@ export component SettingsSheet inherits Rectangle {
 
                             SegmentedControl {
                                 options: [@tr("Show"), @tr("Hide While Editing"), @tr("Always Hide")];
-                                selected: root.status-bar-choice;
+                                selected: SettingsAdapter.status-bar-choice;
                                 changed(i) => {
-                                    root.status-bar-choice = i;
-                                    root.status-bar-changed(i);
+                                    SettingsAdapter.status-bar-choice = i;
+                                    SettingsAdapter.status-bar-changed(i);
                                 }
                             }
                         }
@@ -553,7 +448,7 @@ export component SettingsSheet inherits Rectangle {
                         VerticalLayout {
                             alignment: center;
                             Icon {
-                                source: root.gitlab-connected ? TablerIcons.brand-gitlab : (root.forgejo-connected ? TablerIcons.brand-git : TablerIcons.brand-github);
+                                source: SettingsAdapter.gitlab-connected ? TablerIcons.brand-gitlab : (SettingsAdapter.forgejo-connected ? TablerIcons.brand-git : TablerIcons.brand-github);
                                 width: Metrics.icon-lg;
                                 height: Metrics.icon-lg;
                                 color: Palette.accent-background;
@@ -563,7 +458,7 @@ export component SettingsSheet inherits Rectangle {
                             horizontal-stretch: 1;
                             alignment: center;
                             Text {
-                                text: root.gitlab-connected ? @tr("GitLab Sync") : (root.forgejo-connected ? @tr("Forgejo / Gitea Sync") : (root.github-connected ? @tr("GitHub Sync") : @tr("Cloud Git Sync")));
+                                text: SettingsAdapter.gitlab-connected ? @tr("GitLab Sync") : (SettingsAdapter.forgejo-connected ? @tr("Forgejo / Gitea Sync") : (SettingsAdapter.github-connected ? @tr("GitHub Sync") : @tr("Cloud Git Sync")));
                                 font-size: 16px;
                                 font-weight: 600;
                                 color: Palette.foreground;
@@ -580,7 +475,7 @@ export component SettingsSheet inherits Rectangle {
                     Divider { }
 
                     // State A: GitHub Connected
-                    if root.github-connected: VerticalLayout {
+                    if SettingsAdapter.github-connected: VerticalLayout {
                         spacing: Metrics.spacing-sm;
                         HorizontalLayout {
                             spacing: 8px;
@@ -594,7 +489,7 @@ export component SettingsSheet inherits Rectangle {
                                 }
                             }
                             Text {
-                                text: @tr("Connected as @{} on GitHub", root.github-username);
+                                text: @tr("Connected as @{} on GitHub", SettingsAdapter.github-username);
                                 font-size: 15px;
                                 font-weight: 600;
                                 color: Palette.foreground;
@@ -602,15 +497,15 @@ export component SettingsSheet inherits Rectangle {
                             }
                         }
 
-                        if root.github-repo-name != "": Text {
-                            text: @tr("Repository: {} (Private)", root.github-repo-name);
+                        if SettingsAdapter.github-repo-name != "": Text {
+                            text: @tr("Repository: {} (Private)", SettingsAdapter.github-repo-name);
                             font-size: 13px;
                             color: Colors.muted;
                             wrap: word-wrap;
                         }
 
-                        if root.sync-status != "": Text {
-                            text: root.sync-status;
+                        if SettingsAdapter.sync-status != "": Text {
+                            text: SettingsAdapter.sync-status;
                             font-size: 13px;
                             color: Colors.muted;
                             wrap: word-wrap;
@@ -621,19 +516,19 @@ export component SettingsSheet inherits Rectangle {
                             alignment: end;
                             Button {
                                 text: @tr("Disconnect");
-                                clicked => { root.disconnect-github(); }
+                                clicked => { SettingsAdapter.disconnect-github(); }
                             }
                             Button {
-                                text: root.syncing ? @tr("Syncing...") : @tr("Sync Now");
+                                text: SettingsAdapter.syncing ? @tr("Syncing...") : @tr("Sync Now");
                                 primary: true;
-                                enabled: !root.syncing;
-                                clicked => { root.sync(); }
+                                enabled: !SettingsAdapter.syncing;
+                                clicked => { SettingsAdapter.sync(); }
                             }
                         }
                     }
 
                     // State B: Forgejo Connected
-                    if root.forgejo-connected: VerticalLayout {
+                    if SettingsAdapter.forgejo-connected: VerticalLayout {
                         spacing: Metrics.spacing-sm;
                         HorizontalLayout {
                             spacing: 8px;
@@ -647,7 +542,7 @@ export component SettingsSheet inherits Rectangle {
                                 }
                             }
                             Text {
-                                text: @tr("Connected as @{} on {}", root.forgejo-username, root.forgejo-instance);
+                                text: @tr("Connected as @{} on {}", SettingsAdapter.forgejo-username, SettingsAdapter.forgejo-instance);
                                 font-size: 15px;
                                 font-weight: 600;
                                 color: Palette.foreground;
@@ -655,15 +550,15 @@ export component SettingsSheet inherits Rectangle {
                             }
                         }
 
-                        if root.forgejo-repo-name != "": Text {
-                            text: @tr("Repository: {} (Private)", root.forgejo-repo-name);
+                        if SettingsAdapter.forgejo-repo-name != "": Text {
+                            text: @tr("Repository: {} (Private)", SettingsAdapter.forgejo-repo-name);
                             font-size: 13px;
                             color: Colors.muted;
                             wrap: word-wrap;
                         }
 
-                        if root.sync-status != "": Text {
-                            text: root.sync-status;
+                        if SettingsAdapter.sync-status != "": Text {
+                            text: SettingsAdapter.sync-status;
                             font-size: 13px;
                             color: Colors.muted;
                             wrap: word-wrap;
@@ -674,19 +569,19 @@ export component SettingsSheet inherits Rectangle {
                             alignment: end;
                             Button {
                                 text: @tr("Disconnect");
-                                clicked => { root.disconnect-forgejo(); }
+                                clicked => { SettingsAdapter.disconnect-forgejo(); }
                             }
                             Button {
-                                text: root.syncing ? @tr("Syncing...") : @tr("Sync Now");
+                                text: SettingsAdapter.syncing ? @tr("Syncing...") : @tr("Sync Now");
                                 primary: true;
-                                enabled: !root.syncing;
-                                clicked => { root.sync(); }
+                                enabled: !SettingsAdapter.syncing;
+                                clicked => { SettingsAdapter.sync(); }
                             }
                         }
                     }
 
                     // State B2: GitLab Connected
-                    if root.gitlab-connected: VerticalLayout {
+                    if SettingsAdapter.gitlab-connected: VerticalLayout {
                         spacing: Metrics.spacing-sm;
                         HorizontalLayout {
                             spacing: 8px;
@@ -700,7 +595,7 @@ export component SettingsSheet inherits Rectangle {
                                 }
                             }
                             Text {
-                                text: @tr("Connected as @{} on {}", root.gitlab-username, root.gitlab-instance);
+                                text: @tr("Connected as @{} on {}", SettingsAdapter.gitlab-username, SettingsAdapter.gitlab-instance);
                                 font-size: 15px;
                                 font-weight: 600;
                                 color: Palette.foreground;
@@ -708,8 +603,8 @@ export component SettingsSheet inherits Rectangle {
                             }
                         }
 
-                        if root.gitlab-repo-name != "": Text {
-                            text: @tr("Repository: {} (Private)", root.gitlab-repo-name);
+                        if SettingsAdapter.gitlab-repo-name != "": Text {
+                            text: @tr("Repository: {} (Private)", SettingsAdapter.gitlab-repo-name);
                             font-size: 13px;
                             color: Colors.muted;
                             wrap: word-wrap;
@@ -720,32 +615,32 @@ export component SettingsSheet inherits Rectangle {
                             alignment: end;
                             Button {
                                 text: @tr("Disconnect");
-                                clicked => { root.disconnect-gitlab(); }
+                                clicked => { SettingsAdapter.disconnect-gitlab(); }
                             }
                             Button {
-                                text: root.syncing ? @tr("Syncing...") : @tr("Sync Now");
+                                text: SettingsAdapter.syncing ? @tr("Syncing...") : @tr("Sync Now");
                                 primary: true;
-                                enabled: !root.syncing;
-                                clicked => { root.sync(); }
+                                enabled: !SettingsAdapter.syncing;
+                                clicked => { SettingsAdapter.sync(); }
                             }
                         }
                     }
 
                     // State C: Not Connected (Provider Selection)
-                    if !root.github-connected && !root.forgejo-connected && !root.gitlab-connected: VerticalLayout {
+                    if !SettingsAdapter.github-connected && !SettingsAdapter.forgejo-connected && !SettingsAdapter.gitlab-connected: VerticalLayout {
                         spacing: Metrics.spacing-md;
 
                         SegmentedControl {
                             options: [@tr("GitHub"), @tr("Forgejo / Gitea"), @tr("GitLab")];
-                            selected: root.sync-provider-tab;
-                            changed(i) => { root.sync-provider-tab = i; }
+                            selected: SettingsAdapter.sync-provider-tab;
+                            changed(i) => { SettingsAdapter.sync-provider-tab = i; }
                         }
 
                         // Tab 0: GitHub
-                        if root.sync-provider-tab == 0: VerticalLayout {
+                        if SettingsAdapter.sync-provider-tab == 0: VerticalLayout {
                             spacing: Metrics.spacing-md;
 
-                            if !root.github-auth-pending: VerticalLayout {
+                            if !SettingsAdapter.github-auth-pending: VerticalLayout {
                                 spacing: Metrics.spacing-md;
                                 Text {
                                     text: @tr("Sign in to automatically create and sync a private notes repository.");
@@ -758,12 +653,12 @@ export component SettingsSheet inherits Rectangle {
                                     Button {
                                         text: @tr("Connect with GitHub");
                                         primary: true;
-                                        clicked => { root.connect-github(); }
+                                        clicked => { SettingsAdapter.connect-github(); }
                                     }
                                 }
                             }
 
-                            if root.github-auth-pending: VerticalLayout {
+                            if SettingsAdapter.github-auth-pending: VerticalLayout {
                                 spacing: Metrics.spacing-md;
                                 Text {
                                     text: @tr("Confirm this one-time code on GitHub:");
@@ -778,7 +673,7 @@ export component SettingsSheet inherits Rectangle {
                                     background: Palette.foreground.with-alpha(0.06);
 
                                     Text {
-                                        text: root.github-user-code;
+                                        text: SettingsAdapter.github-user-code;
                                         font-size: 22px;
                                         font-weight: 700;
                                         color: Palette.accent-background;
@@ -788,7 +683,7 @@ export component SettingsSheet inherits Rectangle {
                                 }
 
                                 Text {
-                                    text: root.github-auth-status != "" ? root.github-auth-status : @tr("Waiting for browser authorization...");
+                                    text: SettingsAdapter.github-auth-status != "" ? SettingsAdapter.github-auth-status : @tr("Waiting for browser authorization...");
                                     font-size: Metrics.font-sm;
                                     color: Colors.muted;
                                     wrap: word-wrap;
@@ -799,19 +694,19 @@ export component SettingsSheet inherits Rectangle {
                                     alignment: end;
                                     Button {
                                         text: @tr("Cancel");
-                                        clicked => { root.cancel-github-auth(); }
+                                        clicked => { SettingsAdapter.cancel-github-auth(); }
                                     }
                                     Button {
                                         text: @tr("Open in Browser");
                                         primary: true;
-                                        clicked => { root.open-github-browser(); }
+                                        clicked => { SettingsAdapter.open-github-browser(); }
                                     }
                                 }
                             }
                         }
 
                         // Tab 1: Forgejo / Gitea
-                        if root.sync-provider-tab == 1: VerticalLayout {
+                        if SettingsAdapter.sync-provider-tab == 1: VerticalLayout {
                             spacing: Metrics.spacing-md;
 
                             Text {
@@ -831,7 +726,7 @@ export component SettingsSheet inherits Rectangle {
                                 LineEdit {
                                     height: Metrics.touch;
                                     placeholder-text: "https://codeberg.org";
-                                    text <=> root.forgejo-instance-draft;
+                                    text <=> SettingsAdapter.forgejo-instance-draft;
                                 }
                             }
 
@@ -845,7 +740,7 @@ export component SettingsSheet inherits Rectangle {
                                 LineEdit {
                                     height: Metrics.touch;
                                     placeholder-text: @tr("Token with repo and user permissions");
-                                    text <=> root.forgejo-token-draft;
+                                    text <=> SettingsAdapter.forgejo-token-draft;
                                     input-type: password;
                                 }
                             }
@@ -860,13 +755,13 @@ export component SettingsSheet inherits Rectangle {
                                 LineEdit {
                                     height: Metrics.touch;
                                     placeholder-text: "immermemo-notes";
-                                    text <=> root.forgejo-repo-draft;
+                                    text <=> SettingsAdapter.forgejo-repo-draft;
                                 }
                             }
 
-                            if root.forgejo-status-message != "": Text {
-                                text: root.forgejo-status-message;
-                                color: root.forgejo-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+                            if SettingsAdapter.forgejo-status-message != "": Text {
+                                text: SettingsAdapter.forgejo-status-message;
+                                color: SettingsAdapter.forgejo-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
                                 font-size: 13px;
                                 wrap: word-wrap;
                             }
@@ -874,14 +769,14 @@ export component SettingsSheet inherits Rectangle {
                             HorizontalLayout {
                                 alignment: end;
                                 Button {
-                                    text: root.forgejo-connecting ? @tr("Connecting...") : @tr("Connect Account");
+                                    text: SettingsAdapter.forgejo-connecting ? @tr("Connecting...") : @tr("Connect Account");
                                     primary: true;
-                                    enabled: !root.forgejo-connecting && root.forgejo-token-draft != "";
+                                    enabled: !SettingsAdapter.forgejo-connecting && SettingsAdapter.forgejo-token-draft != "";
                                     clicked => {
-                                        root.connect-forgejo(
-                                            root.forgejo-instance-draft,
-                                            root.forgejo-token-draft,
-                                            root.forgejo-repo-draft,
+                                        SettingsAdapter.connect-forgejo(
+                                            SettingsAdapter.forgejo-instance-draft,
+                                            SettingsAdapter.forgejo-token-draft,
+                                            SettingsAdapter.forgejo-repo-draft,
                                         );
                                     }
                                 }
@@ -889,7 +784,7 @@ export component SettingsSheet inherits Rectangle {
                         }
 
                         // Tab 2: GitLab
-                        if root.sync-provider-tab == 2: VerticalLayout {
+                        if SettingsAdapter.sync-provider-tab == 2: VerticalLayout {
                             spacing: Metrics.spacing-md;
 
                             Text {
@@ -909,7 +804,7 @@ export component SettingsSheet inherits Rectangle {
                                 LineEdit {
                                     height: Metrics.touch;
                                     placeholder-text: "https://gitlab.com";
-                                    text <=> root.gitlab-instance-draft;
+                                    text <=> SettingsAdapter.gitlab-instance-draft;
                                 }
                             }
 
@@ -923,7 +818,7 @@ export component SettingsSheet inherits Rectangle {
                                 LineEdit {
                                     height: Metrics.touch;
                                     placeholder-text: @tr("Token with api permission");
-                                    text <=> root.gitlab-token-draft;
+                                    text <=> SettingsAdapter.gitlab-token-draft;
                                     input-type: password;
                                 }
                             }
@@ -938,13 +833,13 @@ export component SettingsSheet inherits Rectangle {
                                 LineEdit {
                                     height: Metrics.touch;
                                     placeholder-text: "immermemo-notes";
-                                    text <=> root.gitlab-repo-draft;
+                                    text <=> SettingsAdapter.gitlab-repo-draft;
                                 }
                             }
 
-                            if root.gitlab-status-message != "": Text {
-                                text: root.gitlab-status-message;
-                                color: root.gitlab-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+                            if SettingsAdapter.gitlab-status-message != "": Text {
+                                text: SettingsAdapter.gitlab-status-message;
+                                color: SettingsAdapter.gitlab-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
                                 font-size: 13px;
                                 wrap: word-wrap;
                             }
@@ -952,14 +847,14 @@ export component SettingsSheet inherits Rectangle {
                             HorizontalLayout {
                                 alignment: end;
                                 Button {
-                                    text: root.gitlab-connecting ? @tr("Connecting...") : @tr("Connect Account");
+                                    text: SettingsAdapter.gitlab-connecting ? @tr("Connecting...") : @tr("Connect Account");
                                     primary: true;
-                                    enabled: !root.gitlab-connecting && root.gitlab-token-draft != "";
+                                    enabled: !SettingsAdapter.gitlab-connecting && SettingsAdapter.gitlab-token-draft != "";
                                     clicked => {
-                                        root.connect-gitlab(
-                                            root.gitlab-instance-draft,
-                                            root.gitlab-token-draft,
-                                            root.gitlab-repo-draft,
+                                        SettingsAdapter.connect-gitlab(
+                                            SettingsAdapter.gitlab-instance-draft,
+                                            SettingsAdapter.gitlab-token-draft,
+                                            SettingsAdapter.gitlab-repo-draft,
                                         );
                                     }
                                 }
@@ -973,12 +868,12 @@ export component SettingsSheet inherits Rectangle {
                     content-spacing: Metrics.spacing-md;
 
                     ActionRow {
-                        text: root.show-advanced-remote ? @tr("Hide Custom Git Remote ▲") : @tr("Custom Git Remote (Self-hosted) ▼");
+                        text: SettingsAdapter.show-advanced-remote ? @tr("Hide Custom Git Remote ▲") : @tr("Custom Git Remote (Self-hosted) ▼");
                         tint: Colors.muted;
-                        clicked => { root.show-advanced-remote = !root.show-advanced-remote; }
+                        clicked => { SettingsAdapter.show-advanced-remote = !SettingsAdapter.show-advanced-remote; }
                     }
 
-                    if root.show-advanced-remote: VerticalLayout {
+                    if SettingsAdapter.show-advanced-remote: VerticalLayout {
                         spacing: Metrics.spacing-md;
 
                         VerticalLayout {
@@ -992,7 +887,7 @@ export component SettingsSheet inherits Rectangle {
                             LineEdit {
                                 height: Metrics.touch;
                                 placeholder-text: @tr("https://github.com/you/notes.git");
-                                text <=> root.url-draft;
+                                text <=> SettingsAdapter.url-draft;
                             }
                         }
 
@@ -1006,14 +901,14 @@ export component SettingsSheet inherits Rectangle {
 
                             LineEdit {
                                 height: Metrics.touch;
-                                placeholder-text: root.has-token ? @tr("Leave blank to keep the saved token") : @tr("Personal access token");
+                                placeholder-text: SettingsAdapter.has-token ? @tr("Leave blank to keep the saved token") : @tr("Personal access token");
                                 input-type: password;
-                                text <=> root.token-draft;
+                                text <=> SettingsAdapter.token-draft;
                             }
                         }
 
-                        if root.sync-status != "": Text {
-                            text: root.sync-status;
+                        if SettingsAdapter.sync-status != "": Text {
+                            text: SettingsAdapter.sync-status;
                             font-size: 13px;
                             color: Colors.muted;
                             wrap: word-wrap;
@@ -1024,15 +919,15 @@ export component SettingsSheet inherits Rectangle {
                             alignment: end;
 
                             Button {
-                                text: root.syncing ? @tr("Syncing...") : @tr("Sync Now");
-                                enabled: !root.syncing;
-                                clicked => { root.sync(); }
+                                text: SettingsAdapter.syncing ? @tr("Syncing...") : @tr("Sync Now");
+                                enabled: !SettingsAdapter.syncing;
+                                clicked => { SettingsAdapter.sync(); }
                             }
 
                             Button {
                                 text: @tr("Save Remote");
                                 primary: true;
-                                clicked => { root.save-remote(root.url-draft, root.token-draft); }
+                                clicked => { SettingsAdapter.save-remote(SettingsAdapter.url-draft, SettingsAdapter.token-draft); }
                             }
                         }
                     }
@@ -1073,7 +968,7 @@ export component SettingsSheet inherits Rectangle {
 
                     Divider { }
 
-                    if root.ssh-key-present: VerticalLayout {
+                    if SettingsAdapter.ssh-key-present: VerticalLayout {
                         spacing: Metrics.spacing-md;
 
                         Text {
@@ -1098,7 +993,7 @@ export component SettingsSheet inherits Rectangle {
 
                                 Text {
                                     horizontal-stretch: 1;
-                                    text: root.ssh-public-key;
+                                    text: SettingsAdapter.ssh-public-key;
                                     font-size: 11px;
                                     color: Palette.foreground;
                                     wrap: word-wrap;
@@ -1112,18 +1007,18 @@ export component SettingsSheet inherits Rectangle {
 
                             Button {
                                 text: @tr("Regenerate Key");
-                                clicked => { root.generate-ssh-key(); }
+                                clicked => { SettingsAdapter.generate-ssh-key(); }
                             }
 
                             Button {
-                                text: root.ssh-key-copied ? @tr("Copied!") : @tr("Copy Public Key");
+                                text: SettingsAdapter.ssh-key-copied ? @tr("Copied!") : @tr("Copy Public Key");
                                 primary: true;
-                                clicked => { root.copy-ssh-public-key(); }
+                                clicked => { SettingsAdapter.copy-ssh-public-key(); }
                             }
                         }
                     }
 
-                    if !root.ssh-key-present: VerticalLayout {
+                    if !SettingsAdapter.ssh-key-present: VerticalLayout {
                         spacing: Metrics.spacing-md;
 
                         Text {
@@ -1138,7 +1033,7 @@ export component SettingsSheet inherits Rectangle {
                             Button {
                                 text: @tr("Generate SSH Key");
                                 primary: true;
-                                clicked => { root.generate-ssh-key(); }
+                                clicked => { SettingsAdapter.generate-ssh-key(); }
                             }
                         }
                     }
@@ -1170,15 +1065,15 @@ export component SettingsSheet inherits Rectangle {
                             }
 
                             Text {
-                                text: root.current-vault-name != "" ? root.current-vault-name : @tr("Default");
+                                text: SettingsAdapter.current-vault-name != "" ? SettingsAdapter.current-vault-name : @tr("Default");
                                 font-size: 15px;
                                 color: Palette.accent-background;
                                 vertical-alignment: center;
                             }
                         }
 
-                        if root.current-vault-path != "": Text {
-                            text: root.current-vault-path;
+                        if SettingsAdapter.current-vault-path != "": Text {
+                            text: SettingsAdapter.current-vault-path;
                             font-size: 12px;
                             color: Colors.muted;
                             wrap: word-wrap;
@@ -1189,7 +1084,7 @@ export component SettingsSheet inherits Rectangle {
                         ActionRow {
                             text: @tr("Manage & Switch Vaults →");
                             tint: Palette.accent-background;
-                            clicked => { root.open-vaults(); }
+                            clicked => { SettingsAdapter.open-vaults(); }
                         }
                     }
                 }
@@ -1208,7 +1103,7 @@ export component SettingsSheet inherits Rectangle {
                         content-spacing: Metrics.spacing-sm;
 
                         Text {
-                            text: @tr("Immermemo v{}", root.app-version);
+                            text: @tr("Immermemo v{}", SettingsAdapter.app-version);
                             font-size: 16px;
                             font-weight: 600;
                             color: Palette.foreground;
@@ -1247,16 +1142,16 @@ export component SettingsSheet inherits Rectangle {
 
                     SegmentedControl {
                         options: [@tr("Export (Show QR)"), @tr("Import")];
-                        selected: root.transfer-tab;
+                        selected: SettingsAdapter.transfer-tab;
                         changed(i) => {
-                            root.transfer-tab = i;
+                            SettingsAdapter.transfer-tab = i;
                             if (i == 0) {
-                                root.refresh-transfer-qr();
+                                SettingsAdapter.refresh-transfer-qr();
                             }
                         }
                     }
 
-                    if root.transfer-tab == 0: VerticalLayout {
+                    if SettingsAdapter.transfer-tab == 0: VerticalLayout {
                         spacing: 16px;
 
                         Card {
@@ -1272,10 +1167,10 @@ export component SettingsSheet inherits Rectangle {
                                 icon: TablerIcons.settings;
                                 title: @tr("Appearance & UI");
                                 subtitle: @tr("Theme, font size, and UI scale");
-                                checked: root.export-include-interface;
+                                checked: SettingsAdapter.export-include-interface;
                                 toggled(c) => {
-                                    root.export-include-interface = c;
-                                    root.export-options-changed(root.export-include-interface, root.export-include-remote, root.export-include-token);
+                                    SettingsAdapter.export-include-interface = c;
+                                    SettingsAdapter.export-options-changed(SettingsAdapter.export-include-interface, SettingsAdapter.export-include-remote, SettingsAdapter.export-include-token);
                                 }
                             }
 
@@ -1285,10 +1180,10 @@ export component SettingsSheet inherits Rectangle {
                                 icon: TablerIcons.cloud;
                                 title: @tr("Remote Sync URL");
                                 subtitle: @tr("Active vault remote git repository URL");
-                                checked: root.export-include-remote;
+                                checked: SettingsAdapter.export-include-remote;
                                 toggled(c) => {
-                                    root.export-include-remote = c;
-                                    root.export-options-changed(root.export-include-interface, root.export-include-remote, root.export-include-token);
+                                    SettingsAdapter.export-include-remote = c;
+                                    SettingsAdapter.export-options-changed(SettingsAdapter.export-include-interface, SettingsAdapter.export-include-remote, SettingsAdapter.export-include-token);
                                 }
                             }
 
@@ -1298,11 +1193,11 @@ export component SettingsSheet inherits Rectangle {
                                 icon: TablerIcons.lock-share;
                                 title: @tr("Include Access Token");
                                 subtitle: @tr("⚠️ Contains sensitive personal credentials");
-                                checked: root.export-include-token;
+                                checked: SettingsAdapter.export-include-token;
                                 is-warning: true;
                                 toggled(c) => {
-                                    root.export-include-token = c;
-                                    root.export-options-changed(root.export-include-interface, root.export-include-remote, root.export-include-token);
+                                    SettingsAdapter.export-include-token = c;
+                                    SettingsAdapter.export-options-changed(SettingsAdapter.export-include-interface, SettingsAdapter.export-include-remote, SettingsAdapter.export-include-token);
                                 }
                             }
                         }
@@ -1328,7 +1223,7 @@ export component SettingsSheet inherits Rectangle {
                                     Image {
                                         width: 200px;
                                         height: 200px;
-                                        source: root.qr-image;
+                                        source: SettingsAdapter.qr-image;
                                         image-fit: contain;
                                     }
                                 }
@@ -1337,14 +1232,14 @@ export component SettingsSheet inherits Rectangle {
                             HorizontalLayout {
                                 alignment: center;
                                 Button {
-                                    text: root.transfer-copied ? @tr("Copied to Clipboard!") : @tr("Copy Transfer Link");
-                                    clicked => { root.copy-transfer-link(); }
+                                    text: SettingsAdapter.transfer-copied ? @tr("Copied to Clipboard!") : @tr("Copy Transfer Link");
+                                    clicked => { SettingsAdapter.copy-transfer-link(); }
                                 }
                             }
                         }
                     }
 
-                    if root.transfer-tab == 1: VerticalLayout {
+                    if SettingsAdapter.transfer-tab == 1: VerticalLayout {
                         spacing: 16px;
 
                         Card {
@@ -1366,7 +1261,7 @@ export component SettingsSheet inherits Rectangle {
                             LineEdit {
                                 height: Metrics.touch;
                                 placeholder-text: @tr("immermemo://import#... or JSON");
-                                text <=> root.import-draft;
+                                text <=> SettingsAdapter.import-draft;
                             }
 
                             HorizontalLayout {
@@ -1375,26 +1270,26 @@ export component SettingsSheet inherits Rectangle {
 
                                 Button {
                                     text: @tr("Paste Clipboard");
-                                    clicked => { root.paste-import-clipboard(); }
+                                    clicked => { SettingsAdapter.paste-import-clipboard(); }
                                 }
 
                                 Button {
                                     text: @tr("Review & Apply");
                                     primary: true;
-                                    enabled: root.import-draft != "";
-                                    clicked => { root.review-import(root.import-draft); }
+                                    enabled: SettingsAdapter.import-draft != "";
+                                    clicked => { SettingsAdapter.review-import(SettingsAdapter.import-draft); }
                                 }
                             }
 
-                            if root.import-status-message != "": Text {
-                                text: root.import-status-message;
+                            if SettingsAdapter.import-status-message != "": Text {
+                                text: SettingsAdapter.import-status-message;
                                 font-size: 13px;
-                                color: root.import-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+                                color: SettingsAdapter.import-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
                                 wrap: word-wrap;
                             }
                         }
 
-                        if root.import-preview-ready: Card {
+                        if SettingsAdapter.import-preview-ready: Card {
                             content-spacing: Metrics.spacing-sm;
 
                             Text {
@@ -1406,15 +1301,15 @@ export component SettingsSheet inherits Rectangle {
 
                             Divider { }
 
-                            if root.preview-has-interface: ActionRow {
+                            if SettingsAdapter.preview-has-interface: ActionRow {
                                 text: @tr("✓ Appearance & UI settings");
                             }
 
-                            if root.preview-has-remote: ActionRow {
-                                text: @tr("✓ Remote URL: ") + root.preview-remote-url;
+                            if SettingsAdapter.preview-has-remote: ActionRow {
+                                text: @tr("✓ Remote URL: ") + SettingsAdapter.preview-remote-url;
                             }
 
-                            if root.preview-has-token: ActionRow {
+                            if SettingsAdapter.preview-has-token: ActionRow {
                                 text: @tr("⚠️ Access Token (will update saved token)");
                                 tint: Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500;
                             }
@@ -1427,13 +1322,13 @@ export component SettingsSheet inherits Rectangle {
 
                                 Button {
                                     text: @tr("Cancel");
-                                    clicked => { root.cancel-import-preview(); }
+                                    clicked => { SettingsAdapter.cancel-import-preview(); }
                                 }
 
                                 Button {
                                     text: @tr("Apply Settings");
                                     primary: true;
-                                    clicked => { root.apply-import(); }
+                                    clicked => { SettingsAdapter.apply-import(); }
                                 }
                             }
                         }

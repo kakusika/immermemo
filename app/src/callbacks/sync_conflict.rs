@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use slint::{ComponentHandle, SharedString};
 
-use crate::App;
+use crate::{App, SettingsAdapter};
 use crate::session::{
     self, Session, open_first_conflicted_note, resolve_conflict_step, start_sync,
     sync_conflict_sheet_state,
@@ -13,6 +13,12 @@ use crate::session::{
 
 pub fn bind_sync_conflict_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
     app.on_sync({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || start_sync(&weak.unwrap(), &session)
+    });
+
+    let settings = app.global::<SettingsAdapter>();
+    settings.on_sync({
         let (weak, session) = (app.as_weak(), session.clone());
         move || start_sync(&weak.unwrap(), &session)
     });

@@ -8,33 +8,36 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use immermemo_provider::{AuthPollStatus, GitHubProvider, Provider};
 use slint::{ComponentHandle, SharedString};
 
-use crate::App;
+use crate::{App, SettingsAdapter};
 use crate::session::{SESSION, Session, set_status, start_sync};
 
 /// Updates GitHub connected/account state in the UI based on the current remote URL.
 pub fn update_github_ui_state(app: &App, remote: Option<&str>) {
+    let settings = app.global::<SettingsAdapter>();
     if let Some(url) = remote {
         if let Some((user, repo)) = GitHubProvider::parse_remote(url) {
-            app.set_github_connected(true);
-            app.set_github_username(user.into());
-            app.set_github_repo_name(repo.into());
+            settings.set_github_connected(true);
+            settings.set_github_username(user.into());
+            settings.set_github_repo_name(repo.into());
             return;
         }
     }
-    app.set_github_connected(false);
-    app.set_github_username(SharedString::new());
-    app.set_github_repo_name(SharedString::new());
+    settings.set_github_connected(false);
+    settings.set_github_username(SharedString::new());
+    settings.set_github_repo_name(SharedString::new());
 }
 
 /// Binds GitHub connect, disconnect, cancel, and browser callbacks to the Slint App.
 pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
+    let settings = app.global::<SettingsAdapter>();
     let active_auth_cancel = Rc::new(RefCell::new(None::<Arc<AtomicBool>>));
 
-    app.on_open_github_browser({
+    settings.on_open_github_browser({
         let weak = app.as_weak();
         move || {
             if let Some(app) = weak.upgrade() {
-                let uri = app.get_github_verification_uri();
+                let settings = app.global::<SettingsAdapter>();
+                let uri = settings.get_github_verification_uri();
                 if !uri.is_empty() {
                     let _ = webbrowser::open(uri.as_str());
                 }
@@ -42,22 +45,23 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
         }
     });
 
-    app.on_cancel_github_auth({
+    settings.on_cancel_github_auth({
         let (weak, cancel_flag) = (app.as_weak(), active_auth_cancel.clone());
         move || {
             if let Some(flag) = cancel_flag.borrow_mut().take() {
                 flag.store(true, Ordering::SeqCst);
             }
             if let Some(app) = weak.upgrade() {
-                app.set_github_auth_pending(false);
-                app.set_github_user_code(SharedString::new());
-                app.set_github_verification_uri(SharedString::new());
-                app.set_github_auth_status(SharedString::new());
+                let settings = app.global::<SettingsAdapter>();
+                settings.set_github_auth_pending(false);
+                settings.set_github_user_code(SharedString::new());
+                settings.set_github_verification_uri(SharedString::new());
+                settings.set_github_auth_status(SharedString::new());
             }
         }
     });
 
-    app.on_disconnect_github({
+    settings.on_disconnect_github({
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
             let app = weak.unwrap();
@@ -68,15 +72,16 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
             s.remote = None;
             drop(s);
             app.set_remote_configured(false);
-            app.set_remote_url_draft(SharedString::new());
-            app.set_remote_token_draft(SharedString::new());
-            app.set_remote_has_token(false);
+            let settings = app.global::<SettingsAdapter>();
+            settings.set_url_draft(SharedString::new());
+            settings.set_token_draft(SharedString::new());
+            settings.set_has_token(false);
             update_github_ui_state(&app, None);
             set_status(&app, "Disconnected GitHub repository");
         }
     });
 
-    app.on_connect_github({
+    settings.on_connect_github({
         let (weak, active_auth_cancel) = (app.as_weak(), active_auth_cancel);
         move || {
             let app = weak.unwrap();
@@ -86,10 +91,11 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
             let cancel_flag = Arc::new(AtomicBool::new(false));
             *active_auth_cancel.borrow_mut() = Some(cancel_flag.clone());
 
-            app.set_github_auth_pending(true);
-            app.set_github_user_code(SharedString::new());
-            app.set_github_verification_uri(SharedString::new());
-            app.set_github_auth_status("Connecting to GitHub...".into());
+            let settings = app.global::<SettingsAdapter>();
+            settings.set_github_auth_pending(true);
+            settings.set_github_user_code(SharedString::new());
+            settings.set_github_verification_uri(SharedString::new());
+            settings.set_github_auth_status("Connecting to GitHub...".into());
 
             let thread_weak = weak.clone();
             std::thread::spawn(move || {
@@ -99,8 +105,9 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                     Err(e) => {
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(app) = thread_weak.upgrade() {
-                                app.set_github_auth_pending(false);
-                                app.set_github_auth_status(
+                                let settings = app.global::<SettingsAdapter>();
+                                settings.set_github_auth_pending(false);
+                                settings.set_github_auth_status(
                                     format!("Connection failed: {e}").into(),
                                 );
                             }
@@ -114,9 +121,10 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                 let weak_init = thread_weak.clone();
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(app) = weak_init.upgrade() {
-                        app.set_github_user_code(user_code.into());
-                        app.set_github_verification_uri(uri.clone().into());
-                        app.set_github_auth_status("Waiting for browser authorization...".into());
+                        let settings = app.global::<SettingsAdapter>();
+                        settings.set_github_user_code(user_code.into());
+                        settings.set_github_verification_uri(uri.clone().into());
+                        settings.set_github_auth_status("Waiting for browser authorization...".into());
                     }
                 });
 
@@ -141,8 +149,9 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                             let weak = thread_weak.clone();
                             let _ = slint::invoke_from_event_loop(move || {
                                 if let Some(app) = weak.upgrade() {
-                                    app.set_github_auth_pending(false);
-                                    app.set_github_auth_status(
+                                    let settings = app.global::<SettingsAdapter>();
+                                    settings.set_github_auth_pending(false);
+                                    settings.set_github_auth_status(
                                         "Authorization session expired. Please try again.".into(),
                                     );
                                 }
@@ -153,8 +162,9 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                             let weak = thread_weak.clone();
                             let _ = slint::invoke_from_event_loop(move || {
                                 if let Some(app) = weak.upgrade() {
-                                    app.set_github_auth_pending(false);
-                                    app.set_github_auth_status(
+                                    let settings = app.global::<SettingsAdapter>();
+                                    settings.set_github_auth_pending(false);
+                                    settings.set_github_auth_status(
                                         "Authorization was cancelled or denied on GitHub.".into(),
                                     );
                                 }
@@ -165,8 +175,9 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                             let weak = thread_weak.clone();
                             let _ = slint::invoke_from_event_loop(move || {
                                 if let Some(app) = weak.upgrade() {
-                                    app.set_github_auth_pending(false);
-                                    app.set_github_auth_status(format!("Auth error: {e}").into());
+                                    let settings = app.global::<SettingsAdapter>();
+                                    settings.set_github_auth_pending(false);
+                                    settings.set_github_auth_status(format!("Auth error: {e}").into());
                                 }
                             });
                             return;
@@ -181,7 +192,8 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                 let weak_status = thread_weak.clone();
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(app) = weak_status.upgrade() {
-                        app.set_github_auth_status("Setting up private repository...".into());
+                        let settings = app.global::<SettingsAdapter>();
+                        settings.set_github_auth_status("Setting up private repository...".into());
                     }
                 });
 
@@ -191,8 +203,9 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                         let weak = thread_weak.clone();
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(app) = weak.upgrade() {
-                                app.set_github_auth_pending(false);
-                                app.set_github_auth_status(
+                                let settings = app.global::<SettingsAdapter>();
+                                settings.set_github_auth_pending(false);
+                                settings.set_github_auth_status(
                                     format!("Repository setup failed: {e}").into(),
                                 );
                             }
@@ -229,13 +242,15 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                         s.remote = Some(clone_url.clone());
                         drop(s);
 
-                        app.set_github_auth_pending(false);
-                        app.set_github_connected(true);
-                        app.set_github_username(username.into());
-                        app.set_github_repo_name(repo_info.name.into());
+                        let settings = app.global::<SettingsAdapter>();
+                        settings.set_github_auth_pending(false);
+                        settings.set_github_connected(true);
+                        settings.set_github_username(username.into());
+                        settings.set_github_repo_name(repo_info.name.into());
+                        settings.set_url_draft(clone_url.into());
+                        settings.set_has_token(true);
+
                         app.set_remote_configured(true);
-                        app.set_remote_url_draft(clone_url.into());
-                        app.set_remote_has_token(true);
                         set_status(&app, "GitHub account linked! Starting sync...");
                         start_sync(&app, &session);
                     }

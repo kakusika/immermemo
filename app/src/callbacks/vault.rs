@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use slint::{ComponentHandle, SharedString};
 
-use crate::App;
+use crate::{App, SettingsAdapter};
 use crate::haptic;
 use crate::render;
 use crate::update_provider_ui_state;
@@ -30,21 +30,24 @@ pub fn bind_vault_callbacks(
     session: &Rc<RefCell<Session>>,
     #[cfg(target_os = "android")] status_bar_choice_cell: Rc<Cell<i32>>,
 ) {
+    let settings = app.global::<SettingsAdapter>();
+
     app.on_open_settings({
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
             let app = weak.unwrap();
+            let settings = app.global::<SettingsAdapter>();
             let s = session.borrow();
-            app.set_remote_url_draft(s.remote.clone().unwrap_or_default().into());
-            app.set_remote_token_draft(SharedString::new());
-            app.set_remote_has_token(s.token_store.load().unwrap_or_default().is_some());
-            app.set_current_vault_name(vault_display_name(&s.vault_dir).into());
-            app.set_current_vault_path(s.vault_dir.display().to_string().into());
+            settings.set_url_draft(s.remote.clone().unwrap_or_default().into());
+            settings.set_token_draft(SharedString::new());
+            settings.set_has_token(s.token_store.load().unwrap_or_default().is_some());
+            settings.set_current_vault_name(vault_display_name(&s.vault_dir).into());
+            settings.set_current_vault_path(s.vault_dir.display().to_string().into());
             update_provider_ui_state(&app, s.remote.as_deref());
             let ssh_pub = s.app_data.load_ssh_public_key();
-            app.set_ssh_key_present(ssh_pub.is_some());
-            app.set_ssh_public_key(ssh_pub.unwrap_or_default().into());
-            app.set_ssh_key_copied(false);
+            settings.set_ssh_key_present(ssh_pub.is_some());
+            settings.set_ssh_public_key(ssh_pub.unwrap_or_default().into());
+            settings.set_ssh_key_copied(false);
             app.set_settings_page(0);
             app.set_settings_open(true);
         }
@@ -54,16 +57,17 @@ pub fn bind_vault_callbacks(
         move || weak.unwrap().set_settings_open(false)
     });
 
-    app.on_generate_ssh_key({
+    settings.on_generate_ssh_key({
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
             let app = weak.unwrap();
+            let settings = app.global::<SettingsAdapter>();
             let s = session.borrow();
             match s.app_data.generate_ssh_key(None) {
                 Ok(pubkey) => {
-                    app.set_ssh_key_present(true);
-                    app.set_ssh_public_key(pubkey.into());
-                    app.set_ssh_key_copied(false);
+                    settings.set_ssh_key_present(true);
+                    settings.set_ssh_public_key(pubkey.into());
+                    settings.set_ssh_key_copied(false);
                     set_status(&app, "Generated new Ed25519 SSH key");
                 }
                 Err(e) => {
@@ -73,20 +77,21 @@ pub fn bind_vault_callbacks(
         }
     });
 
-    app.on_copy_ssh_public_key({
+    settings.on_copy_ssh_public_key({
         let weak = app.as_weak();
         move || {
             let app = weak.unwrap();
-            let pubkey = app.get_ssh_public_key();
+            let settings = app.global::<SettingsAdapter>();
+            let pubkey = settings.get_ssh_public_key();
             if !pubkey.is_empty() {
                 crate::session::copy_to_clipboard(&app, pubkey.as_str());
-                app.set_ssh_key_copied(true);
+                settings.set_ssh_key_copied(true);
                 set_status(&app, "SSH public key copied to clipboard");
             }
         }
     });
 
-    app.on_font_size_changed({
+    settings.on_font_size_changed({
         let (weak, session) = (app.as_weak(), session.clone());
         move |choice| {
             let app = weak.unwrap();
@@ -102,7 +107,7 @@ pub fn bind_vault_callbacks(
             let _ = session.borrow().app_data.save_font_size(choice);
         }
     });
-    app.on_theme_changed({
+    settings.on_theme_changed({
         let (weak, session) = (app.as_weak(), session.clone());
         move |choice| {
             let _ = session.borrow().app_data.save_theme(choice);
@@ -112,7 +117,7 @@ pub fn bind_vault_callbacks(
             app.set_note_body_items(render::note_body_items(body.as_str(), &app, max_width));
         }
     });
-    app.on_status_bar_changed({
+    settings.on_status_bar_changed({
         let session = session.clone();
         #[cfg(target_os = "android")]
         let (weak, status_bar_choice_cell) = (app.as_weak(), status_bar_choice_cell.clone());
@@ -127,6 +132,14 @@ pub fn bind_vault_callbacks(
                     app.get_note_sheet_open(),
                 ));
             }
+        }
+    });
+    settings.on_open_vaults({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            refresh_vault_list(&app, &session);
+            app.set_vault_sheet_open(true);
         }
     });
     #[cfg(target_os = "android")]
@@ -144,12 +157,13 @@ pub fn bind_vault_callbacks(
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
             let app = weak.unwrap();
+            let settings = app.global::<SettingsAdapter>();
             let s = session.borrow();
-            app.set_remote_url_draft(s.remote.clone().unwrap_or_default().into());
-            app.set_remote_token_draft(SharedString::new());
-            app.set_remote_has_token(s.token_store.load().unwrap_or_default().is_some());
-            app.set_current_vault_name(vault_display_name(&s.vault_dir).into());
-            app.set_current_vault_path(s.vault_dir.display().to_string().into());
+            settings.set_url_draft(s.remote.clone().unwrap_or_default().into());
+            settings.set_token_draft(SharedString::new());
+            settings.set_has_token(s.token_store.load().unwrap_or_default().is_some());
+            settings.set_current_vault_name(vault_display_name(&s.vault_dir).into());
+            settings.set_current_vault_path(s.vault_dir.display().to_string().into());
             update_provider_ui_state(&app, s.remote.as_deref());
             app.set_settings_page(2);
             app.set_settings_open(true);
@@ -266,7 +280,7 @@ pub fn bind_vault_callbacks(
         }
     });
 
-    app.on_save_remote({
+    settings.on_save_remote({
         let (weak, session) = (app.as_weak(), session.clone());
         move |url, token| {
             let app = weak.unwrap();
