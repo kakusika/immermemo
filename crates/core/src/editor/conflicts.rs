@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use immermemo_index::NoteIndex;
-use tomet::merge::ConflictResolution;
 use immermemo_sync::{ConflictSide, Vault};
 use immermemo_vault::appdata::AppData;
+use tomet::merge::ConflictResolution;
 
 use super::state::{EditorState, current_path};
 
@@ -257,7 +257,7 @@ fn resolve_single_lossless(
     let mut current_conflict_idx = 0;
     let mut resolved = false;
 
-    let node_ids = collect_leaf_node_ids(&doc);
+    let node_ids = doc.leaf_nodes();
 
     for node_id in node_ids {
         let Some(node) = doc.get(node_id) else {
@@ -279,8 +279,7 @@ fn resolve_single_lossless(
 
         if target_idx >= current_conflict_idx && target_idx < current_conflict_idx + count {
             let local_idx = target_idx - current_conflict_idx;
-            let resolved_ast =
-                tomet::merge::resolve_single(&parsed, local_idx, resolution.clone());
+            let resolved_ast = tomet::merge::resolve_single(&parsed, local_idx, resolution.clone());
             let mut new_text = tomet::printer::document_to_tm(&resolved_ast);
 
             if node.raw.ends_with('\n') && !new_text.ends_with('\n') {
@@ -318,7 +317,7 @@ fn resolve_all_lossless(
     use tomet::edit::{export_doc, import_source};
 
     let mut doc = import_source(src);
-    let node_ids = collect_leaf_node_ids(&doc);
+    let node_ids = doc.leaf_nodes();
     let mut any_resolved = false;
 
     for node_id in node_ids {
@@ -360,40 +359,6 @@ fn resolve_all_lossless(
     let resolved_text = export_doc(&doc);
     let resolved_doc = tomet::parser::parse_document(&resolved_text).ok()?;
     Some((resolved_text, resolved_doc))
-}
-
-fn collect_leaf_node_ids(doc: &tomet::edit::EditDoc) -> Vec<tomet::edit::NodeId> {
-    let mut out = Vec::new();
-    for item in doc.root_children() {
-        if let Some(id) = item.as_node_id() {
-            collect_nodes_recursive(doc, id, &mut out);
-        }
-    }
-    out
-}
-
-fn collect_nodes_recursive(
-    doc: &tomet::edit::EditDoc,
-    id: tomet::edit::NodeId,
-    out: &mut Vec<tomet::edit::NodeId>,
-) {
-    let Some(node) = doc.get(id) else {
-        return;
-    };
-    match &node.kind {
-        tomet::edit::NodeKind::Section { children, .. }
-        | tomet::edit::NodeKind::List { children }
-        | tomet::edit::NodeKind::ListItem { children, .. } => {
-            for child in children {
-                if let Some(cid) = child.as_node_id() {
-                    collect_nodes_recursive(doc, cid, out);
-                }
-            }
-        }
-        _ => {
-            out.push(id);
-        }
-    }
 }
 
 #[cfg(test)]

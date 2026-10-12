@@ -5,9 +5,7 @@
 //! Uses `tomet::edit` to mutate only the `@meta{}` block while preserving 100% of
 //! layout trivia, comments, and unedited blocks byte-identically.
 
-use tomet::edit::{
-    AttrGroup, ChildItem, EditDoc, EditOp, Node, NodeKind, export_doc, import_source,
-};
+use tomet::edit::{EditDoc, export_doc, import_source};
 
 /// `body` with its top-level `@meta{}`'s `icon` entry set to
 /// `@doc.icon(name, pkg)`, constructing a `@meta{}` block first if `body`
@@ -16,59 +14,13 @@ use tomet::edit::{
 pub fn set_note_icon(body: &str, name: &str, pkg: &str) -> Option<String> {
     let mut doc: EditDoc = import_source(body);
 
-    let meta_node_id = doc
-        .root_children()
-        .iter()
-        .filter_map(|item| item.as_node_id())
-        .find(|id| {
-            matches!(
-                doc.get(*id).map(|n| &n.kind),
-                Some(NodeKind::BlockElement { name, .. }) if name == "meta"
-            )
-        });
-
     let icon_val = if pkg.is_empty() {
         format!("@doc.icon({name})")
     } else {
         format!("@doc.icon({name}, pkg: {pkg})")
     };
 
-    match meta_node_id {
-        Some(id) => {
-            doc.set_attribute(id, AttrGroup::Data, "icon", Some(icon_val))
-                .ok()?;
-        }
-        None => {
-            let new_id = doc.alloc_id();
-            let mut new_node = Node::new(
-                new_id,
-                NodeKind::BlockElement {
-                    name: "meta".to_string(),
-                    id_attr: None,
-                    args: Vec::new(),
-                    data: vec![("icon".to_string(), icon_val)],
-                    content: None,
-                },
-                String::new(),
-            );
-            new_node.mark_edited();
-            doc.apply_op(EditOp::Insert {
-                parent: None,
-                index: 0,
-                node: new_node,
-            })
-            .ok()?;
-
-            // Insert spacing trivia between @meta and the rest of the body
-            if doc.root_children().len() > 1 {
-                doc.root_children_mut()
-                    .insert(1, ChildItem::Trivia("\n\n".to_string()));
-            } else {
-                doc.root_children_mut()
-                    .insert(1, ChildItem::Trivia("\n".to_string()));
-            }
-        }
-    }
+    doc.set_meta_data("icon", Some(icon_val)).ok()?;
 
     Some(export_doc(&doc))
 }
