@@ -2,8 +2,7 @@
 //! the same flat, slash-separated display titles the old flat list already
 //! used (e.g. `work/todo`) -- no new path parsing or sorting of the vault
 //! itself. List and Grid are just two renderings of the same
-//! [`build_folder_entries`] output (rows vs. tiles); a first cut also had a
-//! Tree view, dropped as unworkable on a phone-sized screen.
+//! [`build_folder_entries`] output (rows vs. tiles).
 //!
 //! Entries still only ever hand back a `note_index` into
 //! `Session.notes`/`Session.conflicted` -- the index contract every other
@@ -99,96 +98,142 @@ pub fn build_folder_entries(notes: &[TitledNote], current_folder: &str) -> Vec<D
 /// there's no separate always-present root button) followed by each real
 /// ancestor folder in turn. Empty at the vault root (nothing to show; you
 /// are already there).
-pub fn build_breadcrumb(current_folder: &str) -> Vec<(String, String)> {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BreadcrumbSegment {
+    pub key: String,
+    pub display: String,
+}
+
+pub fn build_breadcrumb(current_folder: &str) -> Vec<BreadcrumbSegment> {
     if current_folder.is_empty() {
         return Vec::new();
     }
-    let mut crumbs = vec![(String::new(), String::new())];
-    let mut key = String::new();
-    for segment in current_folder.split('/') {
-        key = join_key(&key, segment);
-        crumbs.push((key.clone(), segment.to_string()));
+    let mut segments = vec![BreadcrumbSegment {
+        key: String::new(),
+        display: String::new(),
+    }];
+    let mut accum = String::new();
+    for part in current_folder.split('/') {
+        if part.is_empty() {
+            continue;
+        }
+        if !accum.is_empty() {
+            accum.push('/');
+        }
+        accum.push_str(part);
+        segments.push(BreadcrumbSegment {
+            key: accum.clone(),
+            display: part.to_string(),
+        });
     }
-    crumbs
+    segments
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn entry(
-        is_folder: bool,
-        key: &str,
-        display: &str,
-        note_index: i32,
-        has_conflict: bool,
-    ) -> DirectoryEntry {
-        DirectoryEntry {
-            is_folder,
-            key: key.to_string(),
-            display: display.to_string(),
-            note_index,
-            has_conflict,
-        }
-    }
-
     #[test]
-    fn folder_entries_at_root_list_top_level_folders_then_notes() {
+    fn root_folder_lists_subfolders_and_direct_notes() {
         let notes: Vec<TitledNote> = vec![
-            ("grocery", 0, false),
-            ("work/sub/deep", 1, false),
-            ("work/todo", 2, true),
-            ("zz-last", 3, false),
+            ("inbox/first", 0, false),
+            ("inbox/second", 1, false),
+            ("root_note", 2, true),
+            ("work/project/todo", 3, false),
         ];
-        let rows = build_folder_entries(&notes, "");
+        let entries = build_folder_entries(&notes, "");
         assert_eq!(
-            rows,
+            entries,
             vec![
-                entry(true, "work", "work", -1, false),
-                entry(false, "", "grocery", 0, false),
-                entry(false, "", "zz-last", 3, false),
+                DirectoryEntry {
+                    is_folder: true,
+                    key: "inbox".into(),
+                    display: "inbox".into(),
+                    note_index: -1,
+                    has_conflict: false,
+                },
+                DirectoryEntry {
+                    is_folder: true,
+                    key: "work".into(),
+                    display: "work".into(),
+                    note_index: -1,
+                    has_conflict: false,
+                },
+                DirectoryEntry {
+                    is_folder: false,
+                    key: String::new(),
+                    display: "root_note".into(),
+                    note_index: 2,
+                    has_conflict: true,
+                },
             ]
         );
     }
 
     #[test]
-    fn folder_entries_descend_into_a_folder() {
+    fn nested_folder_lists_only_its_direct_children() {
         let notes: Vec<TitledNote> = vec![
-            ("grocery", 0, false),
-            ("work/sub/deep", 1, false),
-            ("work/todo", 2, true),
+            ("work/a", 0, false),
+            ("work/project/alpha", 1, false),
+            ("work/project/beta", 2, false),
         ];
-        let rows = build_folder_entries(&notes, "work");
+        let entries = build_folder_entries(&notes, "work");
         assert_eq!(
-            rows,
+            entries,
             vec![
-                entry(true, "work/sub", "sub", -1, false),
-                entry(false, "", "todo", 2, true),
+                DirectoryEntry {
+                    is_folder: true,
+                    key: "work/project".into(),
+                    display: "project".into(),
+                    note_index: -1,
+                    has_conflict: false,
+                },
+                DirectoryEntry {
+                    is_folder: false,
+                    key: String::new(),
+                    display: "a".into(),
+                    note_index: 0,
+                    has_conflict: false,
+                },
             ]
         );
     }
 
     #[test]
-    fn folder_entries_deduplicate_a_folder_with_multiple_notes() {
-        let notes: Vec<TitledNote> = vec![("work/a", 0, false), ("work/b", 1, false)];
-        let rows = build_folder_entries(&notes, "");
-        assert_eq!(rows, vec![entry(true, "work", "work", -1, false)]);
-    }
-
-    #[test]
-    fn breadcrumb_is_empty_at_root() {
-        assert_eq!(build_breadcrumb(""), Vec::<(String, String)>::new());
-    }
-
-    #[test]
-    fn breadcrumb_lists_the_root_then_each_ancestor_with_its_cumulative_key() {
+    fn breadcrumb_builds_root_and_chain() {
+        assert_eq!(build_breadcrumb(""), Vec::<BreadcrumbSegment>::new());
         assert_eq!(
-            build_breadcrumb("work/sub/deep"),
+            build_breadcrumb("work"),
             vec![
-                ("".to_string(), "".to_string()),
-                ("work".to_string(), "work".to_string()),
-                ("work/sub".to_string(), "sub".to_string()),
-                ("work/sub/deep".to_string(), "deep".to_string()),
+                BreadcrumbSegment {
+                    key: String::new(),
+                    display: String::new(),
+                },
+                BreadcrumbSegment {
+                    key: "work".into(),
+                    display: "work".into(),
+                },
+            ]
+        );
+        assert_eq!(
+            build_breadcrumb("work/project/sub"),
+            vec![
+                BreadcrumbSegment {
+                    key: String::new(),
+                    display: String::new(),
+                },
+                BreadcrumbSegment {
+                    key: "work".into(),
+                    display: "work".into(),
+                },
+                BreadcrumbSegment {
+                    key: "work/project".into(),
+                    display: "project".into(),
+                },
+                BreadcrumbSegment {
+                    key: "work/project/sub".into(),
+                    display: "sub".into(),
+                },
             ]
         );
     }

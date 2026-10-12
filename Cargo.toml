@@ -3,6 +3,7 @@ resolver = "3"
 
 members = [
   "app",
+  "crates/core",
   "crates/editor",
   "crates/identity",
   "crates/index",
@@ -20,6 +21,7 @@ edition = "2024"
 rust-version = "1.85"
 
 [workspace.dependencies]
+immermemo-core = { path = "crates/core" }
 immermemo-editor = { path = "crates/editor" }
 immermemo-identity = { path = "crates/identity" }
 immermemo-index = { path = "crates/index" }

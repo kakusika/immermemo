@@ -13,6 +13,7 @@ name = "immermemo"
 path = "src/main.rs"
 
 [dependencies]
+immermemo-core = { workspace = true }
 immermemo-editor = { workspace = true }
 immermemo-identity = { workspace = true }
 immermemo-index = { workspace = true }

@@ -1,13 +1,11 @@
 pub mod cert;
 pub mod credentials;
-mod directory;
 mod haptic;
 pub mod qr;
 pub mod render;
 mod session;
 mod sync;
 mod widget;
-
 
 #[cfg(target_os = "android")]
 mod android;
@@ -231,7 +229,7 @@ pub fn run(
         .ok()
         .and_then(|p| immermemo_index::NoteIndex::open(&p).ok())
         .unwrap_or_else(|| immermemo_index::NoteIndex::open_in_memory().unwrap());
-    let session = Rc::new(RefCell::new(Session {
+    let core = immermemo_core::Session::new(
         vault_dir,
         app_data,
         token_store,
@@ -239,22 +237,8 @@ pub fn run(
         known_vaults,
         remote,
         index,
-        notes: Vec::new(),
-        conflicted: Vec::new(),
-        search_query: String::new(),
-        filtered_results: Vec::new(),
-        editor: immermemo_editor::EditorState::default(),
-        rename_target: None,
-        icon_picker_target: None,
-        delete_target: None,
-        delete_vault_target: None,
-        pending_auto_sync: false,
-        last_synced_at: None,
-        current_folder: String::new(),
-        directory_source: Vec::new(),
-        note_nav: session::BackForwardStack::default(),
-        history_preview_cache: std::collections::HashMap::new(),
-    }));
+    );
+    let session = Rc::new(RefCell::new(Session::new(core)));
 
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
     refresh_list(&app, &session);
@@ -872,7 +856,9 @@ pub fn run(
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(app) = thread_weak.upgrade() {
                                 app.set_github_auth_pending(false);
-                                app.set_github_auth_status(format!("Connection failed: {e}").into());
+                                app.set_github_auth_status(
+                                    format!("Connection failed: {e}").into(),
+                                );
                             }
                         });
                         return;
@@ -974,9 +960,7 @@ pub fn run(
                 let user_info = provider.get_user(&token).ok();
                 let username = user_info
                     .map(|u| u.login)
-                    .or_else(|| {
-                        GitHubProvider::parse_remote(&repo_info.clone_url).map(|(u, _)| u)
-                    })
+                    .or_else(|| GitHubProvider::parse_remote(&repo_info.clone_url).map(|(u, _)| u))
                     .unwrap_or_default();
 
                 let weak_done = thread_weak.clone();
@@ -1017,7 +1001,9 @@ pub fn run(
     });
 
     let cached_export_uri = Rc::new(RefCell::new(None::<String>));
-    let pending_imported_payload = Rc::new(RefCell::new(None::<immermemo_vault::transfer::TransferPayload>));
+    let pending_imported_payload = Rc::new(RefCell::new(
+        None::<immermemo_vault::transfer::TransferPayload>,
+    ));
     APP_WEAK.with(|a| *a.borrow_mut() = Some(app.as_weak()));
     PENDING_IMPORT_PAYLOAD.with(|p| *p.borrow_mut() = Some(pending_imported_payload.clone()));
 
@@ -1042,25 +1028,24 @@ pub fn run(
             );
             drop(s);
             match payload_res {
-                Ok(payload) => {
-                    match immermemo_vault::transfer::encode_payload(&payload) {
-                        Ok(uri) => {
-                            *cached_export_uri.borrow_mut() = Some(uri.clone());
-                            match crate::qr::generate_qr_image(&uri, 260) {
-                                Ok(img) => app.set_qr_image(img),
-                                Err(_) => app.set_qr_image(slint::Image::default()),
-                            }
+                Ok(payload) => match immermemo_vault::transfer::encode_payload(&payload) {
+                    Ok(uri) => {
+                        *cached_export_uri.borrow_mut() = Some(uri.clone());
+                        match crate::qr::generate_qr_image(&uri, 260) {
+                            Ok(img) => app.set_qr_image(img),
+                            Err(_) => app.set_qr_image(slint::Image::default()),
                         }
-                        Err(_) => app.set_qr_image(slint::Image::default()),
                     }
-                }
+                    Err(_) => app.set_qr_image(slint::Image::default()),
+                },
                 Err(_) => app.set_qr_image(slint::Image::default()),
             }
         }
     };
 
     app.on_refresh_transfer_qr({
-        let (weak, session, update_qr) = (app.as_weak(), session.clone(), update_transfer_qr.clone());
+        let (weak, session, update_qr) =
+            (app.as_weak(), session.clone(), update_transfer_qr.clone());
         move || {
             let app = weak.unwrap();
             app.set_transfer_copied(false);
@@ -1119,8 +1104,11 @@ pub fn run(
     });
 
     app.on_apply_import({
-        let (weak, session, pending_payload) =
-            (app.as_weak(), session.clone(), pending_imported_payload.clone());
+        let (weak, session, pending_payload) = (
+            app.as_weak(),
+            session.clone(),
+            pending_imported_payload.clone(),
+        );
         move || {
             let app = weak.unwrap();
             let payload = pending_payload.borrow_mut().take();
@@ -1176,7 +1164,6 @@ pub fn run(
             }
         }
     });
-
 
     let jump_pos = Rc::new(RefCell::new(0usize));
     app.on_jump_conflict({
@@ -1415,37 +1402,27 @@ mod tests {
         let token_store: Arc<dyn TokenStore> = Arc::new(credentials::PlainFileTokenStore::new(
             tmp.path().join("token"),
         ));
-        let session = Rc::new(RefCell::new(Session {
-            vault_dir: vault_dir.clone(),
+        let mut core = immermemo_core::Session::new(
+            vault_dir.clone(),
             app_data,
-            token_store: token_store.clone(),
-            token_store_for: Box::new(move |_| Ok(token_store.clone())),
-            known_vaults: vec![vault_dir.clone()],
-            remote: None,
-            index: immermemo_index::NoteIndex::open_in_memory().unwrap(),
-            notes: vec![note_path.clone()],
-            conflicted: vec![true],
-            search_query: String::new(),
-            filtered_results: vec![notes::SearchResult {
-                note_index: 0,
-                snippet: None,
-            }],
-            editor: immermemo_editor::EditorState {
-                current: Some(0),
-                history: Some(History::new(&conflicted_text)),
-                note_history_revisions: Vec::new(),
-            },
-            rename_target: None,
-            icon_picker_target: None,
-            delete_target: None,
-            delete_vault_target: None,
-            pending_auto_sync: false,
-            last_synced_at: None,
-            current_folder: String::new(),
-            directory_source: Vec::new(),
-            note_nav: session::BackForwardStack::default(),
-            history_preview_cache: std::collections::HashMap::new(),
-        }));
+            token_store.clone(),
+            Box::new(move |_| Ok(token_store.clone())),
+            vec![vault_dir.clone()],
+            None,
+            immermemo_index::NoteIndex::open_in_memory().unwrap(),
+        );
+        core.notes = vec![note_path.clone()];
+        core.conflicted = vec![true];
+        core.filtered_results = vec![notes::SearchResult {
+            note_index: 0,
+            snippet: None,
+        }];
+        core.editor = immermemo_editor::EditorState {
+            current: Some(0),
+            history: Some(History::new(&conflicted_text)),
+            note_history_revisions: Vec::new(),
+        };
+        let session = Rc::new(RefCell::new(Session::new(core)));
 
         app.set_current_has_conflict(true);
         app.set_body(conflicted_text.into());
@@ -1862,7 +1839,10 @@ mod tests {
         assert!(app.get_import_preview_ready());
         assert!(app.get_preview_has_interface());
         assert!(app.get_preview_has_remote());
-        assert_eq!(app.get_preview_remote_url(), "https://example.com/notes.git");
+        assert_eq!(
+            app.get_preview_remote_url(),
+            "https://example.com/notes.git"
+        );
         assert!(app.get_preview_has_token());
         assert!(pending.borrow().is_some());
     }

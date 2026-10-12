@@ -2578,6 +2578,7 @@ dependencies = [
  "base64",
  "directories",
  "git2",
+ "immermemo-core",
  "immermemo-editor",
  "immermemo-identity",
  "immermemo-index",
@@ -2599,6 +2600,22 @@ dependencies = [
  "tempfile",
  "tomet",
  "webbrowser",
+]
+
+[[package]]
+name = "immermemo-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "directories",
+ "immermemo-editor",
+ "immermemo-identity",
+ "immermemo-index",
+ "immermemo-sync",
+ "immermemo-vault",
+ "serde",
+ "tempfile",
+ "tomet",
 ]
 
 [[package]]

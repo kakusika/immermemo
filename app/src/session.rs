@@ -4,162 +4,52 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::sync::Arc;
-
 use immermemo_editor::EditorState;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::credentials::TokenCredentials;
-use crate::directory;
 use crate::sync;
-use crate::{
-    App, BreadcrumbSegment, DirectoryEntry, NoteBodyItemView, PickerIconEntry, TokenStoreFactory,
-};
+use crate::{App, BreadcrumbSegment, DirectoryEntry, NoteBodyItemView, PickerIconEntry};
+use immermemo_core::directory;
 use immermemo_editor::History;
 use immermemo_index::NoteIndex;
 use immermemo_sync::Vault;
-use immermemo_vault::appdata::AppData;
-use immermemo_vault::credentials::TokenStore;
 use immermemo_vault::notes;
 
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use crate::cert;
 
-/// Back/forward navigation between previously-opened notes -- distinct
-/// from `EditorState.history` (per-note text undo/redo) and the
-/// git-commit "history" sheets (`HistorySheet`/`VaultHistorySheet`).
-/// Holds vault-relative paths (the same shape `OpenedNote::note_rel_path`
-/// and `open_note_by_rel_path` already use), not `notes` indices, since
-/// those shift under rename/create/delete/filtering. `entries[cursor]`
-/// is always "the note open right now".
-#[derive(Default)]
-pub struct BackForwardStack {
-    entries: Vec<String>,
-    cursor: Option<usize>,
-}
-
-impl BackForwardStack {
-    /// Records a newly-opened note as "here", discarding any forward
-    /// entries past the cursor (browser semantics: navigating to a new
-    /// note after going back drops the abandoned forward branch). A
-    /// no-op if `rel_path` is already "here" (re-opening the same note
-    /// doesn't duplicate it).
-    pub fn visit(&mut self, rel_path: String) {
-        if self.cursor.is_some_and(|c| self.entries[c] == rel_path) {
-            return;
-        }
-        let next = self.cursor.map_or(0, |c| c + 1);
-        self.entries.truncate(next);
-        self.entries.push(rel_path);
-        self.cursor = Some(next);
-    }
-
-    pub fn can_back(&self) -> bool {
-        self.cursor.is_some_and(|c| c > 0)
-    }
-
-    pub fn can_forward(&self) -> bool {
-        self.cursor.is_some_and(|c| c + 1 < self.entries.len())
-    }
-
-    /// The note one step back/forward from "here", for a lightweight
-    /// preview -- doesn't move the cursor.
-    pub fn peek_back(&self) -> Option<&str> {
-        let c = self.cursor?;
-        (c > 0).then(|| self.entries[c - 1].as_str())
-    }
-
-    pub fn peek_forward(&self) -> Option<&str> {
-        self.entries.get(self.cursor? + 1).map(String::as_str)
-    }
-
-    /// Moves back one step, dropping entries `is_live` rejects (renamed
-    /// or deleted since they were visited) before landing on one that's
-    /// still real. Returns the path now "here", if any.
-    pub fn step_back(&mut self, is_live: impl Fn(&str) -> bool) -> Option<String> {
-        while self.can_back() {
-            let c = self.cursor.unwrap();
-            if is_live(&self.entries[c - 1]) {
-                self.cursor = Some(c - 1);
-                return Some(self.entries[c - 1].clone());
-            }
-            self.entries.remove(c - 1);
-            self.cursor = Some(c - 1);
-        }
-        None
-    }
-
-    /// Mirrors `step_back`, moving forward instead.
-    pub fn step_forward(&mut self, is_live: impl Fn(&str) -> bool) -> Option<String> {
-        while self.can_forward() {
-            let c = self.cursor.unwrap();
-            if is_live(&self.entries[c + 1]) {
-                self.cursor = Some(c + 1);
-                return Some(self.entries[c + 1].clone());
-            }
-            self.entries.remove(c + 1);
-        }
-        None
-    }
-
-    pub fn clear(&mut self) {
-        self.entries.clear();
-        self.cursor = None;
-    }
-}
+pub use immermemo_core::vault_display_name;
 
 /// What the window is currently editing. Lives on the UI thread only.
 pub struct Session {
-    pub vault_dir: PathBuf,
-    pub app_data: AppData,
-    /// The current vault's token store. Rebuilt (via `token_store_for`)
-    /// whenever the vault switches -- it can't be built once at startup
-    /// the way it used to be, since a different vault can need a
-    /// completely different store (Android: a different Keystore entry).
-    pub token_store: Arc<dyn TokenStore>,
-    pub token_store_for: TokenStoreFactory,
-    /// Every vault folder the user has linked, in the order they were
-    /// added. `vault_dir` is always one of these.
-    pub known_vaults: Vec<PathBuf>,
-    /// The remote URL, kept here once loaded so Sync doesn't re-read it from
-    /// disk on every tap. Not secret -- the token lives in `token_store`.
-    pub remote: Option<String>,
-    pub index: NoteIndex,
-    pub notes: Vec<PathBuf>,
-    pub conflicted: Vec<bool>,
-    pub search_query: String,
-    pub filtered_results: Vec<notes::SearchResult>,
-    /// What the editor is showing right now -- see `immermemo-editor`'s
-    /// module doc for why this is its own type rather than more fields
-    /// here.
-    pub editor: EditorState,
-    /// Which note the open rename/delete-confirm dialog acts on, if any --
-    /// set when the dialog opens, read (and cleared) when it's confirmed.
-    pub rename_target: Option<usize>,
-    pub delete_target: Option<usize>,
-    pub delete_vault_target: Option<usize>,
-    /// Which note the open icon picker (`sheets/icon_picker.slint`) would
-    /// set `@meta{ icon: ... }` on if the user picks one -- same lifecycle
-    /// as `rename_target`.
-    pub icon_picker_target: Option<usize>,
-    pub pending_auto_sync: bool,
-    pub last_synced_at: Option<std::time::SystemTime>,
-    /// The folder the Directory page (List and Grid alike) is currently
-    /// browsing, keyed by its full slash-joined title (e.g. `work/sub`).
-    /// `""` means the vault root. Ephemeral UI state, not persisted.
-    pub current_folder: String,
-    /// `(display title, index into notes/conflicted, has_conflict)` for
-    /// whatever's currently filtered into view, sorted alphabetically by
-    /// title -- the cache [`refresh_directory_views`] rebuilds
-    /// `tree_rows`/`grid_entries` from on every toggle/navigate, without
-    /// re-running `index.search`.
-    pub directory_source: Vec<(String, i32, bool)>,
-    /// Back/forward stack of previously-opened notes in this vault.
-    pub note_nav: BackForwardStack,
+    pub core: immermemo_core::Session,
     /// `history_preview_items`'s cache of rendered history-neighbor
     /// previews, keyed by vault-relative path -- see that function's own
     /// doc comment.
     pub history_preview_cache: HashMap<String, (f32, ModelRc<NoteBodyItemView>)>,
+}
+
+impl std::ops::Deref for Session {
+    type Target = immermemo_core::Session;
+    fn deref(&self) -> &Self::Target {
+        &self.core
+    }
+}
+
+impl std::ops::DerefMut for Session {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.core
+    }
+}
+
+impl Session {
+    pub fn new(core: immermemo_core::Session) -> Self {
+        Self {
+            core,
+            history_preview_cache: HashMap::new(),
+        }
+    }
 }
 
 thread_local! {
@@ -167,12 +57,6 @@ thread_local! {
     // finds the session again here rather than carrying an `Rc` across.
     pub static SESSION: RefCell<Option<Rc<RefCell<Session>>>> = const { RefCell::new(None) };
     static AUTO_SYNC_TIMER: RefCell<slint::Timer> = RefCell::new(slint::Timer::default());
-}
-
-impl Session {
-    pub fn current_path(&self) -> Option<PathBuf> {
-        immermemo_editor::current_path(&self.editor, &self.notes)
-    }
 }
 
 /// Spawns a sync in the background, unless no remote is linked yet -- then
@@ -256,63 +140,26 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
 
 pub fn refresh_list(app: &App, session: &Rc<RefCell<Session>>) {
     let mut s = session.borrow_mut();
-    let previous = s.current_path();
-    let vault_dir = s.vault_dir.clone();
-    let _ = s.index.reconcile_filesystem(&vault_dir);
+    let outcome = s.refresh_list_data();
     crate::widget::export_recent_notes(&s.index);
-    let all = s.index.list_all().unwrap_or_default();
-    let vault_dir = s.vault_dir.clone();
-    s.notes = all.iter().map(|n| vault_dir.join(&n.path)).collect();
-    s.conflicted = all.iter().map(|n| n.has_conflict).collect();
-    let conflict_count = s.conflicted.iter().filter(|&&c| c).count();
-    s.editor.current = previous.and_then(|p| s.notes.iter().position(|n| *n == p));
     drop(s);
-    app.set_conflict_count(conflict_count as i32);
+    app.set_conflict_count(outcome.conflict_count as i32);
     update_filtered_list(app, session);
 }
 
 pub fn update_filtered_list(app: &App, session: &Rc<RefCell<Session>>) {
-    let mut s = session.borrow_mut();
-    let hits = s.index.search(&s.search_query).unwrap_or_default();
-    let vault_dir = s.vault_dir.clone();
+    let outcome = session.borrow_mut().update_filtered_list_data();
+    let names: Vec<SharedString> = outcome.names.into_iter().map(SharedString::from).collect();
+    let snippets: Vec<SharedString> = outcome
+        .snippets
+        .into_iter()
+        .map(SharedString::from)
+        .collect();
 
-    let mut filtered_results = Vec::with_capacity(hits.len());
-    let mut names = Vec::with_capacity(hits.len());
-    let mut conflicted = Vec::with_capacity(hits.len());
-    let mut snippets = Vec::with_capacity(hits.len());
-    // Mirrors `names`/`filtered_results`/`conflicted` above but sorted by
-    // title -- `hits` is ranked by search relevance, not path, while the
-    // Directory Tree/Grid views need a folder's notes to appear as a
-    // contiguous run. See [`refresh_directory_views`].
-    let mut directory_source = Vec::with_capacity(hits.len());
-
-    for hit in hits {
-        let abs_path = vault_dir.join(&hit.path);
-        if let Some(index) = s.notes.iter().position(|p| *p == abs_path) {
-            directory_source.push((hit.title.clone(), index as i32, hit.has_conflict));
-            filtered_results.push(notes::SearchResult {
-                note_index: index,
-                snippet: hit.snippet.clone(),
-            });
-            names.push(SharedString::from(hit.title));
-            conflicted.push(hit.has_conflict);
-            snippets.push(SharedString::from(hit.snippet.unwrap_or_default()));
-        }
-    }
-    directory_source.sort_by(|a: &(String, i32, bool), b| a.0.cmp(&b.0));
-
-    s.filtered_results = filtered_results;
-    s.directory_source = directory_source;
-    let ui_current = s
-        .editor
-        .current
-        .and_then(|cur| s.filtered_results.iter().position(|r| r.note_index == cur));
-
-    drop(s);
     app.set_notes(ModelRc::new(VecModel::from(names)));
-    app.set_conflicted(ModelRc::new(VecModel::from(conflicted)));
+    app.set_conflicted(ModelRc::new(VecModel::from(outcome.conflicted)));
     app.set_snippets(ModelRc::new(VecModel::from(snippets)));
-    app.set_current(ui_current.map_or(-1, |i| i as i32));
+    app.set_current(outcome.ui_current.map_or(-1, |i| i as i32));
     refresh_directory_views(app, session);
 }
 
@@ -351,9 +198,9 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
             .collect();
     let breadcrumb: Vec<BreadcrumbSegment> = directory::build_breadcrumb(&s.current_folder)
         .into_iter()
-        .map(|(key, display)| BreadcrumbSegment {
-            key: key.into(),
-            display: display.into(),
+        .map(|seg| BreadcrumbSegment {
+            key: seg.key.into(),
+            display: seg.display.into(),
         })
         .collect();
     drop(s);
@@ -408,13 +255,6 @@ pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
     drop(s);
     app.set_vaults(ModelRc::new(VecModel::from(names)));
     app.set_current_vault(current.map_or(-1, |i| i as i32));
-}
-
-pub fn vault_display_name(vault_dir: &std::path::Path) -> String {
-    vault_dir
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| vault_dir.display().to_string())
 }
 
 /// Switches to `vault_dir`, reloading everything that's per-vault: the
@@ -552,7 +392,7 @@ pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
 fn open_note_inner(app: &App, session: &Rc<RefCell<Session>>, index: usize) -> Option<String> {
     let outcome = {
         let mut guard = session.borrow_mut();
-        let s = &mut *guard;
+        let s = &mut guard.core;
         let vault_dir = s.vault_dir.clone();
         immermemo_editor::open_note(
             &mut s.editor,
@@ -837,7 +677,7 @@ pub fn resolve_active_conflict(
 ) {
     let outcome = {
         let mut guard = session.borrow_mut();
-        let s = &mut *guard;
+        let s = &mut guard.core;
         let vault_dir = s.vault_dir.clone();
         immermemo_editor::resolve_active_conflict(
             &mut s.editor,
@@ -941,7 +781,7 @@ pub fn resolve_conflict_step(app: &App, session: &Rc<RefCell<Session>>, choice: 
     let active_conflict_index = app.get_active_conflict_index();
     let outcome = {
         let mut guard = session.borrow_mut();
-        let s = &mut *guard;
+        let s = &mut guard.core;
         let vault_dir = s.vault_dir.clone();
         immermemo_editor::resolve_conflict_step(
             &mut s.editor,
@@ -1215,7 +1055,7 @@ pub fn open_note_history(app: &App, session: &Rc<RefCell<Session>>) {
 pub fn restore_note_version(app: &App, session: &Rc<RefCell<Session>>, rev_idx: usize) {
     let outcome = {
         let mut guard = session.borrow_mut();
-        let s = &mut *guard;
+        let s = &mut guard.core;
         let vault_dir = s.vault_dir.clone();
         immermemo_editor::restore_note_version(
             &mut s.editor,
@@ -1366,120 +1206,3 @@ pub fn apply_icon_selection(app: &App, session: &Rc<RefCell<Session>>, name: &st
     }
 }
 
-#[cfg(test)]
-mod back_forward_stack_tests {
-    use super::BackForwardStack;
-
-    #[test]
-    fn a_fresh_stack_has_nowhere_to_go() {
-        let stack = BackForwardStack::default();
-        assert!(!stack.can_back());
-        assert!(!stack.can_forward());
-        assert_eq!(stack.peek_back(), None);
-        assert_eq!(stack.peek_forward(), None);
-    }
-
-    #[test]
-    fn visiting_notes_in_turn_only_allows_going_back() {
-        let mut stack = BackForwardStack::default();
-        stack.visit("a.tmt".into());
-        stack.visit("b.tmt".into());
-        stack.visit("c.tmt".into());
-
-        assert!(stack.can_back());
-        assert!(!stack.can_forward());
-        assert_eq!(stack.peek_back(), Some("b.tmt"));
-    }
-
-    #[test]
-    fn revisiting_the_current_note_does_not_duplicate_it() {
-        let mut stack = BackForwardStack::default();
-        stack.visit("a.tmt".into());
-        stack.visit("a.tmt".into());
-
-        assert!(!stack.can_back());
-    }
-
-    #[test]
-    fn stepping_back_then_forward_returns_to_where_it_started() {
-        let mut stack = BackForwardStack::default();
-        stack.visit("a.tmt".into());
-        stack.visit("b.tmt".into());
-
-        assert_eq!(stack.step_back(|_| true), Some("a.tmt".to_string()));
-        assert!(!stack.can_back());
-        assert!(stack.can_forward());
-        assert_eq!(stack.peek_forward(), Some("b.tmt"));
-
-        assert_eq!(stack.step_forward(|_| true), Some("b.tmt".to_string()));
-        assert!(stack.can_back());
-        assert!(!stack.can_forward());
-    }
-
-    #[test]
-    fn visiting_a_new_note_after_going_back_drops_the_abandoned_forward_branch() {
-        let mut stack = BackForwardStack::default();
-        stack.visit("a.tmt".into());
-        stack.visit("b.tmt".into());
-        stack.step_back(|_| true); // back to a.tmt, b.tmt still reachable forward
-
-        stack.visit("c.tmt".into());
-
-        assert!(!stack.can_forward());
-        assert_eq!(stack.step_back(|_| true), Some("a.tmt".to_string()));
-    }
-
-    #[test]
-    fn stepping_back_skips_and_drops_entries_that_are_no_longer_live() {
-        let mut stack = BackForwardStack::default();
-        stack.visit("a.tmt".into());
-        stack.visit("b.tmt".into()); // renamed/deleted by the time we step back
-        stack.visit("c.tmt".into());
-
-        let is_live = |p: &str| p != "b.tmt";
-        assert_eq!(stack.step_back(is_live), Some("a.tmt".to_string()));
-        // b.tmt was pruned on the way past (not just skipped) -- c.tmt is
-        // still a legitimately-visited note, so it's still reachable
-        // going forward from here, just one slot closer now.
-        assert!(stack.can_forward());
-        assert_eq!(stack.peek_forward(), Some("c.tmt"));
-    }
-
-    #[test]
-    fn stepping_forward_skips_and_drops_entries_that_are_no_longer_live() {
-        let mut stack = BackForwardStack::default();
-        stack.visit("a.tmt".into());
-        stack.visit("b.tmt".into());
-        stack.visit("c.tmt".into());
-        stack.step_back(|_| true);
-        stack.step_back(|_| true); // now at a.tmt, b.tmt and c.tmt ahead
-
-        let is_live = |p: &str| p != "b.tmt";
-        assert_eq!(stack.step_forward(is_live), Some("c.tmt".to_string()));
-        assert!(!stack.can_forward());
-    }
-
-    #[test]
-    fn stepping_back_with_nothing_live_leaves_the_stack_empty() {
-        let mut stack = BackForwardStack::default();
-        stack.visit("a.tmt".into());
-        stack.visit("b.tmt".into());
-
-        assert_eq!(stack.step_back(|_| false), None);
-        assert!(!stack.can_back());
-        assert!(!stack.can_forward());
-    }
-
-    #[test]
-    fn clear_resets_to_a_fresh_stack() {
-        let mut stack = BackForwardStack::default();
-        stack.visit("a.tmt".into());
-        stack.visit("b.tmt".into());
-
-        stack.clear();
-
-        assert!(!stack.can_back());
-        assert!(!stack.can_forward());
-        assert_eq!(stack.peek_back(), None);
-    }
-}

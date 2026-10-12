@@ -1,0 +1,19 @@
+[package]
+name = "immermemo-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+immermemo-editor = { workspace = true }
+immermemo-identity = { workspace = true }
+immermemo-index = { workspace = true }
+immermemo-sync = { workspace = true }
+immermemo-vault = { workspace = true }
+tomet = { workspace = true }
+
+anyhow = { workspace = true }
+directories = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
