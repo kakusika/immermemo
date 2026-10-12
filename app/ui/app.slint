@@ -258,6 +258,17 @@ export component App inherits Window {
     in-out property <string> forgejo-token-draft: "";
     in-out property <string> forgejo-repo-draft: "immermemo-notes";
 
+    in property <bool> gitlab-connected: false;
+    in property <string> gitlab-username: "";
+    in property <string> gitlab-instance: "";
+    in property <string> gitlab-repo-name: "";
+    in property <bool> gitlab-connecting: false;
+    in property <string> gitlab-status-message: "";
+    in property <bool> gitlab-status-is-error: false;
+    in-out property <string> gitlab-instance-draft: "https://gitlab.com";
+    in-out property <string> gitlab-token-draft: "";
+    in-out property <string> gitlab-repo-draft: "immermemo-notes";
+
     in-out property <bool> show-advanced-remote: false;
 
 
@@ -330,6 +341,9 @@ export component App inherits Window {
 
     callback connect-forgejo(string, string, string);
     callback disconnect-forgejo();
+
+    callback connect-gitlab(string, string, string);
+    callback disconnect-gitlab();
 
     callback rename-requested(int);
     callback delete-requested(int);
@@ -1316,6 +1330,17 @@ export component App inherits Window {
                 forgejo-token-draft <=> root.forgejo-token-draft;
                 forgejo-repo-draft <=> root.forgejo-repo-draft;
 
+                gitlab-connected: root.gitlab-connected;
+                gitlab-username: root.gitlab-username;
+                gitlab-instance: root.gitlab-instance;
+                gitlab-repo-name: root.gitlab-repo-name;
+                gitlab-connecting: root.gitlab-connecting;
+                gitlab-status-message: root.gitlab-status-message;
+                gitlab-status-is-error: root.gitlab-status-is-error;
+                gitlab-instance-draft <=> root.gitlab-instance-draft;
+                gitlab-token-draft <=> root.gitlab-token-draft;
+                gitlab-repo-draft <=> root.gitlab-repo-draft;
+
                 show-advanced-remote <=> root.show-advanced-remote;
                 connect-github => { root.connect-github(); }
                 open-github-browser => { root.open-github-browser(); }
@@ -1324,6 +1349,9 @@ export component App inherits Window {
 
                 connect-forgejo(inst, tok, rep) => { root.connect-forgejo(inst, tok, rep); }
                 disconnect-forgejo => { root.disconnect-forgejo(); }
+
+                connect-gitlab(inst, tok, rep) => { root.connect-gitlab(inst, tok, rep); }
+                disconnect-gitlab => { root.disconnect-gitlab(); }
 
                 close => {
                     root.settings-sheet-open = false;

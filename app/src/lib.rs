@@ -3,6 +3,7 @@ pub mod cert;
 pub mod credentials;
 pub mod forgejo;
 pub mod github;
+pub mod gitlab;
 mod haptic;
 pub mod qr;
 pub mod render;
@@ -24,16 +25,18 @@ use slint::ComponentHandle;
 
 pub use forgejo::update_forgejo_ui_state;
 pub use github::update_github_ui_state;
+pub use gitlab::update_gitlab_ui_state;
 use immermemo_core::AppData;
 pub use immermemo_core::{TokenStore, TokenStoreFactory};
 pub use transfer::handle_incoming_import_uri;
 #[cfg(test)]
 pub(crate) use transfer::open_import_preview;
 
-/// Updates UI connection state for all supported Git hosting providers (GitHub, Forgejo/Gitea).
+/// Updates UI connection state for all supported Git hosting providers (GitHub, Forgejo/Gitea, GitLab).
 pub fn update_provider_ui_state(app: &App, remote: Option<&str>) {
     github::update_github_ui_state(app, remote);
     forgejo::update_forgejo_ui_state(app, remote);
+    gitlab::update_gitlab_ui_state(app, remote);
 }
 
 use session::{
@@ -186,6 +189,7 @@ pub fn run(
     callbacks::bind_sync_conflict_callbacks(&app, &session);
     github::bind_github_callbacks(&app, &session);
     forgejo::bind_forgejo_callbacks(&app, &session);
+    gitlab::bind_gitlab_callbacks(&app, &session);
     transfer::bind_transfer_callbacks(&app, &session, initial_import_uri);
 
     app.run()?;
@@ -231,7 +235,7 @@ mod tests {
         bundled_japanese_translation_is_discoverable_at_runtime();
         desktop_app_data_dir_resolves_sensible_path();
         deep_link_import_preview_opens_settings_sheet(&app);
-        provider_ui_state_tracks_github_and_forgejo(&app);
+        provider_ui_state_tracks_github_forgejo_and_gitlab(&app);
 
         // `render::seam_tests` needs the same shared `app` for the same
         // one-event-loop-per-process reason -- see that module's doc.
@@ -724,13 +728,14 @@ mod tests {
         assert!(pending.borrow().is_some());
     }
 
-    fn provider_ui_state_tracks_github_and_forgejo(app: &App) {
+    fn provider_ui_state_tracks_github_forgejo_and_gitlab(app: &App) {
         // GitHub remote
         update_provider_ui_state(app, Some("https://github.com/octocat/notes.git"));
         assert!(app.get_github_connected());
         assert_eq!(app.get_github_username(), "octocat");
         assert_eq!(app.get_github_repo_name(), "notes");
         assert!(!app.get_forgejo_connected());
+        assert!(!app.get_gitlab_connected());
 
         // Forgejo / Codeberg remote
         update_provider_ui_state(app, Some("https://codeberg.org/alice/immermemo-vault.git"));
@@ -739,6 +744,7 @@ mod tests {
         assert_eq!(app.get_forgejo_username(), "alice");
         assert_eq!(app.get_forgejo_instance(), "codeberg.org");
         assert_eq!(app.get_forgejo_repo_name(), "immermemo-vault");
+        assert!(!app.get_gitlab_connected());
 
         // Custom self-hosted Forgejo remote
         update_provider_ui_state(app, Some("https://git.example.com:3000/bob/my-notes"));
@@ -747,10 +753,30 @@ mod tests {
         assert_eq!(app.get_forgejo_username(), "bob");
         assert_eq!(app.get_forgejo_instance(), "git.example.com:3000");
         assert_eq!(app.get_forgejo_repo_name(), "my-notes");
+        assert!(!app.get_gitlab_connected());
+
+        // GitLab.com remote
+        update_provider_ui_state(app, Some("https://gitlab.com/charlie/notes.git"));
+        assert!(!app.get_github_connected());
+        assert!(!app.get_forgejo_connected());
+        assert!(app.get_gitlab_connected());
+        assert_eq!(app.get_gitlab_username(), "charlie");
+        assert_eq!(app.get_gitlab_instance(), "gitlab.com");
+        assert_eq!(app.get_gitlab_repo_name(), "notes");
+
+        // Self-hosted GitLab remote with nested groups
+        update_provider_ui_state(app, Some("git@gitlab.company.org:subgroup/team/notes.git"));
+        assert!(!app.get_github_connected());
+        assert!(!app.get_forgejo_connected());
+        assert!(app.get_gitlab_connected());
+        assert_eq!(app.get_gitlab_username(), "subgroup/team");
+        assert_eq!(app.get_gitlab_instance(), "gitlab.company.org");
+        assert_eq!(app.get_gitlab_repo_name(), "notes");
 
         // Disconnected
         update_provider_ui_state(app, None);
         assert!(!app.get_github_connected());
         assert!(!app.get_forgejo_connected());
+        assert!(!app.get_gitlab_connected());
     }
 }

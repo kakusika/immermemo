@@ -891,4 +891,29 @@ msgctxt "SettingsSheet"
 msgid "Forgejo / Gitea"
 msgstr "Forgejo / Gitea"
 
+msgctxt "SettingsSheet"
+msgid "GitLab Sync"
+msgstr "GitLab 同期"
+
+msgctxt "SettingsSheet"
+msgid "GitLab"
+msgstr "GitLab"
+
+msgctxt "SettingsSheet"
+msgid "Connect to GitLab.com or a self-hosted instance using a Personal Access Token with api scope."
+msgstr "api スコープの Personal Access Token を使用して GitLab.com またはセルフホストの GitLab インスタンスに接続します。"
+
+msgctxt "SettingsSheet"
+msgid "GitLab Instance URL"
+msgstr "GitLab インスタンス URL"
+
+msgctxt "SettingsSheet"
+msgid "Personal Access Token (api scope)"
+msgstr "Personal Access Token (api スコープ)"
+
+msgctxt "SettingsSheet"
+msgid "Token with api permission"
+msgstr "api 権限を持つトークン"
+
+
 

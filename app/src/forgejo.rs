@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use immermemo_provider::{ForgejoProvider, GitHubProvider, Provider};
+use immermemo_provider::{ForgejoProvider, GitHubProvider, GitLabProvider, Provider};
 use slint::{ComponentHandle, SharedString};
 
 use crate::App;
@@ -12,8 +12,8 @@ use crate::session::{SESSION, Session, set_status, start_sync};
 /// Updates Forgejo/Gitea connected/account state in the UI based on the current remote URL.
 pub fn update_forgejo_ui_state(app: &App, remote: Option<&str>) {
     if let Some(url) = remote {
-        // If it belongs to GitHub, it's not a Forgejo connection.
-        if GitHubProvider::parse_remote(url).is_none() {
+        // If it belongs to GitHub or GitLab, it's not a Forgejo connection.
+        if GitHubProvider::parse_remote(url).is_none() && !GitLabProvider::is_gitlab_remote(url) {
             if let Some((host, user, repo)) = ForgejoProvider::parse_any_remote(url) {
                 app.set_forgejo_connected(true);
                 app.set_forgejo_username(user.into());

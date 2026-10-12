@@ -6,9 +6,11 @@
 
 pub mod forgejo;
 pub mod github;
+pub mod gitlab;
 
 pub use forgejo::{DEFAULT_CODEBERG_INSTANCE, ForgejoProvider};
 pub use github::GitHubProvider;
+pub use gitlab::{DEFAULT_GITLAB_INSTANCE, GitLabProvider};
 
 use serde::{Deserialize, Serialize};
 

@@ -236,10 +236,22 @@ export component SettingsSheet inherits Rectangle {
     in property <string> forgejo-status-message: "";
     in property <bool> forgejo-status-is-error: false;
 
-    in-out property <int> sync-provider-tab: 0; // 0: GitHub, 1: Forgejo / Gitea
+    in property <bool> gitlab-connected: false;
+    in property <string> gitlab-username: "";
+    in property <string> gitlab-instance: "";
+    in property <string> gitlab-repo-name: "";
+    in property <bool> gitlab-connecting: false;
+    in property <string> gitlab-status-message: "";
+    in property <bool> gitlab-status-is-error: false;
+
+    in-out property <int> sync-provider-tab: 0; // 0: GitHub, 1: Forgejo / Gitea, 2: GitLab
     in-out property <string> forgejo-instance-draft: "https://codeberg.org";
     in-out property <string> forgejo-token-draft: "";
     in-out property <string> forgejo-repo-draft: "immermemo-notes";
+
+    in-out property <string> gitlab-instance-draft: "https://gitlab.com";
+    in-out property <string> gitlab-token-draft: "";
+    in-out property <string> gitlab-repo-draft: "immermemo-notes";
 
     in-out property <bool> show-advanced-remote: false;
 
@@ -250,6 +262,9 @@ export component SettingsSheet inherits Rectangle {
 
     callback connect-forgejo(string, string, string);
     callback disconnect-forgejo();
+
+    callback connect-gitlab(string, string, string);
+    callback disconnect-gitlab();
 
 
     // 0: list, 1: Interface, 2: Sync & Remote, 3: Vaults, 4: About, 5: Transfer & Share.
@@ -531,7 +546,7 @@ export component SettingsSheet inherits Rectangle {
                         VerticalLayout {
                             alignment: center;
                             Icon {
-                                source: root.forgejo-connected ? TablerIcons.brand-git : TablerIcons.brand-github;
+                                source: root.gitlab-connected ? TablerIcons.brand-gitlab : (root.forgejo-connected ? TablerIcons.brand-git : TablerIcons.brand-github);
                                 width: Metrics.icon-lg;
                                 height: Metrics.icon-lg;
                                 color: Palette.accent-background;
@@ -541,7 +556,7 @@ export component SettingsSheet inherits Rectangle {
                             horizontal-stretch: 1;
                             alignment: center;
                             Text {
-                                text: root.forgejo-connected ? @tr("Forgejo / Gitea Sync") : (root.github-connected ? @tr("GitHub Sync") : @tr("Cloud Git Sync"));
+                                text: root.gitlab-connected ? @tr("GitLab Sync") : (root.forgejo-connected ? @tr("Forgejo / Gitea Sync") : (root.github-connected ? @tr("GitHub Sync") : @tr("Cloud Git Sync")));
                                 font-size: 16px;
                                 font-weight: 600;
                                 color: Palette.foreground;
@@ -663,12 +678,58 @@ export component SettingsSheet inherits Rectangle {
                         }
                     }
 
+                    // State B2: GitLab Connected
+                    if root.gitlab-connected: VerticalLayout {
+                        spacing: Metrics.spacing-sm;
+                        HorizontalLayout {
+                            spacing: 8px;
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    source: TablerIcons.check;
+                                    width: 16px;
+                                    height: 16px;
+                                    color: Palette.color-scheme == ColorScheme.dark ? #55dd88 : #119944;
+                                }
+                            }
+                            Text {
+                                text: @tr("Connected as @{} on {}", root.gitlab-username, root.gitlab-instance);
+                                font-size: 15px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        if root.gitlab-repo-name != "": Text {
+                            text: @tr("Repository: {} (Private)", root.gitlab-repo-name);
+                            font-size: 13px;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: end;
+                            Button {
+                                text: @tr("Disconnect");
+                                clicked => { root.disconnect-gitlab(); }
+                            }
+                            Button {
+                                text: root.syncing ? @tr("Syncing...") : @tr("Sync Now");
+                                primary: true;
+                                enabled: !root.syncing;
+                                clicked => { root.sync(); }
+                            }
+                        }
+                    }
+
                     // State C: Not Connected (Provider Selection)
-                    if !root.github-connected && !root.forgejo-connected: VerticalLayout {
+                    if !root.github-connected && !root.forgejo-connected && !root.gitlab-connected: VerticalLayout {
                         spacing: Metrics.spacing-md;
 
                         SegmentedControl {
-                            options: [@tr("GitHub"), @tr("Forgejo / Gitea")];
+                            options: [@tr("GitHub"), @tr("Forgejo / Gitea"), @tr("GitLab")];
                             selected: root.sync-provider-tab;
                             changed(i) => { root.sync-provider-tab = i; }
                         }
@@ -814,6 +875,84 @@ export component SettingsSheet inherits Rectangle {
                                             root.forgejo-instance-draft,
                                             root.forgejo-token-draft,
                                             root.forgejo-repo-draft,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+
+                        // Tab 2: GitLab
+                        if root.sync-provider-tab == 2: VerticalLayout {
+                            spacing: Metrics.spacing-md;
+
+                            Text {
+                                text: @tr("Connect to GitLab.com or a self-hosted instance using a Personal Access Token with api scope.");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+
+                            VerticalLayout {
+                                spacing: 4px;
+                                Text {
+                                    text: @tr("GitLab Instance URL");
+                                    font-size: 12px;
+                                    color: Colors.muted;
+                                }
+                                LineEdit {
+                                    height: Metrics.touch;
+                                    placeholder-text: "https://gitlab.com";
+                                    text <=> root.gitlab-instance-draft;
+                                }
+                            }
+
+                            VerticalLayout {
+                                spacing: 4px;
+                                Text {
+                                    text: @tr("Personal Access Token (api scope)");
+                                    font-size: 12px;
+                                    color: Colors.muted;
+                                }
+                                LineEdit {
+                                    height: Metrics.touch;
+                                    placeholder-text: @tr("Token with api permission");
+                                    text <=> root.gitlab-token-draft;
+                                    input-type: password;
+                                }
+                            }
+
+                            VerticalLayout {
+                                spacing: 4px;
+                                Text {
+                                    text: @tr("Repository Name");
+                                    font-size: 12px;
+                                    color: Colors.muted;
+                                }
+                                LineEdit {
+                                    height: Metrics.touch;
+                                    placeholder-text: "immermemo-notes";
+                                    text <=> root.gitlab-repo-draft;
+                                }
+                            }
+
+                            if root.gitlab-status-message != "": Text {
+                                text: root.gitlab-status-message;
+                                color: root.gitlab-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+                                font-size: 13px;
+                                wrap: word-wrap;
+                            }
+
+                            HorizontalLayout {
+                                alignment: end;
+                                Button {
+                                    text: root.gitlab-connecting ? @tr("Connecting...") : @tr("Connect Account");
+                                    primary: true;
+                                    enabled: !root.gitlab-connecting && root.gitlab-token-draft != "";
+                                    clicked => {
+                                        root.connect-gitlab(
+                                            root.gitlab-instance-draft,
+                                            root.gitlab-token-draft,
+                                            root.gitlab-repo-draft,
                                         );
                                     }
                                 }

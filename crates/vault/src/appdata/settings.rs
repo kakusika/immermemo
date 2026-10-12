@@ -53,6 +53,20 @@ impl AppData {
         Ok(())
     }
 
+    fn provider_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
+        Ok(self.vault_data_dir(vault_dir)?.join("provider.txt"))
+    }
+
+    pub fn load_provider(&self, vault_dir: &Path) -> Option<String> {
+        self.provider_file(vault_dir)
+            .ok()
+            .and_then(|p| read_trimmed(&p))
+    }
+
+    pub fn save_provider(&self, vault_dir: &Path, provider: &str) -> anyhow::Result<()> {
+        write(&self.provider_file(vault_dir)?, provider)
+    }
+
     fn last_note_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
         Ok(self.vault_data_dir(vault_dir)?.join("last_note.txt"))
     }

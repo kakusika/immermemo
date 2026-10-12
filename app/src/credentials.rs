@@ -9,6 +9,7 @@
 pub use immermemo_core::{
     CredentialProvider, PlainFileTokenStore, TokenStore, TokenStoreFactory,
 };
+use immermemo_provider::GitLabProvider;
 
 /// Credentials backed by whatever [`TokenStore`] the platform provides.
 pub struct TokenCredentials<S> {
@@ -32,6 +33,10 @@ impl<S: TokenStore> CredentialProvider for TokenCredentials<S> {
             .store
             .load()?
             .ok_or_else(|| anyhow::anyhow!("no access token saved for this vault's remote"))?;
-        Ok(git2::Cred::userpass_plaintext(&token, "")?)
+        if GitLabProvider::is_gitlab_remote(remote_url) {
+            Ok(git2::Cred::userpass_plaintext("oauth2", &token)?)
+        } else {
+            Ok(git2::Cred::userpass_plaintext(&token, "")?)
+        }
     }
 }
