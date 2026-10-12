@@ -915,5 +915,38 @@ msgctxt "SettingsSheet"
 msgid "Token with api permission"
 msgstr "api 権限を持つトークン"
 
+msgctxt "SettingsSheet"
+msgid "In-App SSH Key"
+msgstr "アプリ内 SSH 鍵"
+
+msgctxt "SettingsSheet"
+msgid "Enables Git over SSH synchronization on mobile and desktop without external agents."
+msgstr "外部エージェント不要で、モバイルおよびデスクトップでの Git over SSH 同期を可能にします。"
+
+msgctxt "SettingsSheet"
+msgid "Copy this public key and add it to your GitHub, GitLab, or Forgejo SSH Keys:"
+msgstr "この公開鍵をコピーして、GitHub、GitLab、または Forgejo の SSH Keys に追加してください:"
+
+msgctxt "SettingsSheet"
+msgid "Regenerate Key"
+msgstr "鍵を再生成"
+
+msgctxt "SettingsSheet"
+msgid "Copy Public Key"
+msgstr "公開鍵をコピー"
+
+msgctxt "SettingsSheet"
+msgid "Copied!"
+msgstr "コピー完了!"
+
+msgctxt "SettingsSheet"
+msgid "Generate a secure Ed25519 SSH keypair directly inside the app to sync with SSH remotes (git@...)."
+msgstr "SSH リモート (git@...) と同期するために、アプリ内で安全な Ed25519 鍵ペアを生成します。"
+
+msgctxt "SettingsSheet"
+msgid "Generate SSH Key"
+msgstr "SSH 鍵を生成"
+
+
 
 

@@ -15,11 +15,10 @@ pub use immermemo_sync::{
     CertificateVerifier, CommitSummary, ConflictSide, CredentialProvider, FileRevision,
     SyncReport, Vault, tls,
 };
-pub use immermemo_vault::{
-    appdata::AppData,
-    credentials::{PlainFileTokenStore, TokenStore, TokenStoreFactory},
-    token_blob,
+pub use immermemo_credentials::{
+    PlainFileTokenStore, SshKeyStore, TokenStore, TokenStoreFactory, token_blob,
 };
+pub use immermemo_vault::appdata::AppData;
 pub mod notes {
     pub use immermemo_vault::notes::*;
 }

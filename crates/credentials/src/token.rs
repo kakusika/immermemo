@@ -3,13 +3,15 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+/// Storage abstraction for personal access tokens.
 pub trait TokenStore: Send + Sync {
+    /// Loads the stored token string if present.
     fn load(&self) -> anyhow::Result<Option<String>>;
+
+    /// Persists the provided token string.
     fn save(&self, token: &str) -> anyhow::Result<()>;
 }
 
-/// So an `Arc<dyn TokenStore>` -- how the app shares one store between threads
-/// -- is itself a `TokenStore`.
 impl<T: TokenStore + ?Sized> TokenStore for Arc<T> {
     fn load(&self) -> anyhow::Result<Option<String>> {
         (**self).load()
@@ -20,11 +22,13 @@ impl<T: TokenStore + ?Sized> TokenStore for Arc<T> {
     }
 }
 
-pub type TokenStoreFactory = Box<dyn Fn(&Path) -> anyhow::Result<Arc<dyn TokenStore>>>;
+/// A factory for creating a [`TokenStore`] for a given vault path.
+pub type TokenStoreFactory =
+    Box<dyn Fn(&Path) -> anyhow::Result<Arc<dyn TokenStore>> + Send + Sync>;
 
-/// A token kept in a plain file. Used on desktop, where nothing wires this
-/// crate up to the OS keychain yet -- fine for trying the sync loop out,
-/// not for anything real. Android uses the Android Keystore instead.
+/// A token kept in a plain text file.
+/// Used on desktop or non-keystore environments.
+#[derive(Debug, Clone)]
 pub struct PlainFileTokenStore {
     path: PathBuf,
 }
@@ -32,6 +36,10 @@ pub struct PlainFileTokenStore {
 impl PlainFileTokenStore {
     pub fn new(path: PathBuf) -> Self {
         Self { path }
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
     }
 }
 
@@ -49,6 +57,11 @@ impl TokenStore for PlainFileTokenStore {
             std::fs::create_dir_all(parent)?;
         }
         std::fs::write(&self.path, token)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&self.path, std::fs::Permissions::from_mode(0o600));
+        }
         Ok(())
     }
 }

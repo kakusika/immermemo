@@ -1,13 +1,7 @@
-//! The on-disk shape of an encrypted token: `[iv length: 1 byte][iv]
-//! [ciphertext, including the GCM tag]`. The IV is small and never secret;
-//! keeping it alongside the ciphertext is standard practice for GCM.
+//! Encrypted token storage blob encoding and decoding for cross-device transfer.
 //!
-//! Kept separate from `app/src/android/keystore.rs` (which is
-//! Android-only and untestable outside a device) so this format has
-//! ordinary desktop tests.
+//! Format: `[iv length: 1 byte][iv][ciphertext, including GCM tag]`.
 
-// Only app/src/android/keystore.rs (Android-only) calls these; on
-// every other target they exist solely for the tests below.
 #[cfg_attr(not(target_os = "android"), allow(dead_code))]
 pub fn encode(iv: &[u8], ciphertext: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(1 + iv.len() + ciphertext.len());

@@ -41,6 +41,10 @@ pub fn bind_vault_callbacks(
             app.set_current_vault_name(vault_display_name(&s.vault_dir).into());
             app.set_current_vault_path(s.vault_dir.display().to_string().into());
             update_provider_ui_state(&app, s.remote.as_deref());
+            let ssh_pub = s.app_data.load_ssh_public_key();
+            app.set_ssh_key_present(ssh_pub.is_some());
+            app.set_ssh_public_key(ssh_pub.unwrap_or_default().into());
+            app.set_ssh_key_copied(false);
             app.set_settings_page(0);
             app.set_settings_open(true);
         }
@@ -48,6 +52,38 @@ pub fn bind_vault_callbacks(
     app.on_close_settings({
         let weak = app.as_weak();
         move || weak.unwrap().set_settings_open(false)
+    });
+
+    app.on_generate_ssh_key({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            let s = session.borrow();
+            match s.app_data.generate_ssh_key(None) {
+                Ok(pubkey) => {
+                    app.set_ssh_key_present(true);
+                    app.set_ssh_public_key(pubkey.into());
+                    app.set_ssh_key_copied(false);
+                    set_status(&app, "Generated new Ed25519 SSH key");
+                }
+                Err(e) => {
+                    set_status(&app, format!("Failed to generate SSH key: {e}"));
+                }
+            }
+        }
+    });
+
+    app.on_copy_ssh_public_key({
+        let weak = app.as_weak();
+        move || {
+            let app = weak.unwrap();
+            let pubkey = app.get_ssh_public_key();
+            if !pubkey.is_empty() {
+                crate::session::copy_to_clipboard(&app, pubkey.as_str());
+                app.set_ssh_key_copied(true);
+                set_status(&app, "SSH public key copied to clipboard");
+            }
+        }
     });
 
     app.on_font_size_changed({

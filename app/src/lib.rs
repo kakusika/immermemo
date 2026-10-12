@@ -145,6 +145,10 @@ pub fn run(
     app.set_current_vault_path(vault_dir.display().to_string().into());
     app.set_remote_configured(remote.is_some());
     update_provider_ui_state(&app, remote.as_deref());
+    let ssh_pub = app_data.load_ssh_public_key();
+    app.set_ssh_key_present(ssh_pub.is_some());
+    app.set_ssh_public_key(ssh_pub.unwrap_or_default().into());
+    app.set_ssh_key_copied(false);
     let index = app_data
         .index_path(&vault_dir)
         .ok()

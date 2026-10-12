@@ -266,6 +266,13 @@ export component SettingsSheet inherits Rectangle {
     callback connect-gitlab(string, string, string);
     callback disconnect-gitlab();
 
+    in property <bool> ssh-key-present: false;
+    in property <string> ssh-public-key: "";
+    in property <bool> ssh-key-copied: false;
+
+    callback generate-ssh-key();
+    callback copy-ssh-public-key();
+
 
     // 0: list, 1: Interface, 2: Sync & Remote, 3: Vaults, 4: About, 5: Transfer & Share.
     // in-out so the app-level Back action (hardware button / edge-swipe
@@ -1026,6 +1033,112 @@ export component SettingsSheet inherits Rectangle {
                                 text: @tr("Save Remote");
                                 primary: true;
                                 clicked => { root.save-remote(root.url-draft, root.token-draft); }
+                            }
+                        }
+                    }
+                }
+
+                // Card 3: In-App SSH Key
+                Card {
+                    content-spacing: Metrics.spacing-md;
+
+                    HorizontalLayout {
+                        spacing: Metrics.spacing-md;
+                        VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                source: TablerIcons.key;
+                                width: Metrics.icon-lg;
+                                height: Metrics.icon-lg;
+                                color: Palette.accent-background;
+                            }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            alignment: center;
+                            Text {
+                                text: @tr("In-App SSH Key");
+                                font-size: 16px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                            }
+                            Text {
+                                text: @tr("Enables Git over SSH synchronization on mobile and desktop without external agents.");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+
+                    Divider { }
+
+                    if root.ssh-key-present: VerticalLayout {
+                        spacing: Metrics.spacing-md;
+
+                        Text {
+                            text: @tr("Copy this public key and add it to your GitHub, GitLab, or Forgejo SSH Keys:");
+                            font-size: Metrics.font-sm;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+
+                        Rectangle {
+                            min-height: 48px;
+                            border-radius: Metrics.radius-md;
+                            background: Palette.foreground.with-alpha(0.06);
+                            border-width: 1px;
+                            border-color: Palette.foreground.with-alpha(0.12);
+
+                            HorizontalLayout {
+                                padding-left: 12px;
+                                padding-right: 12px;
+                                padding-top: 8px;
+                                padding-bottom: 8px;
+
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: root.ssh-public-key;
+                                    font-size: 11px;
+                                    color: Palette.foreground;
+                                    wrap: word-wrap;
+                                }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: end;
+
+                            Button {
+                                text: @tr("Regenerate Key");
+                                clicked => { root.generate-ssh-key(); }
+                            }
+
+                            Button {
+                                text: root.ssh-key-copied ? @tr("Copied!") : @tr("Copy Public Key");
+                                primary: true;
+                                clicked => { root.copy-ssh-public-key(); }
+                            }
+                        }
+                    }
+
+                    if !root.ssh-key-present: VerticalLayout {
+                        spacing: Metrics.spacing-md;
+
+                        Text {
+                            text: @tr("Generate a secure Ed25519 SSH keypair directly inside the app to sync with SSH remotes (git@...).");
+                            font-size: Metrics.font-sm;
+                            color: Colors.muted;
+                            wrap: word-wrap;
+                        }
+
+                        HorizontalLayout {
+                            alignment: end;
+                            Button {
+                                text: @tr("Generate SSH Key");
+                                primary: true;
+                                clicked => { root.generate-ssh-key(); }
                             }
                         }
                     }

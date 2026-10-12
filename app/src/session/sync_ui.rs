@@ -27,7 +27,7 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
     if app.get_syncing() {
         return;
     }
-    let (vault_dir, gitdir, remote, token_store, identity) = {
+    let (vault_dir, gitdir, remote, token_store, app_data, identity) = {
         let s = session.borrow();
         let Some(remote) = s.remote.clone() else {
             set_status(app, "No remote linked yet");
@@ -54,6 +54,7 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
             gitdir,
             remote,
             s.token_store.clone(),
+            s.app_data.clone(),
             identity,
         )
     };
@@ -64,7 +65,7 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
     set_status(app, "Syncing...");
     let weak = app.as_weak();
     std::thread::spawn(move || {
-        let credentials = TokenCredentials::new(token_store);
+        let credentials = TokenCredentials::with_app_data(token_store, app_data);
         #[cfg(any(target_os = "android", target_os = "ios"))]
         let verifier = cert::verifier().map(Some);
         #[cfg(not(any(target_os = "android", target_os = "ios")))]

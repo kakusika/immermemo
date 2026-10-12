@@ -269,6 +269,10 @@ export component App inherits Window {
     in-out property <string> gitlab-token-draft: "";
     in-out property <string> gitlab-repo-draft: "immermemo-notes";
 
+    in property <bool> ssh-key-present: false;
+    in property <string> ssh-public-key: "";
+    in property <bool> ssh-key-copied: false;
+
     in-out property <bool> show-advanced-remote: false;
 
 
@@ -344,6 +348,9 @@ export component App inherits Window {
 
     callback connect-gitlab(string, string, string);
     callback disconnect-gitlab();
+
+    callback generate-ssh-key();
+    callback copy-ssh-public-key();
 
     callback rename-requested(int);
     callback delete-requested(int);
@@ -1352,6 +1359,12 @@ export component App inherits Window {
 
                 connect-gitlab(inst, tok, rep) => { root.connect-gitlab(inst, tok, rep); }
                 disconnect-gitlab => { root.disconnect-gitlab(); }
+
+                ssh-key-present: root.ssh-key-present;
+                ssh-public-key: root.ssh-public-key;
+                ssh-key-copied: root.ssh-key-copied;
+                generate-ssh-key => { root.generate-ssh-key(); }
+                copy-ssh-public-key => { root.copy-ssh-public-key(); }
 
                 close => {
                     root.settings-sheet-open = false;

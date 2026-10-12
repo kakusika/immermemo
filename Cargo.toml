@@ -4,6 +4,7 @@ resolver = "3"
 members = [
   "app",
   "crates/core",
+  "crates/credentials",
   "crates/identity",
   "crates/index",
   "crates/provider",
@@ -21,6 +22,7 @@ rust-version = "1.85"
 
 [workspace.dependencies]
 immermemo-core = { path = "crates/core" }
+immermemo-credentials = { path = "crates/credentials" }
 immermemo-identity = { path = "crates/identity" }
 immermemo-index = { path = "crates/index" }
 immermemo-provider = { path = "crates/provider" }
@@ -55,6 +57,7 @@ slint = { version = "1.18", default-features = false, features = [
   "compat-1-2",
 ] }
 slint-build = "1.18"
+ssh-key = { version = "0.6", features = ["ed25519", "crypto", "std"] }
 sys-locale = "0.3"
 ureq = { version = "3", features = ["json"] }
 webbrowser = "1"

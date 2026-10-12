@@ -15,13 +15,15 @@
 //! existed to hold editor-session state specifically.
 
 pub mod appdata;
-pub mod credentials;
 pub mod notes;
-pub mod token_blob;
 pub mod transfer;
 
 pub use appdata::AppData;
-pub use credentials::{PlainFileTokenStore, TokenStore, TokenStoreFactory};
+pub use immermemo_credentials::token_blob;
+pub use immermemo_credentials::{PlainFileTokenStore, SshKeyStore, TokenStore, TokenStoreFactory};
+pub mod credentials {
+    pub use immermemo_credentials::*;
+}
 pub use notes::{SearchResult, display_name, has_conflict_marker};
 pub use transfer::{
     ApplyResult, ExportOptions, InterfaceTransfer, SyncTransfer, TransferPayload, apply_payload,

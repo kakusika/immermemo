@@ -22,9 +22,11 @@ mod identity;
 mod paths;
 mod registry;
 mod settings;
+mod ssh;
 
 use std::path::{Path, PathBuf};
 
+#[derive(Debug, Clone)]
 pub struct AppData {
     base: PathBuf,
 }

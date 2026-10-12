@@ -14,6 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 immermemo-core = { workspace = true }
+immermemo-credentials = { workspace = true }
 immermemo-provider = { workspace = true }
 immermemo-tomet-render = { workspace = true }
 
