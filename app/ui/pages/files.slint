@@ -464,7 +464,7 @@ export component FilesScreen inherits Rectangle {
                 padding-left: Metrics.gutter;
                 padding-right: Metrics.gutter;
                 padding-top: Metrics.spacing-sm;
-                padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + 2px * Metrics.ui-scale + Metrics.spacing-lg;
+                padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
                 spacing: Metrics.spacing-sm;
 
                 HorizontalLayout {
@@ -596,7 +596,7 @@ export component FilesScreen inherits Rectangle {
             vertical-stretch: 1;
 
             VerticalLayout {
-                padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + 2px * Metrics.ui-scale + Metrics.spacing-lg;
+                padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
 
                 for entry[i] in root.folder-entries: SelectableRow {
                     leading-icon: entry.is-folder ? TablerIcons.folder : entry.icon-image;
@@ -628,7 +628,7 @@ export component FilesScreen inherits Rectangle {
             VerticalLayout {
                 padding-left: Metrics.gutter;
                 padding-right: Metrics.gutter;
-                padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + 2px * Metrics.ui-scale + Metrics.spacing-lg;
+                padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
                 spacing: Metrics.spacing-sm;
 
                 GridLayout {
@@ -675,7 +675,7 @@ export component FilesScreen inherits Rectangle {
                 padding-left: Metrics.gutter;
                 padding-right: Metrics.gutter;
                 padding-top: Metrics.spacing-sm;
-                padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + 2px * Metrics.ui-scale + Metrics.spacing-lg;
+                padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
                 spacing: Metrics.spacing-lg;
 
                 DailyCalendarView { }

@@ -267,9 +267,46 @@ export component BottomNavBar inherits Rectangle {
     callback tab-selected(int);
     callback open-library-page(int);
     callback quick-action();
+    callback open-more();
+
+    // Item counts to determine 1-based rank among enabled items
+    property <int> count-home: root.has-home ? 1 : 0;
+    property <int> count-search: root.count-home + (root.has-search ? 1 : 0);
+    property <int> count-library: root.count-search + (root.has-library ? 1 : 0);
+    property <int> count-directory: root.count-library + (root.has-directory ? 1 : 0);
+    property <int> count-daily: root.count-directory + (root.has-daily ? 1 : 0);
+    property <int> count-starred: root.count-daily + (root.has-starred ? 1 : 0);
+    property <int> count-recent: root.count-starred + (root.has-recent ? 1 : 0);
+    property <int> count-graph: root.count-recent + (root.has-graph ? 1 : 0);
+    property <int> total-items: root.count-graph + (root.has-quick ? 1 : 0);
+
+    property <bool> has-overflow: root.total-items >= 5;
+
+    // Exported overflow flags indicating which items overflow into the More modal
+    out property <bool> overflow-home: root.has-overflow && root.has-home && root.count-home > 4;
+    out property <bool> overflow-search: root.has-overflow && root.has-search && root.count-search > 4;
+    out property <bool> overflow-library: root.has-overflow && root.has-library && root.count-library > 4;
+    out property <bool> overflow-directory: root.has-overflow && root.has-directory && root.count-directory > 4;
+    out property <bool> overflow-daily: root.has-overflow && root.has-daily && root.count-daily > 4;
+    out property <bool> overflow-starred: root.has-overflow && root.has-starred && root.count-starred > 4;
+    out property <bool> overflow-recent: root.has-overflow && root.has-recent && root.count-recent > 4;
+    out property <bool> overflow-graph: root.has-overflow && root.has-graph && root.count-graph > 4;
+    out property <bool> overflow-quick: root.has-overflow && root.has-quick && root.total-items > 4;
+
+    property <bool> more-active: (
+        (root.overflow-home && root.active-tab == 0) ||
+        (root.overflow-search && root.active-tab == 1) ||
+        (root.overflow-library && root.active-tab == 2 && (root.files-page == 0 || root.files-page == 6 || root.files-page == 7)) ||
+        (root.overflow-directory && root.active-tab == 2 && root.files-page == 1) ||
+        (root.overflow-daily && root.active-tab == 2 && root.files-page == 2) ||
+        (root.overflow-starred && root.active-tab == 2 && root.files-page == 3) ||
+        (root.overflow-recent && root.active-tab == 2 && root.files-page == 4) ||
+        (root.overflow-graph && root.active-tab == 2 && root.files-page == 5)
+    );
+    property <int> more-badge-count: (root.overflow-library) ? root.conflict-count : 0;
 
     property <length> extra-inset-bottom: max(0px, root.inset-bottom - 6px * Metrics.ui-scale);
-    height: Metrics.bottom-bar-height + 2px * Metrics.ui-scale + root.extra-inset-bottom;
+    height: Metrics.bottom-bar-height + root.extra-inset-bottom;
     background: Colors.surface-elevated;
     drop-shadow-blur: 10px * Metrics.ui-scale;
     drop-shadow-offset-y: -2px * Metrics.ui-scale;
@@ -279,13 +316,13 @@ export component BottomNavBar inherits Rectangle {
         x: 0px;
         y: 0px;
         width: 100%;
-        height: Metrics.bottom-bar-height + 2px * Metrics.ui-scale;
+        height: Metrics.bottom-bar-height;
         padding-left: 0px;
         padding-right: 0px;
         padding-bottom: 0px;
         spacing: 0px;
 
-        if root.has-home: NavItem {
+        if root.has-home && (!root.has-overflow || root.count-home <= 4): NavItem {
             icon: TablerIcons.home;
             label: @tr("Home");
             active: root.active-tab == 0;
@@ -295,7 +332,7 @@ export component BottomNavBar inherits Rectangle {
             }
         }
 
-        if root.has-search: NavItem {
+        if root.has-search && (!root.has-overflow || root.count-search <= 4): NavItem {
             icon: TablerIcons.search;
             label: @tr("Search");
             active: root.active-tab == 1;
@@ -305,7 +342,7 @@ export component BottomNavBar inherits Rectangle {
             }
         }
 
-        if root.has-library: NavItem {
+        if root.has-library && (!root.has-overflow || root.count-library <= 4): NavItem {
             icon: TablerIcons.files;
             label: @tr("Library");
             active: root.active-tab == 2 && (root.files-page == 0 || root.files-page == 6 || root.files-page == 7 || (!root.has-directory && root.files-page == 1) || (!root.has-daily && root.files-page == 2) || (!root.has-starred && root.files-page == 3) || (!root.has-recent && root.files-page == 4) || (!root.has-graph && root.files-page == 5));
@@ -318,7 +355,7 @@ export component BottomNavBar inherits Rectangle {
             }
         }
 
-        if root.has-directory: NavItem {
+        if root.has-directory && (!root.has-overflow || root.count-directory <= 4): NavItem {
             icon: TablerIcons.folder;
             label: @tr("Directory");
             active: root.active-tab == 2 && root.files-page == 1;
@@ -330,7 +367,7 @@ export component BottomNavBar inherits Rectangle {
             }
         }
 
-        if root.has-daily: NavItem {
+        if root.has-daily && (!root.has-overflow || root.count-daily <= 4): NavItem {
             icon: TablerIcons.calendar;
             label: @tr("Daily");
             active: root.active-tab == 2 && root.files-page == 2;
@@ -342,7 +379,7 @@ export component BottomNavBar inherits Rectangle {
             }
         }
 
-        if root.has-starred: NavItem {
+        if root.has-starred && (!root.has-overflow || root.count-starred <= 4): NavItem {
             icon: TablerIcons.star;
             label: @tr("Starred");
             active: root.active-tab == 2 && root.files-page == 3;
@@ -354,7 +391,7 @@ export component BottomNavBar inherits Rectangle {
             }
         }
 
-        if root.has-recent: NavItem {
+        if root.has-recent && (!root.has-overflow || root.count-recent <= 4): NavItem {
             icon: TablerIcons.clock;
             label: @tr("Recent");
             active: root.active-tab == 2 && root.files-page == 4;
@@ -366,7 +403,7 @@ export component BottomNavBar inherits Rectangle {
             }
         }
 
-        if root.has-graph: NavItem {
+        if root.has-graph && (!root.has-overflow || root.count-graph <= 4): NavItem {
             icon: TablerIcons.git-fork;
             label: @tr("Graph");
             active: root.active-tab == 2 && root.files-page == 5;
@@ -378,12 +415,22 @@ export component BottomNavBar inherits Rectangle {
             }
         }
 
-        if root.has-quick: NavItem {
+        if root.has-quick && (!root.has-overflow || root.total-items <= 4): NavItem {
             icon: TablerIcons.bolt;
             label: @tr("Quick");
             active: false;
             clicked => {
                 root.quick-action();
+            }
+        }
+
+        if root.has-overflow: NavItem {
+            icon: TablerIcons.menu;
+            label: @tr("More");
+            active: root.more-active;
+            badge-count: root.more-badge-count;
+            clicked => {
+                root.open-more();
             }
         }
     }

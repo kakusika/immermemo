@@ -204,6 +204,7 @@ export component App inherits Window {
     in property <bool> remote-configured;
     in-out property <int> note-menu-index: -1;
     in-out property <bool> quick-actions-open: false;
+    in-out property <bool> more-menu-open: false;
     // Library Directory's List/Grid views -- see `files.slint`'s
     // `DirectoryEntry`/`BreadcrumbSegment` and
     // `app/src/directory.rs`'s module doc.
@@ -337,6 +338,10 @@ export component App inherits Window {
             root.note-menu-index = -1;
             return true;
         }
+        if (root.more-menu-open) {
+            root.more-menu-open = false;
+            return true;
+        }
         if (root.quick-actions-open) {
             root.quick-actions-open = false;
             return true;
@@ -425,7 +430,7 @@ export component App inherits Window {
     property <length> inset-bottom: max(root.safe-area-insets.bottom + root.extra-inset-bottom, root.keyboard);
     property <length> bottom-bar-extra-inset: max(0px, (root.safe-area-insets.bottom + root.extra-inset-bottom) - 6px * Metrics.ui-scale);
     property <length> bottom-bar-total-height: root.keyboard == 0px
-        ? (Metrics.bottom-bar-height + 2px * Metrics.ui-scale + root.bottom-bar-extra-inset)
+        ? (Metrics.bottom-bar-height + root.bottom-bar-extra-inset)
         : 0px;
     property <length> mini-card-resting-y: root.height - root.bottom-bar-total-height - Metrics.mini-card-height - 8px * Metrics.ui-scale;
     property <length> mini-card-extra-inset: (root.current >= 0 && root.keyboard == 0px)
@@ -860,6 +865,122 @@ export component App inherits Window {
             quick-action => {
                 root.trigger-haptic();
                 root.quick-actions-open = true;
+            }
+            open-more => {
+                root.trigger-haptic();
+                root.more-menu-open = true;
+            }
+        }
+
+        ActionSheet {
+            open: root.more-menu-open;
+            narrow: root.narrow;
+            title: @tr("More");
+            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+            cancel => { root.more-menu-open = false; }
+
+            if bottom-nav-bar.overflow-home: IconActionRow {
+                icon: TablerIcons.home;
+                text: @tr("Home");
+                tint: root.active-tab == 0 ? Palette.accent-background : Palette.foreground;
+                clicked => {
+                    root.more-menu-open = false;
+                    root.active-tab = 0;
+                    root.trigger-haptic();
+                }
+            }
+
+            if bottom-nav-bar.overflow-search: IconActionRow {
+                icon: TablerIcons.search;
+                text: @tr("Search");
+                tint: root.active-tab == 1 ? Palette.accent-background : Palette.foreground;
+                clicked => {
+                    root.more-menu-open = false;
+                    root.active-tab = 1;
+                    root.trigger-haptic();
+                }
+            }
+
+            if bottom-nav-bar.overflow-library: IconActionRow {
+                icon: TablerIcons.files;
+                text: @tr("Library");
+                tint: root.active-tab == 2 && files-screen.page == 0 ? Palette.accent-background : Palette.foreground;
+                clicked => {
+                    root.more-menu-open = false;
+                    root.active-tab = 2;
+                    files-screen.page = 0;
+                    root.trigger-haptic();
+                }
+            }
+
+            if bottom-nav-bar.overflow-directory: IconActionRow {
+                icon: TablerIcons.folder;
+                text: @tr("Directory");
+                tint: root.active-tab == 2 && files-screen.page == 1 ? Palette.accent-background : Palette.foreground;
+                clicked => {
+                    root.more-menu-open = false;
+                    root.active-tab = 2;
+                    files-screen.page = 1;
+                    root.trigger-haptic();
+                }
+            }
+
+            if bottom-nav-bar.overflow-daily: IconActionRow {
+                icon: TablerIcons.calendar;
+                text: @tr("Daily Notes");
+                tint: root.active-tab == 2 && files-screen.page == 2 ? Palette.accent-background : Palette.foreground;
+                clicked => {
+                    root.more-menu-open = false;
+                    root.active-tab = 2;
+                    files-screen.page = 2;
+                    root.trigger-haptic();
+                }
+            }
+
+            if bottom-nav-bar.overflow-starred: IconActionRow {
+                icon: TablerIcons.star;
+                text: @tr("Starred");
+                tint: root.active-tab == 2 && files-screen.page == 3 ? Palette.accent-background : Palette.foreground;
+                clicked => {
+                    root.more-menu-open = false;
+                    root.active-tab = 2;
+                    files-screen.page = 3;
+                    root.trigger-haptic();
+                }
+            }
+
+            if bottom-nav-bar.overflow-recent: IconActionRow {
+                icon: TablerIcons.clock;
+                text: @tr("Recent");
+                tint: root.active-tab == 2 && files-screen.page == 4 ? Palette.accent-background : Palette.foreground;
+                clicked => {
+                    root.more-menu-open = false;
+                    root.active-tab = 2;
+                    files-screen.page = 4;
+                    root.trigger-haptic();
+                }
+            }
+
+            if bottom-nav-bar.overflow-graph: IconActionRow {
+                icon: TablerIcons.git-fork;
+                text: @tr("Graph View");
+                tint: root.active-tab == 2 && files-screen.page == 5 ? Palette.accent-background : Palette.foreground;
+                clicked => {
+                    root.more-menu-open = false;
+                    root.active-tab = 2;
+                    files-screen.page = 5;
+                    root.trigger-haptic();
+                }
+            }
+
+            if bottom-nav-bar.overflow-quick: IconActionRow {
+                icon: TablerIcons.bolt;
+                text: @tr("Quick Actions");
+                clicked => {
+                    root.more-menu-open = false;
+                    root.trigger-haptic();
+                    root.quick-actions-open = true;
+                }
             }
         }
 
