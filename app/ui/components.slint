@@ -78,8 +78,8 @@ component NavItem inherits Rectangle {
             alignment: center;
 
             Rectangle {
-                width: 56px * Metrics.ui-scale;
-                height: 32px * Metrics.ui-scale;
+                width: 60px * Metrics.ui-scale;
+                height: 36px * Metrics.ui-scale;
                 border-radius: self.height / 2;
                 background: root.active ? Palette.accent-background.with-alpha(0.18) : transparent;
                 animate background {
@@ -90,8 +90,8 @@ component NavItem inherits Rectangle {
                 Icon {
                     source: root.icon;
                     color: root.active ? Palette.accent-background : Colors.muted;
-                    width: Metrics.icon-lg;
-                    height: Metrics.icon-lg;
+                    width: 28px * Metrics.ui-scale;
+                    height: 28px * Metrics.ui-scale;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;
                     animate color {
@@ -425,7 +425,7 @@ export component BottomNavBar inherits Rectangle {
         }
 
         if root.has-overflow: NavItem {
-            icon: TablerIcons.menu;
+            icon: TablerIcons.menu-2;
             label: @tr("More");
             active: root.more-active;
             badge-count: root.more-badge-count;
