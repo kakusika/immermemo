@@ -46,15 +46,31 @@
 //! intermediate. The trust decision is still made by verifying the
 //! resulting chain up to the bundled root store; a wrong or hostile AIA
 //! response can only ever fail verification, never itself become trusted.
+//!
+//! # The host name is part of the trust decision
+//!
+//! Because this callback *replaces* libgit2's own verification (which has
+//! nothing to check against on Android and so always reports the
+//! certificate as invalid), nothing else ever compares the certificate to
+//! the host being connected to: a chain that verifies perfectly but was
+//! issued for some other site would otherwise be accepted, letting anyone
+//! with a valid certificate for *any* domain impersonate the git host.
+//! So the expected name goes into the store's `X509VerifyParam` and
+//! OpenSSL's own matching (Subject Alternative Names, single-label
+//! wildcards) is applied as part of chain verification, rather than
+//! re-implementing RFC 6125 matching by hand. The subject CN is never a
+//! fallback (`NEVER_CHECK_SUBJECT`), same as browsers; an IP literal is
+//! matched against IP SANs only.
 
 use std::io::{Read, Write};
-use std::net::TcpStream;
+use std::net::{IpAddr, TcpStream};
 use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
 use openssl::nid::Nid;
 use openssl::stack::Stack;
 use openssl::x509::store::{X509Store, X509StoreBuilder};
+use openssl::x509::verify::{X509CheckFlags, X509VerifyParam};
 use openssl::x509::{X509, X509StoreContext};
 
 use crate::CertificateVerifier;
@@ -69,24 +85,23 @@ const FETCH_TIMEOUT: Duration = Duration::from_secs(10);
 /// PEM bundle (Android: `app/assets/cacert.pem`, curl's own extract
 /// of Mozilla's root store).
 pub struct ChainVerifier {
-    roots: X509Store,
+    /// Kept parsed rather than as a ready-made `X509Store`: a store's
+    /// verify param carries the expected host name and cannot be changed
+    /// once built, so each verification builds its own (see [`verify`]).
+    roots: Vec<X509>,
 }
 
 impl ChainVerifier {
     pub fn new(root_bundle_pem: &[u8]) -> Result<Self> {
-        let mut builder = X509StoreBuilder::new()?;
-        for cert in X509::stack_from_pem(root_bundle_pem)? {
-            builder.add_cert(cert)?;
-        }
         Ok(Self {
-            roots: builder.build(),
+            roots: X509::stack_from_pem(root_bundle_pem)?,
         })
     }
 }
 
 impl CertificateVerifier for ChainVerifier {
     fn trust(&self, host: &str, leaf_der: &[u8]) -> bool {
-        match verify(&self.roots, leaf_der) {
+        match verify(&self.roots, host, leaf_der) {
             Ok(()) => true,
             Err(e) => {
                 eprintln!("certificate for {host} not trusted: {e:#}");
@@ -96,11 +111,39 @@ impl CertificateVerifier for ChainVerifier {
     }
 }
 
-fn verify(roots: &X509Store, leaf_der: &[u8]) -> Result<()> {
+/// A store holding `roots`, whose verify param demands that the leaf be
+/// valid for `host`.
+fn store_expecting_host(roots: &[X509], host: &str) -> Result<X509Store> {
+    // libgit2 hands over a bare host, but be forgiving of a bracketed IPv6
+    // literal rather than failing closed on a harmless spelling difference.
+    let host = host.trim_start_matches('[').trim_end_matches(']');
+    if host.is_empty() {
+        bail!("no host name to verify the certificate against");
+    }
+
+    let mut param = X509VerifyParam::new()?;
+    match host.parse::<IpAddr>() {
+        Ok(ip) => param.set_ip(ip)?,
+        Err(_) => {
+            param.set_hostflags(X509CheckFlags::NEVER_CHECK_SUBJECT);
+            param.set_host(host)?;
+        }
+    }
+
+    let mut builder = X509StoreBuilder::new()?;
+    for root in roots {
+        builder.add_cert(root.clone())?;
+    }
+    builder.set_param(&param)?;
+    Ok(builder.build())
+}
+
+fn verify(roots: &[X509], host: &str, leaf_der: &[u8]) -> Result<()> {
+    let store = store_expecting_host(roots, host)?;
     let leaf = X509::from_der(leaf_der).context("parse the server's leaf certificate")?;
     let mut chain: Stack<X509> = Stack::new()?;
 
-    if chain_is_trusted(roots, &leaf, &chain)? {
+    if chain_is_trusted(&store, &leaf, &chain)? {
         return Ok(());
     }
 
@@ -113,18 +156,18 @@ fn verify(roots: &X509Store, leaf_der: &[u8]) -> Result<()> {
             fetch_der_over_http(&url).with_context(|| format!("fetching issuer from {url}"))?;
         let issuer = X509::from_der(&der).context("parse the fetched intermediate certificate")?;
         chain.push(issuer.clone())?;
-        if chain_is_trusted(roots, &leaf, &chain)? {
+        if chain_is_trusted(&store, &leaf, &chain)? {
             return Ok(());
         }
         current = issuer;
     }
 
-    bail!("could not build a certificate chain to a trusted root")
+    bail!("could not build a certificate chain to a trusted root valid for {host}")
 }
 
-fn chain_is_trusted(roots: &X509Store, leaf: &X509, chain: &Stack<X509>) -> Result<bool> {
+fn chain_is_trusted(store: &X509Store, leaf: &X509, chain: &Stack<X509>) -> Result<bool> {
     let mut ctx = X509StoreContext::new()?;
-    Ok(ctx.init(roots, leaf, chain, |c| c.verify_cert())?)
+    Ok(ctx.init(store, leaf, chain, |c| c.verify_cert())?)
 }
 
 /// The "CA Issuers" URL from the certificate's Authority Information
@@ -234,9 +277,10 @@ mod tests {
         // exactly the CA this whole module exists for.
         let leaf = fetch_leaf_der("tailscale.com");
         let roots = ChainVerifier::new(&root_bundle()).unwrap().roots;
+        let store = store_expecting_host(&roots, "tailscale.com").unwrap();
         assert!(
             chain_is_trusted(
-                &roots,
+                &store,
                 &X509::from_der(&leaf).unwrap(),
                 &Stack::new().unwrap()
             )
@@ -244,7 +288,10 @@ mod tests {
             .unwrap_or(true),
             "test is meaningless if the leaf alone already verifies"
         );
-        assert!(verify(&roots, &leaf).is_ok());
+        assert!(verify(&roots, "tailscale.com", &leaf).is_ok());
+        // The same real, fully valid chain must not be accepted as some
+        // other site.
+        assert!(verify(&roots, "github.com", &leaf).is_err());
     }
 
     #[test]
@@ -276,5 +323,148 @@ mod tests {
 
         let verifier = ChainVerifier::new(&root_bundle()).unwrap();
         assert!(!verifier.trust("not-a-real-ca.example", &cert.to_der().unwrap()));
+    }
+
+    /// A throwaway CA plus a leaf it signs, entirely in memory, so the
+    /// hostname tests below need no network and no fixture files. The
+    /// chain itself is always valid; only the name varies, which is what
+    /// isolates the hostname check from the chain check.
+    mod generated {
+        use openssl::asn1::Asn1Time;
+        use openssl::bn::BigNum;
+        use openssl::hash::MessageDigest;
+        use openssl::pkey::{PKey, Private};
+        use openssl::rsa::Rsa;
+        use openssl::x509::extension::{BasicConstraints, SubjectAlternativeName};
+        use openssl::x509::{X509, X509Builder, X509NameBuilder};
+
+        pub struct Ca {
+            pub cert: X509,
+            key: PKey<Private>,
+        }
+
+        fn name(cn: &str) -> openssl::x509::X509Name {
+            let mut name = X509NameBuilder::new().unwrap();
+            name.append_entry_by_text("CN", cn).unwrap();
+            name.build()
+        }
+
+        fn base(
+            subject_cn: &str,
+            issuer: &openssl::x509::X509NameRef,
+            key: &PKey<Private>,
+        ) -> X509Builder {
+            let mut builder = X509Builder::new().unwrap();
+            builder.set_version(2).unwrap();
+            let serial = BigNum::from_u32(1).unwrap().to_asn1_integer().unwrap();
+            builder.set_serial_number(&serial).unwrap();
+            builder.set_subject_name(&name(subject_cn)).unwrap();
+            builder.set_issuer_name(issuer).unwrap();
+            builder.set_pubkey(key).unwrap();
+            builder
+                .set_not_before(&Asn1Time::days_from_now(0).unwrap())
+                .unwrap();
+            builder
+                .set_not_after(&Asn1Time::days_from_now(1).unwrap())
+                .unwrap();
+            builder
+        }
+
+        pub fn ca() -> Ca {
+            let key = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
+            let subject = name("immermemo test ca");
+            let mut builder = base("immermemo test ca", &subject, &key);
+            builder
+                .append_extension(BasicConstraints::new().critical().ca().build().unwrap())
+                .unwrap();
+            builder.sign(&key, MessageDigest::sha256()).unwrap();
+            Ca {
+                cert: builder.build(),
+                key,
+            }
+        }
+
+        /// What goes in the leaf's Subject Alternative Name extension.
+        pub enum San<'a> {
+            Dns(&'a str),
+            Ip(&'a str),
+        }
+
+        /// A leaf signed by `ca`, with `cn` as its subject CN and the given
+        /// SANs (an empty slice means no SAN extension at all).
+        pub fn leaf_der(ca: &Ca, cn: &str, sans: &[San]) -> Vec<u8> {
+            let key = PKey::from_rsa(Rsa::generate(2048).unwrap()).unwrap();
+            let mut builder = base(cn, ca.cert.subject_name(), &key);
+            if !sans.is_empty() {
+                let mut san = SubjectAlternativeName::new();
+                for entry in sans {
+                    match entry {
+                        San::Dns(d) => san.dns(d),
+                        San::Ip(i) => san.ip(i),
+                    };
+                }
+                let ext = san
+                    .build(&builder.x509v3_context(Some(&ca.cert), None))
+                    .unwrap();
+                builder.append_extension(ext).unwrap();
+            }
+            builder.sign(&ca.key, MessageDigest::sha256()).unwrap();
+            builder.build().to_der().unwrap()
+        }
+    }
+
+    fn verifier_trusting(ca: &generated::Ca) -> ChainVerifier {
+        ChainVerifier::new(&ca.cert.to_pem().unwrap()).unwrap()
+    }
+
+    #[test]
+    fn a_leaf_is_accepted_for_the_name_it_was_issued_to() {
+        use generated::San;
+        let ca = generated::ca();
+        let leaf = generated::leaf_der(&ca, "git.example.com", &[San::Dns("git.example.com")]);
+        assert!(verifier_trusting(&ca).trust("git.example.com", &leaf));
+    }
+
+    /// The whole point of this module's hostname check: a chain that
+    /// verifies perfectly, but for a different site, must not be trusted
+    /// -- otherwise anyone holding a valid certificate for *any* domain
+    /// could impersonate the git host.
+    #[test]
+    fn a_valid_chain_for_a_different_host_is_rejected() {
+        use generated::San;
+        let ca = generated::ca();
+        let leaf = generated::leaf_der(&ca, "evil.example.net", &[San::Dns("evil.example.net")]);
+        assert!(!verifier_trusting(&ca).trust("github.com", &leaf));
+    }
+
+    #[test]
+    fn a_wildcard_covers_exactly_one_label() {
+        use generated::San;
+        let ca = generated::ca();
+        let leaf = generated::leaf_der(&ca, "*.example.com", &[San::Dns("*.example.com")]);
+        let verifier = verifier_trusting(&ca);
+        assert!(verifier.trust("git.example.com", &leaf));
+        assert!(!verifier.trust("example.com", &leaf));
+        assert!(!verifier.trust("a.b.example.com", &leaf));
+    }
+
+    #[test]
+    fn an_ip_literal_is_matched_against_ip_sans_only() {
+        use generated::San;
+        let ca = generated::ca();
+        let leaf = generated::leaf_der(&ca, "192.0.2.10", &[San::Ip("192.0.2.10")]);
+        let verifier = verifier_trusting(&ca);
+        assert!(verifier.trust("192.0.2.10", &leaf));
+        assert!(!verifier.trust("192.0.2.11", &leaf));
+    }
+
+    /// Browsers ignore the subject CN once SANs exist, and modern ones
+    /// ignore it entirely. A certificate that only names its host in the
+    /// CN is not accepted here either.
+    #[test]
+    fn a_name_only_in_the_subject_cn_is_not_enough() {
+        let ca = generated::ca();
+        let leaf = generated::leaf_der(&ca, "git.example.com", &[]);
+        assert!(!verifier_trusting(&ca).trust("git.example.com", &leaf));
     }
 }
