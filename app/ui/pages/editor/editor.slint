@@ -10,8 +10,10 @@ import {
 } from "@origiri-mobile/widgets.slint";
 import { NoteBodyItemView, NoteBodyView } from "../../render/note_body.slint";
 import { ViewSwitcher, NavPill } from "../../components.slint";
-import { PropertiesView } from "properties.slint";
+import { PropertiesView, NotePropertyEntry } from "properties.slint";
 import { EditorToolbar } from "toolbar.slint";
+
+export { NotePropertyEntry } from "properties.slint";
 
 // Elevation + the open/close corner-radius morph, shared by the header and
 // body halves of the note sheet so they read as one continuous card. No
@@ -175,6 +177,8 @@ export component EditorScreen inherits Rectangle {
     // card of its own, since this screen's own header already has a
     // 3-dot overflow menu (note-menu-requested) for the same actions.
     in property <string> note-path: "";
+    in property <string> note-kind: "";
+    in property <[NotePropertyEntry]> note-metadata: [];
     in property <int> char-count: 0;
     in property <int> word-count: 0;
     in property <int> line-count: 0;
@@ -765,8 +769,9 @@ export component EditorScreen inherits Rectangle {
                         editor-scroll := AppScrollView {
                             width: 100%;
                             height: 100%;
+                            content-height: max(content-layout.preferred-height, editor-scroll.visible-height + 1px);
 
-                            VerticalLayout {
+                            content-layout := VerticalLayout {
                                 width: 100%;
                                 alignment: start;
                                 padding-left: Metrics.gutter;
@@ -774,7 +779,6 @@ export component EditorScreen inherits Rectangle {
                                 padding-top: Metrics.spacing-lg;
                                 padding-bottom: Metrics.spacing-3xl + (root.edit-mode ? 48px : 0px);
                                 spacing: Metrics.spacing-md;
-                                min-height: editor-scroll.visible-height + 1px;
 
                                 // In-body note title (Notion / Apple Notes style)
                                 Text {
@@ -791,13 +795,15 @@ export component EditorScreen inherits Rectangle {
                                 // detector over the whole area same as before.
                                 view-box := Rectangle {
                                     visible: !root.edit-mode;
+                                    width: 100%;
                                     height: !root.edit-mode ? max(160px, max(view-layout.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
 
                                     view-layout := VerticalLayout {
+                                        width: 100%;
                                         alignment: start;
                                         spacing: Metrics.spacing-sm;
 
-                                        if root.body == "": Text {
+                                        if root.body == "" || root.note-body-items.length == 0: Text {
                                             width: 100%;
                                             text: @tr("Tap Edit or double-tap here to write.");
                                             font-size: root.font-size;
@@ -842,6 +848,7 @@ export component EditorScreen inherits Rectangle {
                                 editor := TextInput {
                                     visible: root.edit-mode;
                                     enabled: root.has-note && root.edit-mode;
+                                    width: 100%;
                                     font-size: root.font-size;
                                     text <=> root.body;
                                     color: Palette.foreground;
@@ -895,6 +902,8 @@ export component EditorScreen inherits Rectangle {
                         has-note: root.has-note;
                         note-title: root.title;
                         note-path: root.note-path;
+                        note-kind: root.note-kind;
+                        note-metadata: root.note-metadata;
                         char-count: root.char-count;
                         word-count: root.word-count;
                         line-count: root.line-count;

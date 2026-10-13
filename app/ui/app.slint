@@ -26,6 +26,8 @@ import {
     ActionRow,
 } from "@origiri-mobile/widgets.slint";
 export { PickerIconEntry } from "sheets/icon_picker.slint";
+import { NotePropertyEntry } from "pages/editor/properties.slint";
+export { NotePropertyEntry }
 import { SettingsAdapter } from "sheets/settings/adapter.slint";
 export { SettingsAdapter }
 
@@ -119,6 +121,8 @@ export component App inherits Window {
     in-out property <string> search-query: "";
     in property <string> current-title;
     in property <string> current-note-path: "";
+    in property <string> note-kind: "";
+    in property <[NotePropertyEntry]> note-metadata: [];
     in property <int> char-count: 0;
     in property <int> word-count: 0;
     in property <int> line-count: 0;
@@ -663,6 +667,8 @@ export component App inherits Window {
                 note-count: root.notes.length;
                 has-conflict: root.current-has-conflict;
                 note-path: root.current-note-path;
+                note-kind: root.note-kind;
+                note-metadata: root.note-metadata;
                 char-count: root.char-count;
                 word-count: root.word-count;
                 line-count: root.line-count;

@@ -2,6 +2,11 @@ import { Palette, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { AppScrollView } from "@origiri-mobile/widgets.slint";
 
+export struct NotePropertyEntry {
+    key: string,
+    value: string,
+}
+
 // The currently-open note's properties/stats, embedded as one of the
 // note sheet's views (`EditorScreen`'s `note-view`). No header of its
 // own -- EditorScreen's own header covers it, same as the body view;
@@ -13,6 +18,8 @@ export component PropertiesView inherits Rectangle {
     in property <bool> has-note: false;
     in property <string> note-title: "";
     in property <string> note-path: "";
+    in property <string> note-kind: "";
+    in property <[NotePropertyEntry]> note-metadata: [];
     in property <int> char-count: 0;
     in property <int> word-count: 0;
     in property <int> line-count: 0;
@@ -93,6 +100,29 @@ export component PropertiesView inherits Rectangle {
                                 color: Colors.muted;
                                 wrap: word-wrap;
                             }
+
+                            if root.note-kind != "": HorizontalLayout {
+                                alignment: start;
+                                Rectangle {
+                                    border-radius: self.height / 2;
+                                    background: Palette.accent-background.with-alpha(0.12);
+                                    border-width: 1px;
+                                    border-color: Palette.accent-background.with-alpha(0.3);
+
+                                    HorizontalLayout {
+                                        padding-left: Metrics.spacing-sm;
+                                        padding-right: Metrics.spacing-sm;
+                                        padding-top: Metrics.spacing-xs / 2;
+                                        padding-bottom: Metrics.spacing-xs / 2;
+                                        Text {
+                                            text: root.note-kind;
+                                            font-size: Metrics.font-caption;
+                                            font-weight: 600;
+                                            color: Palette.accent-background;
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         Rectangle {
@@ -152,6 +182,63 @@ export component PropertiesView inherits Rectangle {
                                     font-size: Metrics.font-body;
                                     font-weight: 600;
                                     color: Palette.foreground;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ----------------------------------------------------
+                // Section: Metadata / Properties
+                // ----------------------------------------------------
+                if root.note-metadata.length > 0: Rectangle {
+                    border-radius: Metrics.radius-md;
+                    background: Colors.surface-elevated;
+
+                    VerticalLayout {
+                        padding: Metrics.spacing-lg;
+                        spacing: Metrics.spacing-md;
+
+                        VerticalLayout {
+                            spacing: Metrics.spacing-xs;
+                            Text {
+                                text: @tr("Properties");
+                                font-size: Metrics.font-caption;
+                                font-weight: 700;
+                                color: Colors.muted;
+                                letter-spacing: 0.5px;
+                            }
+                        }
+
+                        Rectangle {
+                            height: 1px;
+                            background: Colors.separator;
+                        }
+
+                        VerticalLayout {
+                            spacing: Metrics.spacing-sm;
+                            for entry in root.note-metadata: HorizontalLayout {
+                                spacing: Metrics.spacing-md;
+                                VerticalLayout {
+                                    alignment: center;
+                                    Text {
+                                        width: 90px * Metrics.ui-scale;
+                                        text: entry.key;
+                                        font-size: Metrics.font-sm;
+                                        color: Colors.muted;
+                                        overflow: elide;
+                                    }
+                                }
+                                VerticalLayout {
+                                    alignment: center;
+                                    horizontal-stretch: 1;
+                                    Text {
+                                        text: entry.value;
+                                        font-size: Metrics.font-body;
+                                        font-weight: 500;
+                                        color: Palette.foreground;
+                                        wrap: word-wrap;
+                                    }
                                 }
                             }
                         }

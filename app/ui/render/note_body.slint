@@ -30,6 +30,7 @@ export component NoteBodyView inherits VerticalLayout {
         }
 
         if item.is-flow: FlowView {
+            width: 100%;
             lines: item.lines;
             font-size: root.text-font-size;
             text-color: Palette.foreground;

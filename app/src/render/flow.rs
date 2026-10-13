@@ -390,4 +390,21 @@ mod tests {
             Inline::Element { .. } => panic!("expected trailing text"),
         }
     }
+
+    #[test]
+    fn note_body_items_omits_metadata_elements() {
+        let src = "@kind(note)\n\
+                   @config(export: { type: commonmark })\n\
+                   @meta{ id: 123, author: Alice }\n\n\
+                   Body paragraph.\n";
+        let items = note_body_items(src);
+        assert_eq!(items.len(), 1);
+        match &items[0] {
+            NoteBodyItem::Stacked(block) => {
+                assert_eq!(block.shape, BlockShape::PlainText);
+                assert_eq!(block.text, "Body paragraph.");
+            }
+            _ => panic!("expected stacked plain text"),
+        }
+    }
 }

@@ -211,7 +211,7 @@ pub fn classify(src: &str) -> Vec<RenderItem> {
     };
     doc.blocks
         .iter()
-        .flat_map(classify_block_groups)
+        .flat_map(|b| classify_block_groups(b, true))
         .flat_map(|(_, items)| items)
         .collect()
 }
@@ -222,10 +222,13 @@ pub fn classify(src: &str) -> Vec<RenderItem> {
 /// any other prose), then every one of its own nested blocks, recursively
 /// (a sub-section's heading and its nested blocks, and so on). A
 /// `Paragraph`/`Element` always contributes exactly one group.
-fn classify_block_groups(block: &Block) -> Vec<(RenderBlockKind, Vec<RenderItem>)> {
+fn classify_block_groups(block: &Block, skip_metadata: bool) -> Vec<(RenderBlockKind, Vec<RenderItem>)> {
     match block {
         Block::Paragraph(p) => vec![(RenderBlockKind::Paragraph, classify_inline_seq(&p.content))],
         Block::Element(el) => {
+            if skip_metadata && is_metadata_element_ast(el) {
+                return Vec::new();
+            }
             let items = classify_bare_character_element(el).unwrap_or_else(|| {
                 vec![
                     element_item(el)
@@ -239,7 +242,7 @@ fn classify_block_groups(block: &Block) -> Vec<(RenderBlockKind, Vec<RenderItem>
                 RenderBlockKind::Heading(section.level),
                 classify_inline_seq(&section.title),
             )];
-            groups.extend(section.blocks.iter().flat_map(classify_block_groups));
+            groups.extend(section.blocks.iter().flat_map(|b| classify_block_groups(b, skip_metadata)));
             groups
         }
         Block::List(list) => {
@@ -257,6 +260,9 @@ fn classify_block_groups(block: &Block) -> Vec<(RenderBlockKind, Vec<RenderItem>
                 for item in &list.items {
                     match &item.element.sigil {
                         Sigil::Named(_) => {
+                            if skip_metadata && is_metadata_element_ast(&item.element) {
+                                continue;
+                            }
                             let items = classify_bare_character_element(&item.element)
                                 .unwrap_or_else(|| {
                                     vec![element_item(&item.element).unwrap_or_else(|| {
@@ -273,7 +279,7 @@ fn classify_block_groups(block: &Block) -> Vec<(RenderBlockKind, Vec<RenderItem>
                         }
                     }
                     if let Some(sublist) = &item.sublist {
-                        groups.extend(classify_block_groups(&Block::List(sublist.clone())));
+                        groups.extend(classify_block_groups(&Block::List(sublist.clone()), skip_metadata));
                     }
                 }
                 groups
@@ -377,7 +383,11 @@ pub struct ParseFailed;
 /// parts.
 pub fn classify_blocks(src: &str) -> Result<Vec<(RenderBlockKind, Vec<RenderItem>)>, ParseFailed> {
     let doc: Document = tomet::parser::parse_document(src).map_err(|_| ParseFailed)?;
-    Ok(doc.blocks.iter().flat_map(classify_block_groups).collect())
+    Ok(doc
+        .blocks
+        .iter()
+        .flat_map(|b| classify_block_groups(b, true))
+        .collect())
 }
 
 /// Reads `src`'s top-level `@meta{ ... }` group's `key` entry, if present
@@ -422,6 +432,204 @@ pub fn meta_element(src: &str, key: &str) -> Option<(ElementIdentity, ElementArg
         }
         _ => None,
     })
+}
+
+/// Returns true if an element identity represents document-level metadata
+/// or directives (`@meta`, `@kind`, `@config`, `@use`) that belong in note
+/// properties rather than the rendered reading view.
+pub fn is_metadata_element(identity: &ElementIdentity) -> bool {
+    let is_ns = match identity.namespace.as_deref() {
+        None | Some("std") | Some("doc") => true,
+        _ => false,
+    };
+    is_ns && matches!(identity.name.as_str(), "meta" | "kind" | "config" | "use")
+}
+
+/// Returns true if a classified `RenderItem` is a metadata element.
+pub fn is_metadata_render_item(item: &RenderItem) -> bool {
+    match item {
+        RenderItem::Element { identity, .. } => is_metadata_element(identity),
+        _ => false,
+    }
+}
+
+/// Helper for AST elements before full RenderItem conversion.
+fn is_metadata_element_ast(el: &Element) -> bool {
+    let Sigil::Named(name) = &el.sigil else {
+        return false;
+    };
+    let is_ns = match name.namespace.as_deref() {
+        None | Some("std") | Some("doc") => true,
+        _ => false,
+    };
+    is_ns && matches!(name.name.as_str(), "meta" | "kind" | "config" | "use")
+}
+
+/// Formats an AST [`Value`] into a human-readable display string for metadata view.
+fn format_meta_value(value: &Value) -> String {
+    match value {
+        Value::Null => "null".to_string(),
+        Value::Bool(b) => b.to_string(),
+        Value::Int(i) => i.to_string(),
+        Value::Float(f) => f.to_string(),
+        Value::String(s) => s.clone(),
+        Value::Call(name, args) => {
+            if args.is_empty() {
+                name.clone()
+            } else {
+                let formatted_args: Vec<_> = args.iter().map(format_meta_value).collect();
+                format!("{name}({})", formatted_args.join(", "))
+            }
+        }
+        Value::Seq(items) => {
+            let formatted: Vec<_> = items.iter().map(format_meta_value).collect();
+            formatted.join(", ")
+        }
+        Value::Map(entries) => {
+            let formatted: Vec<_> = entries
+                .iter()
+                .map(|(k, v)| format!("{k}: {}", format_meta_value(v)))
+                .collect();
+            formatted.join(", ")
+        }
+        Value::Element(el) => {
+            let name = el
+                .sigil
+                .name()
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| "element".to_string());
+            if let Some(args) = &el.args {
+                format!("@{name}({})", format_meta_value(args))
+            } else {
+                format!("@{name}")
+            }
+        }
+        Value::Blocks(blocks) => {
+            let mut parts = Vec::new();
+            for block in blocks {
+                if let Block::Paragraph(p) = block {
+                    let mut p_text = String::new();
+                    for inline in &p.content {
+                        if let Inline::Text(t) = inline {
+                            p_text.push_str(&t.value);
+                        }
+                    }
+                    if !p_text.trim().is_empty() {
+                        parts.push(p_text.trim().to_string());
+                    }
+                }
+            }
+            if parts.is_empty() {
+                format!("[{} block(s)]", blocks.len())
+            } else {
+                parts.join(", ")
+            }
+        }
+    }
+}
+
+/// Extracts the note's kind from `@kind(...)`, `@doc.kind(...)`, or `@std.kind(...)`
+/// if present at document level.
+pub fn extract_note_kind(src: &str) -> Option<String> {
+    let doc: Document = tomet::parser::parse_document(src).ok()?;
+    for block in &doc.blocks {
+        if let Block::Element(el) = block {
+            let Sigil::Named(name) = &el.sigil else {
+                continue;
+            };
+            if name.name == "kind"
+                && matches!(
+                    name.namespace.as_deref(),
+                    None | Some("std") | Some("doc")
+                )
+            {
+                if let Some(args) = &el.args {
+                    match args {
+                        Value::String(s) => return Some(s.clone()),
+                        Value::Call(ident, _) => return Some(ident.clone()),
+                        Value::Map(entries) => {
+                            for (k, v) in entries {
+                                if k.is_empty() || k == "type" || k == "name" || k == "kind" {
+                                    match v {
+                                        Value::String(s) => return Some(s.clone()),
+                                        Value::Call(ident, _) => return Some(ident.clone()),
+                                        _ => {}
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                if let Some(content) = inline_content(el) {
+                    let mut s = String::new();
+                    for inline in content {
+                        let span = inline.span();
+                        s.push_str(&src[span.start.offset..span.end.offset]);
+                    }
+                    if !s.trim().is_empty() {
+                        return Some(s.trim().to_string());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Extracts metadata key-value pairs from top-level `@meta{ ... }` and `@config(...)`
+/// blocks in `src`. Returns `(key, formatted_value)` pairs.
+pub fn extract_note_metadata(src: &str) -> Vec<(String, String)> {
+    let doc: Document = match tomet::parser::parse_document(src) {
+        Ok(doc) => doc,
+        Err(_) => return Vec::new(),
+    };
+    let mut entries = Vec::new();
+    for block in &doc.blocks {
+        if let Block::Element(el) = block {
+            let Sigil::Named(name) = &el.sigil else {
+                continue;
+            };
+            if !matches!(
+                name.namespace.as_deref(),
+                None | Some("std") | Some("doc")
+            ) {
+                continue;
+            }
+            if name.name == "meta" {
+                if let Some(ElementValue::Group(group_entries)) = &el.value {
+                    for entry in group_entries {
+                        if let Entry::Pair(k, v) = entry {
+                            entries.push((k.clone(), format_meta_value(v)));
+                        }
+                    }
+                }
+                if let Some(Value::Map(map_entries)) = &el.args {
+                    for (k, v) in map_entries {
+                        if !k.is_empty() {
+                            entries.push((k.clone(), format_meta_value(v)));
+                        }
+                    }
+                }
+            } else if name.name == "config" {
+                if let Some(Value::Map(map_entries)) = &el.args {
+                    for (k, v) in map_entries {
+                        if !k.is_empty() {
+                            entries.push((format!("config.{}", k), format_meta_value(v)));
+                        }
+                    }
+                }
+                if let Some(ElementValue::Group(group_entries)) = &el.value {
+                    for entry in group_entries {
+                        if let Entry::Pair(k, v) = entry {
+                            entries.push((format!("config.{}", k), format_meta_value(v)));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    entries
 }
 
 /// Splits a run of [`Inline`]s into [`RenderItem`]s: a *namespaced*
@@ -581,7 +789,7 @@ fn block_args(args: Option<&Value>) -> Vec<(String, Vec<RenderItem>)> {
 fn classify_blocks_flat(blocks: &[Block]) -> Vec<RenderItem> {
     blocks
         .iter()
-        .flat_map(classify_block_groups)
+        .flat_map(|b| classify_block_groups(b, false))
         .flat_map(|(_, items)| items)
         .collect()
 }
@@ -710,6 +918,64 @@ mod tests {
         assert!(meta_element("@meta{ title: \"x\" }\n", "icon").is_none());
         assert!(meta_element("@meta{}\n", "icon").is_none());
         assert!(meta_element("Just a paragraph.\n", "icon").is_none());
+    }
+
+    #[test]
+    fn extract_note_kind_reads_various_syntax_shapes() {
+        assert_eq!(
+            extract_note_kind("@kind(note)\n\nBody text.\n"),
+            Some("note".to_string())
+        );
+        assert_eq!(
+            extract_note_kind("@kind(\"meeting\")\n\nBody text.\n"),
+            Some("meeting".to_string())
+        );
+        assert_eq!(
+            extract_note_kind("@kind(type: \"journal\")\n\nBody text.\n"),
+            Some("journal".to_string())
+        );
+        assert_eq!(
+            extract_note_kind("@doc.kind(reference)\n\nBody text.\n"),
+            Some("reference".to_string())
+        );
+        assert_eq!(extract_note_kind("Just plain text with no kind.\n"), None);
+    }
+
+    #[test]
+    fn extract_note_metadata_reads_meta_and_config_entries() {
+        let src = "@config(export: { type: commonmark })\n\
+                   @meta{\n  id: doc-123,\n  lang: en,\n  tags: [rust, notes]\n}\n\n\
+                   Body content.\n";
+        let meta = extract_note_metadata(src);
+        assert_eq!(
+            meta,
+            vec![
+                ("config.export".to_string(), "type: commonmark".to_string()),
+                ("id".to_string(), "doc-123".to_string()),
+                ("lang".to_string(), "en".to_string()),
+                ("tags".to_string(), "rust, notes".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn metadata_elements_are_filtered_from_render_items() {
+        let src = "@kind(note)\n\
+                   @meta{ id: 123 }\n\
+                   @use(doc)\n\n\
+                   Visible body text.\n";
+        let items = classify(src);
+        assert_eq!(items.len(), 1);
+        match &items[0] {
+            RenderItem::Text(span, _) => {
+                assert_eq!(&src[span.start.offset..span.end.offset], "Visible body text.");
+            }
+            _ => panic!("expected a Text item"),
+        }
+
+        let blocks = classify_blocks(src).unwrap();
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].0, RenderBlockKind::Paragraph);
     }
 
     #[test]

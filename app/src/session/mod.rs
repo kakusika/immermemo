@@ -26,7 +26,7 @@ use std::rc::Rc;
 use immermemo_core::directory;
 use slint::{ModelRc, SharedString, VecModel};
 
-use crate::{App, BreadcrumbSegment, DirectoryEntry, NoteBodyItemView};
+use crate::{App, BreadcrumbSegment, DirectoryEntry, NoteBodyItemView, NotePropertyEntry};
 
 /// What the window is currently editing. Lives on the UI thread only.
 pub struct Session {
@@ -166,6 +166,16 @@ pub fn update_note_stats(app: &App, text: &str) {
     app.set_char_count(stats.char_count);
     app.set_word_count(stats.word_count);
     app.set_line_count(stats.line_count);
+    let kind = immermemo_render_tomet::extract_note_kind(text).unwrap_or_default();
+    app.set_note_kind(kind.into());
+    let metadata_entries: Vec<NotePropertyEntry> = immermemo_render_tomet::extract_note_metadata(text)
+        .into_iter()
+        .map(|(k, v)| NotePropertyEntry {
+            key: k.into(),
+            value: v.into(),
+        })
+        .collect();
+    app.set_note_metadata(Rc::new(VecModel::from(metadata_entries)).into());
 }
 
 pub fn clear_note_stats(app: &App) {
@@ -173,4 +183,6 @@ pub fn clear_note_stats(app: &App) {
     app.set_char_count(0);
     app.set_word_count(0);
     app.set_line_count(0);
+    app.set_note_kind(SharedString::new());
+    app.set_note_metadata(Rc::new(VecModel::from(Vec::<NotePropertyEntry>::new())).into());
 }
