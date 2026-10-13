@@ -425,7 +425,7 @@ export component App inherits Window {
     property <length> inset-bottom: max(root.safe-area-insets.bottom + root.extra-inset-bottom, root.keyboard);
     property <length> bottom-bar-extra-inset: max(0px, (root.safe-area-insets.bottom + root.extra-inset-bottom) - 6px * Metrics.ui-scale);
     property <length> bottom-bar-total-height: root.keyboard == 0px
-        ? (Metrics.bottom-bar-height + root.bottom-bar-extra-inset)
+        ? (Metrics.bottom-bar-height + 2px * Metrics.ui-scale + root.bottom-bar-extra-inset)
         : 0px;
     property <length> mini-card-resting-y: root.height - root.bottom-bar-total-height - Metrics.mini-card-height - 8px * Metrics.ui-scale;
     property <length> mini-card-extra-inset: (root.current >= 0 && root.keyboard == 0px)
