@@ -260,6 +260,19 @@ fn main() {
     app.set_directory_folder_entries(ModelRc::new(VecModel::default()));
     app.set_directory_breadcrumb(ModelRc::new(VecModel::default()));
 
+    // Tab 2: Files / Daily Notes (collapsed)
+    app.set_files_page(2);
+    app.set_calendar_show_month_picker(false);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-daily-notes.ppm"));
+
+    // Daily Notes (month picker expanded)
+    app.set_calendar_show_month_picker(true);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-daily-notes-picker.ppm"));
+    app.set_calendar_show_month_picker(false);
+    app.set_files_page(0);
+
     // Tab 1: Search query with snippet preview
     app.set_active_tab(1);
     app.set_search_query("計画".into());

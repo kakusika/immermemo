@@ -9,7 +9,6 @@ import {
     AppScrollView,
     SegmentedControl,
     IconTile,
-    SelectableRow,
 } from "@origiri-mobile/widgets.slint";
 
 // One row of the Directory page's List view, or one tile of its Grid
@@ -96,34 +95,27 @@ component DirectoryBreadcrumb inherits HorizontalLayout {
     }
 }
 
-component CalNavButton inherits Rectangle {
-    in property <image> icon;
-    callback clicked();
-
-    width: 34px * Metrics.ui-scale;
-    height: 34px * Metrics.ui-scale;
-    border-radius: self.width / 2;
-    background: touch.pressed ? Palette.foreground.with-alpha(0.12) : Palette.foreground.with-alpha(0.05);
-    animate background { duration: 100ms; }
-
-    touch := TouchArea {
-        clicked => { root.clicked(); }
-    }
-
-    Icon {
-        source: root.icon;
-        width: Metrics.icon-sm;
-        height: Metrics.icon-sm;
-        color: Palette.foreground;
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2;
-    }
-}
-
 component DailyCalendarView inherits Rectangle {
     property <int> display-year: 2026;
     property <int> display-month: 10;
     property <int> selected-day: 14;
+    in-out property <bool> show-month-picker: false;
+    property <[int]> months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+    pure function short-month-name(m: int) -> string {
+        if (m == 1) { return @tr("Jan"); }
+        if (m == 2) { return @tr("Feb"); }
+        if (m == 3) { return @tr("Mar"); }
+        if (m == 4) { return @tr("Apr"); }
+        if (m == 5) { return @tr("May"); }
+        if (m == 6) { return @tr("Jun"); }
+        if (m == 7) { return @tr("Jul"); }
+        if (m == 8) { return @tr("Aug"); }
+        if (m == 9) { return @tr("Sep"); }
+        if (m == 10) { return @tr("Oct"); }
+        if (m == 11) { return @tr("Nov"); }
+        return @tr("Dec");
+    }
 
     pure function days-in-month(y: int, m: int) -> int {
         if (m == 2) {
@@ -236,49 +228,96 @@ component DailyCalendarView inherits Rectangle {
             padding: Metrics.spacing-md;
             spacing: Metrics.spacing-sm;
 
-            // Header: controls for year & month
+            // Header: Clickable Month button (no arrows)
             HorizontalLayout {
-                spacing: Metrics.spacing-xs;
+                alignment: center;
 
-                VerticalLayout {
-                    alignment: center;
-                    CalNavButton {
-                        icon: TablerIcons.chevrons-left;
-                        clicked => { root.prev-year(); }
+                Rectangle {
+                    height: 38px * Metrics.ui-scale;
+                    border-radius: self.height / 2;
+                    background: header-touch.pressed
+                        ? Palette.foreground.with-alpha(0.12)
+                        : (root.show-month-picker ? Palette.accent-background.with-alpha(0.16) : Palette.foreground.with-alpha(0.06));
+                    border-width: 1px;
+                    border-color: root.show-month-picker ? Palette.accent-background.with-alpha(0.3) : transparent;
+                    animate background { duration: 150ms; }
+
+                    header-touch := TouchArea {
+                        clicked => {
+                            root.show-month-picker = !root.show-month-picker;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 16px * Metrics.ui-scale;
+                        padding-right: 14px * Metrics.ui-scale;
+                        spacing: 8px * Metrics.ui-scale;
+                        alignment: center;
+
+                        Text {
+                            text: root.month-name(root.display-month);
+                            font-size: Metrics.font-body;
+                            font-weight: 700;
+                            color: root.show-month-picker ? Palette.accent-background : Palette.foreground;
+                            vertical-alignment: center;
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                source: root.show-month-picker ? TablerIcons.chevron-up : TablerIcons.chevron-down;
+                                width: 14px * Metrics.ui-scale;
+                                height: 14px * Metrics.ui-scale;
+                                color: root.show-month-picker ? Palette.accent-background : Colors.muted;
+                            }
+                        }
                     }
                 }
+            }
 
-                VerticalLayout {
-                    alignment: center;
-                    CalNavButton {
-                        icon: TablerIcons.chevron-left;
-                        clicked => { root.prev-month(); }
-                    }
-                }
+            // Horizontal scrollable month picker chips
+            if root.show-month-picker: Flickable {
+                height: 38px * Metrics.ui-scale;
+                interactive: true;
+                mouse-drag-pan-enabled: true;
+                content-height: self.height;
+                content-width: months-layout.preferred-width;
 
-                Text {
-                    horizontal-stretch: 1;
-                    text: root.month-name(root.display-month) + " " + root.display-year;
-                    font-size: Metrics.font-body;
-                    font-weight: 700;
-                    color: Palette.foreground;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
+                months-layout := HorizontalLayout {
+                    spacing: Metrics.spacing-xs;
+                    padding-left: Metrics.spacing-xs;
+                    padding-right: Metrics.spacing-xs;
 
-                VerticalLayout {
-                    alignment: center;
-                    CalNavButton {
-                        icon: TablerIcons.chevron-right;
-                        clicked => { root.next-month(); }
-                    }
-                }
+                    for m in root.months: Rectangle {
+                        property <bool> is-selected: m == root.display-month;
+                        height: 32px * Metrics.ui-scale;
+                        width: chip-layout.preferred-width;
+                        border-radius: self.height / 2;
+                        background: is-selected
+                            ? Palette.accent-background
+                            : (chip-touch.pressed ? Palette.foreground.with-alpha(0.12) : Palette.foreground.with-alpha(0.06));
+                        animate background { duration: 100ms; }
 
-                VerticalLayout {
-                    alignment: center;
-                    CalNavButton {
-                        icon: TablerIcons.chevrons-right;
-                        clicked => { root.next-year(); }
+                        chip-touch := TouchArea {
+                            clicked => {
+                                root.display-month = m;
+                                root.selected-day = min(root.selected-day, root.days-in-month(root.display-year, m));
+                            }
+                        }
+
+                        chip-layout := HorizontalLayout {
+                            padding-left: 14px * Metrics.ui-scale;
+                            padding-right: 14px * Metrics.ui-scale;
+                            alignment: center;
+
+                            Text {
+                                text: root.short-month-name(m);
+                                font-size: Metrics.font-sub;
+                                font-weight: is-selected ? 700 : 500;
+                                color: is-selected ? Palette.accent-foreground : Palette.foreground;
+                                vertical-alignment: center;
+                            }
+                        }
                     }
                 }
             }
@@ -345,41 +384,148 @@ component DailyCalendarView inherits Rectangle {
                 }
             }
 
-            // Quick "Today" action
-            HorizontalLayout {
+        }
+    }
+}
+
+// Android native Material 3 list item for folder and note entries:
+// - Left: rounded container with icon (squircle background)
+// - Center: title text with conflict indicator if applicable
+// - Right: 3-dot overflow menu icon (dots-vertical) without disclosure chevron
+component DirectoryRow inherits Rectangle {
+    in property <bool> is-folder: false;
+    in property <image> icon-image;
+    in property <string> display-text: "";
+    in property <bool> highlighted: false;
+    in property <bool> has-conflict: false;
+    in property <bool> show-menu: true;
+    in property <bool> long-press-enabled: true;
+    callback clicked();
+    callback menu-clicked();
+    callback long-pressed();
+
+    height: 56px * Metrics.ui-scale;
+
+    row-touch := TouchArea {
+        width: root.show-menu ? (parent.width - 48px * Metrics.ui-scale) : parent.width;
+        height: 100%;
+        clicked => {
+            if (root.long-press-fired) {
+                root.long-press-fired = false;
+            } else {
+                root.clicked();
+            }
+        }
+    }
+
+    highlight-rect := Rectangle {
+        x: Metrics.spacing-xs;
+        y: 2px * Metrics.ui-scale;
+        width: parent.width - 2 * Metrics.spacing-xs;
+        height: parent.height - 4px * Metrics.ui-scale;
+        border-radius: 12px * Metrics.ui-scale;
+        background: root.highlighted
+            ? Palette.accent-background.with-alpha(0.18)
+            : (row-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent);
+        animate background { duration: 150ms; easing: ease-out; }
+
+        HorizontalLayout {
+            padding-left: Metrics.spacing-sm + 2px * Metrics.ui-scale;
+            padding-right: Metrics.spacing-xs;
+            spacing: Metrics.spacing-md;
+
+            // Leading rounded background container with icon
+            VerticalLayout {
                 alignment: center;
-                padding-top: Metrics.spacing-xs;
-
                 Rectangle {
-                    height: 28px * Metrics.ui-scale;
-                    border-radius: self.height / 2;
-                    background: today-touch.pressed
-                        ? Palette.foreground.with-alpha(0.12)
-                        : Palette.foreground.with-alpha(0.05);
+                    width: 40px * Metrics.ui-scale;
+                    height: 40px * Metrics.ui-scale;
+                    border-radius: 10px * Metrics.ui-scale;
+                    background: root.is-folder
+                        ? Palette.accent-background.with-alpha(0.14)
+                        : (root.highlighted
+                            ? Palette.accent-background.with-alpha(0.24)
+                            : Palette.foreground.with-alpha(0.06));
+                    animate background { duration: 150ms; }
 
-                    today-touch := TouchArea {
-                        clicked => {
-                            root.display-year = 2026;
-                            root.display-month = 10;
-                            root.selected-day = 14;
-                        }
+                    Icon {
+                        source: root.is-folder
+                            ? TablerIcons.folder
+                            : (root.icon-image.width > 0 ? root.icon-image : TablerIcons.file-text);
+                        width: 20px * Metrics.ui-scale;
+                        height: 20px * Metrics.ui-scale;
+                        color: root.is-folder
+                            ? Palette.accent-background
+                            : (root.highlighted ? Palette.accent-background : Palette.foreground);
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+            }
+
+            // Title
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+
+                Text {
+                    text: root.display-text;
+                    font-size: Metrics.font-body;
+                    font-weight: root.is-folder ? 600 : (root.highlighted ? 600 : 400);
+                    color: root.highlighted ? Palette.accent-background : Palette.foreground;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+
+            // Conflict indicator dot
+            if root.has-conflict: VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 8px * Metrics.ui-scale;
+                    height: 8px * Metrics.ui-scale;
+                    border-radius: 4px * Metrics.ui-scale;
+                    background: Colors.warning;
+                }
+            }
+
+            // Trailing 3-dot overflow menu (no right arrow!)
+            if root.show-menu: VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 40px * Metrics.ui-scale;
+                    height: 40px * Metrics.ui-scale;
+                    border-radius: 20px * Metrics.ui-scale;
+                    background: menu-touch.pressed ? Palette.foreground.with-alpha(0.12) : transparent;
+                    animate background { duration: 100ms; }
+
+                    Icon {
+                        source: TablerIcons.dots-vertical;
+                        width: Metrics.icon-sm;
+                        height: Metrics.icon-sm;
+                        color: Colors.muted;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
                     }
 
-                    HorizontalLayout {
-                        padding-left: 14px * Metrics.ui-scale;
-                        padding-right: 14px * Metrics.ui-scale;
-                        alignment: center;
-
-                        Text {
-                            text: @tr("Today");
-                            font-size: Metrics.font-sm;
-                            font-weight: 600;
-                            color: Palette.accent-background;
-                            vertical-alignment: center;
+                    menu-touch := TouchArea {
+                        clicked => {
+                            root.menu-clicked();
                         }
                     }
                 }
             }
+        }
+    }
+
+    property <bool> long-press-fired: false;
+
+    Timer {
+        interval: 400ms;
+        running: row-touch.pressed && root.long-press-enabled && !root.long-press-fired;
+        triggered => {
+            root.long-press-fired = true;
+            root.long-pressed();
         }
     }
 }
@@ -403,6 +549,7 @@ export component FilesScreen inherits Rectangle {
     // same flat note list every other action already indexes by -- they
     // differ purely in how they render one folder's contents.
     in-out property <int> directory-mode: 0;
+    in-out property <bool> calendar-show-month-picker: false;
     in property <[DirectoryEntry]> folder-entries: [];
     in property <[BreadcrumbSegment]> breadcrumb: [];
 
@@ -598,13 +745,13 @@ export component FilesScreen inherits Rectangle {
             VerticalLayout {
                 padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
 
-                for entry[i] in root.folder-entries: SelectableRow {
-                    leading-icon: entry.is-folder ? TablerIcons.folder : entry.icon-image;
-                    label-text: entry.display;
-                    bold: entry.is-folder;
+                for entry[i] in root.folder-entries: DirectoryRow {
+                    is-folder: entry.is-folder;
+                    icon-image: entry.icon-image;
+                    display-text: entry.display;
                     highlighted: !entry.is-folder && root.highlight-current && entry.note-index == root.current;
-                    show-dot: !entry.is-folder && entry.has-conflict;
-                    show-chevron: entry.is-folder;
+                    has-conflict: !entry.is-folder && entry.has-conflict;
+                    show-menu: !entry.is-folder;
                     long-press-enabled: !entry.is-folder;
                     clicked => {
                         if (entry.is-folder) {
@@ -612,6 +759,10 @@ export component FilesScreen inherits Rectangle {
                         } else {
                             root.select(entry.note-index);
                         }
+                    }
+                    menu-clicked => {
+                        root.trigger-heavy-haptic();
+                        root.note-menu-requested(entry.note-index);
                     }
                     long-pressed => {
                         root.trigger-heavy-haptic();
@@ -667,58 +818,76 @@ export component FilesScreen inherits Rectangle {
             }
         }
 
-        // Daily Notes: Interactive calendar placeholder
+        // Daily Notes: Interactive calendar
         if root.page == 2: AppScrollView {
             vertical-stretch: 1;
 
             VerticalLayout {
                 padding-left: Metrics.gutter;
                 padding-right: Metrics.gutter;
-                padding-top: Metrics.spacing-sm;
+                padding-top: Metrics.spacing-xs;
                 padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
-                spacing: Metrics.spacing-lg;
+                spacing: Metrics.spacing-sm;
 
-                DailyCalendarView { }
-
-                VerticalLayout {
-                    spacing: Metrics.spacing-xs;
-                    alignment: center;
-
-                    Text {
-                        text: @tr("Daily Notes");
-                        font-size: Metrics.font-title;
-                        font-weight: 700;
-                        color: Palette.foreground;
-                        horizontal-alignment: center;
-                    }
-
-                    Text {
-                        text: @tr("Automatic daily journals and calendar log.");
-                        font-size: Metrics.font-sub;
-                        color: Colors.muted;
-                        horizontal-alignment: center;
-                        wrap: word-wrap;
-                    }
+                DailyCalendarView {
+                    show-month-picker <=> root.calendar-show-month-picker;
                 }
 
-                HorizontalLayout {
-                    alignment: center;
-                    Rectangle {
-                        height: 28px * Metrics.ui-scale;
-                        border-radius: 14px * Metrics.ui-scale;
-                        background: Palette.foreground.with-alpha(0.06);
+                // Compact Daily Note action card
+                Rectangle {
+                    background: Colors.surface-elevated;
+                    border-radius: Metrics.radius-lg;
+                    border-width: 1px;
+                    border-color: Palette.color-scheme == ColorScheme.dark
+                        ? Palette.foreground.with-alpha(0.08)
+                        : Palette.foreground.with-alpha(0.06);
 
-                        HorizontalLayout {
-                            padding-left: 14px;
-                            padding-right: 14px;
+                    HorizontalLayout {
+                        padding: Metrics.spacing-md;
+                        spacing: Metrics.spacing-sm;
+
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 2px * Metrics.ui-scale;
                             alignment: center;
 
                             Text {
-                                text: @tr("Placeholder · Coming Soon");
-                                font-size: Metrics.font-sm;
+                                text: @tr("Daily Journal");
+                                font-size: Metrics.font-sub;
                                 font-weight: 600;
+                                color: Palette.foreground;
+                            }
+
+                            Text {
+                                text: @tr("Write today's note");
+                                font-size: Metrics.font-caption;
                                 color: Colors.muted;
-                                vertical-alignment: center;
+                            }
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                width: 36px * Metrics.ui-scale;
+                                height: 36px * Metrics.ui-scale;
+                                border-radius: 18px * Metrics.ui-scale;
+                                background: add-touch.pressed
+                                    ? Palette.accent-background.with-alpha(0.24)
+                                    : Palette.accent-background.with-alpha(0.12);
+                                animate background { duration: 100ms; }
+
+                                add-touch := TouchArea {
+                                    clicked => { root.new-note(); }
+                                }
+
+                                Icon {
+                                    source: TablerIcons.plus;
+                                    width: Metrics.icon-sm;
+                                    height: Metrics.icon-sm;
+                                    color: Palette.accent-background;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                }
                             }
                         }
                     }

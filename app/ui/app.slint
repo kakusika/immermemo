@@ -240,6 +240,7 @@ export component App inherits Window {
     in-out property <bool> editor-edit-mode <=> pane.edit-mode;
     in-out property <int> directory-mode <=> files-screen.directory-mode;
     in-out property <int> files-page <=> files-screen.page;
+    in-out property <bool> calendar-show-month-picker <=> files-screen.calendar-show-month-picker;
 
     function apply-theme-choice() {
         if (root.theme-choice == 1) {
