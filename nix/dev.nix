@@ -77,7 +77,8 @@ mkShell {
     gradle
     cargo-ndk
 
-    #= Runtime
+    #== Crypto / Network
+    openssl
     #== Wayland
     wayland
     libxkbcommon
@@ -98,6 +99,7 @@ mkShell {
   JAVA_HOME = pkgs.jdk17.home;
 
   PKG_CONFIG_PATH = lib.makeSearchPathOutput "dev" "lib/pkgconfig" [
+    pkgs.openssl
     pkgs.fontconfig
     pkgs.freetype
     pkgs.wayland
@@ -106,6 +108,7 @@ mkShell {
 
   LD_LIBRARY_PATH =
     lib.makeLibraryPath [
+      pkgs.openssl
       pkgs.wayland
       pkgs.libxkbcommon
       pkgs.fontconfig

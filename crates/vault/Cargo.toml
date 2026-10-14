@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+immermemo-credentials = { workspace = true }
 tomet = { workspace = true, features = ["merge"] }
 
 #= Crates.io
@@ -12,8 +13,6 @@ base64 = { workspace = true }
 git2 = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-#= Workspace
-immermemo-credentials = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"

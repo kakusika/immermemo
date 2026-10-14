@@ -69,7 +69,7 @@ component NavItem inherits Rectangle {
         width: 100%;
         height: 100%;
         alignment: center;
-        spacing: 1px * Metrics.ui-scale;
+        spacing: 3px * Metrics.ui-scale;
         padding-top: 1px * Metrics.ui-scale;
         padding-bottom: 1px * Metrics.ui-scale;
 
@@ -263,35 +263,73 @@ export component BottomNavBar inherits Rectangle {
     in property <bool> has-recent: false;
     in property <bool> has-graph: false;
     in property <bool> has-quick: true;
+    in property <[int]> nav-order: [0, 1, 2, 3, 4, 5, 6, 7, 8];
     in-out property <int> files-page: 0;
     callback tab-selected(int);
     callback open-library-page(int);
     callback quick-action();
     callback open-more();
 
-    // Item counts to determine 1-based rank among enabled items
-    property <int> count-home: root.has-home ? 1 : 0;
-    property <int> count-search: root.count-home + (root.has-search ? 1 : 0);
-    property <int> count-library: root.count-search + (root.has-library ? 1 : 0);
-    property <int> count-directory: root.count-library + (root.has-directory ? 1 : 0);
-    property <int> count-daily: root.count-directory + (root.has-daily ? 1 : 0);
-    property <int> count-starred: root.count-daily + (root.has-starred ? 1 : 0);
-    property <int> count-recent: root.count-starred + (root.has-recent ? 1 : 0);
-    property <int> count-graph: root.count-recent + (root.has-graph ? 1 : 0);
-    property <int> total-items: root.count-graph + (root.has-quick ? 1 : 0);
+    pure function check-enabled(id: int) -> bool {
+        if (id == 0) { return root.has-home; }
+        if (id == 1) { return root.has-search; }
+        if (id == 2) { return root.has-library; }
+        if (id == 3) { return root.has-directory; }
+        if (id == 4) { return root.has-daily; }
+        if (id == 5) { return root.has-starred; }
+        if (id == 6) { return root.has-recent; }
+        if (id == 7) { return root.has-graph; }
+        if (id == 8) { return root.has-quick; }
+        return false;
+    }
 
+    property <int> cum-0: root.check-enabled(root.nav-order[0]) ? 1 : 0;
+    property <int> cum-1: root.cum-0 + (root.check-enabled(root.nav-order[1]) ? 1 : 0);
+    property <int> cum-2: root.cum-1 + (root.check-enabled(root.nav-order[2]) ? 1 : 0);
+    property <int> cum-3: root.cum-2 + (root.check-enabled(root.nav-order[3]) ? 1 : 0);
+    property <int> cum-4: root.cum-3 + (root.check-enabled(root.nav-order[4]) ? 1 : 0);
+    property <int> cum-5: root.cum-4 + (root.check-enabled(root.nav-order[5]) ? 1 : 0);
+    property <int> cum-6: root.cum-5 + (root.check-enabled(root.nav-order[6]) ? 1 : 0);
+    property <int> cum-7: root.cum-6 + (root.check-enabled(root.nav-order[7]) ? 1 : 0);
+    property <int> cum-8: root.cum-7 + (root.check-enabled(root.nav-order[8]) ? 1 : 0);
+    property <int> total-items: root.cum-8;
     property <bool> has-overflow: root.total-items >= 5;
 
+    pure function cum-at(pos: int) -> int {
+        if (pos == 0) { return root.cum-0; }
+        if (pos == 1) { return root.cum-1; }
+        if (pos == 2) { return root.cum-2; }
+        if (pos == 3) { return root.cum-3; }
+        if (pos == 4) { return root.cum-4; }
+        if (pos == 5) { return root.cum-5; }
+        if (pos == 6) { return root.cum-6; }
+        if (pos == 7) { return root.cum-7; }
+        return root.cum-8;
+    }
+
+    pure function item-overflows(id: int) -> bool {
+        if (root.nav-order[0] == id) { return root.cum-0 > 4; }
+        if (root.nav-order[1] == id) { return root.cum-1 > 4; }
+        if (root.nav-order[2] == id) { return root.cum-2 > 4; }
+        if (root.nav-order[3] == id) { return root.cum-3 > 4; }
+        if (root.nav-order[4] == id) { return root.cum-4 > 4; }
+        if (root.nav-order[5] == id) { return root.cum-5 > 4; }
+        if (root.nav-order[6] == id) { return root.cum-6 > 4; }
+        if (root.nav-order[7] == id) { return root.cum-7 > 4; }
+        if (root.nav-order[8] == id) { return root.cum-8 > 4; }
+        return false;
+    }
+
     // Exported overflow flags indicating which items overflow into the More modal
-    out property <bool> overflow-home: root.has-overflow && root.has-home && root.count-home > 4;
-    out property <bool> overflow-search: root.has-overflow && root.has-search && root.count-search > 4;
-    out property <bool> overflow-library: root.has-overflow && root.has-library && root.count-library > 4;
-    out property <bool> overflow-directory: root.has-overflow && root.has-directory && root.count-directory > 4;
-    out property <bool> overflow-daily: root.has-overflow && root.has-daily && root.count-daily > 4;
-    out property <bool> overflow-starred: root.has-overflow && root.has-starred && root.count-starred > 4;
-    out property <bool> overflow-recent: root.has-overflow && root.has-recent && root.count-recent > 4;
-    out property <bool> overflow-graph: root.has-overflow && root.has-graph && root.count-graph > 4;
-    out property <bool> overflow-quick: root.has-overflow && root.has-quick && root.total-items > 4;
+    out property <bool> overflow-home: root.has-overflow && root.has-home && root.item-overflows(0);
+    out property <bool> overflow-search: root.has-overflow && root.has-search && root.item-overflows(1);
+    out property <bool> overflow-library: root.has-overflow && root.has-library && root.item-overflows(2);
+    out property <bool> overflow-directory: root.has-overflow && root.has-directory && root.item-overflows(3);
+    out property <bool> overflow-daily: root.has-overflow && root.has-daily && root.item-overflows(4);
+    out property <bool> overflow-starred: root.has-overflow && root.has-starred && root.item-overflows(5);
+    out property <bool> overflow-recent: root.has-overflow && root.has-recent && root.item-overflows(6);
+    out property <bool> overflow-graph: root.has-overflow && root.has-graph && root.item-overflows(7);
+    out property <bool> overflow-quick: root.has-overflow && root.has-quick && root.item-overflows(8);
 
     property <bool> more-active: (
         (root.overflow-home && root.active-tab == 0) ||
@@ -322,105 +360,107 @@ export component BottomNavBar inherits Rectangle {
         padding-bottom: 0px;
         spacing: 0px;
 
-        if root.has-home && (!root.has-overflow || root.count-home <= 4): NavItem {
-            icon: TablerIcons.home;
-            label: @tr("Home");
-            active: root.active-tab == 0;
-            clicked => {
-                root.active-tab = 0;
-                root.tab-selected(0);
+        for id[pos] in root.nav-order: HorizontalLayout {
+            if id == 0 && root.has-home && (!root.has-overflow || root.cum-at(pos) <= 4): NavItem {
+                icon: TablerIcons.home;
+                label: @tr("Home");
+                active: root.active-tab == 0;
+                clicked => {
+                    root.active-tab = 0;
+                    root.tab-selected(0);
+                }
             }
-        }
 
-        if root.has-search && (!root.has-overflow || root.count-search <= 4): NavItem {
-            icon: TablerIcons.search;
-            label: @tr("Search");
-            active: root.active-tab == 1;
-            clicked => {
-                root.active-tab = 1;
-                root.tab-selected(1);
+            if id == 1 && root.has-search && (!root.has-overflow || root.cum-at(pos) <= 4): NavItem {
+                icon: TablerIcons.search;
+                label: @tr("Search");
+                active: root.active-tab == 1;
+                clicked => {
+                    root.active-tab = 1;
+                    root.tab-selected(1);
+                }
             }
-        }
 
-        if root.has-library && (!root.has-overflow || root.count-library <= 4): NavItem {
-            icon: TablerIcons.files;
-            label: @tr("Library");
-            active: root.active-tab == 2 && (root.files-page == 0 || root.files-page == 6 || root.files-page == 7 || (!root.has-directory && root.files-page == 1) || (!root.has-daily && root.files-page == 2) || (!root.has-starred && root.files-page == 3) || (!root.has-recent && root.files-page == 4) || (!root.has-graph && root.files-page == 5));
-            badge-count: root.conflict-count;
-            clicked => {
-                root.active-tab = 2;
-                root.files-page = 0;
-                root.open-library-page(0);
-                root.tab-selected(2);
+            if id == 2 && root.has-library && (!root.has-overflow || root.cum-at(pos) <= 4): NavItem {
+                icon: TablerIcons.files;
+                label: @tr("Library");
+                active: root.active-tab == 2 && (root.files-page == 0 || root.files-page == 6 || root.files-page == 7 || (!root.has-directory && root.files-page == 1) || (!root.has-daily && root.files-page == 2) || (!root.has-starred && root.files-page == 3) || (!root.has-recent && root.files-page == 4) || (!root.has-graph && root.files-page == 5));
+                badge-count: root.conflict-count;
+                clicked => {
+                    root.active-tab = 2;
+                    root.files-page = 0;
+                    root.open-library-page(0);
+                    root.tab-selected(2);
+                }
             }
-        }
 
-        if root.has-directory && (!root.has-overflow || root.count-directory <= 4): NavItem {
-            icon: TablerIcons.folder;
-            label: @tr("Directory");
-            active: root.active-tab == 2 && root.files-page == 1;
-            clicked => {
-                root.active-tab = 2;
-                root.files-page = 1;
-                root.open-library-page(1);
-                root.tab-selected(2);
+            if id == 3 && root.has-directory && (!root.has-overflow || root.cum-at(pos) <= 4): NavItem {
+                icon: TablerIcons.folder;
+                label: @tr("Directory");
+                active: root.active-tab == 2 && root.files-page == 1;
+                clicked => {
+                    root.active-tab = 2;
+                    root.files-page = 1;
+                    root.open-library-page(1);
+                    root.tab-selected(2);
+                }
             }
-        }
 
-        if root.has-daily && (!root.has-overflow || root.count-daily <= 4): NavItem {
-            icon: TablerIcons.calendar;
-            label: @tr("Daily");
-            active: root.active-tab == 2 && root.files-page == 2;
-            clicked => {
-                root.active-tab = 2;
-                root.files-page = 2;
-                root.open-library-page(2);
-                root.tab-selected(2);
+            if id == 4 && root.has-daily && (!root.has-overflow || root.cum-at(pos) <= 4): NavItem {
+                icon: TablerIcons.calendar;
+                label: @tr("Daily");
+                active: root.active-tab == 2 && root.files-page == 2;
+                clicked => {
+                    root.active-tab = 2;
+                    root.files-page = 2;
+                    root.open-library-page(2);
+                    root.tab-selected(2);
+                }
             }
-        }
 
-        if root.has-starred && (!root.has-overflow || root.count-starred <= 4): NavItem {
-            icon: TablerIcons.star;
-            label: @tr("Starred");
-            active: root.active-tab == 2 && root.files-page == 3;
-            clicked => {
-                root.active-tab = 2;
-                root.files-page = 3;
-                root.open-library-page(3);
-                root.tab-selected(2);
+            if id == 5 && root.has-starred && (!root.has-overflow || root.cum-at(pos) <= 4): NavItem {
+                icon: TablerIcons.star;
+                label: @tr("Starred");
+                active: root.active-tab == 2 && root.files-page == 3;
+                clicked => {
+                    root.active-tab = 2;
+                    root.files-page = 3;
+                    root.open-library-page(3);
+                    root.tab-selected(2);
+                }
             }
-        }
 
-        if root.has-recent && (!root.has-overflow || root.count-recent <= 4): NavItem {
-            icon: TablerIcons.clock;
-            label: @tr("Recent");
-            active: root.active-tab == 2 && root.files-page == 4;
-            clicked => {
-                root.active-tab = 2;
-                root.files-page = 4;
-                root.open-library-page(4);
-                root.tab-selected(2);
+            if id == 6 && root.has-recent && (!root.has-overflow || root.cum-at(pos) <= 4): NavItem {
+                icon: TablerIcons.clock;
+                label: @tr("Recent");
+                active: root.active-tab == 2 && root.files-page == 4;
+                clicked => {
+                    root.active-tab = 2;
+                    root.files-page = 4;
+                    root.open-library-page(4);
+                    root.tab-selected(2);
+                }
             }
-        }
 
-        if root.has-graph && (!root.has-overflow || root.count-graph <= 4): NavItem {
-            icon: TablerIcons.git-fork;
-            label: @tr("Graph");
-            active: root.active-tab == 2 && root.files-page == 5;
-            clicked => {
-                root.active-tab = 2;
-                root.files-page = 5;
-                root.open-library-page(5);
-                root.tab-selected(2);
+            if id == 7 && root.has-graph && (!root.has-overflow || root.cum-at(pos) <= 4): NavItem {
+                icon: TablerIcons.git-fork;
+                label: @tr("Graph");
+                active: root.active-tab == 2 && root.files-page == 5;
+                clicked => {
+                    root.active-tab = 2;
+                    root.files-page = 5;
+                    root.open-library-page(5);
+                    root.tab-selected(2);
+                }
             }
-        }
 
-        if root.has-quick && (!root.has-overflow || root.total-items <= 4): NavItem {
-            icon: TablerIcons.bolt;
-            label: @tr("Quick");
-            active: false;
-            clicked => {
-                root.quick-action();
+            if id == 8 && root.has-quick && (!root.has-overflow || root.cum-at(pos) <= 4): NavItem {
+                icon: TablerIcons.bolt;
+                label: @tr("Quick");
+                active: false;
+                clicked => {
+                    root.quick-action();
+                }
             }
         }
 

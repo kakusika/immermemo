@@ -21,9 +21,27 @@ pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
         .iter()
         .map(|p| vault_display_name(p).into())
         .collect();
+    let subtitles: Vec<SharedString> = s
+        .known_vaults
+        .iter()
+        .map(|p| {
+            if let Some(acc_id) = s.app_data.load_vault_account(p) {
+                if let Some(acc) = s.app_data.get_account(&acc_id) {
+                    format!("{} (@{})", acc.provider, acc.username).into()
+                } else {
+                    acc_id.into()
+                }
+            } else if let Some(url) = s.app_data.load_remote(p) {
+                url.into()
+            } else {
+                "Local".into()
+            }
+        })
+        .collect();
     let current = s.known_vaults.iter().position(|v| *v == s.vault_dir);
     drop(s);
     app.set_vaults(ModelRc::new(VecModel::from(names)));
+    app.set_vault_subtitles(ModelRc::new(VecModel::from(subtitles)));
     app.set_current_vault(current.map_or(-1, |i| i as i32));
 }
 
@@ -36,7 +54,16 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     }
     let token_store = {
         let s = session.borrow();
-        match (s.token_store_for)(&vault_dir) {
+        let store_res = if let Some(acc_id) = s.app_data.load_vault_account(&vault_dir) {
+            if let Ok(token_path) = s.app_data.account_token_path(&acc_id) {
+                (s.token_store_for)(&token_path)
+            } else {
+                (s.token_store_for)(&vault_dir)
+            }
+        } else {
+            (s.token_store_for)(&vault_dir)
+        };
+        match store_res {
             Ok(t) => t,
             Err(e) => {
                 drop(s);
@@ -82,6 +109,7 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     show_history_state(app, &session.borrow());
     refresh_list(app, session);
     refresh_vault_list(app, session);
+    crate::callbacks::refresh_accounts_ui(app, &session.borrow());
     if session.borrow().notes.is_empty() {
         app.set_list_open(true);
     } else {

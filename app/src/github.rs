@@ -216,7 +216,8 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
 
                 let user_info = provider.get_user(&token).ok();
                 let username = user_info
-                    .map(|u| u.login)
+                    .as_ref()
+                    .map(|u| u.login.clone())
                     .or_else(|| GitHubProvider::parse_remote(&repo_info.clone_url).map(|(u, _)| u))
                     .unwrap_or_default();
 
@@ -240,7 +241,22 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                             return;
                         }
                         s.remote = Some(clone_url.clone());
-                        drop(s);
+                        let account_id = format!("github:{username}");
+                        let account = immermemo_core::Account {
+                            id: account_id.clone(),
+                            provider: "github".to_string(),
+                            instance_url: "https://github.com".to_string(),
+                            username: username.clone(),
+                            display_name: user_info.and_then(|u| u.name),
+                            avatar_url: None,
+                        };
+                        let _ = s.app_data.add_account(account);
+                        let _ = s.app_data.save_vault_account(&vault_dir, &account_id);
+                        if let Ok(path) = s.app_data.account_token_path(&account_id) {
+                            if let Ok(store) = (s.token_store_for)(&path) {
+                                let _ = store.save(&token);
+                            }
+                        }
 
                         let settings = app.global::<SettingsAdapter>();
                         settings.set_github_auth_pending(false);
@@ -249,6 +265,9 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                         settings.set_github_repo_name(repo_info.name.into());
                         settings.set_url_draft(clone_url.into());
                         settings.set_has_token(true);
+
+                        crate::callbacks::refresh_accounts_ui(&app, &s);
+                        drop(s);
 
                         app.set_remote_configured(true);
                         set_status(&app, "GitHub account linked! Starting sync...");

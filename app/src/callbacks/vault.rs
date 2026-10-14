@@ -5,9 +5,9 @@ use std::cell::Cell;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use slint::{ComponentHandle, SharedString};
+use slint::{ComponentHandle, Model, SharedString};
 
-use crate::{App, SettingsAdapter};
+use crate::{AccountData, App, SettingsAdapter};
 use crate::haptic;
 use crate::render;
 use crate::update_provider_ui_state;
@@ -15,6 +15,37 @@ use crate::session::{
     Session, refresh_vault_list, set_status, start_sync, switch_vault, vault_display_name,
     vault_path_from_input,
 };
+
+/// Refreshes the list of provider accounts and vault account link in the Settings sheet.
+pub fn refresh_accounts_ui(app: &App, session: &Session) {
+    let settings = app.global::<SettingsAdapter>();
+    let accounts = session.app_data.load_accounts();
+    let ui_accounts: Vec<AccountData> = accounts
+        .into_iter()
+        .map(|a| AccountData {
+            id: a.id.into(),
+            provider: a.provider.into(),
+            instance_url: a.instance_url.into(),
+            username: a.username.into(),
+            display_name: a.display_name.unwrap_or_default().into(),
+        })
+        .collect();
+    settings.set_accounts(slint::ModelRc::new(slint::VecModel::from(ui_accounts)));
+
+    if let Some(acc_id) = session.app_data.load_vault_account(&session.vault_dir) {
+        settings.set_current_vault_account_id(acc_id.clone().into());
+        if let Some(acc) = session.app_data.get_account(&acc_id) {
+            settings.set_current_vault_account_label(
+                format!("{} (@{})", acc.provider, acc.username).into(),
+            );
+        } else {
+            settings.set_current_vault_account_label(acc_id.into());
+        }
+    } else {
+        settings.set_current_vault_account_id(SharedString::new());
+        settings.set_current_vault_account_label(SharedString::new());
+    }
+}
 
 #[cfg(target_os = "android")]
 pub fn status_bar_visible_for(choice: i32, note_sheet_open: bool) -> bool {
@@ -44,6 +75,7 @@ pub fn bind_vault_callbacks(
             settings.set_current_vault_name(vault_display_name(&s.vault_dir).into());
             settings.set_current_vault_path(s.vault_dir.display().to_string().into());
             update_provider_ui_state(&app, s.remote.as_deref());
+            refresh_accounts_ui(&app, &s);
             let ssh_pub = s.app_data.load_ssh_public_key();
             settings.set_ssh_key_present(ssh_pub.is_some());
             settings.set_ssh_public_key(ssh_pub.unwrap_or_default().into());
@@ -134,47 +166,60 @@ pub fn bind_vault_callbacks(
             }
         }
     });
+    let save_bottom_bar = |session: &std::rc::Rc<std::cell::RefCell<crate::session::Session>>,
+                           settings: &SettingsAdapter| {
+        let order: Vec<i32> = settings.get_nav_order().iter().collect();
+        let id_to_key = |id: i32| -> Option<&'static str> {
+            match id {
+                0 if settings.get_nav_show_home() => Some("home"),
+                1 if settings.get_nav_show_search() => Some("search"),
+                2 if settings.get_nav_show_library() => Some("library"),
+                3 if settings.get_nav_show_directory() => Some("directory"),
+                4 if settings.get_nav_show_daily() => Some("daily"),
+                5 if settings.get_nav_show_starred() => Some("starred"),
+                6 if settings.get_nav_show_recent() => Some("recent"),
+                7 if settings.get_nav_show_graph() => Some("graph"),
+                8 if settings.get_nav_show_quick() => Some("quick"),
+                _ => None,
+            }
+        };
+        let mut items = Vec::new();
+        for id in &order {
+            if let Some(key) = id_to_key(*id) {
+                items.push(key);
+            }
+        }
+        if items.is_empty() {
+            items.push("home");
+            settings.set_nav_show_home(true);
+        }
+        let _ = session
+            .borrow()
+            .app_data
+            .save_bottom_bar_config(&items.join(","));
+    };
+
     settings.on_bottom_bar_changed({
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
             let app = weak.unwrap();
             let settings = app.global::<SettingsAdapter>();
-            let mut items = Vec::new();
-            if settings.get_nav_show_home() {
-                items.push("home");
+            save_bottom_bar(&session, &settings);
+        }
+    });
+    settings.on_move_nav_item({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |from_idx, to_idx| {
+            let app = weak.unwrap();
+            let settings = app.global::<SettingsAdapter>();
+            let mut order: Vec<i32> = settings.get_nav_order().iter().collect();
+            let len = order.len() as i32;
+            if from_idx >= 0 && from_idx < len && to_idx >= 0 && to_idx < len && from_idx != to_idx {
+                let item = order.remove(from_idx as usize);
+                order.insert(to_idx as usize, item);
+                settings.set_nav_order(std::rc::Rc::new(slint::VecModel::from(order)).into());
+                save_bottom_bar(&session, &settings);
             }
-            if settings.get_nav_show_search() {
-                items.push("search");
-            }
-            if settings.get_nav_show_library() {
-                items.push("library");
-            }
-            if settings.get_nav_show_directory() {
-                items.push("directory");
-            }
-            if settings.get_nav_show_daily() {
-                items.push("daily");
-            }
-            if settings.get_nav_show_starred() {
-                items.push("starred");
-            }
-            if settings.get_nav_show_recent() {
-                items.push("recent");
-            }
-            if settings.get_nav_show_graph() {
-                items.push("graph");
-            }
-            if settings.get_nav_show_quick() {
-                items.push("quick");
-            }
-            if items.is_empty() {
-                items.push("home");
-                settings.set_nav_show_home(true);
-            }
-            let _ = session
-                .borrow()
-                .app_data
-                .save_bottom_bar_config(&items.join(","));
         }
     });
     settings.on_open_vaults({
@@ -351,6 +396,113 @@ pub fn bind_vault_callbacks(
             update_provider_ui_state(&app, Some(url));
             app.set_settings_open(false);
             start_sync(&app, &session);
+        }
+    });
+
+    settings.on_delete_account({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |account_id| {
+            let app = weak.unwrap();
+            let s = session.borrow();
+            let _ = s.app_data.remove_account(&account_id);
+            if s.app_data.load_vault_account(&s.vault_dir).as_deref() == Some(&account_id) {
+                s.app_data.clear_vault_account(&s.vault_dir);
+            }
+            refresh_accounts_ui(&app, &s);
+            drop(s);
+            refresh_vault_list(&app, &session);
+            set_status(&app, "Account removed");
+        }
+    });
+
+    settings.on_create_vault_from_account({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |account_id, default_repo_name| {
+            let app = weak.unwrap();
+            let s = session.borrow();
+            let Some(account) = s.app_data.get_account(&account_id) else {
+                set_status(&app, "Account not found");
+                return;
+            };
+            let token_path = match s.app_data.account_token_path(&account_id) {
+                Ok(p) => p,
+                Err(e) => {
+                    set_status(&app, format!("Could not get token path: {e}"));
+                    return;
+                }
+            };
+            let token_store = match (s.token_store_for)(&token_path) {
+                Ok(t) => t,
+                Err(e) => {
+                    set_status(&app, format!("Could not load token store: {e}"));
+                    return;
+                }
+            };
+            let token = match token_store.load() {
+                Ok(Some(t)) => t,
+                _ => {
+                    set_status(&app, "No token found for this account");
+                    return;
+                }
+            };
+            let base = s.app_data.base().to_owned();
+            drop(s);
+
+            let provider_id = account.provider.clone();
+            let instance_url = account.instance_url.clone();
+            let account_id_clone = account_id.clone();
+            let weak_thread = app.as_weak();
+            set_status(&app, format!("Creating vault for {}...", account.username));
+
+            std::thread::spawn(move || {
+                let provider: Box<dyn immermemo_provider::Provider> = match provider_id.as_str() {
+                    "github" => Box::new(immermemo_provider::GitHubProvider::default()),
+                    "forgejo" => Box::new(immermemo_provider::ForgejoProvider::new(Some(&instance_url))),
+                    "gitlab" => Box::new(immermemo_provider::GitLabProvider::new(Some(&instance_url))),
+                    _ => {
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(app) = weak_thread.upgrade() {
+                                set_status(&app, format!("Unsupported provider: {provider_id}"));
+                            }
+                        });
+                        return;
+                    }
+                };
+
+                let repo_name = default_repo_name.as_str();
+                let repo_info = match provider.create_repository(&token, repo_name, true) {
+                    Ok(info) => info,
+                    Err(e) => {
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(app) = weak_thread.upgrade() {
+                                set_status(&app, format!("Failed to create repository: {e}"));
+                            }
+                        });
+                        return;
+                    }
+                };
+
+                let vault_dir = base.join("vaults_repos").join(&repo_info.name);
+                let _ = std::fs::create_dir_all(&vault_dir);
+
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(app) = weak_thread.upgrade() {
+                        let session = crate::session::SESSION
+                            .with(|s| s.borrow().clone())
+                            .expect("session set");
+                        let mut s = session.borrow_mut();
+                        let _ = s.app_data.add_vault(&vault_dir);
+                        let _ = s.app_data.save_vault_account(&vault_dir, &account_id_clone);
+                        let _ = s.app_data.save_remote(&vault_dir, &repo_info.clone_url);
+                        s.known_vaults = s.app_data.known_vaults();
+                        drop(s);
+
+                        switch_vault(&app, &session, vault_dir);
+                        app.set_settings_open(false);
+                        set_status(&app, format!("Created and switched to vault '{}'", repo_info.name));
+                    }
+                });
+            });
         }
     });
 }

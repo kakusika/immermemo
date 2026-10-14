@@ -41,16 +41,50 @@ pub fn update_provider_ui_state(app: &App, remote: Option<&str>) {
 
 /// Applies comma-separated bottom bar configuration keys to the SettingsAdapter.
 pub fn apply_bottom_bar_config(settings: &SettingsAdapter, config: &str) {
-    let items: std::collections::HashSet<&str> = config.split(',').map(str::trim).collect();
-    settings.set_nav_show_home(items.contains("home"));
-    settings.set_nav_show_search(items.contains("search"));
-    settings.set_nav_show_library(items.contains("library"));
-    settings.set_nav_show_directory(items.contains("directory"));
-    settings.set_nav_show_daily(items.contains("daily"));
-    settings.set_nav_show_starred(items.contains("starred"));
-    settings.set_nav_show_recent(items.contains("recent"));
-    settings.set_nav_show_graph(items.contains("graph"));
-    settings.set_nav_show_quick(items.contains("quick"));
+    let raw_items: Vec<&str> = config
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .collect();
+    let set: std::collections::HashSet<&str> = raw_items.iter().copied().collect();
+    settings.set_nav_show_home(set.contains("home"));
+    settings.set_nav_show_search(set.contains("search"));
+    settings.set_nav_show_library(set.contains("library"));
+    settings.set_nav_show_directory(set.contains("directory"));
+    settings.set_nav_show_daily(set.contains("daily"));
+    settings.set_nav_show_starred(set.contains("starred"));
+    settings.set_nav_show_recent(set.contains("recent"));
+    settings.set_nav_show_graph(set.contains("graph"));
+    settings.set_nav_show_quick(set.contains("quick"));
+
+    let key_to_id = |k: &str| -> Option<i32> {
+        match k {
+            "home" => Some(0),
+            "search" => Some(1),
+            "library" => Some(2),
+            "directory" => Some(3),
+            "daily" => Some(4),
+            "starred" => Some(5),
+            "recent" => Some(6),
+            "graph" => Some(7),
+            "quick" => Some(8),
+            _ => None,
+        }
+    };
+    let mut order: Vec<i32> = Vec::new();
+    for key in raw_items {
+        if let Some(id) = key_to_id(key) {
+            if !order.contains(&id) {
+                order.push(id);
+            }
+        }
+    }
+    for default_id in 0..9 {
+        if !order.contains(&default_id) {
+            order.push(default_id);
+        }
+    }
+    settings.set_nav_order(std::rc::Rc::new(slint::VecModel::from(order)).into());
 }
 
 use session::{

@@ -430,6 +430,16 @@ fn main() {
     app.set_current_vault_path("/home/user/notes".into());
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-settings.ppm"));
+
+    app.set_settings_page(1);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-settings-interface.ppm"));
+
+    app.set_settings_page(11);
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-settings-bottom-nav.ppm"));
+
+    app.set_settings_page(0);
     app.set_settings_sheet_open(false);
 
     app.set_note_menu_index(2);

@@ -18,7 +18,7 @@ pub mod appdata;
 pub mod notes;
 pub mod transfer;
 
-pub use appdata::AppData;
+pub use appdata::{Account, AppData};
 pub use immermemo_credentials::token_blob;
 pub use immermemo_credentials::{PlainFileTokenStore, SshKeyStore, TokenStore, TokenStoreFactory};
 pub mod credentials {

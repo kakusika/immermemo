@@ -97,6 +97,17 @@ pub trait Provider: Send + Sync {
     /// searches for an existing one, or creates a new private repository if absent.
     fn setup_repository(&self, token: &str, repo_name: &str) -> anyhow::Result<RepositoryInfo>;
 
+    /// Lists remote repositories accessible with the provided token.
+    fn list_repositories(&self, token: &str) -> anyhow::Result<Vec<RepositoryInfo>>;
+
+    /// Creates a new remote repository with the specified name and visibility.
+    fn create_repository(
+        &self,
+        token: &str,
+        repo_name: &str,
+        is_private: bool,
+    ) -> anyhow::Result<RepositoryInfo>;
+
     /// Extracts repository owner/user and repository name from a remote URL if it belongs to this provider.
     fn parse_remote_url(&self, url: &str) -> Option<(String, String)>;
 }

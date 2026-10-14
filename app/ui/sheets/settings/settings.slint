@@ -1,4 +1,4 @@
-import { SettingsAdapter } from "adapter.slint";
+import { SettingsAdapter, AccountData } from "adapter.slint";
 import { Palette, LineEdit, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
@@ -151,87 +151,299 @@ component TransferToggleRow inherits Rectangle {
     }
 }
 
-// A toggle row for configuring bottom navigation bar items.
+// A row for configuring bottom navigation bar items:
+// - Left: isolated drag handle area & icon (grip-vertical)
+// - Middle: item icon, title
+// - Right: settings icon (to the left of eye) and eye visibility toggle (omitted for Home)
 component NavToggleRow inherits Rectangle {
     in property <image> icon;
     in property <string> title;
-    in property <string> subtitle: "";
     in-out property <bool> checked: false;
+    in property <bool> show-eye: true;
+    in property <bool> show-settings: true;
+    in property <bool> is-dragging: false;
     callback toggled(bool);
+    callback settings-clicked();
 
     min-height: Metrics.touch;
     border-radius: Metrics.radius-sm;
-    background: touch.pressed ? Palette.foreground.with-alpha(0.06) : transparent;
-    animate background {
-        duration: 150ms;
-        easing: ease-out;
-    }
+    background: transparent;
 
     HorizontalLayout {
-        padding-left: Metrics.spacing-sm;
-        padding-right: Metrics.spacing-sm;
-        spacing: Metrics.spacing-md;
+        padding-left: Metrics.spacing-xs;
+        padding-right: Metrics.spacing-xs;
+        spacing: Metrics.spacing-sm;
 
-        if root.icon.width > 0: VerticalLayout {
-            alignment: center;
-            Icon {
-                source: root.icon;
-                width: Metrics.icon-md;
-                height: Metrics.icon-md;
-                color: root.checked ? Palette.accent-background : Colors.muted;
-            }
-        }
-
-        VerticalLayout {
-            horizontal-stretch: 1;
-            alignment: center;
-            spacing: 2px;
-
-            Text {
-                text: root.title;
-                font-size: Metrics.font-body;
-                font-weight: root.checked ? 600 : 400;
-                color: Palette.foreground;
-            }
-
-            if root.subtitle != "": Text {
-                text: root.subtitle;
-                font-size: Metrics.font-sm;
-                color: Colors.muted;
-                wrap: word-wrap;
-            }
-        }
-
+        // 1. Left: Isolated Drag Handle Area
         VerticalLayout {
             alignment: center;
-            Rectangle {
-                width: 24px;
-                height: 24px;
-                border-radius: 6px;
-                border-width: 1.5px;
-                border-color: root.checked ? Palette.accent-background : Colors.muted;
-                background: root.checked ? Palette.accent-background : transparent;
-                animate background, border-color {
-                    duration: 120ms;
-                    easing: ease-out;
-                }
+            drag-handle := Rectangle {
+                width: 28px;
+                height: 36px;
+                border-radius: Metrics.radius-sm;
+                background: root.is-dragging ? Palette.foreground.with-alpha(0.12) : transparent;
 
-                if root.checked: Icon {
-                    source: TablerIcons.check;
-                    width: 16px;
-                    height: 16px;
-                    color: Palette.accent-foreground;
+                Icon {
+                    source: TablerIcons.grip-vertical;
+                    width: 20px;
+                    height: 20px;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;
+                    color: root.is-dragging ? Palette.accent-background : Colors.muted.with-alpha(0.65);
                 }
+            }
+        }
+
+        // 2. Navigation Item Icon
+        if root.icon.width > 0: VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                Icon {
+                    source: root.icon;
+                    width: 24px;
+                    height: 24px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    color: (!root.show-eye || root.checked) ? Palette.accent-background : Colors.muted;
+                }
+            }
+        }
+
+        // 3. Navigation Item Title
+        Text {
+            horizontal-stretch: 1;
+            text: root.title;
+            font-size: Metrics.font-body + 1px;
+            font-weight: (!root.show-eye || root.checked) ? 600 : 400;
+            vertical-alignment: center;
+            color: (!root.show-eye || root.checked) ? Palette.foreground : Colors.muted;
+        }
+
+        // 4. Settings icon button (to the left of the eye)
+        if root.show-settings: VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 36px;
+                height: 36px;
+                border-radius: Metrics.radius-sm;
+                background: settings-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+                animate background { duration: 120ms; }
+
+                Icon {
+                    source: TablerIcons.settings;
+                    width: 22px;
+                    height: 22px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    color: settings-touch.pressed ? Palette.foreground : Colors.muted;
+                }
+
+                settings-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.settings-clicked();
+                    }
+                }
+            }
+        }
+
+        // 5. Eye visibility toggle icon button (omitted for Home!)
+        if root.show-eye: VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 36px;
+                height: 36px;
+                border-radius: Metrics.radius-sm;
+                background: eye-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+                animate background { duration: 120ms; }
+
+                Icon {
+                    source: root.checked ? TablerIcons.eye : TablerIcons.eye-off;
+                    width: 22px;
+                    height: 22px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    color: root.checked ? Palette.accent-background : Colors.muted.with-alpha(0.55);
+                }
+
+                eye-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.checked = !root.checked;
+                        root.toggled(root.checked);
+                    }
+                }
+            }
+        }
+
+        // 6. Spacer placeholder when show-eye is false so settings icon stays aligned
+        if !root.show-eye: VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 36px;
+                height: 36px;
             }
         }
     }
+}
 
-    touch := TouchArea {
-        clicked => {
-            root.checked = !root.checked;
-            root.toggled(root.checked);
+// Helper component that binds a bottom nav row by its item ID
+component BottomNavConfigItem inherits Rectangle {
+    in property <int> item-id;
+    in property <int> item-index;
+    in property <bool> is-dragging: false;
+    in property <length> drag-dy: 0px;
+    callback drag-started();
+    callback drag-moved(length);
+    callback drag-ended(length);
+    callback open-directory();
+    callback open-daily();
+    callback open-starred();
+    callback open-recent();
+    callback open-graph();
+
+    min-height: Metrics.touch;
+    z: root.is-dragging ? 100 : 0;
+
+    // Ghost placeholder shown in the original slot during drag
+    if root.is-dragging: Rectangle {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: 100%;
+        border-radius: Metrics.radius-sm;
+        background: Palette.foreground.with-alpha(0.04);
+        border-width: 1px;
+        border-color: Palette.accent-background.with-alpha(0.25);
+    }
+
+    // Row content: stays in-place normally, floats smoothly with drag-dy when dragged
+    row-content := Rectangle {
+        x: 0px;
+        y: root.is-dragging ? root.drag-dy : 0px;
+        width: 100%;
+        height: 100%;
+        border-radius: Metrics.radius-sm;
+        background: root.is-dragging ? Palette.background : transparent;
+        drop-shadow-blur: root.is-dragging ? 16px : 0px;
+        drop-shadow-offset-y: root.is-dragging ? 4px : 0px;
+        drop-shadow-color: root.is-dragging ? (Palette.color-scheme == ColorScheme.dark ? #000000dd : #00000030) : transparent;
+
+        if root.item-id == 0: NavToggleRow {
+            icon: TablerIcons.home;
+            title: @tr("Home");
+            checked: true;
+            show-eye: false;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+        }
+
+        if root.item-id == 1: NavToggleRow {
+            icon: TablerIcons.search;
+            title: @tr("Search");
+            checked <=> SettingsAdapter.nav-show-search;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 2: NavToggleRow {
+            icon: TablerIcons.files;
+            title: @tr("Library");
+            checked <=> SettingsAdapter.nav-show-library;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 3: NavToggleRow {
+            icon: TablerIcons.folder;
+            title: @tr("Directory");
+            checked <=> SettingsAdapter.nav-show-directory;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            settings-clicked => { root.open-directory(); }
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 4: NavToggleRow {
+            icon: TablerIcons.calendar;
+            title: @tr("Daily Notes");
+            checked <=> SettingsAdapter.nav-show-daily;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            settings-clicked => { root.open-daily(); }
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 5: NavToggleRow {
+            icon: TablerIcons.star;
+            title: @tr("Starred");
+            checked <=> SettingsAdapter.nav-show-starred;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            settings-clicked => { root.open-starred(); }
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 6: NavToggleRow {
+            icon: TablerIcons.clock;
+            title: @tr("Recent");
+            checked <=> SettingsAdapter.nav-show-recent;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            settings-clicked => { root.open-recent(); }
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 7: NavToggleRow {
+            icon: TablerIcons.git-fork;
+            title: @tr("Graph View");
+            checked <=> SettingsAdapter.nav-show-graph;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            settings-clicked => { root.open-graph(); }
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 8: NavToggleRow {
+            icon: TablerIcons.bolt;
+            title: @tr("Quick Actions");
+            checked <=> SettingsAdapter.nav-show-quick;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+    }
+
+    // Drag handle touch area placed strictly over the left grip handle
+    drag-touch := TouchArea {
+        x: 0px;
+        y: 0px;
+        width: 36px;
+        height: 100%;
+        mouse-cursor: grab;
+        moved => {
+            let dy = self.mouse-y - self.pressed-y;
+            root.drag-moved(dy);
+        }
+        changed pressed => {
+            if (self.pressed) {
+                root.drag-started();
+            } else {
+                let dy = self.mouse-y - self.pressed-y;
+                root.drag-ended(dy);
+            }
         }
     }
 }
@@ -253,12 +465,33 @@ export component SettingsSheet inherits Rectangle {
 
     callback close();
     in property <bool> show-back: true;
+    in-out property <int> directory-mode: 0;
 
     // 0: list, 1: Interface, 2: Sync & Remote, 3: Vaults, 4: About, 5: Transfer & Share.
+    // 10: Theme, 11: Bottom Navigation, 12: Directory.
     // in-out so the app-level Back action (hardware button / edge-swipe
     // gesture) can pop a sub-page back to the list -- see app.slint's
     // handle-back().
     in-out property <int> page: 0;
+    in-out property <int> previous-page: 1;
+    property <int> active-drag-idx: -1;
+    property <length> active-drag-dy: 0px;
+
+    public function go-back() -> bool {
+        if (root.page >= 12 && root.previous-page == 11) {
+            root.page = 11;
+            root.previous-page = 1;
+            return true;
+        } else if (root.page >= 10) {
+            root.page = 1;
+            root.previous-page = 1;
+            return true;
+        } else if (root.page != 0) {
+            root.page = 0;
+            return true;
+        }
+        return false;
+    }
 
     property <length> scroll-content-y: 0px;
     property <bool> scroll-at-top: root.scroll-content-y >= -1px;
@@ -286,7 +519,7 @@ export component SettingsSheet inherits Rectangle {
 
             if root.page != 0: IconButton {
                 icon: TablerIcons.chevron-left;
-                clicked => { root.page = 0; }
+                clicked => { root.go-back(); }
             }
             if root.page == 0 && root.show-back: IconButton {
                 icon: TablerIcons.chevron-down;
@@ -300,6 +533,13 @@ export component SettingsSheet inherits Rectangle {
                     : root.page == 3 ? @tr("Vaults")
                     : root.page == 4 ? @tr("About")
                     : root.page == 5 ? @tr("Transfer & Share")
+                    : root.page == 10 ? @tr("Theme")
+                    : root.page == 11 ? @tr("Bottom Navigation Bar")
+                    : root.page == 12 ? @tr("Directory")
+                    : root.page == 13 ? @tr("Daily Notes")
+                    : root.page == 14 ? @tr("Starred")
+                    : root.page == 15 ? @tr("Recent")
+                    : root.page == 16 ? @tr("Graph View")
                     : @tr("Settings");
                 font-size: 20px;
                 font-weight: 600;
@@ -325,14 +565,14 @@ export component SettingsSheet inherits Rectangle {
             width: 100%;
             height: 100%;
 
-            AppScrollView {
+            // --------------------------------------------------------
+            // List: Interface / Other (Sync & Remote, Vaults) / Info (About)
+            // --------------------------------------------------------
+            if root.page == 0: AppScrollView {
                 vertical-stretch: 1;
                 content-y <=> root.scroll-content-y;
 
-                // --------------------------------------------------------
-            // List: Interface / Other (Sync & Remote, Vaults) / Info (About)
-            // --------------------------------------------------------
-            if root.page == 0: VerticalLayout {
+                VerticalLayout {
                 // Without this, a VerticalLayout shorter than its Flickable
                 // dumps all the leftover space onto one section instead of
                 // leaving it below the content -- see home.slint's content
@@ -405,11 +645,122 @@ export component SettingsSheet inherits Rectangle {
                         }
                     }
                 }
+            }
 
-                // --------------------------------------------------------
-            // Interface (theme, font size, UI scale)
             // --------------------------------------------------------
-            if root.page == 1: VerticalLayout {
+            // Interface Menu (General, Page Settings)
+            // --------------------------------------------------------
+            if root.page == 1: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
+                    spacing: 24px;
+
+                    Section {
+                        title: @tr("General");
+
+                        Card {
+                            content-padding: Metrics.spacing-xs;
+                            content-spacing: 0px;
+
+                            CategoryRow {
+                                icon: TablerIcons.palette;
+                                label-text: @tr("Theme");
+                                clicked => {
+                                    root.previous-page = 1;
+                                    root.page = 10;
+                                }
+                            }
+
+                            Divider { }
+
+                            CategoryRow {
+                                icon: TablerIcons.layout-bottombar;
+                                label-text: @tr("Bottom Navigation Bar");
+                                clicked => {
+                                    root.previous-page = 1;
+                                    root.page = 11;
+                                }
+                            }
+                        }
+                    }
+
+                    Section {
+                        title: @tr("Page Settings");
+
+                        Card {
+                            content-padding: Metrics.spacing-xs;
+                            content-spacing: 0px;
+
+                            CategoryRow {
+                                icon: TablerIcons.folder;
+                                label-text: @tr("Directory");
+                                clicked => {
+                                    root.previous-page = 1;
+                                    root.page = 12;
+                                }
+                            }
+
+                            Divider { }
+
+                            CategoryRow {
+                                icon: TablerIcons.calendar;
+                                label-text: @tr("Daily Notes");
+                                clicked => {
+                                    root.previous-page = 1;
+                                    root.page = 13;
+                                }
+                            }
+
+                            Divider { }
+
+                            CategoryRow {
+                                icon: TablerIcons.star;
+                                label-text: @tr("Starred");
+                                clicked => {
+                                    root.previous-page = 1;
+                                    root.page = 14;
+                                }
+                            }
+
+                            Divider { }
+
+                            CategoryRow {
+                                icon: TablerIcons.clock;
+                                label-text: @tr("Recent");
+                                clicked => {
+                                    root.previous-page = 1;
+                                    root.page = 15;
+                                }
+                            }
+
+                            Divider { }
+
+                            CategoryRow {
+                                icon: TablerIcons.git-fork;
+                                label-text: @tr("Graph View");
+                                clicked => {
+                                    root.previous-page = 1;
+                                    root.page = 16;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------------------
+            // Theme Subpage
+            // --------------------------------------------------------
+            if root.page == 10: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
                     alignment: start;
                     padding-left: Metrics.gutter;
                     padding-right: Metrics.gutter;
@@ -512,6 +863,23 @@ export component SettingsSheet inherits Rectangle {
                             }
                         }
                     }
+                }
+            }
+
+            // --------------------------------------------------------
+            // Bottom Navigation Subpage
+            // --------------------------------------------------------
+            if root.page == 11: AppScrollView {
+                vertical-stretch: 1;
+                enabled: root.active-drag-idx < 0;
+
+                VerticalLayout {
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
+                    spacing: 16px;
 
                     Card {
                         content-spacing: Metrics.spacing-md;
@@ -536,90 +904,260 @@ export component SettingsSheet inherits Rectangle {
 
                         Divider { }
 
-                        NavToggleRow {
-                            icon: TablerIcons.home;
-                            title: @tr("Home");
-                            subtitle: @tr("Vault overview and status hub");
-                            checked <=> SettingsAdapter.nav-show-home;
-                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
-                        }
-
-                        NavToggleRow {
-                            icon: TablerIcons.search;
-                            title: @tr("Search");
-                            subtitle: @tr("Full-text search with live snippets");
-                            checked <=> SettingsAdapter.nav-show-search;
-                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
-                        }
-
-                        NavToggleRow {
-                            icon: TablerIcons.files;
-                            title: @tr("Library");
-                            subtitle: @tr("All sections hub");
-                            checked <=> SettingsAdapter.nav-show-library;
-                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
-                        }
-
-                        NavToggleRow {
-                            icon: TablerIcons.folder;
-                            title: @tr("Directory");
-                            subtitle: @tr("Direct folder and file browser");
-                            checked <=> SettingsAdapter.nav-show-directory;
-                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
-                        }
-
-                        NavToggleRow {
-                            icon: TablerIcons.calendar;
-                            title: @tr("Daily Notes");
-                            subtitle: @tr("Daily journal and calendar notes");
-                            checked <=> SettingsAdapter.nav-show-daily;
-                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
-                        }
-
-                        NavToggleRow {
-                            icon: TablerIcons.star;
-                            title: @tr("Starred");
-                            subtitle: @tr("Pinned and favorite notes");
-                            checked <=> SettingsAdapter.nav-show-starred;
-                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
-                        }
-
-                        NavToggleRow {
-                            icon: TablerIcons.clock;
-                            title: @tr("Recent");
-                            subtitle: @tr("Chronological edit timeline");
-                            checked <=> SettingsAdapter.nav-show-recent;
-                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
-                        }
-
-                        NavToggleRow {
-                            icon: TablerIcons.git-fork;
-                            title: @tr("Graph View");
-                            subtitle: @tr("Interactive note backlink graph");
-                            checked <=> SettingsAdapter.nav-show-graph;
-                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
-                        }
-
-                        NavToggleRow {
-                            icon: TablerIcons.bolt;
-                            title: @tr("Quick Actions");
-                            subtitle: @tr("Popup sheet for rapid tasks");
-                            checked <=> SettingsAdapter.nav-show-quick;
-                            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+                        for id[idx] in SettingsAdapter.nav-order: BottomNavConfigItem {
+                            item-id: id;
+                            item-index: idx;
+                            is-dragging: root.active-drag-idx == idx;
+                            drag-dy: root.active-drag-idx == idx ? root.active-drag-dy : 0px;
+                            drag-started => {
+                                root.active-drag-idx = idx;
+                                root.active-drag-dy = 0px;
+                            }
+                            drag-moved(dy) => {
+                                root.active-drag-dy = dy;
+                            }
+                            drag-ended(dy) => {
+                                let steps = round(root.active-drag-dy / 52px);
+                                if (steps != 0) {
+                                    let target = clamp(idx + steps, 0, SettingsAdapter.nav-order.length - 1);
+                                    if (target != idx) {
+                                        SettingsAdapter.move-nav-item(idx, target);
+                                    }
+                                }
+                                root.active-drag-idx = -1;
+                                root.active-drag-dy = 0px;
+                            }
+                            open-directory => {
+                                root.previous-page = 11;
+                                root.page = 12;
+                            }
+                            open-daily => {
+                                root.previous-page = 11;
+                                root.page = 13;
+                            }
+                            open-starred => {
+                                root.previous-page = 11;
+                                root.page = 14;
+                            }
+                            open-recent => {
+                                root.previous-page = 11;
+                                root.page = 15;
+                            }
+                            open-graph => {
+                                root.previous-page = 11;
+                                root.page = 16;
+                            }
                         }
                     }
                 }
+            }
 
-                // --------------------------------------------------------
+            // --------------------------------------------------------
+            // Directory Subpage
+            // --------------------------------------------------------
+            if root.page == 12: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
+                    spacing: 16px;
+
+                    Card {
+                        content-spacing: Metrics.spacing-lg;
+
+                        VerticalLayout {
+                            spacing: Metrics.spacing-sm;
+
+                            Text {
+                                text: @tr("Default View");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            Text {
+                                text: @tr("Choose how folder contents are displayed by default.");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+
+                            SegmentedControl {
+                                options: [@tr("List"), @tr("Grid")];
+                                selected: root.directory-mode;
+                                changed(i) => {
+                                    root.directory-mode = i;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------------------
+            // Daily Notes Subpage
+            // --------------------------------------------------------
+            if root.page == 13: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
+                    spacing: 16px;
+
+                    Card {
+                        content-spacing: Metrics.spacing-md;
+
+                        VerticalLayout {
+                            spacing: Metrics.spacing-sm;
+
+                            Text {
+                                text: @tr("Daily Notes Settings");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            Text {
+                                text: @tr("Settings for daily notes and calendar view will appear here.");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------------------
+            // Starred Subpage
+            // --------------------------------------------------------
+            if root.page == 14: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
+                    spacing: 16px;
+
+                    Card {
+                        content-spacing: Metrics.spacing-md;
+
+                        VerticalLayout {
+                            spacing: Metrics.spacing-sm;
+
+                            Text {
+                                text: @tr("Starred Settings");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            Text {
+                                text: @tr("Settings for starred and favorite notes will appear here.");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------------------
+            // Recent Subpage
+            // --------------------------------------------------------
+            if root.page == 15: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
+                    spacing: 16px;
+
+                    Card {
+                        content-spacing: Metrics.spacing-md;
+
+                        VerticalLayout {
+                            spacing: Metrics.spacing-sm;
+
+                            Text {
+                                text: @tr("Recent Settings");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            Text {
+                                text: @tr("Settings for edit history and timeline will appear here.");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------------------
+            // Graph View Subpage
+            // --------------------------------------------------------
+            if root.page == 16: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
+                    spacing: 16px;
+
+                    Card {
+                        content-spacing: Metrics.spacing-md;
+
+                        VerticalLayout {
+                            spacing: Metrics.spacing-sm;
+
+                            Text {
+                                text: @tr("Graph View Settings");
+                                font-size: Metrics.font-sub;
+                                color: Colors.muted;
+                            }
+
+                            Text {
+                                text: @tr("Settings for interactive note graph will appear here.");
+                                font-size: Metrics.font-sm;
+                                color: Colors.muted;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------------------
             // Sync & Remote
             // --------------------------------------------------------
-            if root.page == 2: VerticalLayout {
-                alignment: start;
-                padding-left: Metrics.gutter;
-                padding-right: Metrics.gutter;
-                padding-top: 16px;
-                padding-bottom: root.inset-bottom + 24px;
-                spacing: 16px;
+            if root.page == 2: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
+                    spacing: 16px;
 
                 // Card 1: Cloud Account Sync (Primary)
                 Card {
@@ -655,6 +1193,76 @@ export component SettingsSheet inherits Rectangle {
                     }
 
                     Divider { }
+
+                    // Connected Accounts List
+                    if SettingsAdapter.accounts.length > 0: VerticalLayout {
+                        spacing: Metrics.spacing-sm;
+
+                        HorizontalLayout {
+                            alignment: center;
+                            Text {
+                                text: @tr("Connected Accounts ({})", SettingsAdapter.accounts.length);
+                                font-size: 14px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                                horizontal-stretch: 1;
+                            }
+                            Button {
+                                text: SettingsAdapter.adding-account ? @tr("Close") : @tr("+ Add Account");
+                                clicked => { SettingsAdapter.adding-account = !SettingsAdapter.adding-account; }
+                            }
+                        }
+
+                        for acc in SettingsAdapter.accounts: Rectangle {
+                            height: 52px;
+                            border-radius: Metrics.radius-md;
+                            background: Palette.foreground.with-alpha(0.04);
+
+                            HorizontalLayout {
+                                padding-left: 12px;
+                                padding-right: 12px;
+                                spacing: 10px;
+                                alignment: center;
+
+                                Icon {
+                                    source: acc.provider == "gitlab" ? TablerIcons.brand-gitlab : (acc.provider == "forgejo" ? TablerIcons.brand-git : TablerIcons.brand-github);
+                                    width: 20px;
+                                    height: 20px;
+                                    color: Palette.accent-background;
+                                }
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    horizontal-stretch: 1;
+                                    Text {
+                                        text: "@" + acc.username;
+                                        font-size: 14px;
+                                        font-weight: 600;
+                                        color: Palette.foreground;
+                                    }
+                                    Text {
+                                        text: acc.provider + " · " + acc.instance-url;
+                                        font-size: 11px;
+                                        color: Colors.muted;
+                                    }
+                                }
+
+                                Button {
+                                    text: @tr("+ Vault");
+                                    clicked => {
+                                        SettingsAdapter.create-vault-from-account(acc.id, "immermemo-notes");
+                                    }
+                                }
+
+                                IconButton {
+                                    icon: TablerIcons.trash;
+                                    clicked => { SettingsAdapter.delete-account(acc.id); }
+                                }
+                            }
+                        }
+
+                        Divider { }
+                    }
 
                     // State A: GitHub Connected
                     if SettingsAdapter.github-connected: VerticalLayout {
@@ -808,8 +1416,8 @@ export component SettingsSheet inherits Rectangle {
                         }
                     }
 
-                    // State C: Not Connected (Provider Selection)
-                    if !SettingsAdapter.github-connected && !SettingsAdapter.forgejo-connected && !SettingsAdapter.gitlab-connected: VerticalLayout {
+                    // State C: Provider Selection / Add Account
+                    if SettingsAdapter.adding-account || (!SettingsAdapter.github-connected && !SettingsAdapter.forgejo-connected && !SettingsAdapter.gitlab-connected): VerticalLayout {
                         spacing: Metrics.spacing-md;
 
                         SegmentedControl {
@@ -1221,12 +1829,15 @@ export component SettingsSheet inherits Rectangle {
                     }
                 }
             }
+            }
 
-
-                // --------------------------------------------------------
+            // --------------------------------------------------------
             // Vaults
             // --------------------------------------------------------
-            if root.page == 3: VerticalLayout {
+            if root.page == 3: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
                     alignment: start;
                     padding-left: Metrics.gutter;
                     padding-right: Metrics.gutter;
@@ -1268,13 +1879,17 @@ export component SettingsSheet inherits Rectangle {
                             tint: Palette.accent-background;
                             clicked => { SettingsAdapter.open-vaults(); }
                         }
-                    }
                 }
+            }
+            }
 
-                // --------------------------------------------------------
+            // --------------------------------------------------------
             // About
             // --------------------------------------------------------
-            if root.page == 4: VerticalLayout {
+            if root.page == 4: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
                     alignment: start;
                     padding-left: Metrics.gutter;
                     padding-right: Metrics.gutter;
@@ -1310,11 +1925,15 @@ export component SettingsSheet inherits Rectangle {
                         }
                     }
                 }
+            }
 
-                // --------------------------------------------------------
-                // Transfer & Share
-                // --------------------------------------------------------
-                if root.page == 5: VerticalLayout {
+            // --------------------------------------------------------
+            // Transfer & Share
+            // --------------------------------------------------------
+            if root.page == 5: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
                     alignment: start;
                     padding-left: Metrics.gutter;
                     padding-right: Metrics.gutter;

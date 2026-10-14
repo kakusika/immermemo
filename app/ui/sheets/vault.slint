@@ -15,6 +15,7 @@ import { SheetDragArea } from "../components.slint";
 // ever shows names and reports which row was tapped.
 export component VaultSheet inherits Rectangle {
     in property <[string]> vaults;
+    in property <[string]> vault-subtitles: [];
     // Index into `vaults`, or -1 if none matches (shouldn't normally
     // happen -- the current vault is always one of the known ones).
     in property <int> current: -1;
@@ -99,12 +100,22 @@ export component VaultSheet inherits Rectangle {
                 HorizontalLayout {
                     padding-left: Metrics.gutter;
                     padding-right: Metrics.gutter;
-                    Text {
-                        text: name;
-                        color: i == root.current ? Palette.accent-background : Palette.foreground;
-                        font-size: 17px;
-                        vertical-alignment: center;
+                    VerticalLayout {
+                        alignment: center;
                         horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text {
+                            text: name;
+                            color: i == root.current ? Palette.accent-background : Palette.foreground;
+                            font-size: 16px;
+                            font-weight: 500;
+                        }
+
+                        if root.vault-subtitles.length > i && root.vault-subtitles[i] != "": Text {
+                            text: root.vault-subtitles[i];
+                            color: Colors.muted;
+                            font-size: 12px;
+                        }
                     }
 
                     if i == root.current: Text {

@@ -1687,3 +1687,118 @@ msgstr "最近の更新"
 msgctxt "App"
 msgid "Graph View"
 msgstr "グラフビュー"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "BottomNavConfigItem"
+msgid "Home"
+msgstr "ホーム"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "BottomNavConfigItem"
+msgid "Search"
+msgstr "検索"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "BottomNavConfigItem"
+msgid "Library"
+msgstr "ライブラリ"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "BottomNavConfigItem"
+msgid "Directory"
+msgstr "ディレクトリ"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "BottomNavConfigItem"
+msgid "Daily Notes"
+msgstr "デイリーノート"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "BottomNavConfigItem"
+msgid "Starred"
+msgstr "スター付き"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "BottomNavConfigItem"
+msgid "Recent"
+msgstr "最近の更新"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "BottomNavConfigItem"
+msgid "Graph View"
+msgstr "グラフビュー"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "BottomNavConfigItem"
+msgid "Quick Actions"
+msgstr "クイックアクション"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "General"
+msgstr "一般"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Page Settings"
+msgstr "ページ設定"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Default View"
+msgstr "デフォルト表示"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Choose how folder contents are displayed by default."
+msgstr "フォルダ内のデフォルトの表示形式を選択します。"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "List"
+msgstr "リスト"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Grid"
+msgstr "グリッド"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Daily Notes Settings"
+msgstr "デイリーノート設定"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Settings for daily notes and calendar view will appear here."
+msgstr "デイリーノートとカレンダー表示の設定がここに表示されます。"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Starred Settings"
+msgstr "スター設定"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Settings for starred and favorite notes will appear here."
+msgstr "スター・お気に入りノートの設定がここに表示されます。"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Recent Settings"
+msgstr "履歴設定"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Settings for edit history and timeline will appear here."
+msgstr "編集履歴とタイムラインの設定がここに表示されます。"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Graph View Settings"
+msgstr "グラフビュー設定"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Settings for interactive note graph will appear here."
+msgstr "ノートの関連グラフ表示の設定がここに表示されます。"

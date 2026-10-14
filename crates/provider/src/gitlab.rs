@@ -230,16 +230,47 @@ impl Provider for GitLabProvider {
                     default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
                 });
             }
-            Err(ureq::Error::StatusCode(404)) => {
-                // Repository does not exist; proceed to creation.
-            }
+            Err(ureq::Error::StatusCode(404)) => {}
             Err(e) => return Err(e.into()),
         }
 
+        self.create_repository(token, repo_name, true)
+    }
+
+    fn list_repositories(&self, token: &str) -> anyhow::Result<Vec<RepositoryInfo>> {
+        let url = format!(
+            "{}/projects?membership=true&order_by=updated_at&per_page=100",
+            self.api_base_url
+        );
+        let response = ureq::get(&url)
+            .header("PRIVATE-TOKEN", token)
+            .header("Accept", "application/json")
+            .header("User-Agent", USER_AGENT)
+            .call()?;
+
+        let repos: Vec<GitLabProjectResponse> = response.into_body().read_json()?;
+        Ok(repos
+            .into_iter()
+            .map(|repo| RepositoryInfo {
+                name: repo.name,
+                full_name: repo.path_with_namespace,
+                clone_url: repo.http_url_to_repo,
+                is_private: repo.visibility != "public",
+                default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
+            })
+            .collect())
+    }
+
+    fn create_repository(
+        &self,
+        token: &str,
+        repo_name: &str,
+        is_private: bool,
+    ) -> anyhow::Result<RepositoryInfo> {
         let create_url = format!("{}/projects", self.api_base_url);
         let body = CreateGitLabProjectRequest {
             name: repo_name,
-            visibility: "private",
+            visibility: if is_private { "private" } else { "public" },
             initialize_with_readme: false,
         };
 

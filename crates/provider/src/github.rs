@@ -212,18 +212,48 @@ impl Provider for GitHubProvider {
                     default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
                 });
             }
-            Err(ureq::Error::StatusCode(404)) => {
-                // Not found; proceed to creation.
-            }
+            Err(ureq::Error::StatusCode(404)) => {}
             Err(e) => return Err(e.into()),
         }
 
-        // Create new private repository
+        self.create_repository(token, repo_name, true)
+    }
+
+    fn list_repositories(&self, token: &str) -> anyhow::Result<Vec<RepositoryInfo>> {
+        let url = format!(
+            "{}/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator",
+            self.api_base_url
+        );
+        let response = ureq::get(&url)
+            .header("Authorization", &format!("Bearer {token}"))
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", USER_AGENT)
+            .call()?;
+
+        let repos: Vec<GitHubRepoResponse> = response.into_body().read_json()?;
+        Ok(repos
+            .into_iter()
+            .map(|repo| RepositoryInfo {
+                name: repo.name,
+                full_name: repo.full_name,
+                clone_url: repo.clone_url,
+                is_private: repo.private,
+                default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
+            })
+            .collect())
+    }
+
+    fn create_repository(
+        &self,
+        token: &str,
+        repo_name: &str,
+        is_private: bool,
+    ) -> anyhow::Result<RepositoryInfo> {
         let create_url = format!("{}/user/repos", self.api_base_url);
         let body = CreateRepoRequest {
             name: repo_name,
             description: "Immermemo notes vault",
-            private: true,
+            private: is_private,
             auto_init: false,
         };
 
@@ -434,6 +464,67 @@ mod tests {
             None
         );
         assert_eq!(GitHubProvider::parse_remote(""), None);
+    }
+
+    #[test]
+    fn test_list_repositories() {
+        let json = r#"[
+            {
+                "name": "notes-personal",
+                "full_name": "octocat/notes-personal",
+                "clone_url": "https://github.com/octocat/notes-personal.git",
+                "private": true,
+                "default_branch": "main"
+            },
+            {
+                "name": "work-vault",
+                "full_name": "octocat/work-vault",
+                "clone_url": "https://github.com/octocat/work-vault.git",
+                "private": false,
+                "default_branch": "master"
+            }
+        ]"#;
+        let (url, server) = mock_single_request(json, "HTTP/1.1 200 OK");
+        let provider = GitHubProvider::with_custom_endpoints(
+            "test_client".to_owned(),
+            url.clone(),
+            url.clone(),
+            url,
+        );
+
+        let repos = provider.list_repositories("ghu_token123").unwrap();
+        server.join().unwrap();
+
+        assert_eq!(repos.len(), 2);
+        assert_eq!(repos[0].name, "notes-personal");
+        assert!(repos[0].is_private);
+        assert_eq!(repos[1].name, "work-vault");
+        assert!(!repos[1].is_private);
+    }
+
+    #[test]
+    fn test_create_repository() {
+        let json = r#"{
+            "name": "my-new-vault",
+            "full_name": "octocat/my-new-vault",
+            "clone_url": "https://github.com/octocat/my-new-vault.git",
+            "private": true,
+            "default_branch": "main"
+        }"#;
+        let (url, server) = mock_single_request(json, "HTTP/1.1 201 Created");
+        let provider = GitHubProvider::with_custom_endpoints(
+            "test_client".to_owned(),
+            url.clone(),
+            url.clone(),
+            url,
+        );
+
+        let repo = provider.create_repository("ghu_token123", "my-new-vault", true).unwrap();
+        server.join().unwrap();
+
+        assert_eq!(repo.name, "my-new-vault");
+        assert_eq!(repo.full_name, "octocat/my-new-vault");
+        assert!(repo.is_private);
     }
 }
 

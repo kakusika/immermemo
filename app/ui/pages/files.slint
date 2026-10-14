@@ -204,16 +204,21 @@ component DailyCalendarView inherits Rectangle {
         @tr("Su"), @tr("Mo"), @tr("Tu"), @tr("We"), @tr("Th"), @tr("Fr"), @tr("Sa")
     ];
 
+    property <int> total-slots: root.start-weekday(root.display-year, root.display-month) + root.days-in-month(root.display-year, root.display-month);
+
     background: Colors.surface-elevated;
     border-radius: Metrics.radius-lg;
     border-width: 1px;
     border-color: Palette.color-scheme == ColorScheme.dark
         ? Palette.foreground.with-alpha(0.08)
         : Palette.foreground.with-alpha(0.06);
+    height: calendar-layout.preferred-height;
 
     swipe := SwipeGestureHandler {
         handle-swipe-left: true;
         handle-swipe-right: true;
+        width: 100%;
+        height: 100%;
 
         swiped => {
             let dx = self.current-position.x - self.pressed-position.x;
@@ -224,16 +229,20 @@ component DailyCalendarView inherits Rectangle {
             }
         }
 
-        VerticalLayout {
-            padding: Metrics.spacing-md;
-            spacing: Metrics.spacing-sm;
+        calendar-layout := VerticalLayout {
+            alignment: start;
+            padding-top: 6px * Metrics.ui-scale;
+            padding-bottom: 6px * Metrics.ui-scale;
+            padding-left: 2px * Metrics.ui-scale;
+            padding-right: 2px * Metrics.ui-scale;
+            spacing: 2px * Metrics.ui-scale;
 
             // Header: Clickable Month button (no arrows)
             HorizontalLayout {
                 alignment: center;
 
                 Rectangle {
-                    height: 38px * Metrics.ui-scale;
+                    height: 28px * Metrics.ui-scale;
                     border-radius: self.height / 2;
                     background: header-touch.pressed
                         ? Palette.foreground.with-alpha(0.12)
@@ -249,14 +258,14 @@ component DailyCalendarView inherits Rectangle {
                     }
 
                     HorizontalLayout {
-                        padding-left: 16px * Metrics.ui-scale;
-                        padding-right: 14px * Metrics.ui-scale;
-                        spacing: 8px * Metrics.ui-scale;
+                        padding-left: 12px * Metrics.ui-scale;
+                        padding-right: 10px * Metrics.ui-scale;
+                        spacing: 4px * Metrics.ui-scale;
                         alignment: center;
 
                         Text {
                             text: root.month-name(root.display-month);
-                            font-size: Metrics.font-body;
+                            font-size: Metrics.font-sub;
                             font-weight: 700;
                             color: root.show-month-picker ? Palette.accent-background : Palette.foreground;
                             vertical-alignment: center;
@@ -275,9 +284,9 @@ component DailyCalendarView inherits Rectangle {
                 }
             }
 
-            // Horizontal scrollable month picker chips
+            // Horizontal scrollable month picker chips (height 0 when hidden to prevent layout gap)
             if root.show-month-picker: Flickable {
-                height: 38px * Metrics.ui-scale;
+                height: root.show-month-picker ? 28px * Metrics.ui-scale : 0px;
                 interactive: true;
                 mouse-drag-pan-enabled: true;
                 content-height: self.height;
@@ -290,7 +299,7 @@ component DailyCalendarView inherits Rectangle {
 
                     for m in root.months: Rectangle {
                         property <bool> is-selected: m == root.display-month;
-                        height: 32px * Metrics.ui-scale;
+                        height: 26px * Metrics.ui-scale;
                         width: chip-layout.preferred-width;
                         border-radius: self.height / 2;
                         background: is-selected
@@ -306,8 +315,8 @@ component DailyCalendarView inherits Rectangle {
                         }
 
                         chip-layout := HorizontalLayout {
-                            padding-left: 14px * Metrics.ui-scale;
-                            padding-right: 14px * Metrics.ui-scale;
+                            padding-left: 10px * Metrics.ui-scale;
+                            padding-right: 10px * Metrics.ui-scale;
                             alignment: center;
 
                             Text {
@@ -337,12 +346,14 @@ component DailyCalendarView inherits Rectangle {
 
             // Days Grid
             GridLayout {
-                spacing: 2px * Metrics.ui-scale;
+                spacing: 0px;
 
                 for idx in root.grid-indices: Rectangle {
                     row: idx / 7;
                     col: Math.mod(idx, 7);
-                    height: 36px * Metrics.ui-scale;
+                    property <bool> row-needed: idx < 35 || root.total-slots > 35;
+                    height: self.row-needed ? 28px * Metrics.ui-scale : 0px;
+                    visible: self.row-needed;
 
                     property <int> start-day: root.start-weekday(root.display-year, root.display-month);
                     property <int> days-count: root.days-in-month(root.display-year, root.display-month);
@@ -359,8 +370,8 @@ component DailyCalendarView inherits Rectangle {
                     }
 
                     Rectangle {
-                        width: 32px * Metrics.ui-scale;
-                        height: 32px * Metrics.ui-scale;
+                        width: 26px * Metrics.ui-scale;
+                        height: 26px * Metrics.ui-scale;
                         border-radius: self.height / 2;
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
@@ -383,7 +394,6 @@ component DailyCalendarView inherits Rectangle {
                     }
                 }
             }
-
         }
     }
 }
@@ -823,6 +833,7 @@ export component FilesScreen inherits Rectangle {
             vertical-stretch: 1;
 
             VerticalLayout {
+                alignment: start;
                 padding-left: Metrics.gutter;
                 padding-right: Metrics.gutter;
                 padding-top: Metrics.spacing-xs;

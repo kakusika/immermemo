@@ -140,7 +140,22 @@ pub fn bind_forgejo_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                             return;
                         }
                         s.remote = Some(clone_url.clone());
-                        drop(s);
+                        let account_id = format!("forgejo:{instance_display}:{username}");
+                        let account = immermemo_core::Account {
+                            id: account_id.clone(),
+                            provider: "forgejo".to_string(),
+                            instance_url: instance_display.clone(),
+                            username: username.clone(),
+                            display_name: None,
+                            avatar_url: None,
+                        };
+                        let _ = s.app_data.add_account(account);
+                        let _ = s.app_data.save_vault_account(&vault_dir, &account_id);
+                        if let Ok(path) = s.app_data.account_token_path(&account_id) {
+                            if let Ok(store) = (s.token_store_for)(&path) {
+                                let _ = store.save(&token_str);
+                            }
+                        }
 
                         settings.set_forgejo_connecting(false);
                         settings.set_forgejo_connected(true);
@@ -151,6 +166,9 @@ pub fn bind_forgejo_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                         settings.set_forgejo_status_is_error(false);
                         settings.set_url_draft(clone_url.into());
                         settings.set_has_token(true);
+
+                        crate::callbacks::refresh_accounts_ui(&app, &s);
+                        drop(s);
 
                         app.set_remote_configured(true);
                         set_status(&app, "Forgejo / Gitea account linked! Starting sync...");

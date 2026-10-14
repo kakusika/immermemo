@@ -18,7 +18,7 @@ pub use immermemo_sync::{
 pub use immermemo_credentials::{
     PlainFileTokenStore, SshKeyStore, TokenStore, TokenStoreFactory, token_blob,
 };
-pub use immermemo_vault::appdata::AppData;
+pub use immermemo_vault::appdata::{Account, AppData};
 pub mod notes {
     pub use immermemo_vault::notes::*;
 }

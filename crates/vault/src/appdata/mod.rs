@@ -18,11 +18,14 @@
 //! like `registry`'s `known_vaults`/`current_vault`, not per-vault) --
 //! all as `impl AppData` blocks over the one struct defined here.
 
+mod account;
 mod identity;
 mod paths;
 mod registry;
 mod settings;
 mod ssh;
+
+pub use account::Account;
 
 use std::path::{Path, PathBuf};
 

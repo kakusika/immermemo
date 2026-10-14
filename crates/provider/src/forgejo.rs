@@ -226,17 +226,45 @@ impl Provider for ForgejoProvider {
                     default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
                 });
             }
-            Err(ureq::Error::StatusCode(404)) => {
-                // Repository does not exist; proceed to creation.
-            }
+            Err(ureq::Error::StatusCode(404)) => {}
             Err(e) => return Err(e.into()),
         }
 
+        self.create_repository(token, repo_name, true)
+    }
+
+    fn list_repositories(&self, token: &str) -> anyhow::Result<Vec<RepositoryInfo>> {
+        let url = format!("{}/user/repos", self.api_base_url);
+        let response = ureq::get(&url)
+            .header("Authorization", &format!("token {token}"))
+            .header("Accept", "application/json")
+            .header("User-Agent", USER_AGENT)
+            .call()?;
+
+        let repos: Vec<ForgejoRepoResponse> = response.into_body().read_json()?;
+        Ok(repos
+            .into_iter()
+            .map(|repo| RepositoryInfo {
+                name: repo.name,
+                full_name: repo.full_name,
+                clone_url: repo.clone_url,
+                is_private: repo.private,
+                default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
+            })
+            .collect())
+    }
+
+    fn create_repository(
+        &self,
+        token: &str,
+        repo_name: &str,
+        is_private: bool,
+    ) -> anyhow::Result<RepositoryInfo> {
         let create_url = format!("{}/user/repos", self.api_base_url);
         let body = CreateRepoRequest {
             name: repo_name,
             description: "Immermemo notes vault",
-            private: true,
+            private: is_private,
             auto_init: false,
         };
 

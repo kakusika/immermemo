@@ -50,11 +50,20 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
         };
         let identity =
             immermemo_core::DeviceIdentity::load_or_init(&s.app_data.identity_path()).ok();
+        let token_store = if let Some(acc_id) = s.app_data.load_vault_account(&s.vault_dir) {
+            if let Ok(token_path) = s.app_data.account_token_path(&acc_id) {
+                (s.token_store_for)(&token_path).unwrap_or_else(|_| s.token_store.clone())
+            } else {
+                s.token_store.clone()
+            }
+        } else {
+            s.token_store.clone()
+        };
         (
             s.vault_dir.clone(),
             gitdir,
             remote,
-            s.token_store.clone(),
+            token_store,
             s.app_data.clone(),
             identity,
         )
