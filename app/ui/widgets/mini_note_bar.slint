@@ -1,7 +1,7 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
-import { MiniNoteCard } from "../components.slint";
+import { MiniNoteCard, CalloutBubble } from "../components.slint";
 
 // Mini note card container (anchored above the bottom nav bar).
 // Fixed at resting position so upward swipe gesture coordinates never shift.
@@ -278,52 +278,23 @@ export component MiniNoteBar inherits Rectangle {
         }
 
         // History target note bubble (speech bubble floating above the mini card when triggered)
-        history-bubble := Rectangle {
+        history-bubble := CalloutBubble {
             x: root.is-back-direction
                 ? (16px * Metrics.ui-scale + max(0px, root.mini-card-reveal-dx * 0.12))
                 : (parent.width - self.width - 16px * Metrics.ui-scale + min(0px, root.mini-card-reveal-dx * 0.12));
-            y: root.show-bubble ? (-16px * Metrics.ui-scale) : (8px * Metrics.ui-scale);
-            height: 32px * Metrics.ui-scale;
-            width: min(bubble-layout.preferred-width + 24px * Metrics.ui-scale, parent.width - 32px * Metrics.ui-scale);
-            border-radius: self.height / 2;
-            background: Colors.surface-elevated;
-            border-width: 1.5px;
-            border-color: Palette.accent-background.with-alpha(0.35);
-            drop-shadow-blur: 10px * Metrics.ui-scale;
-            drop-shadow-offset-y: 2px * Metrics.ui-scale;
-            drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000aa : #00000024;
+            y: root.show-bubble ? (-26px * Metrics.ui-scale) : (8px * Metrics.ui-scale);
+            width: min(self.preferred-bubble-width, parent.width - 32px * Metrics.ui-scale);
+            height: 42px * Metrics.ui-scale;
             opacity: root.show-bubble ? 1.0 : 0.0;
-            clip: true;
+            text: root.bubble-title;
+            icon: root.bubble-icon;
+            icon-on-right: !root.is-back-direction;
+            tail-on-right: !root.is-back-direction;
+            tail-offset-x: 18px * Metrics.ui-scale;
 
             animate y, opacity {
                 duration: 200ms;
                 easing: cubic-bezier(0.34, 1.56, 0.64, 1.0);
-            }
-
-            bubble-layout := HorizontalLayout {
-                padding-left: 10px * Metrics.ui-scale;
-                padding-right: 12px * Metrics.ui-scale;
-                spacing: 6px * Metrics.ui-scale;
-
-                VerticalLayout {
-                    alignment: center;
-                    Icon {
-                        source: root.bubble-icon;
-                        color: Palette.accent-background;
-                        width: Metrics.icon-sm;
-                        height: Metrics.icon-sm;
-                    }
-                }
-
-                Text {
-                    text: root.bubble-title;
-                    font-size: Metrics.font-sub;
-                    font-weight: 600;
-                    color: Palette.foreground;
-                    vertical-alignment: center;
-                    overflow: elide;
-                    horizontal-stretch: 1;
-                }
             }
         }
     }

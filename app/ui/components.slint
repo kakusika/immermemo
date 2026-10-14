@@ -624,3 +624,87 @@ export component NavPill inherits Rectangle {
         }
     }
 }
+
+// Callout / Speech bubble component floating above target elements.
+// Borderless, elevated surface with a pointer tail pointing towards the target.
+export component CalloutBubble inherits Rectangle {
+    in property <string> text: "";
+    in property <image> icon;
+    in property <color> icon-color: root.text-color;
+    in property <color> text-color: #ffffff;
+    in property <bool> icon-on-right: false;
+    in property <bool> tail-on-right: false;
+    in property <length> tail-offset-x: 18px * Metrics.ui-scale;
+    in property <length> tail-width: 14px * Metrics.ui-scale;
+    in property <length> tail-height: 10px * Metrics.ui-scale;
+    in property <bool> show-tail: true;
+    in property <color> bubble-background: #f59e0b;
+    out property <length> preferred-bubble-width: content-layout.preferred-width;
+
+    // Outer container sizing and defaults
+    height: 42px * Metrics.ui-scale;
+    background: transparent;
+
+    // Main bubble body (floating elevated card without border)
+    body := Rectangle {
+        x: 0px;
+        y: 0px;
+        width: parent.width > 0px ? parent.width : content-layout.preferred-width;
+        height: parent.height - (root.show-tail ? root.tail-height : 0px);
+        border-radius: self.height / 2;
+        background: root.bubble-background;
+        drop-shadow-blur: 10px * Metrics.ui-scale;
+        drop-shadow-offset-y: 2px * Metrics.ui-scale;
+        drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000aa : #00000024;
+
+        content-layout := HorizontalLayout {
+            padding-left: root.icon-on-right ? 14px * Metrics.ui-scale : 12px * Metrics.ui-scale;
+            padding-right: root.icon-on-right ? 12px * Metrics.ui-scale : 14px * Metrics.ui-scale;
+            spacing: 6px * Metrics.ui-scale;
+
+            if !root.icon-on-right && root.icon.width > 0: VerticalLayout {
+                alignment: center;
+                Icon {
+                    source: root.icon;
+                    color: root.icon-color;
+                    width: Metrics.icon-sm;
+                    height: Metrics.icon-sm;
+                }
+            }
+
+            Text {
+                text: root.text;
+                font-size: Metrics.font-sub;
+                font-weight: 600;
+                color: root.text-color;
+                vertical-alignment: center;
+                overflow: elide;
+                horizontal-stretch: 1;
+            }
+
+            if root.icon-on-right && root.icon.width > 0: VerticalLayout {
+                alignment: center;
+                Icon {
+                    source: root.icon;
+                    color: root.icon-color;
+                    width: Metrics.icon-sm;
+                    height: Metrics.icon-sm;
+                }
+            }
+        }
+    }
+
+    // Downward pointer tail pointing to target
+    if root.show-tail: Path {
+        x: root.tail-on-right
+            ? (body.width - root.tail-offset-x - root.tail-width)
+            : root.tail-offset-x;
+        y: body.height - 1px;
+        width: root.tail-width;
+        height: root.tail-height;
+        viewbox-width: 14;
+        viewbox-height: 10;
+        commands: "M 0 0 L 14 0 L 7 10 Z";
+        fill: root.bubble-background;
+    }
+}
