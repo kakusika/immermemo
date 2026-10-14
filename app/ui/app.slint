@@ -860,14 +860,12 @@ export component App inherits Window {
             }
             tab-selected(idx) => {
                 root.active-tab = idx;
-                root.trigger-haptic();
             }
             quick-action => {
                 root.trigger-haptic();
                 root.quick-actions-open = true;
             }
             open-more => {
-                root.trigger-haptic();
                 root.more-menu-open = true;
             }
         }
@@ -886,7 +884,6 @@ export component App inherits Window {
                 clicked => {
                     root.more-menu-open = false;
                     root.active-tab = 0;
-                    root.trigger-haptic();
                 }
             }
 
@@ -897,7 +894,6 @@ export component App inherits Window {
                 clicked => {
                     root.more-menu-open = false;
                     root.active-tab = 1;
-                    root.trigger-haptic();
                 }
             }
 
@@ -909,7 +905,6 @@ export component App inherits Window {
                     root.more-menu-open = false;
                     root.active-tab = 2;
                     files-screen.page = 0;
-                    root.trigger-haptic();
                 }
             }
 
@@ -921,7 +916,6 @@ export component App inherits Window {
                     root.more-menu-open = false;
                     root.active-tab = 2;
                     files-screen.page = 1;
-                    root.trigger-haptic();
                 }
             }
 
@@ -933,7 +927,6 @@ export component App inherits Window {
                     root.more-menu-open = false;
                     root.active-tab = 2;
                     files-screen.page = 2;
-                    root.trigger-haptic();
                 }
             }
 
@@ -945,7 +938,6 @@ export component App inherits Window {
                     root.more-menu-open = false;
                     root.active-tab = 2;
                     files-screen.page = 3;
-                    root.trigger-haptic();
                 }
             }
 
@@ -957,7 +949,6 @@ export component App inherits Window {
                     root.more-menu-open = false;
                     root.active-tab = 2;
                     files-screen.page = 4;
-                    root.trigger-haptic();
                 }
             }
 
@@ -969,7 +960,6 @@ export component App inherits Window {
                     root.more-menu-open = false;
                     root.active-tab = 2;
                     files-screen.page = 5;
-                    root.trigger-haptic();
                 }
             }
 

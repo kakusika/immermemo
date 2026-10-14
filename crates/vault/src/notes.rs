@@ -41,12 +41,10 @@ pub fn walk_tmt_files(dir: &Path, visit: &mut impl FnMut(&Path, &std::fs::Metada
     }
 }
 
-pub fn display_name(vault_dir: &Path, path: &Path) -> String {
-    path.strip_prefix(vault_dir)
-        .unwrap_or(path)
-        .with_extension("")
-        .display()
-        .to_string()
+pub fn display_name(_vault_dir: &Path, path: &Path) -> String {
+    path.file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default()
 }
 
 /// A cheap textual check for the list badge; the sync report is what says
@@ -119,7 +117,7 @@ mod tests {
         std::fs::write(dir.join(".hidden/d.tmt"), "").unwrap();
 
         let names: Vec<_> = scan(&dir).iter().map(|p| display_name(&dir, p)).collect();
-        assert_eq!(names, ["a", "sub/b"]);
+        assert_eq!(names, ["a", "b"]);
         let _ = std::fs::remove_dir_all(&dir);
     }
 

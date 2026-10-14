@@ -334,7 +334,7 @@ impl Session {
                     note_index: index,
                     snippet: hit.snippet.clone(),
                 });
-                names.push(hit.title);
+                names.push(notes::display_name(&vault_dir, &abs_path));
                 conflicted.push(hit.has_conflict);
                 snippets.push(hit.snippet.unwrap_or_default());
             }

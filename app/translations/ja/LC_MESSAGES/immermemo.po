@@ -1289,3 +1289,129 @@ msgstr "保管庫内の全ノートをアルファベット順に一覧表示し
 msgctxt "FilesScreen"
 msgid "Placeholder · Coming Soon"
 msgstr "プレイスホルダー · 準備中"
+
+#: app/ui/pages/files.slint:162
+msgctxt "DailyCalendarView"
+msgid "January"
+msgstr "1月"
+
+#: app/ui/pages/files.slint:163
+msgctxt "DailyCalendarView"
+msgid "February"
+msgstr "2月"
+
+#: app/ui/pages/files.slint:164
+msgctxt "DailyCalendarView"
+msgid "March"
+msgstr "3月"
+
+#: app/ui/pages/files.slint:165
+msgctxt "DailyCalendarView"
+msgid "April"
+msgstr "4月"
+
+#: app/ui/pages/files.slint:166
+msgctxt "DailyCalendarView"
+msgid "May"
+msgstr "5月"
+
+#: app/ui/pages/files.slint:167
+msgctxt "DailyCalendarView"
+msgid "June"
+msgstr "6月"
+
+#: app/ui/pages/files.slint:168
+msgctxt "DailyCalendarView"
+msgid "July"
+msgstr "7月"
+
+#: app/ui/pages/files.slint:169
+msgctxt "DailyCalendarView"
+msgid "August"
+msgstr "8月"
+
+#: app/ui/pages/files.slint:170
+msgctxt "DailyCalendarView"
+msgid "September"
+msgstr "9月"
+
+#: app/ui/pages/files.slint:171
+msgctxt "DailyCalendarView"
+msgid "October"
+msgstr "10月"
+
+#: app/ui/pages/files.slint:172
+msgctxt "DailyCalendarView"
+msgid "November"
+msgstr "11月"
+
+#: app/ui/pages/files.slint:173
+msgctxt "DailyCalendarView"
+msgid "December"
+msgstr "12月"
+
+#: app/ui/pages/files.slint:212
+msgctxt "DailyCalendarView"
+msgid "Su"
+msgstr "日"
+
+#: app/ui/pages/files.slint:212
+msgctxt "DailyCalendarView"
+msgid "Mo"
+msgstr "月"
+
+#: app/ui/pages/files.slint:212
+msgctxt "DailyCalendarView"
+msgid "Tu"
+msgstr "火"
+
+#: app/ui/pages/files.slint:212
+msgctxt "DailyCalendarView"
+msgid "We"
+msgstr "水"
+
+#: app/ui/pages/files.slint:212
+msgctxt "DailyCalendarView"
+msgid "Th"
+msgstr "木"
+
+#: app/ui/pages/files.slint:212
+msgctxt "DailyCalendarView"
+msgid "Fr"
+msgstr "金"
+
+#: app/ui/pages/files.slint:212
+msgctxt "DailyCalendarView"
+msgid "Sa"
+msgstr "土"
+
+#: app/ui/pages/files.slint:374
+msgctxt "DailyCalendarView"
+msgid "Today"
+msgstr "今日"
+
+#: app/ui/pages/files.slint:438 app/ui/pages/files.slint:530
+msgctxt "FilesScreen"
+msgid "Tasks"
+msgstr "タスク"
+
+#: app/ui/pages/files.slint:770
+msgctxt "FilesScreen"
+msgid "Task View"
+msgstr "タスクビュー"
+
+#: app/ui/pages/files.slint:782
+msgctxt "FilesScreen"
+msgid "Aggregated task checklists across all notes."
+msgstr "すべてのノートのタスクチェックリストを集約"
+
+#: app/ui/app.slint:878
+msgctxt "App"
+msgid "More"
+msgstr "その他"
+
+#: app/ui/components.slint:429
+msgctxt "BottomNavBar"
+msgid "More"
+msgstr "その他"
+
