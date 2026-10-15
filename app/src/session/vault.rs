@@ -5,9 +5,9 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use immermemo_core::{EditorState, NoteIndex};
-use slint::{ModelRc, SharedString, VecModel};
+use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
-use crate::App;
+use crate::{App, SettingsAdapter, VaultData};
 use super::util::set_status;
 use super::{
     Session, clear_note_stats, open_initial_or_last_note, refresh_list, schedule_auto_sync,
@@ -40,10 +40,41 @@ pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
         })
         .collect();
     let current = s.known_vaults.iter().position(|v| *v == s.vault_dir);
+
+    // Build SettingsAdapter vault list: active vault first, followed by other vaults
+    let settings = app.global::<SettingsAdapter>();
+    let mut ui_vaults = Vec::new();
+    if let Some(curr_idx) = current {
+        let p = &s.known_vaults[curr_idx];
+        let subtitle = subtitles.get(curr_idx).cloned().unwrap_or_else(|| "Local".into());
+        ui_vaults.push(VaultData {
+            name: names[curr_idx].clone(),
+            path: p.display().to_string().into(),
+            subtitle,
+            is_current: true,
+            original_index: curr_idx as i32,
+        });
+    }
+
+    for (idx, p) in s.known_vaults.iter().enumerate() {
+        if Some(idx) == current {
+            continue;
+        }
+        let subtitle = subtitles.get(idx).cloned().unwrap_or_else(|| "Local".into());
+        ui_vaults.push(VaultData {
+            name: names[idx].clone(),
+            path: p.display().to_string().into(),
+            subtitle,
+            is_current: false,
+            original_index: idx as i32,
+        });
+    }
     drop(s);
+
     app.set_vaults(ModelRc::new(VecModel::from(names)));
     app.set_vault_subtitles(ModelRc::new(VecModel::from(subtitles)));
     app.set_current_vault(current.map_or(-1, |i| i as i32));
+    settings.set_vaults(ModelRc::new(VecModel::from(ui_vaults)));
 }
 
 /// Switches to `vault_dir`, reloading everything that's per-vault: the

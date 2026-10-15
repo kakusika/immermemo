@@ -1842,3 +1842,90 @@ msgstr "現在の保管庫: "
 msgctxt "SettingsSheet"
 msgid "Add Provider Account"
 msgstr "プロバイダーアカウントを追加"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Accounts"
+msgstr "アカウント"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Advanced"
+msgstr "高度な設定"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Vault: "
+msgstr "保管庫: "
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Connected Accounts"
+msgstr "接続済みアカウント"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "No accounts connected yet."
+msgstr "接続済みのアカウントがありません。"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "+ Add Account"
+msgstr "+ アカウントを追加"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Add Account"
+msgstr "アカウントを追加"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Custom Git"
+msgstr "カスタム Git"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Connect an arbitrary Git repository over HTTPS or SSH."
+msgstr "HTTPS または SSH を使用して任意の Git リポジトリに接続します。"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "https://git.example.com/notes.git or git@..."
+msgstr "https://git.example.com/notes.git または git@..."
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Access token (if using HTTPS)"
+msgstr "アクセストークン (HTTPS の場合)"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Using SSH? Ensure your public key is registered on the server."
+msgstr "SSH を使用しますか？ 公開鍵がサーバーに登録されていることを確認してください。"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "SSH Key"
+msgstr "SSH 鍵"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "{} vaults"
+msgstr "{} 件の保管庫"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "In Use"
+msgstr "使用中"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Switch"
+msgstr "切り替え"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "+ Add Vault"
+msgstr "+ 保管庫を追加"
+
+

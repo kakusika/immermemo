@@ -135,6 +135,9 @@ pub fn bind_vault_callbacks(
             settings.set_current_vault_path(s.vault_dir.display().to_string().into());
             update_provider_ui_state(&app, s.remote.as_deref());
             refresh_accounts_ui(&app, &s);
+            drop(s);
+            refresh_vault_list(&app, &session);
+            let s = session.borrow();
             let ssh_pub = s.app_data.load_ssh_public_key();
             settings.set_ssh_key_present(ssh_pub.is_some());
             settings.set_ssh_public_key(ssh_pub.unwrap_or_default().into());
@@ -287,6 +290,38 @@ pub fn bind_vault_callbacks(
             let app = weak.unwrap();
             refresh_vault_list(&app, &session);
             app.set_vault_sheet_open(true);
+        }
+    });
+    settings.on_switch_vault({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |index| {
+            let app = weak.unwrap();
+            let Some(vault_dir) = session.borrow().known_vaults.get(index as usize).cloned() else {
+                return;
+            };
+            switch_vault(&app, &session, vault_dir);
+            refresh_vault_list(&app, &session);
+        }
+    });
+    settings.on_add_vault({
+        let weak = app.as_weak();
+        move || {
+            let app = weak.unwrap();
+            app.set_add_vault_draft(SharedString::new());
+            app.set_add_vault_open(true);
+        }
+    });
+    settings.on_delete_vault({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |index| {
+            let app = weak.unwrap();
+            let s = session.borrow();
+            if s.known_vaults.len() <= 1 {
+                return;
+            }
+            drop(s);
+            session.borrow_mut().delete_vault_target = Some(index as usize);
+            app.set_delete_vault_confirm_open(true);
         }
     });
     #[cfg(target_os = "android")]

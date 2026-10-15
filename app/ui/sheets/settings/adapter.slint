@@ -9,12 +9,23 @@ export struct AccountData {
     display-name: string,
 }
 
+export struct VaultData {
+    name: string,
+    path: string,
+    subtitle: string,
+    is-current: bool,
+    original-index: int,
+}
+
 export global SettingsAdapter {
     // Accounts list
     in property <[AccountData]> accounts: [];
     in-out property <bool> adding-account: false;
     in property <string> current-vault-account-id: "";
     in property <string> current-vault-account-label: "";
+
+    // Vaults list
+    in property <[VaultData]> vaults: [];
 
     // Remote sync properties
     in property <bool> has-token: false;
@@ -141,4 +152,8 @@ export global SettingsAdapter {
 
     callback delete-account(string);
     callback create-vault-from-account(string, string);
+
+    callback switch-vault(int);
+    callback add-vault();
+    callback delete-vault(int);
 }
