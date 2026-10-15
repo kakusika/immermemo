@@ -8,6 +8,7 @@ mod haptic;
 pub mod qr;
 pub mod render;
 mod session;
+pub mod theme;
 pub mod transfer;
 mod widget;
 
@@ -134,6 +135,17 @@ pub fn run(
     });
     settings.set_theme_choice(theme_choice);
     app.set_theme_choice(theme_choice);
+    let color_source = app_data.load_color_source().unwrap_or(0);
+    let color_seed = app_data
+        .load_color_seed()
+        .unwrap_or_else(|| "#6750A4".to_string());
+    let palette_style = app_data.load_palette_style().unwrap_or(0);
+    let contrast_level = app_data.load_contrast_level().unwrap_or(0);
+    settings.set_color_source(color_source);
+    settings.set_color_seed(color_seed.into());
+    settings.set_palette_style(palette_style);
+    settings.set_contrast_level(contrast_level);
+    theme::apply_theme(&app, &app_data);
     let status_bar_choice = app_data.load_status_bar_choice().unwrap_or(0);
     settings.set_status_bar_choice(status_bar_choice);
     app.set_status_bar_choice(status_bar_choice);

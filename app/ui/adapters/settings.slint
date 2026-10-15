@@ -43,6 +43,13 @@ export global SettingsAdapter {
     in-out property <int> font-size-choice: 1;
     // 0: System, 1: Light, 2: Dark
     in-out property <int> theme-choice: 0;
+    // 0: System (Wallpaper), 1: Custom
+    in-out property <int> color-source: 0;
+    in-out property <string> color-seed: "#6750A4";
+    // 0: Tonal Spot, 1: Vivid, 2: Expressive, 3: Fruit Salad, 4: Rainbow, 5: Spritz, 6: Monochrome
+    in-out property <int> palette-style: 0;
+    // 0: Standard, 1: Medium, 2: High
+    in-out property <int> contrast-level: 0;
     // 0: show (default), 1: hide while editing a note, 2: always hide
     in-out property <int> status-bar-choice: 0;
 
@@ -133,6 +140,10 @@ export global SettingsAdapter {
     callback bottom-bar-changed();
     callback font-size-changed(int);
     callback theme-changed(int);
+    callback color-source-changed(int);
+    callback color-seed-changed(string);
+    callback palette-style-changed(int);
+    callback contrast-level-changed(int);
     callback refresh-transfer-qr();
     callback export-options-changed(bool, bool, bool);
     callback copy-transfer-link();

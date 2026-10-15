@@ -139,4 +139,56 @@ impl AppData {
     pub fn save_bottom_bar_config(&self, config: &str) -> anyhow::Result<()> {
         write(&self.bottom_bar_file(), config)
     }
+
+    fn color_source_file(&self) -> PathBuf {
+        self.base.join("color_source.txt")
+    }
+
+    /// 0: system wallpaper / dynamic color, 1: custom color & style
+    pub fn load_color_source(&self) -> Option<i32> {
+        read_trimmed(&self.color_source_file()).and_then(|s| s.parse().ok())
+    }
+
+    pub fn save_color_source(&self, choice: i32) -> anyhow::Result<()> {
+        write(&self.color_source_file(), &choice.to_string())
+    }
+
+    fn color_seed_file(&self) -> PathBuf {
+        self.base.join("color_seed.txt")
+    }
+
+    pub fn load_color_seed(&self) -> Option<String> {
+        read_trimmed(&self.color_seed_file())
+    }
+
+    pub fn save_color_seed(&self, seed: &str) -> anyhow::Result<()> {
+        write(&self.color_seed_file(), seed)
+    }
+
+    fn palette_style_file(&self) -> PathBuf {
+        self.base.join("palette_style.txt")
+    }
+
+    /// 0: TonalSpot, 1: Vivid, 2: Expressive, 3: FruitSalad, 4: Rainbow, 5: Spritz, 6: Monochrome
+    pub fn load_palette_style(&self) -> Option<i32> {
+        read_trimmed(&self.palette_style_file()).and_then(|s| s.parse().ok())
+    }
+
+    pub fn save_palette_style(&self, style: i32) -> anyhow::Result<()> {
+        write(&self.palette_style_file(), &style.to_string())
+    }
+
+    fn contrast_level_file(&self) -> PathBuf {
+        self.base.join("contrast_level.txt")
+    }
+
+    /// 0: Standard (0.0), 1: Medium (0.5), 2: High (1.0)
+    pub fn load_contrast_level(&self) -> Option<i32> {
+        read_trimmed(&self.contrast_level_file()).and_then(|s| s.parse().ok())
+    }
+
+    pub fn save_contrast_level(&self, level: i32) -> anyhow::Result<()> {
+        write(&self.contrast_level_file(), &level.to_string())
+    }
 }
+

@@ -939,14 +939,14 @@ export component EditorScreen inherits Rectangle {
                 width: root.pill-height;
                 height: root.pill-height;
                 border-radius: self.height / 2;
-                background: Palette.accent-background;
+                background: Colors.primary;
                 drop-shadow-blur: 6px * Metrics.ui-scale;
                 drop-shadow-offset-y: 2px * Metrics.ui-scale;
                 drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #00000080 : #00000024;
 
                 Icon {
                     source: TablerIcons.pencil;
-                    color: Palette.accent-foreground;
+                    color: Colors.on-primary;
                     width: Metrics.icon-md;
                     height: Metrics.icon-md;
                     x: (parent.width - self.width) / 2;

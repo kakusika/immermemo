@@ -204,11 +204,49 @@ pub fn bind_vault_callbacks(
     settings.on_theme_changed({
         let (weak, session) = (app.as_weak(), session.clone());
         move |choice| {
-            let _ = session.borrow().app_data.save_theme(choice);
+            let session_borrow = session.borrow();
+            let _ = session_borrow.app_data.save_theme(choice);
             let app = weak.unwrap();
+            crate::theme::apply_theme(&app, &session_borrow.app_data);
             let body = app.get_body();
             let max_width = app.get_body_content_width();
             app.set_note_body_items(render::note_body_items(body.as_str(), &app, max_width));
+        }
+    });
+    settings.on_color_source_changed({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |source| {
+            let session_borrow = session.borrow();
+            let _ = session_borrow.app_data.save_color_source(source);
+            let app = weak.unwrap();
+            crate::theme::apply_theme(&app, &session_borrow.app_data);
+        }
+    });
+    settings.on_color_seed_changed({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |seed| {
+            let session_borrow = session.borrow();
+            let _ = session_borrow.app_data.save_color_seed(seed.as_str());
+            let app = weak.unwrap();
+            crate::theme::apply_theme(&app, &session_borrow.app_data);
+        }
+    });
+    settings.on_palette_style_changed({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |style| {
+            let session_borrow = session.borrow();
+            let _ = session_borrow.app_data.save_palette_style(style);
+            let app = weak.unwrap();
+            crate::theme::apply_theme(&app, &session_borrow.app_data);
+        }
+    });
+    settings.on_contrast_level_changed({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |level| {
+            let session_borrow = session.borrow();
+            let _ = session_borrow.app_data.save_contrast_level(level);
+            let app = weak.unwrap();
+            crate::theme::apply_theme(&app, &session_borrow.app_data);
         }
     });
     settings.on_status_bar_changed({

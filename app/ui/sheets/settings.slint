@@ -64,7 +64,7 @@ component CategoryRow inherits Rectangle {
                 source: root.icon;
                 width: Metrics.icon-md;
                 height: Metrics.icon-md;
-                color: Palette.accent-background;
+                color: Colors.primary;
             }
         }
 
@@ -502,6 +502,54 @@ component BottomNavConfigItem inherits Rectangle {
     }
 }
 
+// A circular color chip for selecting a Material 3 seed color.
+component ColorSeedChip inherits Rectangle {
+    in property <color> chip-color;
+    in property <bool> is-selected;
+    callback clicked();
+
+    width: 38px * Metrics.ui-scale;
+    height: 38px * Metrics.ui-scale;
+    border-radius: self.height / 2;
+    border-width: root.is-selected ? 2px * Metrics.ui-scale : 0px;
+    border-color: Colors.primary;
+    background: transparent;
+
+    Rectangle {
+        width: root.is-selected ? (parent.width - 8px * Metrics.ui-scale) : (parent.width - 4px * Metrics.ui-scale);
+        height: root.is-selected ? (parent.height - 8px * Metrics.ui-scale) : (parent.height - 4px * Metrics.ui-scale);
+        border-radius: self.height / 2;
+        background: root.chip-color;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+
+        animate width, height {
+            duration: 120ms;
+            easing: ease-out;
+        }
+
+        if root.is-selected: VerticalLayout {
+            alignment: center;
+            HorizontalLayout {
+                alignment: center;
+                VerticalLayout {
+                    alignment: center;
+                    Icon {
+                        source: TablerIcons.check;
+                        width: 14px * Metrics.ui-scale;
+                        height: 14px * Metrics.ui-scale;
+                        color: #ffffff;
+                    }
+                }
+            }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
 // A full-screen sheet for application settings: a grouped list of rows
 // (Interface; Other -- Sync & Remote, Vaults, Transfer & Share; Info -- About), each
 // drilling into its own sub-page -- the common "grouped list -> detail"
@@ -762,6 +810,172 @@ export component SettingsSheet inherits Rectangle {
                                     changed(i) => {
                                         SettingsAdapter.theme-choice = i;
                                         SettingsAdapter.theme-changed(i);
+                                    }
+                                }
+                            }
+
+                            Divider { }
+
+                            // Dynamic Color Source Selector
+                            VerticalLayout {
+                                spacing: Metrics.spacing-sm;
+
+                                SettingHeader {
+                                    title: @tr("Color Source");
+                                    subtitle: @tr("Choose wallpaper dynamic color or custom accent color.");
+                                }
+
+                                SegmentedControl {
+                                    options: [@tr("System Wallpaper"), @tr("Custom")];
+                                    selected: SettingsAdapter.color-source;
+                                    changed(i) => {
+                                        SettingsAdapter.color-source = i;
+                                        SettingsAdapter.color-source-changed(i);
+                                    }
+                                }
+                            }
+
+                            // Custom Seed Color Picker
+                            if SettingsAdapter.color-source == 1: VerticalLayout {
+                                spacing: Metrics.spacing-sm;
+
+                                SettingHeader {
+                                    title: @tr("Accent Seed Color");
+                                }
+
+                                VerticalLayout {
+                                    spacing: Metrics.spacing-md;
+                                    alignment: center;
+
+                                    HorizontalLayout {
+                                        spacing: Metrics.spacing-lg;
+                                        alignment: center;
+
+                                        ColorSeedChip {
+                                            chip-color: #6750A4;
+                                            is-selected: SettingsAdapter.color-seed == "#6750A4";
+                                            clicked => {
+                                                SettingsAdapter.color-seed = "#6750A4";
+                                                SettingsAdapter.color-seed-changed("#6750A4");
+                                            }
+                                        }
+                                        ColorSeedChip {
+                                            chip-color: #1971C2;
+                                            is-selected: SettingsAdapter.color-seed == "#1971C2";
+                                            clicked => {
+                                                SettingsAdapter.color-seed = "#1971C2";
+                                                SettingsAdapter.color-seed-changed("#1971C2");
+                                            }
+                                        }
+                                        ColorSeedChip {
+                                            chip-color: #0CA678;
+                                            is-selected: SettingsAdapter.color-seed == "#0CA678";
+                                            clicked => {
+                                                SettingsAdapter.color-seed = "#0CA678";
+                                                SettingsAdapter.color-seed-changed("#0CA678");
+                                            }
+                                        }
+                                        ColorSeedChip {
+                                            chip-color: #2F9E44;
+                                            is-selected: SettingsAdapter.color-seed == "#2F9E44";
+                                            clicked => {
+                                                SettingsAdapter.color-seed = "#2F9E44";
+                                                SettingsAdapter.color-seed-changed("#2F9E44");
+                                            }
+                                        }
+                                    }
+
+                                    HorizontalLayout {
+                                        spacing: Metrics.spacing-lg;
+                                        alignment: center;
+
+                                        ColorSeedChip {
+                                            chip-color: #F59F00;
+                                            is-selected: SettingsAdapter.color-seed == "#F59F00";
+                                            clicked => {
+                                                SettingsAdapter.color-seed = "#F59F00";
+                                                SettingsAdapter.color-seed-changed("#F59F00");
+                                            }
+                                        }
+                                        ColorSeedChip {
+                                            chip-color: #F76707;
+                                            is-selected: SettingsAdapter.color-seed == "#F76707";
+                                            clicked => {
+                                                SettingsAdapter.color-seed = "#F76707";
+                                                SettingsAdapter.color-seed-changed("#F76707");
+                                            }
+                                        }
+                                        ColorSeedChip {
+                                            chip-color: #E03131;
+                                            is-selected: SettingsAdapter.color-seed == "#E03131";
+                                            clicked => {
+                                                SettingsAdapter.color-seed = "#E03131";
+                                                SettingsAdapter.color-seed-changed("#E03131");
+                                            }
+                                        }
+                                        ColorSeedChip {
+                                            chip-color: #D6336C;
+                                            is-selected: SettingsAdapter.color-seed == "#D6336C";
+                                            clicked => {
+                                                SettingsAdapter.color-seed = "#D6336C";
+                                                SettingsAdapter.color-seed-changed("#D6336C");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Divider { }
+
+                            // Palette Style Selector
+                            VerticalLayout {
+                                spacing: Metrics.spacing-sm;
+
+                                SettingHeader {
+                                    title: @tr("Palette Style");
+                                    subtitle: @tr("Material 3 color generation variant for tonal palettes.");
+                                }
+
+                                VerticalLayout {
+                                    spacing: Metrics.spacing-xs;
+
+                                    SegmentedControl {
+                                        options: [@tr("Tonal Spot"), @tr("Vivid"), @tr("Expressive")];
+                                        selected: SettingsAdapter.palette-style < 3 ? SettingsAdapter.palette-style : -1;
+                                        changed(i) => {
+                                            SettingsAdapter.palette-style = i;
+                                            SettingsAdapter.palette-style-changed(i);
+                                        }
+                                    }
+
+                                    SegmentedControl {
+                                        options: [@tr("Fruit Salad"), @tr("Rainbow"), @tr("Spritz"), @tr("Monochrome")];
+                                        selected: SettingsAdapter.palette-style >= 3 ? (SettingsAdapter.palette-style - 3) : -1;
+                                        changed(i) => {
+                                            SettingsAdapter.palette-style = i + 3;
+                                            SettingsAdapter.palette-style-changed(i + 3);
+                                        }
+                                    }
+                                }
+                            }
+
+                            Divider { }
+
+                            // Contrast Level Selector
+                            VerticalLayout {
+                                spacing: Metrics.spacing-sm;
+
+                                SettingHeader {
+                                    title: @tr("Contrast");
+                                    subtitle: @tr("Increases luminance separation between surfaces and content.");
+                                }
+
+                                SegmentedControl {
+                                    options: [@tr("Standard"), @tr("Medium"), @tr("High")];
+                                    selected: SettingsAdapter.contrast-level;
+                                    changed(i) => {
+                                        SettingsAdapter.contrast-level = i;
+                                        SettingsAdapter.contrast-level-changed(i);
                                     }
                                 }
                             }

@@ -24,6 +24,7 @@ origiri-mobile = { workspace = true }
 origiri-richtext = { workspace = true }
 origiri-richtext-flow = { workspace = true }
 origiri-selection = { workspace = true }
+origiri-theme = { workspace = true }
 
 #= Crates.io
 anyhow = { workspace = true }

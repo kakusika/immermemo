@@ -83,7 +83,7 @@ component NavItem inherits Rectangle {
                 width: 60px * Metrics.ui-scale;
                 height: 36px * Metrics.ui-scale;
                 border-radius: self.height / 2;
-                background: root.active ? Palette.accent-background.with-alpha(0.18) : transparent;
+                background: root.active ? Colors.primary-container : transparent;
                 animate background {
                     duration: 150ms;
                     easing: ease-out;
@@ -91,7 +91,7 @@ component NavItem inherits Rectangle {
 
                 Icon {
                     source: root.icon;
-                    color: root.active ? Palette.accent-background : Colors.muted;
+                    color: root.active ? Colors.primary : Colors.muted;
                     width: 28px * Metrics.ui-scale;
                     height: 28px * Metrics.ui-scale;
                     x: (parent.width - self.width) / 2;
@@ -137,7 +137,7 @@ component NavItem inherits Rectangle {
             text: root.label;
             font-size: Metrics.font-sm;
             font-weight: root.active ? 600 : 500;
-            color: root.active ? Palette.accent-background : Colors.muted;
+            color: root.active ? Colors.primary : Colors.muted;
             horizontal-alignment: center;
             animate color {
                 duration: 120ms;

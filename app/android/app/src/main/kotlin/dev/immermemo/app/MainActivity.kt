@@ -132,6 +132,57 @@ class MainActivity : NativeActivity() {
             }
     }
 
+    /**
+     * Retrieves the Android wallpaper primary seed color (ARGB integer).
+     * Falls back to colorAccent if wallpaper extraction is unavailable or below API 27.
+     */
+    @Suppress("unused")
+    fun getWallpaperSeedColor(): Int {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
+            try {
+                val wm = android.app.WallpaperManager.getInstance(this)
+                val colors = wm.getWallpaperColors(android.app.WallpaperManager.FLAG_SYSTEM)
+                if (colors != null) {
+                    val primary = colors.primaryColor
+                    if (primary != null) {
+                        return primary.toArgb()
+                    }
+                }
+            } catch (_: Throwable) {}
+        }
+        val typedValue = android.util.TypedValue()
+        if (theme.resolveAttribute(android.R.attr.colorAccent, typedValue, true)) {
+            return getColor(typedValue.resourceId)
+        }
+        return 0
+    }
+
+    /**
+     * Retrieves whether the Android system is currently in Dark Theme mode.
+     */
+    @Suppress("unused")
+    fun isSystemInDarkTheme(): Boolean {
+        val nightModeFlags = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        return nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    }
+
+    /**
+     * Retrieves the system contrast level (-1.0 to 1.0, with 0.0 standard default).
+     * Supported on Android 14+ (API 34+).
+     */
+    @Suppress("unused")
+    fun getSystemContrast(): Float {
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            try {
+                val um = getSystemService(android.app.UiModeManager::class.java)
+                if (um != null) {
+                    return um.contrast
+                }
+            } catch (_: Throwable) {}
+        }
+        return 0f
+    }
+
     companion object {
         private const val SPLASH_TIMEOUT_MS = 500L
     }
