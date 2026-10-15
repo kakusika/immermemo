@@ -550,7 +550,7 @@ export component App inherits Window {
             return reject;
         }
 
-        // Layer 1: Content Area with 3 pages (swiping disabled to free gestures)
+        // Layer 1: Content Area (instant screen switching without horizontal sliding)
         content-box := Rectangle {
             x: 0px;
             y: 0px;
@@ -560,10 +560,11 @@ export component App inherits Window {
 
             // Screen 0: Home
             home-screen := HomeScreen {
-                x: (0 - root.active-tab) * parent.width;
+                x: 0px;
                 y: 0px;
                 width: parent.width;
                 height: parent.height;
+                visible: root.active-tab == 0;
                 inset-top: root.inset-top;
                 inset-bottom: root.screen-inset-bottom;
                 vault-name: root.current-vault-name;
@@ -597,19 +598,15 @@ export component App inherits Window {
                 dismiss-sync-error => {
                     root.dismiss-sync-error();
                 }
-
-                animate x {
-                    duration: 220ms;
-                    easing: ease-out;
-                }
             }
 
             // Screen 1: Search
             search-screen := SearchScreen {
-                x: (1 - root.active-tab) * parent.width;
+                x: 0px;
                 y: 0px;
                 width: parent.width;
                 height: parent.height;
+                visible: root.active-tab == 1;
                 inset-top: root.inset-top;
                 inset-bottom: root.screen-inset-bottom;
                 query <=> root.search-query;
@@ -621,19 +618,15 @@ export component App inherits Window {
                     root.select(i);
                     root.open-note-sheet();
                 }
-
-                animate x {
-                    duration: 220ms;
-                    easing: ease-out;
-                }
             }
 
             // Screen 2: Files / Notes list (Library)
             files-screen := FilesScreen {
-                x: (2 - root.active-tab) * parent.width;
+                x: 0px;
                 y: 0px;
                 width: parent.width;
                 height: parent.height;
+                visible: root.active-tab == 2;
                 current: root.current;
                 status: root.status;
                 syncing: root.syncing;
@@ -660,11 +653,6 @@ export component App inherits Window {
                 navigate-folder(key) => { root.navigate-directory-folder(key); }
                 trigger-haptic => { root.trigger-haptic(); }
                 trigger-heavy-haptic => { root.trigger-heavy-haptic(); }
-
-                animate x {
-                    duration: 220ms;
-                    easing: ease-out;
-                }
             }
         }
 
