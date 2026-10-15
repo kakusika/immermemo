@@ -1,8 +1,8 @@
 =@dir(tmtroot)
 
--@dir(schema)    Tometの設定ファイル
--@dir(dev)       開発用メモ
-  -@dir(adr)     現在の実装には記述できない、却下された機能を記録する。
--@dir(docs)      使用者に向けたドキュメント
--@dir(generated) 自動生成されたドキュメントは全てここに集約する。
--@dir(locales)   多言語対応。
+-@dir(schema)    | Tometの設定ファイル
+-@dir(dev)       | 開発用メモ
+  -@dir(adr)     | 現在の実装には記述できない、却下された機能を記録する。
+-@dir(docs)      | 使用者に向けたドキュメント
+-@dir(generated) | 自動生成されたドキュメントは全てここに集約する。
+-@dir(locales)   | 多言語対応。

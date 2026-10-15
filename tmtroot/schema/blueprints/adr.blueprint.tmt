@@ -1,0 +1,13 @@
+@kind(blueprint)
+@blueprint(adr){
+  version: "1.0",
+  description: "adr"
+}
+
+=[ title ]
+
+==#(background)
+
+==#(why)
+
+==#(decision)
