@@ -921,7 +921,7 @@ msgstr "複数端末での自動同期とバックアップ。"
 #: app/ui/sheets/settings/settings.slint:828
 msgctxt "SettingsSheet"
 msgid "Sign in to automatically create and sync a private notes repository."
-msgstr ""
+msgstr "サインインすると、プライベートなノートリポジトリが自動的に作成・同期されます。"
 "サインインすると、専用のプライベートリポジトリを自動作"
 "成して同期します。"
 
@@ -1944,3 +1944,59 @@ msgstr "保管庫"
 
 
 
+
+msgctxt "App"
+msgid "More Actions"
+msgstr "その他のアクション"
+
+msgctxt "App"
+msgid "Delete selected notes?"
+msgstr "選択したノートを削除しますか？"
+
+msgctxt "BottomNavBar"
+msgid "Sync"
+msgstr "同期"
+
+msgctxt "BottomNavConfigItem"
+msgid "New Note"
+msgstr "新しいノート"
+
+msgctxt "BottomNavConfigItem"
+msgid "Sync"
+msgstr "同期"
+
+msgctxt "BottomNavConfigItem"
+msgid "Switch Vault"
+msgstr "保管庫の切り替え"
+
+msgctxt "BottomNavConfigItem"
+msgid "Settings"
+msgstr "設定"
+
+msgctxt "SettingsSheet"
+msgid "Appearance"
+msgstr "外観"
+
+msgctxt "SettingsSheet"
+msgid "Navigation & Views"
+msgstr "ナビゲーションと画面"
+
+msgctxt "SettingsSheet"
+msgid "Vaults & Sync"
+msgstr "保管庫と同期"
+
+msgctxt "SettingsSheet"
+msgid "Other & Info"
+msgstr "その他・情報"
+
+msgctxt "SettingsSheet"
+msgid "Display"
+msgstr "表示"
+
+msgctxt "SettingsSheet"
+msgid "Navigation"
+msgstr "ナビゲーション"
+
+msgctxt "SelectionBar"
+msgid "{} selected"
+msgstr "{}件選択中"

@@ -163,10 +163,17 @@ screenshot name="screenshot.png":
 
 # Regenerate the translation template from every @tr(...) in app/ui,
 # to see what's missing from (or stale in) a .po file under
-# app/translations/. Requires `cargo install slint-tr-extractor`.
+# app/translations/. Requires `slint-tr-extractor`.
 tr-extract:
-    cd app && find ui -name '*.slint' | xargs slint-tr-extractor -o /tmp/immermemo-slint.pot
-    @echo "Wrote /tmp/immermemo-slint.pot"
+    python3 scripts/i18n.py extract
+
+# Check for missing or untranslated strings across all languages.
+tr-check:
+    python3 scripts/i18n.py check
+
+# Extract latest template and sync/append missing strings into .po files.
+tr-sync:
+    python3 scripts/i18n.py sync
 
 # Generate and update all derived documentation across the workspace.
 docs:

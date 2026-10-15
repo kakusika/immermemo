@@ -14,6 +14,30 @@ import {
 } from "@origiri-mobile/widgets.slint";
 import { SheetDragArea } from "../components.slint";
 
+// A unified header for settings items or sections:
+// - Title in bold foreground color
+// - Optional subtitle/description in muted color
+component SettingHeader inherits VerticalLayout {
+    in property <string> title;
+    in property <string> subtitle: "";
+
+    spacing: 4px;
+
+    Text {
+        text: root.title;
+        font-size: Metrics.font-sub;
+        font-weight: 600;
+        color: Palette.foreground;
+    }
+
+    if root.subtitle != "": Text {
+        text: root.subtitle;
+        font-size: Metrics.font-sm;
+        color: Colors.muted;
+        wrap: word-wrap;
+    }
+}
+
 // A tappable row for the Settings list: icon, label, and a trailing
 // chevron to show it drills into its own sub-page.
 component CategoryRow inherits Rectangle {
@@ -705,7 +729,7 @@ export component SettingsSheet inherits Rectangle {
             }
 
             // --------------------------------------------------------
-            // Appearance Subpage (Theme, Font Size, UI Scale, Status Bar)
+            // Appearance Subpage (Appearance: Theme, UI Scale / Display: Font Size, Status Bar)
             // --------------------------------------------------------
             if root.page == 1: AppScrollView {
                 vertical-stretch: 1;
@@ -716,99 +740,95 @@ export component SettingsSheet inherits Rectangle {
                     padding-right: Metrics.gutter;
                     padding-top: 16px;
                     padding-bottom: root.inset-bottom + 24px;
-                    spacing: 16px;
+                    spacing: 24px;
 
-                    Card {
-                        content-spacing: Metrics.spacing-lg;
+                    Section {
+                        title: @tr("Appearance");
 
-                        // Theme Selector
-                        VerticalLayout {
-                            spacing: Metrics.spacing-sm;
+                        Card {
+                            content-spacing: Metrics.spacing-lg;
 
-                            Text {
-                                text: @tr("Theme");
-                                font-size: Metrics.font-sub;
-                                color: Colors.muted;
+                            // Theme Selector
+                            VerticalLayout {
+                                spacing: Metrics.spacing-sm;
+
+                                SettingHeader {
+                                    title: @tr("Theme");
+                                }
+
+                                SegmentedControl {
+                                    options: [@tr("System"), @tr("Light"), @tr("Dark")];
+                                    selected: SettingsAdapter.theme-choice;
+                                    changed(i) => {
+                                        SettingsAdapter.theme-choice = i;
+                                        SettingsAdapter.theme-changed(i);
+                                    }
+                                }
                             }
 
-                            SegmentedControl {
-                                options: [@tr("System"), @tr("Light"), @tr("Dark")];
-                                selected: SettingsAdapter.theme-choice;
-                                changed(i) => {
-                                    SettingsAdapter.theme-choice = i;
-                                    SettingsAdapter.theme-changed(i);
+                            Divider { }
+
+                            // UI Scale Selector
+                            VerticalLayout {
+                                spacing: Metrics.spacing-sm;
+
+                                SettingHeader {
+                                    title: @tr("UI Scale");
+                                }
+
+                                SegmentedControl {
+                                    options: ["90%", "100%", "110%", "125%"];
+                                    selected: Metrics.ui-scale < 0.95 ? 0 : (Metrics.ui-scale <= 1.05 ? 1 : (Metrics.ui-scale <= 1.18 ? 2 : 3));
+                                    changed(i) => {
+                                        Metrics.ui-scale = [0.9, 1.0, 1.1, 1.25][i];
+                                    }
                                 }
                             }
                         }
+                    }
 
-                        Divider { }
+                    Section {
+                        title: @tr("Display");
 
-                        // Font Size Selector
-                        VerticalLayout {
-                            spacing: Metrics.spacing-sm;
+                        Card {
+                            content-spacing: Metrics.spacing-lg;
 
-                            Text {
-                                text: @tr("Editor Font Size");
-                                font-size: Metrics.font-sub;
-                                color: Colors.muted;
-                            }
+                            // Font Size Selector
+                            VerticalLayout {
+                                spacing: Metrics.spacing-sm;
 
-                            SegmentedControl {
-                                options: [@tr("Small (14)"), @tr("Medium (17)"), @tr("Large (20)")];
-                                selected: SettingsAdapter.font-size-choice;
-                                changed(i) => {
-                                    SettingsAdapter.font-size-choice = i;
-                                    SettingsAdapter.font-size-changed(i);
+                                SettingHeader {
+                                    title: @tr("Editor Font Size");
+                                }
+
+                                SegmentedControl {
+                                    options: [@tr("Small (14)"), @tr("Medium (17)"), @tr("Large (20)")];
+                                    selected: SettingsAdapter.font-size-choice;
+                                    changed(i) => {
+                                        SettingsAdapter.font-size-choice = i;
+                                        SettingsAdapter.font-size-changed(i);
+                                    }
                                 }
                             }
-                        }
 
-                        Divider { }
+                            Divider { }
 
-                        // UI Scale Selector
-                        VerticalLayout {
-                            spacing: Metrics.spacing-sm;
+                            // Status Bar Selector
+                            VerticalLayout {
+                                spacing: Metrics.spacing-sm;
 
-                            Text {
-                                text: @tr("UI Scale");
-                                font-size: Metrics.font-sub;
-                                color: Colors.muted;
-                            }
-
-                            SegmentedControl {
-                                options: ["90%", "100%", "110%", "125%"];
-                                selected: Metrics.ui-scale < 0.95 ? 0 : (Metrics.ui-scale <= 1.05 ? 1 : (Metrics.ui-scale <= 1.18 ? 2 : 3));
-                                changed(i) => {
-                                    Metrics.ui-scale = [0.9, 1.0, 1.1, 1.25][i];
+                                SettingHeader {
+                                    title: @tr("Status Bar");
+                                    subtitle: @tr("Hide it while editing a note (for a less distracting full-screen view), or everywhere in the app.");
                                 }
-                            }
-                        }
 
-                        Divider { }
-
-                        // Status Bar Selector
-                        VerticalLayout {
-                            spacing: Metrics.spacing-sm;
-
-                            Text {
-                                text: @tr("Status Bar");
-                                font-size: Metrics.font-sub;
-                                color: Colors.muted;
-                            }
-
-                            Text {
-                                text: @tr("Hide it while editing a note (for a less distracting full-screen view), or everywhere in the app.");
-                                font-size: Metrics.font-sm;
-                                color: Colors.muted;
-                                wrap: word-wrap;
-                            }
-
-                            SegmentedControl {
-                                options: [@tr("Show"), @tr("Hide While Editing"), @tr("Always Hide")];
-                                selected: SettingsAdapter.status-bar-choice;
-                                changed(i) => {
-                                    SettingsAdapter.status-bar-choice = i;
-                                    SettingsAdapter.status-bar-changed(i);
+                                SegmentedControl {
+                                    options: [@tr("Show"), @tr("Hide While Editing"), @tr("Always Hide")];
+                                    selected: SettingsAdapter.status-bar-choice;
+                                    changed(i) => {
+                                        SettingsAdapter.status-bar-choice = i;
+                                        SettingsAdapter.status-bar-changed(i);
+                                    }
                                 }
                             }
                         }
@@ -930,22 +950,9 @@ export component SettingsSheet inherits Rectangle {
                     Card {
                         content-spacing: Metrics.spacing-md;
 
-                        VerticalLayout {
-                            spacing: 4px;
-
-                            Text {
-                                text: @tr("Bottom Navigation Bar");
-                                font-size: Metrics.font-sub;
-                                font-weight: 600;
-                                color: Palette.foreground;
-                            }
-
-                            Text {
-                                text: @tr("Choose which items appear on the bottom navigation bar.");
-                                font-size: Metrics.font-sm;
-                                color: Colors.muted;
-                                wrap: word-wrap;
-                            }
+                        SettingHeader {
+                            title: @tr("Bottom Navigation Bar");
+                            subtitle: @tr("Choose which items appear on the bottom navigation bar.");
                         }
 
                         Divider { }
@@ -1018,17 +1025,9 @@ export component SettingsSheet inherits Rectangle {
                         VerticalLayout {
                             spacing: Metrics.spacing-sm;
 
-                            Text {
-                                text: @tr("Default View");
-                                font-size: Metrics.font-sub;
-                                color: Colors.muted;
-                            }
-
-                            Text {
-                                text: @tr("Choose how folder contents are displayed by default.");
-                                font-size: Metrics.font-sm;
-                                color: Colors.muted;
-                                wrap: word-wrap;
+                            SettingHeader {
+                                title: @tr("Default View");
+                                subtitle: @tr("Choose how folder contents are displayed by default.");
                             }
 
                             SegmentedControl {
@@ -1060,21 +1059,9 @@ export component SettingsSheet inherits Rectangle {
                     Card {
                         content-spacing: Metrics.spacing-md;
 
-                        VerticalLayout {
-                            spacing: Metrics.spacing-sm;
-
-                            Text {
-                                text: @tr("Daily Notes Settings");
-                                font-size: Metrics.font-sub;
-                                color: Colors.muted;
-                            }
-
-                            Text {
-                                text: @tr("Settings for daily notes and calendar view will appear here.");
-                                font-size: Metrics.font-sm;
-                                color: Colors.muted;
-                                wrap: word-wrap;
-                            }
+                        SettingHeader {
+                            title: @tr("Daily Notes Settings");
+                            subtitle: @tr("Settings for daily notes and calendar view will appear here.");
                         }
                     }
                 }
@@ -1097,21 +1084,9 @@ export component SettingsSheet inherits Rectangle {
                     Card {
                         content-spacing: Metrics.spacing-md;
 
-                        VerticalLayout {
-                            spacing: Metrics.spacing-sm;
-
-                            Text {
-                                text: @tr("Starred Settings");
-                                font-size: Metrics.font-sub;
-                                color: Colors.muted;
-                            }
-
-                            Text {
-                                text: @tr("Settings for starred and favorite notes will appear here.");
-                                font-size: Metrics.font-sm;
-                                color: Colors.muted;
-                                wrap: word-wrap;
-                            }
+                        SettingHeader {
+                            title: @tr("Starred Settings");
+                            subtitle: @tr("Settings for starred and favorite notes will appear here.");
                         }
                     }
                 }
@@ -1134,21 +1109,9 @@ export component SettingsSheet inherits Rectangle {
                     Card {
                         content-spacing: Metrics.spacing-md;
 
-                        VerticalLayout {
-                            spacing: Metrics.spacing-sm;
-
-                            Text {
-                                text: @tr("Recent Settings");
-                                font-size: Metrics.font-sub;
-                                color: Colors.muted;
-                            }
-
-                            Text {
-                                text: @tr("Settings for edit history and timeline will appear here.");
-                                font-size: Metrics.font-sm;
-                                color: Colors.muted;
-                                wrap: word-wrap;
-                            }
+                        SettingHeader {
+                            title: @tr("Recent Settings");
+                            subtitle: @tr("Settings for edit history and timeline will appear here.");
                         }
                     }
                 }
@@ -1171,21 +1134,9 @@ export component SettingsSheet inherits Rectangle {
                     Card {
                         content-spacing: Metrics.spacing-md;
 
-                        VerticalLayout {
-                            spacing: Metrics.spacing-sm;
-
-                            Text {
-                                text: @tr("Graph View Settings");
-                                font-size: Metrics.font-sub;
-                                color: Colors.muted;
-                            }
-
-                            Text {
-                                text: @tr("Settings for interactive note graph will appear here.");
-                                font-size: Metrics.font-sm;
-                                color: Colors.muted;
-                                wrap: word-wrap;
-                            }
+                        SettingHeader {
+                            title: @tr("Graph View Settings");
+                            subtitle: @tr("Settings for interactive note graph will appear here.");
                         }
                     }
                 }
