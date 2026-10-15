@@ -35,6 +35,7 @@ origiri-icons = { git = "https://github.com/kakusika/origiri-frameworks.git" }
 origiri-mobile = { git = "https://github.com/kakusika/origiri-frameworks.git" }
 origiri-richtext = { git = "https://github.com/kakusika/origiri-frameworks.git" }
 origiri-richtext-flow = { git = "https://github.com/kakusika/origiri-frameworks.git" }
+origiri-selection = { git = "https://github.com/kakusika/origiri-frameworks.git" }
 
 #= Tomet
 tomet = { git = "https://github.com/tomet-lang/tomet.git" }

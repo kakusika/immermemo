@@ -24,7 +24,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use immermemo_core::directory;
-use slint::{ModelRc, SharedString, VecModel};
+use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::{App, BreadcrumbSegment, DirectoryEntry, NoteBodyItemView, NotePropertyEntry};
 
@@ -36,6 +36,8 @@ pub struct Session {
     pub history_preview_cache: HashMap<String, (f32, ModelRc<NoteBodyItemView>)>,
     /// Whether directory folder entries need rebuilding when the Directory page is viewed.
     pub directory_views_dirty: bool,
+    /// Multi-selection state for notes across the app.
+    pub selection: origiri_selection::Selection,
 }
 
 impl std::ops::Deref for Session {
@@ -57,6 +59,7 @@ impl Session {
             core,
             history_preview_cache: HashMap::new(),
             directory_views_dirty: true,
+            selection: origiri_selection::Selection::default(),
         }
     }
 }
@@ -150,7 +153,7 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
 
     let folder_entries: Vec<DirectoryEntry> = folder_entries_raw
         .into_iter()
-        .map(|e| to_entry_view(e, &s.notes, &icon_by_path))
+        .map(|e| to_entry_view(e, &s.notes, &icon_by_path, &s.selection))
         .collect();
     let breadcrumb: Vec<BreadcrumbSegment> = directory::build_breadcrumb(&s.current_folder)
         .into_iter()
@@ -168,13 +171,17 @@ fn to_entry_view(
     e: directory::DirectoryEntry,
     notes: &[PathBuf],
     icon_by_path: &std::collections::HashMap<PathBuf, slint::Image>,
+    selection: &origiri_selection::Selection,
 ) -> DirectoryEntry {
-    let icon_image = usize::try_from(e.note_index)
-        .ok()
-        .and_then(|i| notes.get(i))
-        .and_then(|path| icon_by_path.get(path))
-        .cloned()
-        .unwrap_or_default();
+    let (icon_image, path_str) = match usize::try_from(e.note_index).ok().and_then(|i| notes.get(i)) {
+        Some(path) => {
+            let p_str = path.to_string_lossy().to_string();
+            let icon = icon_by_path.get(path).cloned().unwrap_or_default();
+            (icon, p_str)
+        }
+        None => (slint::Image::default(), String::new()),
+    };
+    let is_selected = !e.is_folder && !path_str.is_empty() && selection.is_selected(&path_str);
     DirectoryEntry {
         is_folder: e.is_folder,
         key: e.key.into(),
@@ -182,7 +189,31 @@ fn to_entry_view(
         note_index: e.note_index,
         has_conflict: e.has_conflict,
         icon_image,
+        path: path_str.into(),
+        is_selected,
     }
+}
+
+/// Syncs the current `origiri_selection::Selection` count, mode, and paths to the `SelectionAdapter`
+/// global in Slint and refreshes directory views.
+pub fn sync_selection_to_ui(app: &App, session: &Rc<RefCell<Session>>) {
+    let sel = session.borrow();
+    let count = sel.selection.len() as i32;
+    let mode = count > 0;
+    let paths: Vec<SharedString> = sel
+        .selection
+        .paths()
+        .into_iter()
+        .map(SharedString::from)
+        .collect();
+    drop(sel);
+
+    let adapter = app.global::<crate::SelectionAdapter>();
+    adapter.set_selection_count(count);
+    adapter.set_selection_mode(mode);
+    adapter.set_selected_paths(ModelRc::new(VecModel::from(paths)));
+
+    refresh_directory_views(app, session);
 }
 
 pub fn navigate_directory_folder(app: &App, session: &Rc<RefCell<Session>>, key: &str) {

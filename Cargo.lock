@@ -2551,6 +2551,7 @@ dependencies = [
  "origiri-mobile",
  "origiri-richtext",
  "origiri-richtext-flow",
+ "origiri-selection",
  "qrcode",
  "serde",
  "serde_json",
@@ -3807,7 +3808,7 @@ dependencies = [
 [[package]]
 name = "origiri-icons"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origiri-frameworks.git#5b0472d60a0487f60ca373040e44e0d08f3f0884"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#327b47fd94eac8cb9c3b6dacde391cf4b0462c6a"
 dependencies = [
  "flate2",
 ]
@@ -3815,12 +3816,12 @@ dependencies = [
 [[package]]
 name = "origiri-mobile"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origiri-frameworks.git#5b0472d60a0487f60ca373040e44e0d08f3f0884"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#327b47fd94eac8cb9c3b6dacde391cf4b0462c6a"
 
 [[package]]
 name = "origiri-richtext"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origiri-frameworks.git#5b0472d60a0487f60ca373040e44e0d08f3f0884"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#327b47fd94eac8cb9c3b6dacde391cf4b0462c6a"
 dependencies = [
  "origiri-richtext-flow",
 ]
@@ -3828,7 +3829,12 @@ dependencies = [
 [[package]]
 name = "origiri-richtext-flow"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origiri-frameworks.git#5b0472d60a0487f60ca373040e44e0d08f3f0884"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#327b47fd94eac8cb9c3b6dacde391cf4b0462c6a"
+
+[[package]]
+name = "origiri-selection"
+version = "0.1.0"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#327b47fd94eac8cb9c3b6dacde391cf4b0462c6a"
 
 [[package]]
 name = "os_pipe"

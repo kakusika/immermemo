@@ -213,6 +213,7 @@ pub fn run(
         status_bar_choice_cell,
     );
     callbacks::bind_sync_conflict_callbacks(&app, &session);
+    callbacks::bind_selection_callbacks(&app, &session);
     github::bind_github_callbacks(&app, &session);
     forgejo::bind_forgejo_callbacks(&app, &session);
     gitlab::bind_gitlab_callbacks(&app, &session);

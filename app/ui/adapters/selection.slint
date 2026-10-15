@@ -1,0 +1,14 @@
+// Global adapter managing multi-selection state, counts, and bulk actions.
+
+export global SelectionAdapter {
+    in property <int> selection-count: 0;
+    in property <bool> selection-mode: false;
+    in property <[string]> selected-paths: [];
+
+    callback toggle(string);
+    callback select-only(string);
+    callback select-all-in-view();
+    callback clear();
+    callback delete-selected();
+    callback request-action();
+}

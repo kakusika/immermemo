@@ -1,0 +1,91 @@
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+import { IconButton } from "@origiri-mobile/widgets.slint";
+import { SelectionAdapter } from "../adapters/selection.slint";
+
+export component SelectionBar inherits Rectangle {
+    callback select-all();
+    callback trigger-action();
+    callback clear();
+
+    width: content-layout.preferred-width;
+    height: 48px * Metrics.ui-scale;
+    border-radius: 24px * Metrics.ui-scale;
+    background: Colors.surface;
+    border-width: 1px;
+    border-color: Colors.card-border;
+    drop-shadow-blur: 16px;
+    drop-shadow-offset-y: 4px;
+    drop-shadow-color: Palette.foreground.with-alpha(Palette.color-scheme == ColorScheme.dark ? 0.35 : 0.15);
+
+    content-layout := HorizontalLayout {
+        padding-left: Metrics.spacing-md;
+        padding-right: Metrics.spacing-xs;
+        spacing: Metrics.spacing-xs;
+
+        // Selection count badge and text
+        VerticalLayout {
+            alignment: center;
+            HorizontalLayout {
+                spacing: 6px * Metrics.ui-scale;
+                VerticalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 20px * Metrics.ui-scale;
+                        height: 20px * Metrics.ui-scale;
+                        border-radius: 10px * Metrics.ui-scale;
+                        background: Palette.accent-background;
+                        Icon {
+                            source: TablerIcons.check;
+                            width: 13px * Metrics.ui-scale;
+                            height: 13px * Metrics.ui-scale;
+                            color: Palette.accent-foreground;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+                }
+                Text {
+                    text: @tr("{} selected", SelectionAdapter.selection-count);
+                    font-size: Metrics.font-sm + 1px;
+                    font-weight: 600;
+                    color: Palette.foreground;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Small spacer
+        Rectangle {
+            width: 4px * Metrics.ui-scale;
+        }
+
+        // Select All in current view
+        VerticalLayout {
+            alignment: center;
+            IconButton {
+                icon: TablerIcons.checkbox;
+                clicked => { root.select-all(); }
+            }
+        }
+
+        // Bulk action (Delete)
+        VerticalLayout {
+            alignment: center;
+            IconButton {
+                icon: TablerIcons.trash;
+                clicked => { root.trigger-action(); }
+            }
+        }
+
+        // Clear selection / Exit mode
+        VerticalLayout {
+            alignment: center;
+            IconButton {
+                icon: TablerIcons.x;
+                clicked => { root.clear(); }
+            }
+        }
+    }
+}

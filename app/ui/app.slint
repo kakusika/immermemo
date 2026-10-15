@@ -14,7 +14,7 @@ import {
 } from "pages/files.slint";
 import { SearchScreen } from "pages/search.slint";
 import { VaultSheet } from "sheets/vault.slint";
-import { SettingsSheet } from "sheets/settings/settings.slint";
+import { SettingsSheet } from "sheets/settings.slint";
 import { ConflictSheet } from "sheets/conflict.slint";
 import { HistorySheet } from "sheets/history.slint";
 import { VaultHistorySheet } from "sheets/vault_history.slint";
@@ -28,8 +28,11 @@ import {
 export { PickerIconEntry } from "sheets/icon_picker.slint";
 import { NotePropertyEntry } from "pages/editor/properties.slint";
 export { NotePropertyEntry }
-import { SettingsAdapter, VaultData } from "sheets/settings/adapter.slint";
+import { SettingsAdapter, VaultData } from "adapters/settings.slint";
 export { SettingsAdapter, VaultData }
+import { SelectionAdapter } from "adapters/selection.slint";
+export { SelectionAdapter }
+import { SelectionBar } from "widgets/selection_bar.slint";
 
 // Drives one full-screen sheet's "hop up from the bottom, swipe down to
 // dismiss" animation -- the same drag math `App` already runs for the
@@ -261,6 +264,7 @@ export component App inherits Window {
     in-out property <string> icon-picker-query;
     in property <[PickerIconEntry]> icon-picker-results: [];
     in-out property <bool> delete-confirm-open: false;
+    in-out property <bool> delete-selected-confirm-open: false;
     in-out property <length> mini-card-reveal-dx: 0px;
     in-out property <bool> is-dragging-mini-reveal: false;
     in-out property <bool> delete-vault-confirm-open: false;
@@ -384,6 +388,14 @@ export component App inherits Window {
         }
         if (root.delete-confirm-open) {
             root.delete-confirm-open = false;
+            return true;
+        }
+        if (root.delete-selected-confirm-open) {
+            root.delete-selected-confirm-open = false;
+            return true;
+        }
+        if (SelectionAdapter.selection-mode) {
+            SelectionAdapter.clear();
             return true;
         }
         if (root.note-menu-index >= 0) {
@@ -901,6 +913,27 @@ export component App inherits Window {
             }
         }
 
+        // Floating Selection Bar anchored above mini note card (or bottom bar when mini note card is hidden), right-aligned
+        selection-bar := SelectionBar {
+            property <bool> mini-visible: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open && !root.settings-sheet-open;
+            x: parent.width - self.width - Metrics.spacing-md;
+            y: mini-visible
+                ? root.mini-card-resting-y - self.height - 8px * Metrics.ui-scale
+                : (root.height - root.bottom-bar-total-height) - self.height - 8px * Metrics.ui-scale;
+            visible: SelectionAdapter.selection-mode && root.keyboard == 0px && root.sheet-progress < 0.1 && !root.settings-sheet-open && !root.vault-sheet-open;
+            animate y { duration: 180ms; easing: ease-out; }
+
+            select-all => {
+                SelectionAdapter.select-all-in-view();
+            }
+            trigger-action => {
+                root.delete-selected-confirm-open = true;
+            }
+            clear => {
+                SelectionAdapter.clear();
+            }
+        }
+
         ActionSheet {
             open: root.more-menu-open;
             narrow: root.narrow;
@@ -1087,6 +1120,20 @@ export component App inherits Window {
                 root.confirm-delete();
             }
             cancel => { root.delete-confirm-open = false; }
+        }
+
+        ConfirmDialog {
+            open: root.delete-selected-confirm-open;
+            narrow: root.narrow;
+            title: @tr("Delete selected notes?");
+            body: @tr("This can't be undone from here.");
+            confirm-text: @tr("Delete");
+            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+            confirm => {
+                root.delete-selected-confirm-open = false;
+                SelectionAdapter.delete-selected();
+            }
+            cancel => { root.delete-selected-confirm-open = false; }
         }
 
         Rectangle {

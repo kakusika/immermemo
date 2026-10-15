@@ -137,6 +137,8 @@ fn main() {
                 note_index: -1,
                 has_conflict: false,
                 icon_image: slint::Image::default(),
+                path: "".into(),
+                is_selected: false,
             },
             DirectoryEntry {
                 is_folder: true,
@@ -145,6 +147,8 @@ fn main() {
                 note_index: -1,
                 has_conflict: false,
                 icon_image: slint::Image::default(),
+                path: "".into(),
+                is_selected: false,
             },
             DirectoryEntry {
                 is_folder: false,
@@ -153,6 +157,8 @@ fn main() {
                 note_index: 0,
                 has_conflict: false,
                 icon_image: slint::Image::default(),
+                path: "".into(),
+                is_selected: false,
             },
             DirectoryEntry {
                 is_folder: false,
@@ -161,6 +167,8 @@ fn main() {
                 note_index: 4,
                 has_conflict: false,
                 icon_image: slint::Image::default(),
+                path: "".into(),
+                is_selected: false,
             },
         ]))
     };
@@ -190,6 +198,8 @@ fn main() {
         note_index: 1,
         has_conflict: true,
         icon_image: slint::Image::default(),
+        path: "".into(),
+        is_selected: false,
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(
@@ -219,6 +229,8 @@ fn main() {
         note_index: 1,
         has_conflict: true,
         icon_image: slint::Image::default(),
+        path: "".into(),
+        is_selected: false,
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(
@@ -249,6 +261,8 @@ fn main() {
         note_index: 1,
         has_conflict: true,
         icon_image: slint::Image::default(),
+        path: "".into(),
+        is_selected: false,
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(

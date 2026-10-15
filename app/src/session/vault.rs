@@ -124,11 +124,13 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     s.editor = EditorState::default();
     s.note_nav.clear();
     s.history_preview_cache.clear();
+    s.selection.clear();
     s.pending_auto_sync = false;
     s.last_synced_at = None;
     drop(s);
 
     sync_nav_state(app, session);
+    super::sync_selection_to_ui(app, session);
     app.set_search_query(SharedString::new());
     app.set_remote_configured(remote.is_some());
     crate::update_provider_ui_state(app, remote.as_deref());
