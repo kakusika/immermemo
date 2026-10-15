@@ -57,8 +57,8 @@ emulator:
 emulator-stop:
     adb emu kill
 
-android_cflags := "-fno-unwind-tables -fno-asynchronous-unwind-tables -ffunction-sections -fdata-sections -DOPENSSL_NO_SM2_PRECOMP -DSQLITE_OMIT_JSON -DSQLITE_OMIT_SHARED_CACHE -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_LIKE_DOESNT_MATCH_BLOBS"
-android_rustflags := "-C force-unwind-tables=no -C link-arg=-Wl,--icf=all"
+android_cflags := "-fno-unwind-tables -fno-asynchronous-unwind-tables -ffunction-sections -fdata-sections -DOPENSSL_NO_SM2_PRECOMP -DSQLITE_OMIT_JSON -DSQLITE_OMIT_SHARED_CACHE -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_LIKE_DOESNT_MATCH_BLOBS -DSQLITE_OMIT_UTF16 -DSQLITE_OMIT_AUTOINCREMENT -DSQLITE_OMIT_EXPLAIN -DSQLITE_OMIT_DEPRECATED -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_OMIT_PROGRESS_CALLBACK -DSQLITE_OMIT_TRACE -DSQLITE_OMIT_GET_TABLE"
+android_rustflags := "-C force-unwind-tables=no -C link-arg=-Wl,--icf=all -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--strip-all"
 
 # Build one fat APK with both aarch64 (a real phone) and x86_64 (the
 # emulator) native libraries, see app/Cargo.toml. Native libs are
@@ -80,8 +80,7 @@ apk:
     cp {{apk_raw}} {{apk}}
     @echo "Built: {{apk_universal}} (and {{apk}})"
 
-# Build a slim release APK for real devices only (aarch64, ~24 MB on-device,
-# no duplicate extracted copy -- see the `apk` recipe's comment)
+# Build a slim release APK for real devices (aarch64, ~19 MB with FemtoVG GPU renderer)
 apk-arm:
     cd app && rm -rf {{jniLibs}}
     cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo
@@ -91,7 +90,7 @@ apk-arm:
     cp {{apk_raw}} {{apk}}
     @echo "Built: {{apk_arm}} (and {{apk}})"
 
-# Build a slim release APK for the emulator only (x86_64, ~26 MB on-device)
+# Build a slim release APK for the emulator (x86_64, FemtoVG GPU renderer)
 apk-x86:
     cd app && rm -rf {{jniLibs}}
     cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
@@ -101,23 +100,18 @@ apk-x86:
     cp {{apk_raw}} {{apk}}
     @echo "Built: {{apk_x86}} (and {{apk}})"
 
-# Build a slim release APK with FemtoVG renderer (OpenGL ES) for real devices (aarch64)
-apk-arm-femtovg:
+# Build a release APK using the heavier Google Skia renderer (for comparison or testing)
+apk-arm-skia:
     cd app && rm -rf {{jniLibs}}
-    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-femtovg
+    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-skia
     cd app/android && gradle assembleRelease
     @mkdir -p {{dist}}
-    cp {{apk_raw}} {{apk_arm_femtovg}}
-    @echo "Built: {{apk_arm_femtovg}}"
+    cp {{apk_raw}} {{dist}}/immermemo-arm64-skia.apk
+    @echo "Built: {{dist}}/immermemo-arm64-skia.apk"
 
-# Build a slim release APK with FemtoVG renderer (OpenGL ES) for emulator (x86_64)
-apk-x86-femtovg:
-    cd app && rm -rf {{jniLibs}}
-    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-femtovg
-    cd app/android && gradle assembleRelease
-    @mkdir -p {{dist}}
-    cp {{apk_raw}} {{apk_x86_femtovg}}
-    @echo "Built: {{apk_x86_femtovg}}"
+# Backward-compatible aliases
+apk-arm-femtovg: apk-arm
+apk-x86-femtovg: apk-x86
 
 # Build for whatever single device/emulator adb currently sees, picking
 # its ABI automatically instead of bundling both (what `install`/`run`

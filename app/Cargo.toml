@@ -47,9 +47,9 @@ slint = { workspace = true, features = [
 slint = { workspace = true, features = ["backend-winit", "renderer-skia"] }
 
 [features]
-default = ["renderer-skia"]
-renderer-skia = ["i-slint-backend-android-activity/renderer-skia"]
+default = ["renderer-femtovg"]
 renderer-femtovg = ["i-slint-backend-android-activity/renderer-femtovg"]
+renderer-skia = ["i-slint-backend-android-activity/renderer-skia"]
 
 [target.'cfg(target_os = "android")'.dependencies]
 # For the Android Keystore token store: plain JNI calls into java.security /
