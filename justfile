@@ -7,12 +7,24 @@ device := "pixel_6"
 system_image := "system-images;android-34;google_apis;x86_64"
 package := "dev.immermemo.app"
 activity := package + "/.MainActivity"
+dist := "dist"
 jniLibs := "android/app/src/main/jniLibs"
-apk := "app/android/app/build/outputs/apk/release/app-release.apk"
+apk_raw := "app/android/app/build/outputs/apk/release/app-release.apk"
+apk := dist + "/immermemo.apk"
+apk_universal := dist + "/immermemo-universal.apk"
+apk_arm := dist + "/immermemo-arm64.apk"
+apk_arm_soft := dist + "/immermemo-arm64-software.apk"
+apk_x86 := dist + "/immermemo-x86_64.apk"
+apk_x86_soft := dist + "/immermemo-x86_64-software.apk"
 
 # List available recipes
 default:
     @just --list
+
+# Clean all aggregated build outputs in dist/
+clean-dist:
+    rm -rf {{dist}}
+    @echo "Cleaned {{dist}}/"
 
 # One-time setup: create the emulator's AVD. Safe to re-run (--force).
 avd-create:
@@ -63,6 +75,10 @@ apk:
     cd app && rm -rf {{jniLibs}}
     cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
     cd app/android && gradle assembleRelease
+    @mkdir -p {{dist}}
+    cp {{apk_raw}} {{apk_universal}}
+    cp {{apk_raw}} {{apk}}
+    @echo "Built: {{apk_universal}} (and {{apk}})"
 
 # Build a slim release APK for real devices only (aarch64, ~24 MB on-device,
 # no duplicate extracted copy -- see the `apk` recipe's comment)
@@ -70,6 +86,10 @@ apk-arm:
     cd app && rm -rf {{jniLibs}}
     cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo
     cd app/android && gradle assembleRelease
+    @mkdir -p {{dist}}
+    cp {{apk_raw}} {{apk_arm}}
+    cp {{apk_raw}} {{apk}}
+    @echo "Built: {{apk_arm}} (and {{apk}})"
 
 # Build a slim release APK with software renderer for real devices (aarch64, no Skia)
 apk-arm-soft: apk-arm-software
@@ -77,12 +97,20 @@ apk-arm-software:
     cd app && rm -rf {{jniLibs}}
     cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-software
     cd app/android && gradle assembleRelease
+    @mkdir -p {{dist}}
+    cp {{apk_raw}} {{apk_arm_soft}}
+    cp {{apk_raw}} {{apk}}
+    @echo "Built: {{apk_arm_soft}} (and {{apk}})"
 
 # Build a slim release APK for the emulator only (x86_64, ~26 MB on-device)
 apk-x86:
     cd app && rm -rf {{jniLibs}}
     cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
     cd app/android && gradle assembleRelease
+    @mkdir -p {{dist}}
+    cp {{apk_raw}} {{apk_x86}}
+    cp {{apk_raw}} {{apk}}
+    @echo "Built: {{apk_x86}} (and {{apk}})"
 
 # Build a slim release APK with software renderer for emulator (x86_64, no Skia)
 apk-x86-soft: apk-x86-software
@@ -90,6 +118,10 @@ apk-x86-software:
     cd app && rm -rf {{jniLibs}}
     cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-software
     cd app/android && gradle assembleRelease
+    @mkdir -p {{dist}}
+    cp {{apk_raw}} {{apk_x86_soft}}
+    cp {{apk_raw}} {{apk}}
+    @echo "Built: {{apk_x86_soft}} (and {{apk}})"
 
 # Build for whatever single device/emulator adb currently sees, picking
 # its ABI automatically instead of bundling both (what `install`/`run`
@@ -107,6 +139,13 @@ apk-auto:
             exit 1
             ;;
     esac
+
+# Build the release desktop binary and copy it into dist/
+desktop:
+    cargo build --release -p immermemo --bin immermemo
+    @mkdir -p {{dist}}
+    cp target/release/immermemo {{dist}}/immermemo-desktop
+    @echo "Built: {{dist}}/immermemo-desktop"
 
 # Install the built APK on whatever device/emulator adb currently sees
 install: apk-auto
