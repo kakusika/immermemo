@@ -1,5 +1,6 @@
 //! Core session state management and note operations, independent of GUI frameworks.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -320,6 +321,13 @@ impl Session {
         let hits = self.index.search(&self.search_query).unwrap_or_default();
         let vault_dir = self.vault_dir.clone();
 
+        let note_indices: HashMap<&Path, usize> = self
+            .notes
+            .iter()
+            .enumerate()
+            .map(|(idx, path)| (path.as_path(), idx))
+            .collect();
+
         let mut filtered_results = Vec::with_capacity(hits.len());
         let mut names = Vec::with_capacity(hits.len());
         let mut conflicted = Vec::with_capacity(hits.len());
@@ -328,7 +336,7 @@ impl Session {
 
         for hit in hits {
             let abs_path = vault_dir.join(&hit.path);
-            if let Some(index) = self.notes.iter().position(|p| *p == abs_path) {
+            if let Some(&index) = note_indices.get(abs_path.as_path()) {
                 directory_source.push((hit.title.clone(), index as i32, hit.has_conflict));
                 filtered_results.push(notes::SearchResult {
                     note_index: index,

@@ -389,6 +389,8 @@ mod tests {
         session: &Rc<RefCell<Session>>,
         vault_dir: &Path,
     ) {
+        app.set_active_tab(2);
+        app.set_files_page(1);
         let iconed = vault_dir.join("starred.tmt");
         std::fs::write(
             &iconed,

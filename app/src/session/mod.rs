@@ -34,6 +34,8 @@ pub struct Session {
     /// `history_preview_items`'s cache of rendered history-neighbor
     /// previews, keyed by vault-relative path.
     pub history_preview_cache: HashMap<String, (f32, ModelRc<NoteBodyItemView>)>,
+    /// Whether directory folder entries need rebuilding when the Directory page is viewed.
+    pub directory_views_dirty: bool,
 }
 
 impl std::ops::Deref for Session {
@@ -54,6 +56,7 @@ impl Session {
         Self {
             core,
             history_preview_cache: HashMap::new(),
+            directory_views_dirty: true,
         }
     }
 }
@@ -86,36 +89,59 @@ pub fn update_filtered_list(app: &App, session: &Rc<RefCell<Session>>) {
     app.set_conflicted(ModelRc::new(VecModel::from(outcome.conflicted)));
     app.set_snippets(ModelRc::new(VecModel::from(snippets)));
     app.set_current(outcome.ui_current.map_or(-1, |i| i as i32));
-    refresh_directory_views(app, session);
+
+    session.borrow_mut().directory_views_dirty = true;
+    if app.get_active_tab() == 2 && app.get_files_page() == 1 {
+        refresh_directory_views(app, session);
+    }
+}
+
+/// Ensures Directory page contents are refreshed if they have been marked dirty.
+pub fn ensure_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
+    if session.borrow().directory_views_dirty {
+        refresh_directory_views(app, session);
+    }
 }
 
 /// Rebuilds the Directory page's List/Grid contents from `Session`'s
 /// cached `directory_source` plus whichever folder is currently browsed.
 pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
-    let s = session.borrow();
+    let mut s = session.borrow_mut();
+    s.directory_views_dirty = false;
+    let current_folder = s.current_folder.clone();
     let source: Vec<directory::TitledNote> = s
         .directory_source
         .iter()
         .map(|(title, idx, conflict)| (title.as_str(), *idx, *conflict))
         .collect();
-    let icon_by_path: std::collections::HashMap<PathBuf, slint::Image> = s
-        .index
-        .bodies()
-        .unwrap_or_default()
+    let folder_entries_raw = directory::build_folder_entries(&source, &current_folder);
+
+    // Only resolve note icon metadata for notes actually present in this folder
+    let mut icon_by_path: std::collections::HashMap<PathBuf, slint::Image> =
+        std::collections::HashMap::new();
+    for entry in &folder_entries_raw {
+        if !entry.is_folder {
+            if let Ok(idx) = usize::try_from(entry.note_index) {
+                if let Some(abs_path) = s.notes.get(idx) {
+                    if let Ok(rel_path) = abs_path.strip_prefix(&s.vault_dir) {
+                        if let Ok(Some(body)) = s.index.body_for(rel_path) {
+                            if let Some((name, pkg)) = crate::render::classify::note_icon(&body) {
+                                icon_by_path.insert(
+                                    abs_path.clone(),
+                                    crate::render::icon_image(&name, &pkg),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let folder_entries: Vec<DirectoryEntry> = folder_entries_raw
         .into_iter()
-        .filter_map(|(rel_path, body)| {
-            let (name, pkg) = crate::render::classify::note_icon(&body)?;
-            Some((
-                s.vault_dir.join(rel_path),
-                crate::render::icon_image(&name, &pkg),
-            ))
-        })
+        .map(|e| to_entry_view(e, &s.notes, &icon_by_path))
         .collect();
-    let folder_entries: Vec<DirectoryEntry> =
-        directory::build_folder_entries(&source, &s.current_folder)
-            .into_iter()
-            .map(|e| to_entry_view(e, &s.notes, &icon_by_path))
-            .collect();
     let breadcrumb: Vec<BreadcrumbSegment> = directory::build_breadcrumb(&s.current_folder)
         .into_iter()
         .map(|seg| BreadcrumbSegment {
@@ -158,7 +184,11 @@ pub fn navigate_directory_folder(app: &App, session: &Rc<RefCell<Session>>, key:
 pub fn update_rendered_body(app: &App, text: &str) {
     app.set_body(text.into());
     let max_width = app.get_body_content_width();
-    app.set_note_body_items(crate::render::note_body_items(text, app, max_width));
+    if max_width > 0.0 {
+        app.set_note_body_items(crate::render::note_body_items(text, app, max_width));
+    } else {
+        app.set_note_body_items(ModelRc::default());
+    }
 }
 
 pub fn update_note_stats(app: &App, text: &str) {

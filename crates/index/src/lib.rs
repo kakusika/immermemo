@@ -141,7 +141,7 @@ impl NoteIndex {
         let tx = self.conn.transaction()?;
 
         // Retrieve existing paths and their cached metadata.
-        let mut cached_notes: HashSet<PathBuf> = HashSet::new();
+        let mut cached_notes: HashMap<PathBuf, (u64, u64, u32)> = HashMap::new();
         {
             let mut stmt = tx.prepare("SELECT path, size, mtime_secs, mtime_nanos FROM notes")?;
             let mut rows = stmt.query([])?;
@@ -150,16 +150,16 @@ impl NoteIndex {
             while let Some(row) = rows.next()? {
                 let path_str: String = row.get(0)?;
                 let rel_path = PathBuf::from(&path_str);
+                let cached_size: u64 = row.get(1)?;
+                let cached_secs: u64 = row.get(2)?;
+                let cached_nanos: u32 = row.get(3)?;
                 match disk_meta.get(&rel_path) {
                     None => to_remove.push(rel_path),
                     Some((size, secs, nanos)) => {
-                        let cached_size: u64 = row.get(1)?;
-                        let cached_secs: u64 = row.get(2)?;
-                        let cached_nanos: u32 = row.get(3)?;
                         if *size == cached_size && *secs == cached_secs && *nanos == cached_nanos {
                             report.unchanged += 1;
                         }
-                        cached_notes.insert(rel_path);
+                        cached_notes.insert(rel_path, (cached_size, cached_secs, cached_nanos));
                     }
                 }
             }
@@ -174,35 +174,24 @@ impl NoteIndex {
 
         // Process disk files: insert new, update modified
         {
-            let mut check_stmt = tx.prepare_cached(
-                "SELECT size, mtime_secs, mtime_nanos FROM notes WHERE path = ?1",
-            )?;
             let mut upsert_stmt = tx.prepare_cached(UPSERT_NOTE_SQL)?;
 
             for (rel_path, size, mtime_secs, mtime_nanos) in disk_files {
-                let mut needs_read = true;
-                let path_str = rel_path.to_string_lossy().to_string();
-
-                let existing = check_stmt.query_row(params![&path_str], |row| {
-                    let s: u64 = row.get(0)?;
-                    let sec: u64 = row.get(1)?;
-                    let nano: u32 = row.get(2)?;
-                    Ok((s, sec, nano))
-                });
-
-                if let Ok((cached_size, cached_sec, cached_nano)) = existing {
-                    if cached_size == size && cached_sec == mtime_secs && cached_nano == mtime_nanos
-                    {
-                        needs_read = false;
+                let cached = cached_notes.get(&rel_path);
+                let needs_read = match cached {
+                    Some(&(cached_size, cached_sec, cached_nano)) => {
+                        cached_size != size || cached_sec != mtime_secs || cached_nano != mtime_nanos
                     }
-                }
+                    None => true,
+                };
 
                 if needs_read {
+                    let path_str = rel_path.to_string_lossy().to_string();
                     let abs_path = vault_dir.join(&rel_path);
                     if let Ok(body) = std::fs::read_to_string(&abs_path) {
                         let has_conflict = body.contains(CONFLICT_MARKER);
                         let title = display_name_from_rel(&rel_path);
-                        let is_new = !cached_notes.contains(&rel_path);
+                        let is_new = cached.is_none();
 
                         upsert_stmt.execute(params![
                             &path_str,
@@ -401,6 +390,21 @@ impl NoteIndex {
             out.push(r?);
         }
         Ok(out)
+    }
+
+    /// Returns the cached body of the note at `rel_path`, if indexed.
+    pub fn body_for(&self, rel_path: &Path) -> anyhow::Result<Option<String>> {
+        let mut stmt = self
+            .conn
+            .prepare_cached("SELECT body FROM notes WHERE path = ?1")?;
+        let path_str = rel_path.to_string_lossy();
+        let mut rows = stmt.query(params![path_str])?;
+        if let Some(row) = rows.next()? {
+            let body: String = row.get(0)?;
+            Ok(Some(body))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Returns up to `limit` most recently modified notes, newest first.
@@ -958,5 +962,20 @@ mod tests {
 
         let hits = index.search("Version 2").unwrap();
         assert_eq!(hits.len(), 1);
+    }
+
+    #[test]
+    fn body_for_returns_cached_content() {
+        let vault = TempDir::new().unwrap();
+        let mut index = NoteIndex::open_in_memory().unwrap();
+        let note = vault.path().join("test.tmt");
+        std::fs::write(&note, "Sample note body").unwrap();
+        index.reconcile_filesystem(vault.path()).unwrap();
+
+        let body = index.body_for(Path::new("test.tmt")).unwrap();
+        assert_eq!(body.as_deref(), Some("Sample note body"));
+
+        let nonexistent = index.body_for(Path::new("missing.tmt")).unwrap();
+        assert_eq!(nonexistent, None);
     }
 }

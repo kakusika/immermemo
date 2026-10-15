@@ -84,39 +84,46 @@ pub fn export_recent_notes(_index: &NoteIndex) {
             }
         };
         let json = notes_to_json(&notes);
-        if let Err(e) = std::fs::write(snapshot_path, json) {
-            eprintln!("immermemo: failed to write widget snapshot: {e}");
-            return;
-        }
+        let snapshot_path = snapshot_path.clone();
+        let activity_ref = activity_ref.clone();
+        let class_loader_ref = class_loader_ref.clone();
+        let vm = vm.clone();
 
-        let Ok(mut env) = vm.attach_current_thread() else {
-            return;
-        };
-        let activity = activity_ref.as_obj();
-        let res: jni::errors::Result<()> = (|| {
-            // `loadClass` wants the dotted binary name, unlike `find_class`'s
-            // slash-separated one.
-            let name = env.new_string("dev.immermemo.app.widget.NoteWidgetProvider")?;
-            let class_obj = env
-                .call_method(
-                    class_loader_ref.as_obj(),
-                    "loadClass",
-                    "(Ljava/lang/String;)Ljava/lang/Class;",
-                    &[jni::objects::JValue::Object(&name)],
-                )?
-                .l()?;
-            let class = jni::objects::JClass::from(class_obj);
-            env.call_static_method(
-                class,
-                "requestUpdate",
-                "(Landroid/content/Context;)V",
-                &[jni::objects::JValue::Object(activity)],
-            )?;
-            Ok(())
-        })();
-        if let Err(e) = res {
-            eprintln!("immermemo: failed to notify widget: {e}");
-        }
+        std::thread::spawn(move || {
+            if let Err(e) = std::fs::write(&snapshot_path, json) {
+                eprintln!("immermemo: failed to write widget snapshot: {e}");
+                return;
+            }
+
+            let Ok(mut env) = vm.attach_current_thread() else {
+                return;
+            };
+            let activity = activity_ref.as_obj();
+            let res: jni::errors::Result<()> = (|| {
+                // `loadClass` wants the dotted binary name, unlike `find_class`'s
+                // slash-separated one.
+                let name = env.new_string("dev.immermemo.app.widget.NoteWidgetProvider")?;
+                let class_obj = env
+                    .call_method(
+                        class_loader_ref.as_obj(),
+                        "loadClass",
+                        "(Ljava/lang/String;)Ljava/lang/Class;",
+                        &[jni::objects::JValue::Object(&name)],
+                    )?
+                    .l()?;
+                let class = jni::objects::JClass::from(class_obj);
+                env.call_static_method(
+                    class,
+                    "requestUpdate",
+                    "(Landroid/content/Context;)V",
+                    &[jni::objects::JValue::Object(activity)],
+                )?;
+                Ok(())
+            })();
+            if let Err(e) = res {
+                eprintln!("immermemo: failed to notify widget: {e}");
+            }
+        });
     }
 }
 

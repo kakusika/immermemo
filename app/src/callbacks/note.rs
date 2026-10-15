@@ -61,6 +61,14 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
         }
     });
 
+    app.on_ensure_directory_views({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            session::ensure_directory_views(&app, &session);
+        }
+    });
+
     app.on_edited({
         let (weak, session) = (app.as_weak(), session.clone());
         move |text| {

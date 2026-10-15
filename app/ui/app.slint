@@ -250,6 +250,7 @@ export component App inherits Window {
     in property <[DirectoryEntry]> directory-folder-entries: [];
     in property <[BreadcrumbSegment]> directory-breadcrumb: [];
     callback navigate-directory-folder(string);
+    callback ensure-directory-views();
     in-out property <bool> rename-open: false;
     in-out property <string> rename-draft;
     // Sets a note's own `@meta{ icon: @doc.icon(...) }` -- see
@@ -303,6 +304,16 @@ export component App inherits Window {
     changed list-open => {
         if (root.list-open && root.active-tab != 2) {
             root.active-tab = 2;
+        }
+    }
+    changed active-tab => {
+        if (root.active-tab == 2 && root.files-page == 1) {
+            root.ensure-directory-views();
+        }
+    }
+    changed files-page => {
+        if (root.active-tab == 2 && root.files-page == 1) {
+            root.ensure-directory-views();
         }
     }
 
