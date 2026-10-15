@@ -13,8 +13,7 @@ use immermemo_vault::notes;
 use crate::navigation::BackForwardStack;
 
 /// Factory for creating vault-specific token stores.
-pub type TokenStoreFactory =
-    Box<dyn Fn(&Path) -> anyhow::Result<Arc<dyn TokenStore>> + 'static>;
+pub type TokenStoreFactory = Box<dyn Fn(&Path) -> anyhow::Result<Arc<dyn TokenStore>> + 'static>;
 
 /// Results of updating the filtered list according to search queries.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -112,7 +111,9 @@ impl Session {
     }
 
     /// Selects the first note to open on launch (either last opened or first in list).
-    pub fn open_initial_or_last_note(&mut self) -> Option<Result<crate::editor::OpenedNote, String>> {
+    pub fn open_initial_or_last_note(
+        &mut self,
+    ) -> Option<Result<crate::editor::OpenedNote, String>> {
         let idx = crate::editor::initial_or_last_note_index(
             &self.app_data,
             &self.vault_dir,
@@ -122,16 +123,18 @@ impl Session {
     }
 
     /// Opens the first note containing an unresolved conflict marker, if any.
-    pub fn open_first_conflicted_note(&mut self) -> Option<Result<crate::editor::OpenedNote, String>> {
-        let idx = crate::editor::first_conflicted_note_index(
-            &self.editor,
-            &self.conflicted,
-        )?;
+    pub fn open_first_conflicted_note(
+        &mut self,
+    ) -> Option<Result<crate::editor::OpenedNote, String>> {
+        let idx = crate::editor::first_conflicted_note_index(&self.editor, &self.conflicted)?;
         self.open_note(idx)
     }
 
     /// Opens a note by its vault-relative path.
-    pub fn open_note_by_rel_path(&mut self, rel_path: &Path) -> Option<Result<crate::editor::OpenedNote, String>> {
+    pub fn open_note_by_rel_path(
+        &mut self,
+        rel_path: &Path,
+    ) -> Option<Result<crate::editor::OpenedNote, String>> {
         let target = self.vault_dir.join(rel_path);
         let idx = self.notes.iter().position(|p| *p == target)?;
         self.open_note(idx)
@@ -252,12 +255,8 @@ impl Session {
     /// Loads Git revision history for the open note up to `limit` entries.
     pub fn load_note_history(&mut self, limit: usize) -> Option<Vec<immermemo_sync::FileRevision>> {
         let current_path = self.current_path();
-        let revisions = crate::editor::load_note_history(
-            &self.app_data,
-            &self.vault_dir,
-            current_path,
-            limit,
-        )?;
+        let revisions =
+            crate::editor::load_note_history(&self.app_data, &self.vault_dir, current_path, limit)?;
         self.editor.note_history_revisions = revisions.clone();
         Some(revisions)
     }
@@ -363,10 +362,11 @@ impl Session {
 
         self.filtered_results = filtered_results;
         self.directory_source = directory_source;
-        let ui_current = self
-            .editor
-            .current
-            .and_then(|cur| self.filtered_results.iter().position(|r| r.note_index == cur));
+        let ui_current = self.editor.current.and_then(|cur| {
+            self.filtered_results
+                .iter()
+                .position(|r| r.note_index == cur)
+        });
 
         FilteredListOutcome {
             names,
@@ -457,7 +457,13 @@ mod tests {
 
     #[test]
     fn test_vault_display_name() {
-        assert_eq!(vault_display_name(Path::new("/home/user/my-vault")), "my-vault");
-        assert_eq!(vault_display_name(Path::new("relative-vault")), "relative-vault");
+        assert_eq!(
+            vault_display_name(Path::new("/home/user/my-vault")),
+            "my-vault"
+        );
+        assert_eq!(
+            vault_display_name(Path::new("relative-vault")),
+            "relative-vault"
+        );
     }
 }

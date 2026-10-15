@@ -7,12 +7,12 @@ use std::rc::Rc;
 use immermemo_core::{EditorState, NoteIndex};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
-use crate::{App, SettingsAdapter, VaultData};
 use super::util::set_status;
 use super::{
     Session, clear_note_stats, open_initial_or_last_note, refresh_list, schedule_auto_sync,
     show_history_state, sync_nav_state, update_rendered_body, vault_display_name,
 };
+use crate::{App, SettingsAdapter, VaultData};
 
 pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
     crate::callbacks::migrate_legacy_remotes(&session.borrow());
@@ -46,7 +46,10 @@ pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
     let mut ui_vaults = Vec::new();
     if let Some(curr_idx) = current {
         let p = &s.known_vaults[curr_idx];
-        let subtitle = subtitles.get(curr_idx).cloned().unwrap_or_else(|| "Local".into());
+        let subtitle = subtitles
+            .get(curr_idx)
+            .cloned()
+            .unwrap_or_else(|| "Local".into());
         ui_vaults.push(VaultData {
             name: names[curr_idx].clone(),
             path: p.display().to_string().into(),
@@ -60,7 +63,10 @@ pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
         if Some(idx) == current {
             continue;
         }
-        let subtitle = subtitles.get(idx).cloned().unwrap_or_else(|| "Local".into());
+        let subtitle = subtitles
+            .get(idx)
+            .cloned()
+            .unwrap_or_else(|| "Local".into());
         ui_vaults.push(VaultData {
             name: names[idx].clone(),
             path: p.display().to_string().into(),

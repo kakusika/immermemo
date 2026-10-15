@@ -5,11 +5,11 @@ use std::rc::Rc;
 
 use slint::{ModelRc, SharedString, VecModel};
 
-use crate::App;
 use super::util::set_status;
 use super::{
     Session, open_note, refresh_list, show_history_state, update_note_stats, update_rendered_body,
 };
+use crate::App;
 
 #[allow(dead_code)]
 pub fn resolve_active_conflict(
@@ -59,7 +59,9 @@ fn conflict_side_labels(side: immermemo_core::ConflictSide, letter: &str) -> (St
 }
 
 pub fn sync_conflict_sheet_state(app: &App, session: &Rc<RefCell<Session>>) {
-    let state = session.borrow().conflict_sheet_state(app.get_active_conflict_index());
+    let state = session
+        .borrow()
+        .conflict_sheet_state(app.get_active_conflict_index());
     match state {
         immermemo_core::ConflictSheetState::NoActiveNote => {
             app.set_active_conflict_total(0);
@@ -96,7 +98,9 @@ pub fn sync_conflict_sheet_state(app: &App, session: &Rc<RefCell<Session>>) {
 
 pub fn resolve_conflict_step(app: &App, session: &Rc<RefCell<Session>>, choice: i32) {
     let active_conflict_index = app.get_active_conflict_index();
-    let outcome = session.borrow_mut().resolve_conflict_step(active_conflict_index, choice);
+    let outcome = session
+        .borrow_mut()
+        .resolve_conflict_step(active_conflict_index, choice);
     let Some(outcome) = outcome else { return };
     match outcome {
         Err(msg) => set_status(app, msg),

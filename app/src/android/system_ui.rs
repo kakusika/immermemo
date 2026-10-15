@@ -50,11 +50,7 @@ pub fn get_wallpaper_seed_color() -> Option<u32> {
         .call_method(activity_ref.as_obj(), "getWallpaperSeedColor", "()I", &[])
         .ok()?;
     let color = val.i().ok()? as u32;
-    if color != 0 {
-        Some(color)
-    } else {
-        None
-    }
+    if color != 0 { Some(color) } else { None }
 }
 
 pub fn is_system_in_dark_theme() -> bool {
@@ -82,4 +78,3 @@ pub fn get_system_contrast() -> f64 {
     };
     val.f().unwrap_or(0.0) as f64
 }
-

@@ -6,13 +6,11 @@ use std::rc::Rc;
 
 use slint::SharedString;
 
-use crate::App;
 use super::conflict::sync_conflict_sheet_state;
 use super::history::{history_preview, show_history_state};
 use super::util::set_status;
-use super::{
-    Session, clear_note_stats, update_note_stats, update_rendered_body,
-};
+use super::{Session, clear_note_stats, update_note_stats, update_rendered_body};
+use crate::App;
 
 /// Opens `notes[index]` and records it in the back/forward stack.
 pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {

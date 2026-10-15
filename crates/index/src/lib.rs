@@ -557,7 +557,11 @@ mod tests {
         let vault = TempDir::new().unwrap();
         let mut index = NoteIndex::open_in_memory().unwrap();
         let note = vault.path().join("starred.tmt");
-        std::fs::write(&note, "@meta{ icon: @doc.icon(\"star\") }\n\nStarred note.\n").unwrap();
+        std::fs::write(
+            &note,
+            "@meta{ icon: @doc.icon(\"star\") }\n\nStarred note.\n",
+        )
+        .unwrap();
         index.reconcile_filesystem(vault.path()).unwrap();
 
         let icon = index.icon_for(Path::new("starred.tmt")).unwrap();

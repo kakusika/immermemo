@@ -84,7 +84,8 @@ impl GitLabProvider {
 
             if let Some(rest) = trimmed_url.strip_prefix(&format!("git@{host_only}:")) {
                 rest
-            } else if let Some(rest) = trimmed_url.strip_prefix(&format!("ssh://git@{host_only}/")) {
+            } else if let Some(rest) = trimmed_url.strip_prefix(&format!("ssh://git@{host_only}/"))
+            {
                 rest
             } else {
                 return None;
@@ -212,7 +213,10 @@ impl Provider for GitLabProvider {
     fn setup_repository(&self, token: &str, repo_name: &str) -> anyhow::Result<RepositoryInfo> {
         let user = self.get_user(token)?;
         // In GitLab API v4, projects are retrieved by URL-encoded path `namespace%2Fproject_name`
-        let check_url = format!("{}/projects/{}%2F{}", self.api_base_url, user.login, repo_name);
+        let check_url = format!(
+            "{}/projects/{}%2F{}",
+            self.api_base_url, user.login, repo_name
+        );
 
         match ureq::get(&check_url)
             .header("PRIVATE-TOKEN", token)
@@ -391,26 +395,48 @@ mod tests {
     fn test_parse_any_remote() {
         assert_eq!(
             GitLabProvider::parse_any_remote("https://gitlab.com/alice/notes.git"),
-            Some(("gitlab.com".to_owned(), "alice".to_owned(), "notes".to_owned()))
+            Some((
+                "gitlab.com".to_owned(),
+                "alice".to_owned(),
+                "notes".to_owned()
+            ))
         );
         assert_eq!(
             GitLabProvider::parse_any_remote("git@gitlab.com:team/subgroup/notes.git"),
-            Some(("gitlab.com".to_owned(), "team/subgroup".to_owned(), "notes".to_owned()))
+            Some((
+                "gitlab.com".to_owned(),
+                "team/subgroup".to_owned(),
+                "notes".to_owned()
+            ))
         );
         assert_eq!(
             GitLabProvider::parse_any_remote("https://gitlab.example.com:8443/bob/notes"),
-            Some(("gitlab.example.com:8443".to_owned(), "bob".to_owned(), "notes".to_owned()))
+            Some((
+                "gitlab.example.com:8443".to_owned(),
+                "bob".to_owned(),
+                "notes".to_owned()
+            ))
         );
         assert_eq!(GitLabProvider::parse_any_remote("invalid-url"), None);
     }
 
     #[test]
     fn test_is_gitlab_remote() {
-        assert!(GitLabProvider::is_gitlab_remote("https://gitlab.com/alice/notes.git"));
-        assert!(GitLabProvider::is_gitlab_remote("git@gitlab.com:alice/notes.git"));
-        assert!(GitLabProvider::is_gitlab_remote("https://gitlab.corp.net/team/notes.git"));
-        assert!(!GitLabProvider::is_gitlab_remote("https://github.com/alice/notes.git"));
-        assert!(!GitLabProvider::is_gitlab_remote("https://codeberg.org/alice/notes.git"));
+        assert!(GitLabProvider::is_gitlab_remote(
+            "https://gitlab.com/alice/notes.git"
+        ));
+        assert!(GitLabProvider::is_gitlab_remote(
+            "git@gitlab.com:alice/notes.git"
+        ));
+        assert!(GitLabProvider::is_gitlab_remote(
+            "https://gitlab.corp.net/team/notes.git"
+        ));
+        assert!(!GitLabProvider::is_gitlab_remote(
+            "https://github.com/alice/notes.git"
+        ));
+        assert!(!GitLabProvider::is_gitlab_remote(
+            "https://codeberg.org/alice/notes.git"
+        ));
     }
 
     #[test]
@@ -497,7 +523,8 @@ mod tests {
             if let Ok((mut stream, _)) = listener.accept() {
                 let mut buf = [0u8; 2048];
                 let _ = stream.read(&mut buf);
-                let resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                let resp =
+                    "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
                 let _ = stream.write_all(resp.as_bytes());
             }
             // Third request: POST /projects -> 201 Created

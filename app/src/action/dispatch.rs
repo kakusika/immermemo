@@ -3,9 +3,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use super::id::ActionId;
 use crate::App;
 use crate::session::Session;
-use super::id::ActionId;
 
 /// Dispatches an action by its ID.
 ///

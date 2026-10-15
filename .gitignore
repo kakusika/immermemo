@@ -29,7 +29,6 @@ target/
 .direnv/
 .claude/
 .agents/workspaces/
-.cargo/config.toml
 .idea/
 .zed/
 .vscode/

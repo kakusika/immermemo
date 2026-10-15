@@ -81,7 +81,9 @@ impl NoteIndex {
                 let cached = cached_notes.get(&rel_path);
                 let needs_read = match cached {
                     Some(&(cached_size, cached_sec, cached_nano)) => {
-                        cached_size != size || cached_sec != mtime_secs || cached_nano != mtime_nanos
+                        cached_size != size
+                            || cached_sec != mtime_secs
+                            || cached_nano != mtime_nanos
                     }
                     None => true,
                 };
@@ -161,10 +163,9 @@ impl NoteIndex {
                         conflict_set.contains(rel_path.as_path()) || body.contains(CONFLICT_MARKER);
                     let title = display_name_from_rel(rel_path);
                     let path_str = rel_path.to_string_lossy().to_string();
-                    let (icon_name, icon_pkg) =
-                        immermemo_render_tomet::extract_note_icon(&body)
-                            .map(|(n, p)| (Some(n), Some(p)))
-                            .unwrap_or((None, None));
+                    let (icon_name, icon_pkg) = immermemo_render_tomet::extract_note_icon(&body)
+                        .map(|(n, p)| (Some(n), Some(p)))
+                        .unwrap_or((None, None));
 
                     upsert_stmt.execute(params![
                         &path_str,

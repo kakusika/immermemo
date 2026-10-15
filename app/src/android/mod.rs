@@ -30,7 +30,9 @@ pub fn android_main(app: slint::android::AndroidApp) {
         let path = app_data.token_path(vault_dir)?;
         // Safety: `vm_ptr` is `app.vm_as_ptr()`, valid for the process's
         // lifetime; this closure doesn't outlive it.
-        let store = unsafe { keystore::AndroidKeystoreTokenStore::new(vm_addr as *mut std::ffi::c_void, path) }?;
+        let store = unsafe {
+            keystore::AndroidKeystoreTokenStore::new(vm_addr as *mut std::ffi::c_void, path)
+        }?;
         Ok(Arc::new(store) as Arc<dyn TokenStore>)
     });
     slint::android::init(app).expect("initialize the Android backend");

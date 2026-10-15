@@ -377,7 +377,11 @@ fn main() {
                 .collect::<Vec<_>>(),
         )));
         std::thread::sleep(std::time::Duration::from_millis(100));
-        render(&window, test_size, &format!("{prefix}-resize-{label_w}.ppm"));
+        render(
+            &window,
+            test_size,
+            &format!("{prefix}-resize-{label_w}.ppm"),
+        );
     }
     // Restore original size and body
     window.set_size(size);
@@ -472,7 +476,11 @@ fn main() {
     app.set_is_dragging_mini_reveal(true);
     app.set_mini_card_reveal_dx(42.0);
     std::thread::sleep(std::time::Duration::from_millis(300));
-    render(&window, size, &format!("{prefix}-mini-card-history-bubble.ppm"));
+    render(
+        &window,
+        size,
+        &format!("{prefix}-mini-card-history-bubble.ppm"),
+    );
     app.set_mini_card_reveal_dx(0.0);
     app.set_is_dragging_mini_reveal(false);
 
@@ -482,7 +490,11 @@ fn main() {
     app.set_is_dragging_mini_reveal(true);
     app.set_mini_card_reveal_dx(-42.0);
     std::thread::sleep(std::time::Duration::from_millis(300));
-    render(&window, size, &format!("{prefix}-mini-card-forward-bubble.ppm"));
+    render(
+        &window,
+        size,
+        &format!("{prefix}-mini-card-forward-bubble.ppm"),
+    );
     app.set_mini_card_reveal_dx(0.0);
     app.set_is_dragging_mini_reveal(false);
 
@@ -633,10 +645,7 @@ fn to_rich_text_lines(
     ModelRc::new(VecModel::from(lines))
 }
 
-fn to_rich_text_fragment(
-    fragment: Fragment,
-    elements: &[ClassifiedBlock],
-) -> RichTextFragment {
+fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> RichTextFragment {
     match fragment {
         Fragment::Text { content, style, .. } => {
             let style = origiri_richtext_flow::TextStyle::from_style_id(style);

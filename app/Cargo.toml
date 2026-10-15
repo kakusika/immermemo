@@ -37,21 +37,20 @@ serde_json = { workspace = true }
 sys-locale = { workspace = true }
 webbrowser = { workspace = true }
 
-# Linux Desktop: winit on Wayland + Skia.
+# Linux Desktop: winit on Wayland + FemtoVG.
 [target.'cfg(target_os = "linux")'.dependencies]
 slint = { workspace = true, features = [
   "backend-winit-wayland",
-  "renderer-skia",
+  "renderer-femtovg",
 ] }
 
-# iOS: winit + Skia (Metal backend on iOS).
+# iOS: winit + FemtoVG.
 [target.'cfg(target_os = "ios")'.dependencies]
-slint = { workspace = true, features = ["backend-winit", "renderer-skia"] }
+slint = { workspace = true, features = ["backend-winit", "renderer-femtovg"] }
 
 [features]
 default = ["renderer-femtovg"]
 renderer-femtovg = ["i-slint-backend-android-activity/renderer-femtovg"]
-renderer-skia = ["i-slint-backend-android-activity/renderer-skia"]
 
 [target.'cfg(target_os = "android")'.dependencies]
 # For the Android Keystore token store: plain JNI calls into java.security /
@@ -78,7 +77,7 @@ tempfile = "3"
 # headlessly at a chosen size; the software renderer needs this to find
 # system (Japanese) fonts). Target-gated: an *unconditional*
 # `[dev-dependencies]` entry here would still pull in `backend-winit-wayland`
-# (or the full Skia renderer) into mobile (`--lib`/`staticlib`) builds too,
+# (or the full FemtoVG renderer) into mobile (`--lib`/`staticlib`) builds too,
 # even though neither Android nor iOS ever uses it.
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 slint = { workspace = true, features = ["software-renderer-systemfonts"] }

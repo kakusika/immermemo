@@ -5,9 +5,9 @@ use std::rc::Rc;
 
 use slint::{ComponentHandle, SharedString};
 
-use crate::{App, SettingsAdapter};
 use crate::session::{self, Session};
 use crate::update_provider_ui_state;
+use crate::{App, SettingsAdapter};
 
 thread_local! {
     static APP_WEAK: RefCell<Option<slint::Weak<App>>> = const { RefCell::new(None) };
@@ -249,7 +249,8 @@ pub fn bind_transfer_callbacks(
                 }
                 Err(e) => {
                     settings.set_import_status_is_error(true);
-                    settings.set_import_status_message(format!("Failed to apply settings: {e}").into());
+                    settings
+                        .set_import_status_message(format!("Failed to apply settings: {e}").into());
                 }
             }
         }
@@ -259,4 +260,3 @@ pub fn bind_transfer_callbacks(
         open_import_preview(app, &pending_imported_payload, &uri);
     }
 }
-

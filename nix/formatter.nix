@@ -17,7 +17,9 @@
   };
   settings = {
     # https://github.com/numtide/treefmt-nix/issues/171
-    global.excludes = [ ];
+    global.excludes = [
+      "patches/**"
+    ];
 
     formatter = {
       tomet = {

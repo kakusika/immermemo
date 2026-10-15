@@ -100,15 +100,6 @@ apk-x86:
     cp {{apk_raw}} {{apk}}
     @echo "Built: {{apk_x86}} (and {{apk}})"
 
-# Build a release APK using the heavier Google Skia renderer (for comparison or testing)
-apk-arm-skia:
-    cd app && rm -rf {{jniLibs}}
-    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-skia
-    cd app/android && gradle assembleRelease
-    @mkdir -p {{dist}}
-    cp {{apk_raw}} {{dist}}/immermemo-arm64-skia.apk
-    @echo "Built: {{dist}}/immermemo-arm64-skia.apk"
-
 # Backward-compatible aliases
 apk-arm-femtovg: apk-arm
 apk-x86-femtovg: apk-x86
@@ -131,7 +122,7 @@ apk-auto:
     esac
 
 desktop_cflags := "-fno-unwind-tables -fno-asynchronous-unwind-tables -ffunction-sections -fdata-sections -DOPENSSL_NO_SM2_PRECOMP -DSQLITE_OMIT_JSON -DSQLITE_OMIT_SHARED_CACHE -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_LIKE_DOESNT_MATCH_BLOBS"
-desktop_rustflags := "-C force-unwind-tables=no -C link-arg=-Wl,--gc-sections"
+desktop_rustflags := "-C force-unwind-tables=no -C link-arg=-Wl,--gc-sections -C link-arg=-fuse-ld=mold"
 
 # Build the release desktop binary and copy it into dist/
 desktop:

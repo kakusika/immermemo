@@ -82,10 +82,19 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
         move |sym, cursor_offset, anchor_offset| {
             let app = weak.unwrap();
             let body = app.get_body();
-            let c_pos = if cursor_offset < 0 { body.len() } else { (cursor_offset as usize).min(body.len()) };
-            let a_pos = if anchor_offset < 0 { body.len() } else { (anchor_offset as usize).min(body.len()) };
+            let c_pos = if cursor_offset < 0 {
+                body.len()
+            } else {
+                (cursor_offset as usize).min(body.len())
+            };
+            let a_pos = if anchor_offset < 0 {
+                body.len()
+            } else {
+                (anchor_offset as usize).min(body.len())
+            };
 
-            let (new_body, new_cursor) = apply_symbol_insertion(body.as_str(), sym.as_str(), c_pos, a_pos);
+            let (new_body, new_cursor) =
+                apply_symbol_insertion(body.as_str(), sym.as_str(), c_pos, a_pos);
             app.set_body(new_body.clone().into());
             handle_edit(&app, &session, &new_body);
             app.invoke_set_cursor(new_cursor as i32);
@@ -333,9 +342,7 @@ fn handle_edit(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>>, te
                         let _ = s.index.record_write(&vault_dir, rel, text);
                         s.history_preview_cache.remove(&rel.display().to_string());
                     }
-                    if app.get_status_is_error()
-                        && app.get_status().starts_with("Save failed")
-                    {
+                    if app.get_status_is_error() && app.get_status().starts_with("Save failed") {
                         set_status(app, "");
                     }
                 }

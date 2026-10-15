@@ -306,7 +306,10 @@ mod tests {
             app_data2.load_remote(&vault_dir2),
             Some("https://github.com/initial/repo.git".to_owned())
         );
-        assert_eq!(token_store2.load().unwrap(), Some("ghp_old_token".to_owned()));
+        assert_eq!(
+            token_store2.load().unwrap(),
+            Some("ghp_old_token".to_owned())
+        );
     }
 
     #[test]
@@ -325,15 +328,8 @@ mod tests {
             include_remote: true,
             include_token: false,
         };
-        let payload = build_payload(
-            &app_data,
-            &vault_dir,
-            &token_store,
-            &options,
-            None,
-            None,
-        )
-        .unwrap();
+        let payload =
+            build_payload(&app_data, &vault_dir, &token_store, &options, None, None).unwrap();
 
         assert!(payload.sync.as_ref().unwrap().token.is_none());
     }

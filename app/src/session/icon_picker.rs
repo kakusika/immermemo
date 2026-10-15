@@ -5,9 +5,9 @@ use std::rc::Rc;
 
 use slint::{ModelRc, SharedString, VecModel};
 
-use crate::{App, PickerIconEntry};
 use super::util::set_status;
 use super::{Session, refresh_list, schedule_auto_sync};
+use crate::{App, PickerIconEntry};
 
 const ICON_PICKER_MAX_RESULTS: usize = 60;
 const ICON_PICKER_DEFAULT_PKG: &str = "tabler";
@@ -52,8 +52,7 @@ pub fn apply_icon_selection(app: &App, session: &Rc<RefCell<Session>>, name: &st
         set_status(app, "Could not read this note");
         return;
     };
-    let Some(new_body) = immermemo_core::set_note_icon(&body, name, ICON_PICKER_DEFAULT_PKG)
-    else {
+    let Some(new_body) = immermemo_core::set_note_icon(&body, name, ICON_PICKER_DEFAULT_PKG) else {
         set_status(app, "Could not update this note's icon");
         return;
     };

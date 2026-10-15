@@ -3,7 +3,9 @@ import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 import { BubbleButton } from "@origiri-mobile/widgets.slint";
 import { LongPressRippleArea } from "widgets/long_press_ripple.slint";
-export { LongPressRippleArea }
+export {
+    LongPressRippleArea,
+}
 
 // A `SwipeGestureHandler` that only recognizes a downward drag and turns
 // its raw `moved`/`swiped`/`cancelled` signals into the (dy,
@@ -357,8 +359,7 @@ export component BottomNavBar inherits Rectangle {
         (root.overflow-daily && root.active-tab == 2 && root.files-page == 2) ||
         (root.overflow-starred && root.active-tab == 2 && root.files-page == 3) ||
         (root.overflow-recent && root.active-tab == 2 && root.files-page == 4) ||
-        (root.overflow-graph && root.active-tab == 2 && root.files-page == 5)
-    );
+        (root.overflow-graph && root.active-tab == 2 && root.files-page == 5));
     property <int> more-badge-count: (root.overflow-library) ? root.conflict-count : 0;
 
     property <length> extra-inset-bottom: max(0px, root.inset-bottom - 6px * Metrics.ui-scale);

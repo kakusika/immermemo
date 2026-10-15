@@ -1,4 +1,8 @@
-import { SettingsAdapter, AccountData, VaultData } from "../adapters/settings.slint";
+import {
+    SettingsAdapter,
+    AccountData,
+    VaultData,
+} from "../adapters/settings.slint";
 import { Palette, LineEdit, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
@@ -600,7 +604,6 @@ export component SettingsSheet inherits Rectangle {
 
     background: Colors.page-background;
 
-
     header-gesture := SheetDragArea {
         x: 0px;
         y: 0px;
@@ -649,7 +652,6 @@ export component SettingsSheet inherits Rectangle {
                 vertical-alignment: center;
                 color: Palette.foreground;
             }
-
         }
     }
 
@@ -859,6 +861,7 @@ export component SettingsSheet inherits Rectangle {
                                                 SettingsAdapter.color-seed-changed("#6750A4");
                                             }
                                         }
+
                                         ColorSeedChip {
                                             chip-color: #1971C2;
                                             is-selected: SettingsAdapter.color-seed == "#1971C2";
@@ -867,6 +870,7 @@ export component SettingsSheet inherits Rectangle {
                                                 SettingsAdapter.color-seed-changed("#1971C2");
                                             }
                                         }
+
                                         ColorSeedChip {
                                             chip-color: #0CA678;
                                             is-selected: SettingsAdapter.color-seed == "#0CA678";
@@ -875,6 +879,7 @@ export component SettingsSheet inherits Rectangle {
                                                 SettingsAdapter.color-seed-changed("#0CA678");
                                             }
                                         }
+
                                         ColorSeedChip {
                                             chip-color: #2F9E44;
                                             is-selected: SettingsAdapter.color-seed == "#2F9E44";
@@ -897,6 +902,7 @@ export component SettingsSheet inherits Rectangle {
                                                 SettingsAdapter.color-seed-changed("#F59F00");
                                             }
                                         }
+
                                         ColorSeedChip {
                                             chip-color: #F76707;
                                             is-selected: SettingsAdapter.color-seed == "#F76707";
@@ -905,6 +911,7 @@ export component SettingsSheet inherits Rectangle {
                                                 SettingsAdapter.color-seed-changed("#F76707");
                                             }
                                         }
+
                                         ColorSeedChip {
                                             chip-color: #E03131;
                                             is-selected: SettingsAdapter.color-seed == "#E03131";
@@ -913,6 +920,7 @@ export component SettingsSheet inherits Rectangle {
                                                 SettingsAdapter.color-seed-changed("#E03131");
                                             }
                                         }
+
                                         ColorSeedChip {
                                             chip-color: #D6336C;
                                             is-selected: SettingsAdapter.color-seed == "#D6336C";
@@ -1390,6 +1398,7 @@ export component SettingsSheet inherits Rectangle {
                                         font-weight: 600;
                                         color: Palette.foreground;
                                     }
+
                                     if SettingsAdapter.current-vault-account-label != "": Rectangle {
                                         height: 18px;
                                         border-radius: 4px;
@@ -1407,6 +1416,7 @@ export component SettingsSheet inherits Rectangle {
                                         }
                                     }
                                 }
+
                                 if SettingsAdapter.sync-status != "": Text {
                                     text: SettingsAdapter.sync-status;
                                     font-size: 12px;
@@ -1477,6 +1487,7 @@ export component SettingsSheet inherits Rectangle {
                                             font-weight: 600;
                                             color: Palette.foreground;
                                         }
+
                                         if SettingsAdapter.current-vault-account-id == acc.id: Rectangle {
                                             height: 18px;
                                             border-radius: 4px;
@@ -1494,6 +1505,7 @@ export component SettingsSheet inherits Rectangle {
                                             }
                                         }
                                     }
+
                                     Text {
                                         text: acc.provider + " · " + acc.instance-url;
                                         font-size: 11px;
@@ -1540,6 +1552,7 @@ export component SettingsSheet inherits Rectangle {
                                     color: Palette.foreground;
                                     horizontal-stretch: 1;
                                 }
+
                                 IconButton {
                                     icon: TablerIcons.x;
                                     clicked => { SettingsAdapter.adding-account = false; }
@@ -1564,6 +1577,7 @@ export component SettingsSheet inherits Rectangle {
                                         color: Colors.muted;
                                         wrap: word-wrap;
                                     }
+
                                     HorizontalLayout {
                                         alignment: end;
                                         Button {
@@ -1612,6 +1626,7 @@ export component SettingsSheet inherits Rectangle {
                                             text: @tr("Cancel");
                                             clicked => { SettingsAdapter.cancel-github-auth(); }
                                         }
+
                                         Button {
                                             text: @tr("Open in Browser");
                                             primary: true;
@@ -1639,6 +1654,7 @@ export component SettingsSheet inherits Rectangle {
                                         font-size: 13px;
                                         color: Colors.muted;
                                     }
+
                                     LineEdit {
                                         height: Metrics.touch;
                                         placeholder-text: "https://codeberg.org";
@@ -1653,6 +1669,7 @@ export component SettingsSheet inherits Rectangle {
                                         font-size: 13px;
                                         color: Colors.muted;
                                     }
+
                                     LineEdit {
                                         height: Metrics.touch;
                                         placeholder-text: @tr("Token with repo and user permissions");
@@ -1668,6 +1685,7 @@ export component SettingsSheet inherits Rectangle {
                                         font-size: 13px;
                                         color: Colors.muted;
                                     }
+
                                     LineEdit {
                                         height: Metrics.touch;
                                         placeholder-text: "immermemo-notes";
@@ -1717,6 +1735,7 @@ export component SettingsSheet inherits Rectangle {
                                         font-size: 12px;
                                         color: Colors.muted;
                                     }
+
                                     LineEdit {
                                         height: Metrics.touch;
                                         placeholder-text: "https://gitlab.com";
@@ -1731,6 +1750,7 @@ export component SettingsSheet inherits Rectangle {
                                         font-size: 12px;
                                         color: Colors.muted;
                                     }
+
                                     LineEdit {
                                         height: Metrics.touch;
                                         placeholder-text: @tr("Token with api permission");
@@ -1746,6 +1766,7 @@ export component SettingsSheet inherits Rectangle {
                                         font-size: 12px;
                                         color: Colors.muted;
                                     }
+
                                     LineEdit {
                                         height: Metrics.touch;
                                         placeholder-text: "immermemo-notes";
@@ -1829,6 +1850,7 @@ export component SettingsSheet inherits Rectangle {
                                         color: Colors.muted;
                                         wrap: word-wrap;
                                     }
+
                                     Button {
                                         text: @tr("SSH Key");
                                         clicked => { root.page = 6; }
@@ -1890,6 +1912,7 @@ export component SettingsSheet inherits Rectangle {
                                     color: Palette.accent-background;
                                 }
                             }
+
                             Text {
                                 horizontal-stretch: 1;
                                 text: @tr("Vaults");
@@ -1898,6 +1921,7 @@ export component SettingsSheet inherits Rectangle {
                                 color: Palette.foreground;
                                 vertical-alignment: center;
                             }
+
                             Text {
                                 text: @tr("{} vaults", SettingsAdapter.vaults.length);
                                 font-size: Metrics.font-sm;
@@ -2285,7 +2309,6 @@ export component SettingsSheet inherits Rectangle {
                         }
                     }
                 }
-
             }
 
             // --------------------------------------------------------
@@ -2317,6 +2340,7 @@ export component SettingsSheet inherits Rectangle {
                                     color: Palette.accent-background;
                                 }
                             }
+
                             VerticalLayout {
                                 horizontal-stretch: 1;
                                 alignment: center;
@@ -2326,6 +2350,7 @@ export component SettingsSheet inherits Rectangle {
                                     font-weight: 600;
                                     color: Palette.foreground;
                                 }
+
                                 Text {
                                     text: @tr("Enables Git over SSH synchronization on mobile and desktop without external agents.");
                                     font-size: Metrics.font-sm;

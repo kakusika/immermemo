@@ -74,7 +74,12 @@ pub(crate) fn classify_block_groups(
                 RenderBlockKind::Heading(section.level),
                 classify_inline_seq(&section.title),
             )];
-            groups.extend(section.blocks.iter().flat_map(|b| classify_block_groups(b, skip_metadata)));
+            groups.extend(
+                section
+                    .blocks
+                    .iter()
+                    .flat_map(|b| classify_block_groups(b, skip_metadata)),
+            );
             groups
         }
         Block::List(list) => {
@@ -111,7 +116,10 @@ pub(crate) fn classify_block_groups(
                         }
                     }
                     if let Some(sublist) = &item.sublist {
-                        groups.extend(classify_block_groups(&Block::List(sublist.clone()), skip_metadata));
+                        groups.extend(classify_block_groups(
+                            &Block::List(sublist.clone()),
+                            skip_metadata,
+                        ));
                     }
                 }
                 groups

@@ -8,8 +8,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use immermemo_provider::{AuthPollStatus, GitHubProvider, Provider};
 use slint::{ComponentHandle, SharedString};
 
-use crate::{App, SettingsAdapter};
 use crate::session::{SESSION, Session, set_status, start_sync};
+use crate::{App, SettingsAdapter};
 
 /// Updates GitHub connected/account state in the UI based on the current remote URL.
 pub fn update_github_ui_state(app: &App, remote: Option<&str>) {
@@ -124,7 +124,8 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                         let settings = app.global::<SettingsAdapter>();
                         settings.set_github_user_code(user_code.into());
                         settings.set_github_verification_uri(uri.clone().into());
-                        settings.set_github_auth_status("Waiting for browser authorization...".into());
+                        settings
+                            .set_github_auth_status("Waiting for browser authorization...".into());
                     }
                 });
 
@@ -177,7 +178,8 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                                 if let Some(app) = weak.upgrade() {
                                     let settings = app.global::<SettingsAdapter>();
                                     settings.set_github_auth_pending(false);
-                                    settings.set_github_auth_status(format!("Auth error: {e}").into());
+                                    settings
+                                        .set_github_auth_status(format!("Auth error: {e}").into());
                                 }
                             });
                             return;

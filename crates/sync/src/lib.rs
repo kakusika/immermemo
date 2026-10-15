@@ -1154,7 +1154,3 @@ mod tests {
         assert!(remote_head.tree().unwrap().get_name("delete.tmt").is_none());
     }
 }
-
-
-
-

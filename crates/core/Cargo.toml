@@ -11,7 +11,13 @@ immermemo-vault = { workspace = true }
 immermemo-credentials = { workspace = true }
 immermemo-provider = { workspace = true }
 #= Tomet
-tomet = { workspace = true, features = ["edit", "merge", "parser", "printer", "stats"] }
+tomet = { workspace = true, features = [
+  "edit",
+  "merge",
+  "parser",
+  "printer",
+  "stats",
+] }
 
 #= Crates.io
 anyhow = { workspace = true }

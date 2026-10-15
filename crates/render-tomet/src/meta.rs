@@ -169,10 +169,7 @@ pub fn extract_note_kind(src: &str) -> Option<String> {
                 continue;
             };
             if name.name == "kind"
-                && matches!(
-                    name.namespace.as_deref(),
-                    None | Some("std") | Some("doc")
-                )
+                && matches!(name.namespace.as_deref(), None | Some("std") | Some("doc"))
             {
                 if let Some(args) = &el.args {
                     match args {
@@ -221,10 +218,7 @@ pub fn extract_note_metadata(src: &str) -> Vec<(String, String)> {
             let Sigil::Named(name) = &el.sigil else {
                 continue;
             };
-            if !matches!(
-                name.namespace.as_deref(),
-                None | Some("std") | Some("doc")
-            ) {
+            if !matches!(name.namespace.as_deref(), None | Some("std") | Some("doc")) {
                 continue;
             }
             if name.name == "meta" {

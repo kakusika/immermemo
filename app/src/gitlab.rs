@@ -6,8 +6,8 @@ use std::rc::Rc;
 use immermemo_provider::{GitLabProvider, Provider};
 use slint::{ComponentHandle, SharedString};
 
-use crate::{App, SettingsAdapter};
 use crate::session::{SESSION, Session, set_status, start_sync};
+use crate::{App, SettingsAdapter};
 
 /// Updates GitLab connected/account state in the UI based on the current remote URL.
 pub fn update_gitlab_ui_state(app: &App, remote: Option<&str>) {
@@ -109,8 +109,7 @@ pub fn bind_gitlab_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                 let username = user_info
                     .map(|u| u.login)
                     .or_else(|| {
-                        GitLabProvider::parse_any_remote(&repo_info.clone_url)
-                            .map(|(_, u, _)| u)
+                        GitLabProvider::parse_any_remote(&repo_info.clone_url).map(|(_, u, _)| u)
                     })
                     .unwrap_or_default();
                 let instance_display = provider.instance_url().to_string();
@@ -129,7 +128,9 @@ pub fn bind_gitlab_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                             drop(s);
                             settings.set_gitlab_connecting(false);
                             settings.set_gitlab_status_is_error(true);
-                            settings.set_gitlab_status_message(format!("Could not save remote: {e}").into());
+                            settings.set_gitlab_status_message(
+                                format!("Could not save remote: {e}").into(),
+                            );
                             return;
                         }
                         let _ = s.app_data.save_provider(&vault_dir, "gitlab");
@@ -137,7 +138,9 @@ pub fn bind_gitlab_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                             drop(s);
                             settings.set_gitlab_connecting(false);
                             settings.set_gitlab_status_is_error(true);
-                            settings.set_gitlab_status_message(format!("Could not save access token: {e}").into());
+                            settings.set_gitlab_status_message(
+                                format!("Could not save access token: {e}").into(),
+                            );
                             return;
                         }
                         s.remote = Some(clone_url.clone());

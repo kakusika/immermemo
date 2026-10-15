@@ -32,8 +32,8 @@ use origiri_richtext_flow::{Fragment, Measure, layout_block};
 use slint::{ModelRc, VecModel};
 
 use crate::{
-    App, ConflictSideBlock, NoteBodyItemView, RenderedBlock, RenderedBlockShape,
-    RenderedBlockTone, RichTextFragment, RichTextLine,
+    App, ConflictSideBlock, NoteBodyItemView, RenderedBlock, RenderedBlockShape, RenderedBlockTone,
+    RichTextFragment, RichTextLine,
 };
 
 /// Classifies/flows `body` and converts the result into the model
@@ -124,10 +124,7 @@ fn to_rich_text_lines(
     ModelRc::new(VecModel::from(lines))
 }
 
-fn to_rich_text_fragment(
-    fragment: Fragment,
-    elements: &[ClassifiedBlock],
-) -> RichTextFragment {
+fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> RichTextFragment {
     match fragment {
         Fragment::Text { content, style, .. } => {
             let style = origiri_richtext_flow::TextStyle::from_style_id(style);

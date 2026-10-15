@@ -196,17 +196,51 @@ component DailyCalendarView inherits Rectangle {
     }
 
     property <[int]> grid-indices: [
-        0, 1, 2, 3, 4, 5, 6,
-        7, 8, 9, 10, 11, 12, 13,
-        14, 15, 16, 17, 18, 19, 20,
-        21, 22, 23, 24, 25, 26, 27,
-        28, 29, 30, 31, 32, 33, 34,
-        35, 36, 37, 38, 39, 40, 41
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41
     ];
 
-    property <[string]> weekdays: [
-        @tr("Su"), @tr("Mo"), @tr("Tu"), @tr("We"), @tr("Th"), @tr("Fr"), @tr("Sa")
-    ];
+    property <[string]> weekdays: [@tr("Su"), @tr("Mo"), @tr("Tu"), @tr("We"), @tr("Th"), @tr("Fr"), @tr("Sa")];
 
     property <int> total-slots: root.start-weekday(root.display-year, root.display-month) + root.days-in-month(root.display-year, root.display-month);
 
@@ -450,10 +484,10 @@ component DirectoryRow inherits Rectangle {
                     background: root.is-folder
                         ? Palette.accent-background.with-alpha(0.14)
                         : (root.is-selected
-                            ? Palette.accent-background
-                            : (root.highlighted
-                                ? Palette.accent-background.with-alpha(0.24)
-                                : Palette.foreground.with-alpha(0.06)));
+                        ? Palette.accent-background
+                        : (root.highlighted
+                        ? Palette.accent-background.with-alpha(0.24)
+                        : Palette.foreground.with-alpha(0.06)));
                     animate background { duration: 150ms; }
 
                     if !root.is-selected || root.is-folder: Icon {

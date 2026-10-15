@@ -7,11 +7,9 @@ use std::rc::Rc;
 use immermemo_core::{History, format_timestamp, notes};
 use slint::{ModelRc, SharedString, VecModel};
 
-use crate::{App, NoteBodyItemView};
 use super::util::set_status;
-use super::{
-    Session, schedule_auto_sync, update_note_stats, update_rendered_body,
-};
+use super::{Session, schedule_auto_sync, update_note_stats, update_rendered_body};
+use crate::{App, NoteBodyItemView};
 
 /// Title + real rendered body items for `rel_path`'s history-neighbor preview.
 pub fn history_preview(

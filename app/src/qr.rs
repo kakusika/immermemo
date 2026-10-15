@@ -32,9 +32,9 @@ pub fn generate_qr_image(payload: &str, target_size: u32) -> anyhow::Result<Imag
                 for py in start_py..start_py + scale {
                     for px in start_px..start_px + scale {
                         let idx = ((py * img_size + px) * 4) as usize;
-                        pixels[idx] = 0;       // R
-                        pixels[idx + 1] = 0;   // G
-                        pixels[idx + 2] = 0;   // B
+                        pixels[idx] = 0; // R
+                        pixels[idx + 1] = 0; // G
+                        pixels[idx + 2] = 0; // B
                         pixels[idx + 3] = 255; // A
                     }
                 }

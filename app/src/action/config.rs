@@ -1,12 +1,12 @@
 //! Persistence and configuration parsing for bottom bar actions.
 
+use slint::{Model, VecModel};
 use std::collections::HashSet;
 use std::rc::Rc;
-use slint::{Model, VecModel};
 
-use crate::SettingsAdapter;
 use super::id::ActionId;
 use super::registry::get_action_meta;
+use crate::SettingsAdapter;
 
 /// Applies a comma-separated action configuration string to the `SettingsAdapter`.
 ///
@@ -30,10 +30,7 @@ pub fn apply_bottom_bar_config(settings: &SettingsAdapter, config: &str) {
         } else if has_legacy_quick
             && matches!(
                 action,
-                ActionId::NewNote
-                    | ActionId::Sync
-                    | ActionId::SwitchVault
-                    | ActionId::Settings
+                ActionId::NewNote | ActionId::Sync | ActionId::SwitchVault | ActionId::Settings
             )
         {
             true

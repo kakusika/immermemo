@@ -104,7 +104,10 @@ mod tests {
         assert_eq!(items.len(), 1);
         match &items[0] {
             RenderItem::Text(span, _) => {
-                assert_eq!(&src[span.start.offset..span.end.offset], "Visible body text.");
+                assert_eq!(
+                    &src[span.start.offset..span.end.offset],
+                    "Visible body text."
+                );
             }
             _ => panic!("expected a Text item"),
         }

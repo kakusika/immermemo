@@ -82,7 +82,9 @@ impl BackForwardStack {
     }
 
     pub fn current(&self) -> Option<&str> {
-        self.cursor.and_then(|c| self.entries.get(c)).map(String::as_str)
+        self.cursor
+            .and_then(|c| self.entries.get(c))
+            .map(String::as_str)
     }
 }
 

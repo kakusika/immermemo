@@ -1,8 +1,8 @@
 //! Provider accounts management: persisting authenticated hosting provider accounts
 //! (GitHub, Forgejo, GitLab) and associating vaults with accounts.
 
-use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
 use super::{AppData, read_trimmed, write};
 
@@ -66,7 +66,9 @@ impl AppData {
 
     /// Finds an account by `id`.
     pub fn get_account(&self, account_id: &str) -> Option<Account> {
-        self.load_accounts().into_iter().find(|a| a.id == account_id)
+        self.load_accounts()
+            .into_iter()
+            .find(|a| a.id == account_id)
     }
 
     /// Directory where private credentials and data for this account live.
@@ -145,7 +147,10 @@ mod tests {
             ..data.get_account("github:octocat").unwrap()
         };
         data.add_account(updated_acc1.clone()).unwrap();
-        assert_eq!(data.get_account("github:octocat").unwrap().display_name, Some("Updated Cat".to_string()));
+        assert_eq!(
+            data.get_account("github:octocat").unwrap().display_name,
+            Some("Updated Cat".to_string())
+        );
 
         // Remove account
         data.remove_account("github:octocat").unwrap();
@@ -160,8 +165,12 @@ mod tests {
         let vault = tempfile::tempdir().unwrap();
 
         assert_eq!(data.load_vault_account(vault.path()), None);
-        data.save_vault_account(vault.path(), "github:octocat").unwrap();
-        assert_eq!(data.load_vault_account(vault.path()), Some("github:octocat".to_string()));
+        data.save_vault_account(vault.path(), "github:octocat")
+            .unwrap();
+        assert_eq!(
+            data.load_vault_account(vault.path()),
+            Some("github:octocat".to_string())
+        );
 
         data.clear_vault_account(vault.path());
         assert_eq!(data.load_vault_account(vault.path()), None);

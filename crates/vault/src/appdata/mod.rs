@@ -210,7 +210,8 @@ mod tests {
         let data = AppData::new(dir.path().to_owned());
         assert_eq!(data.load_bottom_bar_config(), None);
 
-        data.save_bottom_bar_config("home,search,library,daily,quick").unwrap();
+        data.save_bottom_bar_config("home,search,library,daily,quick")
+            .unwrap();
         assert_eq!(
             data.load_bottom_bar_config(),
             Some("home,search,library,daily,quick".to_string())

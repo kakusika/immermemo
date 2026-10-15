@@ -7,14 +7,14 @@ use std::rc::Rc;
 
 use slint::{ComponentHandle, Model, SharedString};
 
-use crate::{AccountData, App, SettingsAdapter};
 use crate::haptic;
 use crate::render;
-use crate::update_provider_ui_state;
 use crate::session::{
     Session, refresh_vault_list, set_status, start_sync, switch_vault, vault_display_name,
     vault_path_from_input,
 };
+use crate::update_provider_ui_state;
+use crate::{AccountData, App, SettingsAdapter};
 
 /// Migrates any legacy remote URL on known vaults into registered accounts if not yet present.
 pub fn migrate_legacy_remotes(session: &Session) {
@@ -30,32 +30,35 @@ pub fn migrate_legacy_remotes(session: &Session) {
             continue;
         }
 
-        let maybe_account = if let Some((user, _)) = immermemo_provider::GitHubProvider::parse_remote(trimmed) {
-            Some(immermemo_core::Account {
-                id: format!("github:{user}"),
-                provider: "github".to_string(),
-                instance_url: "https://github.com".to_string(),
-                username: user,
-                display_name: None,
-                avatar_url: None,
-            })
-        } else if let Some((host, user, _)) = immermemo_provider::ForgejoProvider::parse_any_remote(trimmed) {
-            let instance = if host.starts_with("http://") || host.starts_with("https://") {
-                host
+        let maybe_account =
+            if let Some((user, _)) = immermemo_provider::GitHubProvider::parse_remote(trimmed) {
+                Some(immermemo_core::Account {
+                    id: format!("github:{user}"),
+                    provider: "github".to_string(),
+                    instance_url: "https://github.com".to_string(),
+                    username: user,
+                    display_name: None,
+                    avatar_url: None,
+                })
+            } else if let Some((host, user, _)) =
+                immermemo_provider::ForgejoProvider::parse_any_remote(trimmed)
+            {
+                let instance = if host.starts_with("http://") || host.starts_with("https://") {
+                    host
+                } else {
+                    format!("https://{host}")
+                };
+                Some(immermemo_core::Account {
+                    id: format!("forgejo:{instance}:{user}"),
+                    provider: "forgejo".to_string(),
+                    instance_url: instance,
+                    username: user,
+                    display_name: None,
+                    avatar_url: None,
+                })
             } else {
-                format!("https://{host}")
+                None
             };
-            Some(immermemo_core::Account {
-                id: format!("forgejo:{instance}:{user}"),
-                provider: "forgejo".to_string(),
-                instance_url: instance,
-                username: user,
-                display_name: None,
-                avatar_url: None,
-            })
-        } else {
-            None
-        };
 
         if let Some(acc) = maybe_account {
             let acc_id = acc.id.clone();
@@ -290,7 +293,8 @@ pub fn bind_vault_callbacks(
             let settings = app.global::<SettingsAdapter>();
             let mut order: Vec<i32> = settings.get_nav_order().iter().collect();
             let len = order.len() as i32;
-            if from_idx >= 0 && from_idx < len && to_idx >= 0 && to_idx < len && from_idx != to_idx {
+            if from_idx >= 0 && from_idx < len && to_idx >= 0 && to_idx < len && from_idx != to_idx
+            {
                 let item = order.remove(from_idx as usize);
                 order.insert(to_idx as usize, item);
                 settings.set_nav_order(std::rc::Rc::new(slint::VecModel::from(order)).into());
@@ -565,8 +569,12 @@ pub fn bind_vault_callbacks(
             std::thread::spawn(move || {
                 let provider: Box<dyn immermemo_provider::Provider> = match provider_id.as_str() {
                     "github" => Box::new(immermemo_provider::GitHubProvider::default()),
-                    "forgejo" => Box::new(immermemo_provider::ForgejoProvider::new(Some(&instance_url))),
-                    "gitlab" => Box::new(immermemo_provider::GitLabProvider::new(Some(&instance_url))),
+                    "forgejo" => Box::new(immermemo_provider::ForgejoProvider::new(Some(
+                        &instance_url,
+                    ))),
+                    "gitlab" => {
+                        Box::new(immermemo_provider::GitLabProvider::new(Some(&instance_url)))
+                    }
                     _ => {
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(app) = weak_thread.upgrade() {
@@ -607,7 +615,10 @@ pub fn bind_vault_callbacks(
 
                         switch_vault(&app, &session, vault_dir);
                         app.set_settings_open(false);
-                        set_status(&app, format!("Created and switched to vault '{}'", repo_info.name));
+                        set_status(
+                            &app,
+                            format!("Created and switched to vault '{}'", repo_info.name),
+                        );
                     }
                 });
             });

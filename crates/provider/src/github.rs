@@ -519,7 +519,9 @@ mod tests {
             url,
         );
 
-        let repo = provider.create_repository("ghu_token123", "my-new-vault", true).unwrap();
+        let repo = provider
+            .create_repository("ghu_token123", "my-new-vault", true)
+            .unwrap();
         server.join().unwrap();
 
         assert_eq!(repo.name, "my-new-vault");
@@ -527,4 +529,3 @@ mod tests {
         assert!(repo.is_private);
     }
 }
-

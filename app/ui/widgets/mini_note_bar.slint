@@ -199,8 +199,8 @@ export component MiniNoteBar inherits Rectangle {
                     border-radius: self.width / 2;
                     background: root.can-navigate-back
                         ? (root.mini-reveal-back-committable
-                            ? Palette.accent-background.with-alpha(0.24)
-                            : Palette.accent-background.with-alpha(0.14 * root.mini-reveal-back-progress))
+                        ? Palette.accent-background.with-alpha(0.24)
+                        : Palette.accent-background.with-alpha(0.14 * root.mini-reveal-back-progress))
                         : transparent;
 
                     if root.can-navigate-back: Icon {
@@ -238,8 +238,8 @@ export component MiniNoteBar inherits Rectangle {
                     border-radius: self.width / 2;
                     background: root.can-navigate-forward
                         ? (root.mini-reveal-forward-committable
-                            ? Palette.accent-background.with-alpha(0.24)
-                            : Palette.accent-background.with-alpha(0.14 * root.mini-reveal-forward-progress))
+                        ? Palette.accent-background.with-alpha(0.24)
+                        : Palette.accent-background.with-alpha(0.14 * root.mini-reveal-forward-progress))
                         : transparent;
 
                     if root.can-navigate-forward: Icon {

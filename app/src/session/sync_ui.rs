@@ -5,10 +5,10 @@ use std::rc::Rc;
 
 use slint::{ComponentHandle, SharedString};
 
-use immermemo_core::{TokenCredentials, format_time_only, sync};
-use crate::{App, SettingsAdapter};
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use crate::cert;
+use crate::{App, SettingsAdapter};
+use immermemo_core::{TokenCredentials, format_time_only, sync};
 
 use super::util::set_status;
 use super::{

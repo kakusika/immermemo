@@ -119,7 +119,15 @@ mod tests {
         token_store.save("my_pat_secret").unwrap();
 
         let creds = TokenCredentials::with_app_data(token_store, app_data);
-        assert!(creds.credentials("https://github.com/alice/notes.git").is_ok());
-        assert!(creds.credentials("https://gitlab.com/alice/notes.git").is_ok());
+        assert!(
+            creds
+                .credentials("https://github.com/alice/notes.git")
+                .is_ok()
+        );
+        assert!(
+            creds
+                .credentials("https://gitlab.com/alice/notes.git")
+                .is_ok()
+        );
     }
 }

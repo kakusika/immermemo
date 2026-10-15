@@ -1,0 +1,10 @@
+# Fast linker configuration for Linux host development.
+# Uses `mold` to drastically reduce link times during `cargo build` and `cargo test`.
+# Android targets (aarch64-linux-android, x86_64-linux-android) are intentionally excluded
+# so they continue using the Android NDK's bundled LLD linker.
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]

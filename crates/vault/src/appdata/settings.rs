@@ -191,4 +191,3 @@ impl AppData {
         write(&self.contrast_level_file(), &level.to_string())
     }
 }
-

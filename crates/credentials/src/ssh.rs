@@ -58,8 +58,10 @@ impl SshKeyStore {
     /// and returns the OpenSSH public key string.
     pub fn generate_key(&self, comment: Option<&str>) -> anyhow::Result<String> {
         let comment_str = comment.unwrap_or("immermemo");
-        let key =
-            ssh_key::PrivateKey::random(&mut ssh_key::rand_core::OsRng, ssh_key::Algorithm::Ed25519)?;
+        let key = ssh_key::PrivateKey::random(
+            &mut ssh_key::rand_core::OsRng,
+            ssh_key::Algorithm::Ed25519,
+        )?;
         let priv_openssh = (*key.to_openssh(ssh_key::LineEnding::LF)?).to_owned();
         let mut pub_key = key.public_key().clone();
         pub_key.set_comment(comment_str);

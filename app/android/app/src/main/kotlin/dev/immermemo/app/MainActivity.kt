@@ -148,7 +148,8 @@ class MainActivity : NativeActivity() {
                         return primary.toArgb()
                     }
                 }
-            } catch (_: Throwable) {}
+            } catch (_: Throwable) {
+            }
         }
         val typedValue = android.util.TypedValue()
         if (theme.resolveAttribute(android.R.attr.colorAccent, typedValue, true)) {
@@ -178,7 +179,8 @@ class MainActivity : NativeActivity() {
                 if (um != null) {
                     return um.contrast
                 }
-            } catch (_: Throwable) {}
+            } catch (_: Throwable) {
+            }
         }
         return 0f
     }

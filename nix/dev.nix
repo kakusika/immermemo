@@ -64,6 +64,7 @@ mkShell {
     llvmPackages.libclang
     python3
     perl # vendored-openssl (git2) builds OpenSSL from source
+    mold
     #== Rust
     rustToolchain
     cargo-edit

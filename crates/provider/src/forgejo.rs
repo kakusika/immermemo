@@ -71,7 +71,8 @@ impl ForgejoProvider {
 
             if let Some(rest) = trimmed_url.strip_prefix(&format!("git@{host_only}:")) {
                 rest
-            } else if let Some(rest) = trimmed_url.strip_prefix(&format!("ssh://git@{host_only}/")) {
+            } else if let Some(rest) = trimmed_url.strip_prefix(&format!("ssh://git@{host_only}/"))
+            {
                 rest
             } else {
                 return None;
@@ -318,7 +319,10 @@ mod tests {
 
     #[test]
     fn test_normalize_instance_url() {
-        assert_eq!(normalize_instance_url("codeberg.org"), "https://codeberg.org");
+        assert_eq!(
+            normalize_instance_url("codeberg.org"),
+            "https://codeberg.org"
+        );
         assert_eq!(
             normalize_instance_url("https://codeberg.org/"),
             "https://codeberg.org"
@@ -366,15 +370,27 @@ mod tests {
     fn test_parse_any_remote() {
         assert_eq!(
             ForgejoProvider::parse_any_remote("https://codeberg.org/alice/notes.git"),
-            Some(("codeberg.org".to_owned(), "alice".to_owned(), "notes".to_owned()))
+            Some((
+                "codeberg.org".to_owned(),
+                "alice".to_owned(),
+                "notes".to_owned()
+            ))
         );
         assert_eq!(
             ForgejoProvider::parse_any_remote("git@codeberg.org:alice/notes.git"),
-            Some(("codeberg.org".to_owned(), "alice".to_owned(), "notes".to_owned()))
+            Some((
+                "codeberg.org".to_owned(),
+                "alice".to_owned(),
+                "notes".to_owned()
+            ))
         );
         assert_eq!(
             ForgejoProvider::parse_any_remote("https://git.example.com:3000/bob/notes"),
-            Some(("git.example.com:3000".to_owned(), "bob".to_owned(), "notes".to_owned()))
+            Some((
+                "git.example.com:3000".to_owned(),
+                "bob".to_owned(),
+                "notes".to_owned()
+            ))
         );
         assert_eq!(ForgejoProvider::parse_any_remote("invalid-url"), None);
     }

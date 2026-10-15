@@ -1,0 +1,56 @@
+=[ 高速なテスト実行のプラクティス ]
+
+==[ なぜデフォルトの `cargo test --workspace` は重いのか ]
+
+-| *Doc-testsのオーバーヘッド*:
+  デフォルトの `cargo test --workspace` は、全9クレートに対して個別に `rustdoc --test` を起動し、それぞれの依存関係をリンクしてテストを実行しようとします。
+  現状のワークスペースではDoctestが0件のため、9回分の無駄なリンク処理だけで約5秒以上の待機時間が発生します。
+-| *巨大なSlint UIコードの結合*:
+  最上位の `app` クレートは、Slintビルドによって生成される約17MBのRustコード (`app.rs`) と、FemtoVG / Wayland / OpenSSL / SQLite などのライブラリをリンクします。
+  `crates/*` のロジックを1行変更しただけでも、ワークスペース全体をテストすると `app` の再コンパイルとリンクが誘発されます。
+
+==[ 推奨するテストコマンド ]
+
+===[ 1. 日常的なユニットテスト（Doctestスキップ） ]
+
+```bash
+cargo test --workspace --lib --bins
+```
+- `--lib --bins` を指定することで、0件のDoc-tests（rustdoc起動・リンク）をスキップします。
+- すでにビルド済みの状態であれば、**約5.8秒から約0.9秒（約6倍高速）** に短縮されます。
+
+===[ 2. バックエンド・クレート修正時（GUIコンパイルの回避） ]
+
+```bash
+cargo test --workspace --exclude immermemo --lib
+```
+- `crates/` 配下（`vault`, `sync`, `render-tomet`, `provider` 等）のロジックを開発している間は、GUIクレートである `immermemo` (`app`) を除外します。
+- 17MBのSlintコードやGUIスタックの再ビルド・再リンクを完全に回避し、CPU時間を大幅に節約できます。
+
+===[ 3. 特定クレートに絞ったテスト ]
+
+```bash
+cargo test -p immermemo-vault --lib
+cargo test -p immermemo-sync --lib
+cargo test -p immermemo-render-tomet --lib
+```
+- 作業中のクレートのみを指定して実行することで、最小限のオーバーヘッドでフィードバックループを回せます。
+
+==[ リンカーによる高速化 (mold) ]
+
+Linux環境では、デフォルトのシングルスレッドGNU `ld` からマルチスレッド高速リンカー `mold` に切り替えることで、重いGUIバイナリやテストバイナリのリンク時間を大幅に短縮できます。
+
+===[ 導入構成 ]
+
+-| *Nix環境への追加*: `nix/dev.nix` の `buildInputs` に `mold` を追加し、devShell (`nix develop` / `direnv`) で常に利用可能にしています。
+-| *Cargoターゲット設定*: `.cargo/config.toml` にてホストLinuxターゲット (`x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`) に対して `-C link-arg=-fuse-ld=mold` を指定しています。
+-| *Androidクロスコンパイルとの共存*: Androidターゲット (`*-linux-android`) は除外されているため、Android NDKに同梱されているLLDリンカーと干渉することなく、ホスト開発時のみ自動で `mold` が適用されます。
+
+==[ レンダラーの統一 (FemtoVG) ]
+
+デスクトップ環境でも Android と同様に Slint の軽量レンダラー `renderer-femtovg` を採用しています。
+従来の Google Skia (`renderer-skia`) と比較して、以下のような利点があります:
+
+-| *ビルド・リンクの劇的な短縮*: 巨大な C++ ライブラリ (Skia) のダウンロードや bindgen 生成、libstdc++ の重厚なリンク処理が不要になり、純粋な Rust + OpenGL (FemtoVG) のみで完結します。
+-| *ターゲット間の挙動の一致*: Android とデスクトップで同一のレンダリングバックエンドを使用するため、フォントやグラフィックスの表示差異を最小限に抑えられます。
+-| *フットプリントの削減*: 依存関係および出力バイナリサイズが大幅に軽量化されます。

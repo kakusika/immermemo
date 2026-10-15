@@ -4,9 +4,7 @@
 
 use origiri_mobile::push_mobile_color_tokens;
 use origiri_theme::palette::RgbColor;
-use origiri_theme::{
-    MaterialSettings, MaterialVariant, ResolvedTheme, ThemeSettings, resolve,
-};
+use origiri_theme::{MaterialSettings, MaterialVariant, ResolvedTheme, ThemeSettings, resolve};
 use slint::ComponentHandle;
 
 use crate::{App, Theme, ThemeColors};
@@ -43,8 +41,8 @@ pub fn resolve_app_theme(
 
         (seed, contrast)
     } else {
-        let seed = RgbColor::from_hex(color_seed)
-            .unwrap_or_else(|| RgbColor::new(0x67, 0x50, 0xa4));
+        let seed =
+            RgbColor::from_hex(color_seed).unwrap_or_else(|| RgbColor::new(0x67, 0x50, 0xa4));
         let contrast = match contrast_choice {
             1 => 0.5,
             2 => 1.0,
