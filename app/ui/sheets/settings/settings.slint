@@ -497,24 +497,24 @@ export component SettingsSheet inherits Rectangle {
     in property <bool> show-back: true;
     in-out property <int> directory-mode: 0;
 
-    // 0: list, 1: Interface, 2: Sync & Remote, 3: Vaults, 4: About, 5: Transfer & Share.
-    // 10: Theme, 11: Bottom Navigation, 12: Directory.
+    // 0: list, 1: Appearance, 2: Accounts, 3: Vaults, 4: About, 5: Transfer & Share, 6: Advanced, 7: Navigation & Views.
+    // 11: Bottom Navigation, 12: Directory, 13: Daily Notes, 14: Starred, 15: Recent, 16: Graph View.
     // in-out so the app-level Back action (hardware button / edge-swipe
     // gesture) can pop a sub-page back to the list -- see app.slint's
     // handle-back().
     in-out property <int> page: 0;
-    in-out property <int> previous-page: 1;
+    in-out property <int> previous-page: 7;
     property <int> active-drag-idx: -1;
     property <length> active-drag-dy: 0px;
 
     public function go-back() -> bool {
         if (root.page >= 12 && root.previous-page == 11) {
             root.page = 11;
-            root.previous-page = 1;
+            root.previous-page = 7;
             return true;
-        } else if (root.page >= 10) {
-            root.page = 1;
-            root.previous-page = 1;
+        } else if (root.page >= 11) {
+            root.page = 7;
+            root.previous-page = 7;
             return true;
         } else if (root.page != 0) {
             root.page = 0;
@@ -558,13 +558,13 @@ export component SettingsSheet inherits Rectangle {
 
             Text {
                 horizontal-stretch: 1;
-                text: root.page == 1 ? @tr("Interface")
+                text: root.page == 1 ? @tr("Appearance")
                     : root.page == 2 ? @tr("Accounts")
                     : root.page == 3 ? @tr("Vaults")
                     : root.page == 4 ? @tr("About")
                     : root.page == 5 ? @tr("Transfer & Share")
                     : root.page == 6 ? @tr("Advanced")
-                    : root.page == 10 ? @tr("Theme")
+                    : root.page == 7 ? @tr("Navigation & Views")
                     : root.page == 11 ? @tr("Bottom Navigation Bar")
                     : root.page == 12 ? @tr("Directory")
                     : root.page == 13 ? @tr("Daily Notes")
@@ -597,7 +597,7 @@ export component SettingsSheet inherits Rectangle {
             height: 100%;
 
             // --------------------------------------------------------
-            // List: Interface / Other (Accounts, Vaults, etc.) / Info (About)
+            // List: Vaults & Sync / Appearance / Navigation & Views / Other & Info
             // --------------------------------------------------------
             if root.page == 0: AppScrollView {
                 vertical-stretch: 1;
@@ -615,36 +615,25 @@ export component SettingsSheet inherits Rectangle {
                     padding-bottom: root.inset-bottom + 24px;
                     spacing: 24px;
 
-                    Card {
-                        content-padding: Metrics.spacing-xs;
-                        content-spacing: 0px;
-
-                        CategoryRow {
-                            icon: TablerIcons.settings;
-                            label-text: @tr("Interface");
-                            clicked => { root.page = 1; }
-                        }
-                    }
-
                     Section {
-                        title: @tr("Other");
+                        title: @tr("Vaults & Sync");
 
                         Card {
                             content-padding: Metrics.spacing-xs;
                             content-spacing: 0px;
 
                             CategoryRow {
-                                icon: TablerIcons.user;
-                                label-text: @tr("Accounts");
-                                clicked => { root.page = 2; }
+                                icon: TablerIcons.files;
+                                label-text: @tr("Vaults");
+                                clicked => { root.page = 3; }
                             }
 
                             Divider { }
 
                             CategoryRow {
-                                icon: TablerIcons.files;
-                                label-text: @tr("Vaults");
-                                clicked => { root.page = 3; }
+                                icon: TablerIcons.user;
+                                label-text: @tr("Accounts");
+                                clicked => { root.page = 2; }
                             }
 
                             Divider { }
@@ -657,8 +646,45 @@ export component SettingsSheet inherits Rectangle {
                                     SettingsAdapter.refresh-transfer-qr();
                                 }
                             }
+                        }
+                    }
 
-                            Divider { }
+                    Section {
+                        title: @tr("Appearance");
+
+                        Card {
+                            content-padding: Metrics.spacing-xs;
+                            content-spacing: 0px;
+
+                            CategoryRow {
+                                icon: TablerIcons.palette;
+                                label-text: @tr("Appearance");
+                                clicked => { root.page = 1; }
+                            }
+                        }
+                    }
+
+                    Section {
+                        title: @tr("Navigation & Views");
+
+                        Card {
+                            content-padding: Metrics.spacing-xs;
+                            content-spacing: 0px;
+
+                            CategoryRow {
+                                icon: TablerIcons.layout-bottombar;
+                                label-text: @tr("Navigation & Views");
+                                clicked => { root.page = 7; }
+                            }
+                        }
+                    }
+
+                    Section {
+                        title: @tr("Other & Info");
+
+                        Card {
+                            content-padding: Metrics.spacing-xs;
+                            content-spacing: 0px;
 
                             CategoryRow {
                                 icon: TablerIcons.adjustments;
@@ -666,15 +692,7 @@ export component SettingsSheet inherits Rectangle {
                                 clicked => { root.page = 6; }
                             }
 
-                        }
-                    }
-
-                    Section {
-                        title: @tr("Info");
-
-                        Card {
-                            content-padding: Metrics.spacing-xs;
-                            content-spacing: 0px;
+                            Divider { }
 
                             CategoryRow {
                                 icon: TablerIcons.info-circle;
@@ -687,116 +705,9 @@ export component SettingsSheet inherits Rectangle {
             }
 
             // --------------------------------------------------------
-            // Interface Menu (General, Page Settings)
+            // Appearance Subpage (Theme, Font Size, UI Scale, Status Bar)
             // --------------------------------------------------------
             if root.page == 1: AppScrollView {
-                vertical-stretch: 1;
-
-                VerticalLayout {
-                    alignment: start;
-                    padding-left: Metrics.gutter;
-                    padding-right: Metrics.gutter;
-                    padding-top: 16px;
-                    padding-bottom: root.inset-bottom + 24px;
-                    spacing: 24px;
-
-                    Section {
-                        title: @tr("General");
-
-                        Card {
-                            content-padding: Metrics.spacing-xs;
-                            content-spacing: 0px;
-
-                            CategoryRow {
-                                icon: TablerIcons.palette;
-                                label-text: @tr("Theme");
-                                clicked => {
-                                    root.previous-page = 1;
-                                    root.page = 10;
-                                }
-                            }
-
-                            Divider { }
-
-                            CategoryRow {
-                                icon: TablerIcons.layout-bottombar;
-                                label-text: @tr("Bottom Navigation Bar");
-                                clicked => {
-                                    root.previous-page = 1;
-                                    root.page = 11;
-                                }
-                            }
-                        }
-                    }
-
-                    Section {
-                        title: @tr("Page Settings");
-
-                        Card {
-                            content-padding: Metrics.spacing-xs;
-                            content-spacing: 0px;
-
-                            CategoryRow {
-                                icon: TablerIcons.folder;
-                                label-text: @tr("Directory");
-                                clicked => {
-                                    root.previous-page = 1;
-                                    root.page = 12;
-                                }
-                            }
-
-                            Divider { }
-
-                            CategoryRow {
-                                icon: TablerIcons.calendar;
-                                label-text: @tr("Daily Notes");
-                                clicked => {
-                                    root.previous-page = 1;
-                                    root.page = 13;
-                                }
-                            }
-
-                            Divider { }
-
-                            CategoryRow {
-                                icon: TablerIcons.star;
-                                label-text: @tr("Starred");
-                                clicked => {
-                                    root.previous-page = 1;
-                                    root.page = 14;
-                                }
-                            }
-
-                            Divider { }
-
-                            CategoryRow {
-                                icon: TablerIcons.clock;
-                                label-text: @tr("Recent");
-                                clicked => {
-                                    root.previous-page = 1;
-                                    root.page = 15;
-                                }
-                            }
-
-                            Divider { }
-
-                            CategoryRow {
-                                icon: TablerIcons.git-fork;
-                                label-text: @tr("Graph View");
-                                clicked => {
-                                    root.previous-page = 1;
-                                    root.page = 16;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // --------------------------------------------------------
-            // Theme Subpage
-            // --------------------------------------------------------
-            if root.page == 10: AppScrollView {
                 vertical-stretch: 1;
 
                 VerticalLayout {
@@ -898,6 +809,102 @@ export component SettingsSheet inherits Rectangle {
                                 changed(i) => {
                                     SettingsAdapter.status-bar-choice = i;
                                     SettingsAdapter.status-bar-changed(i);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --------------------------------------------------------
+            // Navigation & Views Menu (Bottom Nav, Page Settings)
+            // --------------------------------------------------------
+            if root.page == 7: AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: 16px;
+                    padding-bottom: root.inset-bottom + 24px;
+                    spacing: 24px;
+
+                    Section {
+                        title: @tr("Navigation");
+
+                        Card {
+                            content-padding: Metrics.spacing-xs;
+                            content-spacing: 0px;
+
+                            CategoryRow {
+                                icon: TablerIcons.layout-bottombar;
+                                label-text: @tr("Bottom Navigation Bar");
+                                clicked => {
+                                    root.previous-page = 7;
+                                    root.page = 11;
+                                }
+                            }
+                        }
+                    }
+
+                    Section {
+                        title: @tr("Page Settings");
+
+                        Card {
+                            content-padding: Metrics.spacing-xs;
+                            content-spacing: 0px;
+
+                            CategoryRow {
+                                icon: TablerIcons.folder;
+                                label-text: @tr("Directory");
+                                clicked => {
+                                    root.previous-page = 7;
+                                    root.page = 12;
+                                }
+                            }
+
+                            Divider { }
+
+                            CategoryRow {
+                                icon: TablerIcons.calendar;
+                                label-text: @tr("Daily Notes");
+                                clicked => {
+                                    root.previous-page = 7;
+                                    root.page = 13;
+                                }
+                            }
+
+                            Divider { }
+
+                            CategoryRow {
+                                icon: TablerIcons.star;
+                                label-text: @tr("Starred");
+                                clicked => {
+                                    root.previous-page = 7;
+                                    root.page = 14;
+                                }
+                            }
+
+                            Divider { }
+
+                            CategoryRow {
+                                icon: TablerIcons.clock;
+                                label-text: @tr("Recent");
+                                clicked => {
+                                    root.previous-page = 7;
+                                    root.page = 15;
+                                }
+                            }
+
+                            Divider { }
+
+                            CategoryRow {
+                                icon: TablerIcons.git-fork;
+                                label-text: @tr("Graph View");
+                                clicked => {
+                                    root.previous-page = 7;
+                                    root.page = 16;
                                 }
                             }
                         }
