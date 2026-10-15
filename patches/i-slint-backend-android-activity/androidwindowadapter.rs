@@ -23,8 +23,6 @@ use i_slint_core::timers::{Timer, TimerMode};
 use i_slint_core::window::{InputMethodRequest, WindowInner};
 #[cfg(feature = "renderer-skia")]
 use i_slint_renderer_skia::{SkiaRenderer, SkiaSharedContext};
-#[cfg(all(not(feature = "renderer-skia"), feature = "renderer-software"))]
-use i_slint_renderer_software::SoftwareRenderer;
 use std::cell::Cell;
 use std::rc::Rc;
 #[cfg(feature = "renderer-skia")]
@@ -40,8 +38,6 @@ pub struct AndroidWindowAdapter {
     pub(crate) window: Window,
     #[cfg(feature = "renderer-skia")]
     pub(crate) renderer: i_slint_renderer_skia::SkiaRenderer,
-    #[cfg(all(not(feature = "renderer-skia"), feature = "renderer-software"))]
-    pub(crate) renderer: i_slint_renderer_software::SoftwareRenderer,
     #[allow(dead_code)]
     requested_graphics_api: RefCell<Option<i_slint_core::graphics::RequestedGraphicsAPI>>,
     pub(crate) event_queue: EventQueue,
@@ -196,8 +192,6 @@ impl AndroidWindowAdapter {
             #[cfg(feature = "renderer-skia")]
             #[cfg(feature = "unstable-wgpu-30")]
             renderer: SkiaRenderer::default_wgpu_30(&SkiaSharedContext::default()),
-            #[cfg(all(not(feature = "renderer-skia"), feature = "renderer-software"))]
-            renderer: SoftwareRenderer::default(),
             requested_graphics_api: RefCell::new(None),
             event_queue: Default::default(),
             pending_redraw: Default::default(),
@@ -243,14 +237,6 @@ impl AndroidWindowAdapter {
                         self.requested_graphics_api.borrow().clone(),
                         false,
                     )?;
-                    #[cfg(all(not(feature = "renderer-skia"), feature = "renderer-software"))]
-                    {
-                        let _ = w.set_buffers_geometry(
-                            0,
-                            0,
-                            Some(ndk::hardware_buffer_format::HardwareBufferFormat::R8G8B8A8_UNORM),
-                        );
-                    }
                     self.resize()?;
 
                     // Fixes a problem for old Android versions: the soft input always prompt out on startup.
@@ -547,24 +533,6 @@ impl AndroidWindowAdapter {
                     PhysicalSize { width: win.width() as _, height: win.height() as _ },
                     None,
                 )?;
-            }
-            #[cfg(all(not(feature = "renderer-skia"), feature = "renderer-software"))]
-            {
-                if let Ok(mut guard) = win.lock(None) {
-                    let width = guard.width();
-                    let height = guard.height();
-                    let stride = guard.stride();
-                    let bits = guard.bits();
-                    if !bits.is_null() && width > 0 && height > 0 {
-                        let slice = unsafe {
-                            core::slice::from_raw_parts_mut(
-                                bits as *mut i_slint_renderer_software::PremultipliedRgbaColor,
-                                stride * height,
-                            )
-                        };
-                        self.renderer.render(slice, stride);
-                    }
-                }
             }
         }
         Ok(())

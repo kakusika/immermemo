@@ -58,7 +58,6 @@ native-activity = [
     "android-activity-05?/native-activity",
 ]
 renderer-skia = ["dep:i-slint-renderer-skia"]
-renderer-software = ["dep:i-slint-renderer-software"]
 unstable-wgpu-29 = ["i-slint-renderer-skia?/unstable-wgpu-29"]
 unstable-wgpu-30 = ["i-slint-renderer-skia?/unstable-wgpu-30"]
 
@@ -95,11 +94,6 @@ default-features = false
 [target.'cfg(target_os = "android")'.dependencies.i-slint-renderer-skia]
 version = "=1.18.1"
 default-features = false
-optional = true
-
-[target.'cfg(target_os = "android")'.dependencies.i-slint-renderer-software]
-version = "=1.18.1"
-default-features = true
 optional = true
 
 [target.'cfg(target_os = "android")'.dependencies.jni]

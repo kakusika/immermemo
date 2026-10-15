@@ -13,9 +13,7 @@ apk_raw := "app/android/app/build/outputs/apk/release/app-release.apk"
 apk := dist + "/immermemo.apk"
 apk_universal := dist + "/immermemo-universal.apk"
 apk_arm := dist + "/immermemo-arm64.apk"
-apk_arm_soft := dist + "/immermemo-arm64-software.apk"
 apk_x86 := dist + "/immermemo-x86_64.apk"
-apk_x86_soft := dist + "/immermemo-x86_64-software.apk"
 
 # List available recipes
 default:
@@ -91,17 +89,6 @@ apk-arm:
     cp {{apk_raw}} {{apk}}
     @echo "Built: {{apk_arm}} (and {{apk}})"
 
-# Build a slim release APK with software renderer for real devices (aarch64, no Skia)
-apk-arm-soft: apk-arm-software
-apk-arm-software:
-    cd app && rm -rf {{jniLibs}}
-    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-software
-    cd app/android && gradle assembleRelease
-    @mkdir -p {{dist}}
-    cp {{apk_raw}} {{apk_arm_soft}}
-    cp {{apk_raw}} {{apk}}
-    @echo "Built: {{apk_arm_soft}} (and {{apk}})"
-
 # Build a slim release APK for the emulator only (x86_64, ~26 MB on-device)
 apk-x86:
     cd app && rm -rf {{jniLibs}}
@@ -111,17 +98,6 @@ apk-x86:
     cp {{apk_raw}} {{apk_x86}}
     cp {{apk_raw}} {{apk}}
     @echo "Built: {{apk_x86}} (and {{apk}})"
-
-# Build a slim release APK with software renderer for emulator (x86_64, no Skia)
-apk-x86-soft: apk-x86-software
-apk-x86-software:
-    cd app && rm -rf {{jniLibs}}
-    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-software
-    cd app/android && gradle assembleRelease
-    @mkdir -p {{dist}}
-    cp {{apk_raw}} {{apk_x86_soft}}
-    cp {{apk_raw}} {{apk}}
-    @echo "Built: {{apk_x86_soft}} (and {{apk}})"
 
 # Build for whatever single device/emulator adb currently sees, picking
 # its ABI automatically instead of bundling both (what `install`/`run`

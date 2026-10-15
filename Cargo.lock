@@ -1941,7 +1941,6 @@ dependencies = [
  "i-slint-common",
  "i-slint-core",
  "i-slint-renderer-skia",
- "i-slint-renderer-software",
  "jni 0.22.4",
  "ndk 0.9.0",
  "raw-window-handle",
