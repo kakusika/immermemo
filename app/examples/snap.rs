@@ -447,10 +447,10 @@ fn main() {
     render(&window, size, &format!("{prefix}-note-menu.ppm"));
     app.set_note_menu_index(-1);
 
-    app.set_quick_actions_open(true);
+    app.set_more_menu_open(true);
     std::thread::sleep(std::time::Duration::from_millis(300));
-    render(&window, size, &format!("{prefix}-quick-actions.ppm"));
-    app.set_quick_actions_open(false);
+    render(&window, size, &format!("{prefix}-more-menu.ppm"));
+    app.set_more_menu_open(false);
 
     // Mini card swipe gesture with history preview bubble (Back)
     app.set_can_navigate_back(true);

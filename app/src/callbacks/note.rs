@@ -46,6 +46,13 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
         }
     });
 
+    app.on_action_executed({
+        let _session = session.clone();
+        move |_id| {
+            // Action executed hook
+        }
+    });
+
     app.on_navigate_directory_folder({
         let (weak, session) = (app.as_weak(), session.clone());
         move |key| {

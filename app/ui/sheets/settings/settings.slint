@@ -416,11 +416,41 @@ component BottomNavConfigItem inherits Rectangle {
         }
 
         if root.item-id == 8: NavToggleRow {
-            icon: TablerIcons.bolt;
-            title: @tr("Quick Actions");
-            checked <=> SettingsAdapter.nav-show-quick;
+            icon: TablerIcons.plus;
+            title: @tr("New Note");
+            checked <=> SettingsAdapter.nav-show-new-note;
             show-eye: true;
-            show-settings: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 9: NavToggleRow {
+            icon: TablerIcons.cloud;
+            title: @tr("Sync");
+            checked <=> SettingsAdapter.nav-show-sync;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 10: NavToggleRow {
+            icon: TablerIcons.folder;
+            title: @tr("Switch Vault");
+            checked <=> SettingsAdapter.nav-show-switch-vault;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 11: NavToggleRow {
+            icon: TablerIcons.settings;
+            title: @tr("Settings");
+            checked <=> SettingsAdapter.nav-show-settings;
+            show-eye: true;
+            show-settings: false;
             is-dragging: root.is-dragging;
             toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
         }

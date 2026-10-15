@@ -230,35 +230,11 @@ pub fn bind_vault_callbacks(
     });
     let save_bottom_bar = |session: &std::rc::Rc<std::cell::RefCell<crate::session::Session>>,
                            settings: &SettingsAdapter| {
-        let order: Vec<i32> = settings.get_nav_order().iter().collect();
-        let id_to_key = |id: i32| -> Option<&'static str> {
-            match id {
-                0 if settings.get_nav_show_home() => Some("home"),
-                1 if settings.get_nav_show_search() => Some("search"),
-                2 if settings.get_nav_show_library() => Some("library"),
-                3 if settings.get_nav_show_directory() => Some("directory"),
-                4 if settings.get_nav_show_daily() => Some("daily"),
-                5 if settings.get_nav_show_starred() => Some("starred"),
-                6 if settings.get_nav_show_recent() => Some("recent"),
-                7 if settings.get_nav_show_graph() => Some("graph"),
-                8 if settings.get_nav_show_quick() => Some("quick"),
-                _ => None,
-            }
-        };
-        let mut items = Vec::new();
-        for id in &order {
-            if let Some(key) = id_to_key(*id) {
-                items.push(key);
-            }
-        }
-        if items.is_empty() {
-            items.push("home");
-            settings.set_nav_show_home(true);
-        }
+        let serialized = crate::action::serialize_bottom_bar_config(settings);
         let _ = session
             .borrow()
             .app_data
-            .save_bottom_bar_config(&items.join(","));
+            .save_bottom_bar_config(&serialized);
     };
 
     settings.on_bottom_bar_changed({

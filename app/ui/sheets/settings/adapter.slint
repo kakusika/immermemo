@@ -46,7 +46,7 @@ export global SettingsAdapter {
     // 0: show (default), 1: hide while editing a note, 2: always hide
     in-out property <int> status-bar-choice: 0;
 
-    // Bottom bar navigation items
+    // Bottom bar actions
     in-out property <bool> nav-show-home: true;
     in-out property <bool> nav-show-search: true;
     in-out property <bool> nav-show-library: true;
@@ -55,9 +55,14 @@ export global SettingsAdapter {
     in-out property <bool> nav-show-starred: false;
     in-out property <bool> nav-show-recent: false;
     in-out property <bool> nav-show-graph: false;
-    in-out property <bool> nav-show-quick: true;
-    // Order of items by ID: 0: home, 1: search, 2: library, 3: directory, 4: daily, 5: starred, 6: recent, 7: graph, 8: quick
-    in-out property <[int]> nav-order: [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    in-out property <bool> nav-show-new-note: true;
+    in-out property <bool> nav-show-sync: true;
+    in-out property <bool> nav-show-switch-vault: true;
+    in-out property <bool> nav-show-settings: true;
+    // Order of items by ID:
+    // 0: home, 1: search, 2: library, 3: directory, 4: daily, 5: starred, 6: recent, 7: graph,
+    // 8: new_note, 9: sync, 10: switch_vault, 11: settings
+    in-out property <[int]> nav-order: [0, 1, 8, 2, 9, 10, 11, 3, 4, 5, 6, 7];
     callback move-nav-item(int, int);
 
     // App info

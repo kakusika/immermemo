@@ -1928,4 +1928,19 @@ msgctxt "SettingsSheet"
 msgid "+ Add Vault"
 msgstr "+ 保管庫を追加"
 
+#: app/ui/app.slint
+msgid "More Actions"
+msgstr "その他のアクション"
+
+#: app/ui/components.slint
+msgctxt "BottomNavBar"
+msgid "New"
+msgstr "新規"
+
+#: app/ui/components.slint
+msgctxt "BottomNavBar"
+msgid "Vault"
+msgstr "保管庫"
+
+
 

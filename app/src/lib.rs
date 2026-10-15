@@ -1,3 +1,4 @@
+pub mod action;
 mod callbacks;
 pub mod cert;
 pub mod credentials;
@@ -39,53 +40,7 @@ pub fn update_provider_ui_state(app: &App, remote: Option<&str>) {
     gitlab::update_gitlab_ui_state(app, remote);
 }
 
-/// Applies comma-separated bottom bar configuration keys to the SettingsAdapter.
-pub fn apply_bottom_bar_config(settings: &SettingsAdapter, config: &str) {
-    let raw_items: Vec<&str> = config
-        .split(',')
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .collect();
-    let set: std::collections::HashSet<&str> = raw_items.iter().copied().collect();
-    settings.set_nav_show_home(set.contains("home"));
-    settings.set_nav_show_search(set.contains("search"));
-    settings.set_nav_show_library(set.contains("library"));
-    settings.set_nav_show_directory(set.contains("directory"));
-    settings.set_nav_show_daily(set.contains("daily"));
-    settings.set_nav_show_starred(set.contains("starred"));
-    settings.set_nav_show_recent(set.contains("recent"));
-    settings.set_nav_show_graph(set.contains("graph"));
-    settings.set_nav_show_quick(set.contains("quick"));
-
-    let key_to_id = |k: &str| -> Option<i32> {
-        match k {
-            "home" => Some(0),
-            "search" => Some(1),
-            "library" => Some(2),
-            "directory" => Some(3),
-            "daily" => Some(4),
-            "starred" => Some(5),
-            "recent" => Some(6),
-            "graph" => Some(7),
-            "quick" => Some(8),
-            _ => None,
-        }
-    };
-    let mut order: Vec<i32> = Vec::new();
-    for key in raw_items {
-        if let Some(id) = key_to_id(key) {
-            if !order.contains(&id) {
-                order.push(id);
-            }
-        }
-    }
-    for default_id in 0..9 {
-        if !order.contains(&default_id) {
-            order.push(default_id);
-        }
-    }
-    settings.set_nav_order(std::rc::Rc::new(slint::VecModel::from(order)).into());
-}
+pub use action::apply_bottom_bar_config;
 
 use session::{
     SESSION, Session, open_initial_or_last_note, open_note_by_rel_path, refresh_list,
@@ -848,28 +803,47 @@ mod tests {
     fn bottom_bar_config_applies_to_settings(app: &App) {
         let settings = app.global::<SettingsAdapter>();
 
-        apply_bottom_bar_config(&settings, "home,search,library,quick");
+        apply_bottom_bar_config(&settings, "home,search,new_note,library");
         assert!(settings.get_nav_show_home());
         assert!(settings.get_nav_show_search());
+        assert!(settings.get_nav_show_new_note());
         assert!(settings.get_nav_show_library());
         assert!(!settings.get_nav_show_directory());
         assert!(!settings.get_nav_show_daily());
         assert!(!settings.get_nav_show_starred());
         assert!(!settings.get_nav_show_recent());
         assert!(!settings.get_nav_show_graph());
-        assert!(settings.get_nav_show_quick());
+        assert!(!settings.get_nav_show_sync());
 
-        apply_bottom_bar_config(&settings, "home,daily,starred,recent,graph");
+        apply_bottom_bar_config(&settings, "home,daily,starred,recent,graph,sync");
         assert!(settings.get_nav_show_home());
         assert!(!settings.get_nav_show_search());
+        assert!(!settings.get_nav_show_new_note());
         assert!(!settings.get_nav_show_library());
         assert!(settings.get_nav_show_daily());
         assert!(settings.get_nav_show_starred());
         assert!(settings.get_nav_show_recent());
         assert!(settings.get_nav_show_graph());
-        assert!(!settings.get_nav_show_quick());
+        assert!(settings.get_nav_show_sync());
+
+        // Test legacy "quick" migration: expands into new_note, sync, switch_vault, settings
+        apply_bottom_bar_config(&settings, "home,search,library,quick");
+        assert!(settings.get_nav_show_home());
+        assert!(settings.get_nav_show_search());
+        assert!(settings.get_nav_show_library());
+        assert!(settings.get_nav_show_new_note());
+        assert!(settings.get_nav_show_sync());
+        assert!(settings.get_nav_show_switch_vault());
+        assert!(settings.get_nav_show_settings());
+        assert!(!settings.get_nav_show_directory());
+
+        let serialized = action::serialize_bottom_bar_config(&settings);
+        assert_eq!(
+            serialized,
+            "home,search,library,new_note,sync,switch_vault,settings"
+        );
 
         // Restore default
-        apply_bottom_bar_config(&settings, "home,search,library,quick");
+        apply_bottom_bar_config(&settings, "home,search,new_note,library");
     }
 }
