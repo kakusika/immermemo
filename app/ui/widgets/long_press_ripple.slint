@@ -1,0 +1,169 @@
+// Copyright © 2026 Immermemo contributors
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+
+/// A container component that provides an expanding circular ripple feedback
+/// when pressed, triggering a `long-pressed` callback when held down for the
+/// specified duration, or a `clicked` callback on a short tap.
+export component LongPressRippleArea inherits Rectangle {
+    in property <bool> enabled: true;
+    in property <bool> long-press-enabled: true;
+    in property <duration> long-press-duration: 350ms;
+    in property <color> ripple-color: Palette.foreground.with-alpha(0.12);
+    in property <color> flash-color: Palette.accent-background.with-alpha(0.18);
+    in property <color> base-background: transparent;
+    in property <color> pressed-background: transparent;
+    in property <MouseCursor> mouse-cursor: default;
+
+    callback clicked();
+    callback long-pressed();
+
+    out property <bool> pressed: touch.pressed;
+
+    // Boundary clipping
+    clip: true;
+    background: root.base-background;
+
+    // Subtle overall highlight while touching
+    press-overlay := Rectangle {
+        width: 100%;
+        height: 100%;
+        border-radius: root.border-radius;
+        background: root.pressed-background;
+        opacity: (touch.pressed && root.enabled) ? 1.0 : 0.0;
+        animate opacity {
+            duration: touch.pressed ? 50ms : 180ms;
+            easing: ease-out;
+        }
+    }
+
+    // Ripple center coordinates
+    property <length> origin-x: root.width / 2;
+    property <length> origin-y: root.height / 2;
+    property <bool> is-active: false;
+    property <bool> long-press-fired: false;
+
+    // Flash highlight upon long-press completion
+    property <float> flash-opacity: 0.0;
+    animate flash-opacity {
+        duration: 180ms;
+        easing: ease-out;
+    }
+
+    // Distance to the furthest corner from the tap origin
+    property <length> dist-x: max(root.origin-x, root.width - root.origin-x);
+    property <length> dist-y: max(root.origin-y, root.height - root.origin-y);
+    property <length> target-radius: max(root.dist-x, root.dist-y) + min(root.dist-x, root.dist-y) * 0.45;
+    property <length> ripple-diameter: 0px;
+
+    states [
+        active when root.is-active: {
+            ripple-diameter: root.target-radius * 2;
+            in {
+                animate ripple-diameter {
+                    duration: root.long-press-duration;
+                    easing: linear;
+                }
+            }
+            out {
+                animate ripple-diameter {
+                    duration: 0ms;
+                }
+            }
+        }
+    ]
+
+    property <float> ripple-opacity: (touch.pressed && root.enabled) ? 1.0 : 0.0;
+    animate ripple-opacity {
+        duration: touch.pressed ? 60ms : 180ms;
+        easing: ease-out;
+    }
+
+    // Expanding ripple circle
+    ripple-circle := Rectangle {
+        x: root.origin-x - self.width / 2;
+        y: root.origin-y - self.height / 2;
+        width: root.ripple-diameter;
+        height: root.ripple-diameter;
+        border-radius: self.width / 2;
+        background: root.ripple-color;
+        opacity: root.ripple-opacity;
+    }
+
+    // Subtle accent flash when long-press successfully triggers
+    flash-overlay := Rectangle {
+        width: 100%;
+        height: 100%;
+        border-radius: root.border-radius;
+        background: root.flash-color;
+        opacity: root.flash-opacity;
+    }
+
+    // Touch capture area
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.mouse-cursor;
+
+        changed pressed => {
+            if (self.pressed) {
+                reset-timer.running = false;
+                root.origin-x = self.pressed-x;
+                root.origin-y = self.pressed-y;
+                root.long-press-fired = false;
+                root.is-active = true;
+            } else {
+                reset-timer.running = true;
+            }
+        }
+
+        clicked => {
+            if (root.long-press-fired) {
+                root.long-press-fired = false;
+            } else {
+                root.clicked();
+            }
+        }
+    }
+
+    // Long-press timer
+    long-press-timer := Timer {
+        interval: root.long-press-duration;
+        running: touch.pressed && root.enabled && root.long-press-enabled && !root.long-press-fired;
+        triggered => {
+            root.long-press-fired = true;
+            root.flash-opacity = 1.0;
+            flash-timer.running = true;
+            root.long-pressed();
+        }
+    }
+
+    flash-timer := Timer {
+        interval: 100ms;
+        running: false;
+        triggered => {
+            self.running = false;
+            root.flash-opacity = 0.0;
+        }
+    }
+
+    // Reset timer to reset ripple geometry after fade-out completes
+    reset-timer := Timer {
+        interval: 220ms;
+        running: false;
+        triggered => {
+            self.running = false;
+            if (!touch.pressed) {
+                root.is-active = false;
+            }
+        }
+    }
+
+    // Children slot rendered above the ripple & background
+    content-container := Rectangle {
+        width: 100%;
+        height: 100%;
+        @children
+    }
+}

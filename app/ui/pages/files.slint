@@ -10,6 +10,7 @@ import {
     SegmentedControl,
     IconTile,
 } from "@origiri-mobile/widgets.slint";
+import { LongPressRippleArea } from "../widgets/long_press_ripple.slint";
 
 // One row of the Directory page's List view, or one tile of its Grid
 // view -- both are the direct contents of whichever folder is currently
@@ -416,28 +417,18 @@ component DirectoryRow inherits Rectangle {
 
     height: 56px * Metrics.ui-scale;
 
-    row-touch := TouchArea {
-        width: root.show-menu ? (parent.width - 48px * Metrics.ui-scale) : parent.width;
-        height: 100%;
-        clicked => {
-            if (root.long-press-fired) {
-                root.long-press-fired = false;
-            } else {
-                root.clicked();
-            }
-        }
-    }
-
-    highlight-rect := Rectangle {
+    highlight-rect := LongPressRippleArea {
         x: Metrics.spacing-xs;
         y: 2px * Metrics.ui-scale;
         width: parent.width - 2 * Metrics.spacing-xs;
         height: parent.height - 4px * Metrics.ui-scale;
         border-radius: 12px * Metrics.ui-scale;
-        background: root.highlighted
+        base-background: root.highlighted
             ? Palette.accent-background.with-alpha(0.18)
-            : (row-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent);
-        animate background { duration: 150ms; easing: ease-out; }
+            : transparent;
+        long-press-enabled: root.long-press-enabled;
+        clicked => { root.clicked(); }
+        long-pressed => { root.long-pressed(); }
 
         HorizontalLayout {
             padding-left: Metrics.spacing-sm + 2px * Metrics.ui-scale;
@@ -527,18 +518,8 @@ component DirectoryRow inherits Rectangle {
             }
         }
     }
-
-    property <bool> long-press-fired: false;
-
-    Timer {
-        interval: 400ms;
-        running: row-touch.pressed && root.long-press-enabled && !root.long-press-fired;
-        triggered => {
-            root.long-press-fired = true;
-            root.long-pressed();
-        }
-    }
 }
+
 
 export component FilesScreen inherits Rectangle {
     in property <int> current: -1;

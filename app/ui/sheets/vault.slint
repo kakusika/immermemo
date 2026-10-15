@@ -7,7 +7,7 @@ import {
     ActionRow,
     ActionSheet,
 } from "@origiri-mobile/widgets.slint";
-import { SheetDragArea } from "../components.slint";
+import { SheetDragArea, LongPressRippleArea } from "../components.slint";
 
 // Full-screen, same shape as the other sheets: which vault is open, and a
 // way to link another one. Rust owns what "adding" a vault actually means
@@ -92,10 +92,16 @@ export component VaultSheet inherits Rectangle {
                 background: Colors.separator;
             }
 
-            for name[i] in root.vaults: Rectangle {
+            for name[i] in root.vaults: LongPressRippleArea {
                 height: (root.vault-subtitles.length > i && root.vault-subtitles[i] != "") ? 56px : Metrics.touch;
-                background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
-                property <bool> long-pressed: false;
+                long-press-duration: 350ms;
+                clicked => {
+                    root.select(i);
+                }
+                long-pressed => {
+                    root.trigger-haptic();
+                    root.menu-index = i;
+                }
 
                 HorizontalLayout {
                     padding-left: Metrics.gutter;
@@ -123,26 +129,6 @@ export component VaultSheet inherits Rectangle {
                         font-size: 13px;
                         color: Palette.accent-background;
                         vertical-alignment: center;
-                    }
-                }
-
-                touch := TouchArea {
-                    clicked => {
-                        if (long-pressed) {
-                            long-pressed = false;
-                        } else {
-                            root.select(i);
-                        }
-                    }
-                }
-
-                Timer {
-                    interval: 500ms;
-                    running: touch.pressed && !long-pressed;
-                    triggered => {
-                        long-pressed = true;
-                        root.trigger-haptic();
-                        root.menu-index = i;
                     }
                 }
             }
