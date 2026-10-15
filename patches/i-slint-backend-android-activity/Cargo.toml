@@ -58,6 +58,7 @@ native-activity = [
     "android-activity-05?/native-activity",
 ]
 renderer-skia = ["dep:i-slint-renderer-skia"]
+renderer-femtovg = ["dep:i-slint-renderer-femtovg", "i-slint-renderer-femtovg/opengl"]
 unstable-wgpu-29 = ["i-slint-renderer-skia?/unstable-wgpu-29"]
 unstable-wgpu-30 = ["i-slint-renderer-skia?/unstable-wgpu-30"]
 
@@ -92,6 +93,11 @@ features = [
 default-features = false
 
 [target.'cfg(target_os = "android")'.dependencies.i-slint-renderer-skia]
+version = "=1.18.1"
+default-features = false
+optional = true
+
+[target.'cfg(target_os = "android")'.dependencies.i-slint-renderer-femtovg]
 version = "=1.18.1"
 default-features = false
 optional = true

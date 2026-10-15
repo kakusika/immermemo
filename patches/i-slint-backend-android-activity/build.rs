@@ -12,6 +12,11 @@ fn main() {
     if !env::var("TARGET").unwrap().contains("android") {
         return;
     }
+
+    if env::var("CARGO_FEATURE_RENDERER_FEMTOVG").is_ok() {
+        println!("cargo:rustc-link-lib=EGL");
+        println!("cargo:rustc-link-lib=GLESv2");
+    }
     let release_mode = env::var("PROFILE").as_ref().map(|s| s.as_str()) == Ok("release");
 
     // This is the only Java source file

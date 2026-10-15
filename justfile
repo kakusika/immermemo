@@ -14,6 +14,8 @@ apk := dist + "/immermemo.apk"
 apk_universal := dist + "/immermemo-universal.apk"
 apk_arm := dist + "/immermemo-arm64.apk"
 apk_x86 := dist + "/immermemo-x86_64.apk"
+apk_arm_femtovg := dist + "/immermemo-arm64-femtovg.apk"
+apk_x86_femtovg := dist + "/immermemo-x86_64-femtovg.apk"
 
 # List available recipes
 default:
@@ -98,6 +100,24 @@ apk-x86:
     cp {{apk_raw}} {{apk_x86}}
     cp {{apk_raw}} {{apk}}
     @echo "Built: {{apk_x86}} (and {{apk}})"
+
+# Build a slim release APK with FemtoVG renderer (OpenGL ES) for real devices (aarch64)
+apk-arm-femtovg:
+    cd app && rm -rf {{jniLibs}}
+    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-femtovg
+    cd app/android && gradle assembleRelease
+    @mkdir -p {{dist}}
+    cp {{apk_raw}} {{apk_arm_femtovg}}
+    @echo "Built: {{apk_arm_femtovg}}"
+
+# Build a slim release APK with FemtoVG renderer (OpenGL ES) for emulator (x86_64)
+apk-x86-femtovg:
+    cd app && rm -rf {{jniLibs}}
+    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo --no-default-features --features renderer-femtovg
+    cd app/android && gradle assembleRelease
+    @mkdir -p {{dist}}
+    cp {{apk_raw}} {{apk_x86_femtovg}}
+    @echo "Built: {{apk_x86_femtovg}}"
 
 # Build for whatever single device/emulator adb currently sees, picking
 # its ABI automatically instead of bundling both (what `install`/`run`

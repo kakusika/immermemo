@@ -23,6 +23,8 @@ use i_slint_core::timers::{Timer, TimerMode};
 use i_slint_core::window::{InputMethodRequest, WindowInner};
 #[cfg(feature = "renderer-skia")]
 use i_slint_renderer_skia::{SkiaRenderer, SkiaSharedContext};
+#[cfg(feature = "renderer-femtovg")]
+use i_slint_renderer_femtovg::{FemtoVGOpenGLRenderer, FemtoVGOpenGLRendererExt, FemtoVGRendererExt};
 use std::cell::Cell;
 use std::rc::Rc;
 #[cfg(feature = "renderer-skia")]
@@ -38,6 +40,8 @@ pub struct AndroidWindowAdapter {
     pub(crate) window: Window,
     #[cfg(feature = "renderer-skia")]
     pub(crate) renderer: i_slint_renderer_skia::SkiaRenderer,
+    #[cfg(feature = "renderer-femtovg")]
+    pub(crate) renderer: FemtoVGOpenGLRenderer,
     #[allow(dead_code)]
     requested_graphics_api: RefCell<Option<i_slint_core::graphics::RequestedGraphicsAPI>>,
     pub(crate) event_queue: EventQueue,
@@ -192,6 +196,8 @@ impl AndroidWindowAdapter {
             #[cfg(feature = "renderer-skia")]
             #[cfg(feature = "unstable-wgpu-30")]
             renderer: SkiaRenderer::default_wgpu_30(&SkiaSharedContext::default()),
+            #[cfg(feature = "renderer-femtovg")]
+            renderer: FemtoVGOpenGLRenderer::new_suspended(),
             requested_graphics_api: RefCell::new(None),
             event_queue: Default::default(),
             pending_redraw: Default::default(),
@@ -237,6 +243,12 @@ impl AndroidWindowAdapter {
                         self.requested_graphics_api.borrow().clone(),
                         false,
                     )?;
+                    #[cfg(feature = "renderer-femtovg")]
+                    {
+                        let egl_context = crate::egl::AndroidEglContext::new(w.ptr().as_ptr().cast())
+                            .map_err(|e| PlatformError::Other(e.to_string()))?;
+                        self.renderer.set_opengl_context(egl_context)?;
+                    }
                     self.resize()?;
 
                     // Fixes a problem for old Android versions: the soft input always prompt out on startup.
@@ -245,6 +257,10 @@ impl AndroidWindowAdapter {
                         .show_or_hide_soft_input(false)
                         .unwrap_or_else(|e| print_jni_error(&self.app, e));
                 }
+            }
+            PollEvent::Main(MainEvent::TerminateWindow { .. }) => {
+                #[cfg(feature = "renderer-femtovg")]
+                self.renderer.clear_graphics_context()?;
             }
             PollEvent::Main(
                 MainEvent::WindowResized { .. } | MainEvent::ContentRectChanged { .. },
@@ -525,6 +541,16 @@ impl AndroidWindowAdapter {
     pub fn do_render(&self) -> Result<(), PlatformError> {
         if let Some(win) = self.app.native_window() {
             #[cfg(feature = "renderer-skia")]
+            {
+                let o = self.offset.get();
+                let _ = self.renderer.render_transformed_with_post_callback(
+                    0.,
+                    (o.x as f32, o.y as f32),
+                    PhysicalSize { width: win.width() as _, height: win.height() as _ },
+                    None,
+                )?;
+            }
+            #[cfg(feature = "renderer-femtovg")]
             {
                 let o = self.offset.get();
                 let _ = self.renderer.render_transformed_with_post_callback(

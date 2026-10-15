@@ -10,6 +10,8 @@
 #![cfg_attr(slint_nightly_test, warn(non_exhaustive_omitted_patterns))]
 
 mod androidwindowadapter;
+#[cfg(feature = "renderer-femtovg")]
+mod egl;
 mod javahelper;
 mod vsync;
 
