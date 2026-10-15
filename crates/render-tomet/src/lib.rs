@@ -434,6 +434,33 @@ pub fn meta_element(src: &str, key: &str) -> Option<(ElementIdentity, ElementArg
     })
 }
 
+/// Extracts `(icon_name, icon_pkg)` from a note's `@meta{ icon: @doc.icon(...) }`, if present.
+pub fn extract_note_icon(src: &str) -> Option<(String, String)> {
+    let (identity, args) = meta_element(src, "icon")?;
+    if identity.namespace.as_deref() == Some("doc") && identity.name == "icon" {
+        let (name, pkg) = match &args {
+            ElementArgs::Positional(name) => (name.clone(), "tabler".to_string()),
+            ElementArgs::Named(pairs) => {
+                let name = pairs
+                    .iter()
+                    .find(|(key, _)| key.is_empty())
+                    .map(|(_, value)| value.clone())
+                    .unwrap_or_default();
+                let pkg = pairs
+                    .iter()
+                    .find(|(key, _)| key == "pkg")
+                    .map(|(_, value)| value.clone())
+                    .unwrap_or_else(|| "tabler".to_string());
+                (name, pkg)
+            }
+            ElementArgs::None => (String::new(), "tabler".to_string()),
+        };
+        Some((name, pkg))
+    } else {
+        None
+    }
+}
+
 /// Returns true if an element identity represents document-level metadata
 /// or directives (`@meta`, `@kind`, `@config`, `@use`) that belong in note
 /// properties rather than the rendered reading view.

@@ -16,15 +16,17 @@ use tomet::merge::CONFLICT_MARKER;
 /// Shared by every place that writes a note row: insert it fresh, or
 /// overwrite every column if the path already exists.
 const UPSERT_NOTE_SQL: &str =
-    "INSERT INTO notes (path, title, mtime_secs, mtime_nanos, size, has_conflict, body)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+    "INSERT INTO notes (path, title, mtime_secs, mtime_nanos, size, has_conflict, body, icon_name, icon_pkg)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
      ON CONFLICT(path) DO UPDATE SET
         title = excluded.title,
         mtime_secs = excluded.mtime_secs,
         mtime_nanos = excluded.mtime_nanos,
         size = excluded.size,
         has_conflict = excluded.has_conflict,
-        body = excluded.body";
+        body = excluded.body,
+        icon_name = excluded.icon_name,
+        icon_pkg = excluded.icon_pkg";
 
 /// An indexed note in the vault.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,39 +85,52 @@ impl NoteIndex {
     fn init(conn: Connection) -> anyhow::Result<Self> {
         conn.execute_batch(
             "PRAGMA journal_mode = WAL;
-            PRAGMA synchronous = NORMAL;
-
-            CREATE TABLE IF NOT EXISTS notes (
-                path TEXT PRIMARY KEY,
-                title TEXT NOT NULL,
-                mtime_secs INTEGER NOT NULL,
-                mtime_nanos INTEGER NOT NULL,
-                size INTEGER NOT NULL,
-                has_conflict INTEGER NOT NULL DEFAULT 0,
-                body TEXT NOT NULL
-            );
-
-            CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
-                path UNINDEXED,
-                title,
-                body,
-                tokenize = 'trigram'
-            );
-
-            CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON notes BEGIN
-                INSERT INTO notes_fts (path, title, body) VALUES (new.path, new.title, new.body);
-            END;
-
-            CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON notes BEGIN
-                DELETE FROM notes_fts WHERE path = old.path;
-            END;
-
-            CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON notes BEGIN
-                DELETE FROM notes_fts WHERE path = old.path;
-                INSERT INTO notes_fts (path, title, body) VALUES (new.path, new.title, new.body);
-            END;
-            ",
+            PRAGMA synchronous = NORMAL;",
         )?;
+
+        let version: u32 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+        if version == 0 {
+            conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS notes (
+                    path TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    mtime_secs INTEGER NOT NULL,
+                    mtime_nanos INTEGER NOT NULL,
+                    size INTEGER NOT NULL,
+                    has_conflict INTEGER NOT NULL DEFAULT 0,
+                    body TEXT NOT NULL,
+                    icon_name TEXT,
+                    icon_pkg TEXT
+                );
+
+                CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+                    path UNINDEXED,
+                    title,
+                    body,
+                    tokenize = 'trigram'
+                );
+
+                CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON notes BEGIN
+                    INSERT INTO notes_fts (path, title, body) VALUES (new.path, new.title, new.body);
+                END;
+
+                CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON notes BEGIN
+                    DELETE FROM notes_fts WHERE path = old.path;
+                END;
+
+                CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON notes BEGIN
+                    DELETE FROM notes_fts WHERE path = old.path;
+                    INSERT INTO notes_fts (path, title, body) VALUES (new.path, new.title, new.body);
+                END;
+
+                PRAGMA user_version = 2;
+                ",
+            )?;
+        } else if version == 1 {
+            let _ = conn.execute("ALTER TABLE notes ADD COLUMN icon_name TEXT;", []);
+            let _ = conn.execute("ALTER TABLE notes ADD COLUMN icon_pkg TEXT;", []);
+            let _ = conn.execute("PRAGMA user_version = 2;", []);
+        }
         Ok(Self { conn })
     }
 
@@ -192,6 +207,10 @@ impl NoteIndex {
                         let has_conflict = body.contains(CONFLICT_MARKER);
                         let title = display_name_from_rel(&rel_path);
                         let is_new = cached.is_none();
+                        let (icon_name, icon_pkg) =
+                            immermemo_render_tomet::extract_note_icon(&body)
+                                .map(|(n, p)| (Some(n), Some(p)))
+                                .unwrap_or((None, None));
 
                         upsert_stmt.execute(params![
                             &path_str,
@@ -200,7 +219,9 @@ impl NoteIndex {
                             mtime_nanos,
                             size,
                             if has_conflict { 1 } else { 0 },
-                            &body
+                            &body,
+                            icon_name,
+                            icon_pkg,
                         ])?;
 
                         if is_new {
@@ -254,6 +275,10 @@ impl NoteIndex {
                         conflict_set.contains(rel_path.as_path()) || body.contains(CONFLICT_MARKER);
                     let title = display_name_from_rel(rel_path);
                     let path_str = rel_path.to_string_lossy().to_string();
+                    let (icon_name, icon_pkg) =
+                        immermemo_render_tomet::extract_note_icon(&body)
+                            .map(|(n, p)| (Some(n), Some(p)))
+                            .unwrap_or((None, None));
 
                     upsert_stmt.execute(params![
                         &path_str,
@@ -262,7 +287,9 @@ impl NoteIndex {
                         mtime_nanos,
                         size,
                         if has_conflict { 1 } else { 0 },
-                        &body
+                        &body,
+                        icon_name,
+                        icon_pkg,
                     ])?;
                 }
             }
@@ -295,6 +322,9 @@ impl NoteIndex {
         let title = display_name_from_rel(rel_path);
         let has_conflict = content.contains(CONFLICT_MARKER);
         let path_str = rel_path.to_string_lossy().to_string();
+        let (icon_name, icon_pkg) = immermemo_render_tomet::extract_note_icon(content)
+            .map(|(n, p)| (Some(n), Some(p)))
+            .unwrap_or((None, None));
 
         self.conn.execute(
             UPSERT_NOTE_SQL,
@@ -305,7 +335,9 @@ impl NoteIndex {
                 mtime_nanos,
                 meta.len(),
                 if has_conflict { 1 } else { 0 },
-                content
+                content,
+                icon_name,
+                icon_pkg,
             ],
         )?;
         Ok(())
@@ -402,6 +434,25 @@ impl NoteIndex {
         if let Some(row) = rows.next()? {
             let body: String = row.get(0)?;
             Ok(Some(body))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Returns the cached `(name, pkg)` icon metadata for the note at `rel_path`, if any.
+    pub fn icon_for(&self, rel_path: &Path) -> anyhow::Result<Option<(String, String)>> {
+        let mut stmt = self
+            .conn
+            .prepare_cached("SELECT icon_name, icon_pkg FROM notes WHERE path = ?1")?;
+        let path_str = rel_path.to_string_lossy();
+        let mut rows = stmt.query(params![path_str])?;
+        if let Some(row) = rows.next()? {
+            let name: Option<String> = row.get(0)?;
+            let pkg: Option<String> = row.get(1)?;
+            match (name, pkg) {
+                (Some(n), Some(p)) if !n.is_empty() => Ok(Some((n, p))),
+                _ => Ok(None),
+            }
         } else {
             Ok(None)
         }
@@ -977,5 +1028,24 @@ mod tests {
 
         let nonexistent = index.body_for(Path::new("missing.tmt")).unwrap();
         assert_eq!(nonexistent, None);
+    }
+
+    #[test]
+    fn icon_for_returns_persisted_icon_metadata() {
+        let vault = TempDir::new().unwrap();
+        let mut index = NoteIndex::open_in_memory().unwrap();
+        let note = vault.path().join("starred.tmt");
+        std::fs::write(&note, "@meta{ icon: @doc.icon(\"star\") }\n\nStarred note.\n").unwrap();
+        index.reconcile_filesystem(vault.path()).unwrap();
+
+        let icon = index.icon_for(Path::new("starred.tmt")).unwrap();
+        assert_eq!(icon, Some(("star".to_string(), "tabler".to_string())));
+
+        let plain = vault.path().join("plain.tmt");
+        std::fs::write(&plain, "Plain note without icon.\n").unwrap();
+        index.reconcile_filesystem(vault.path()).unwrap();
+
+        let plain_icon = index.icon_for(Path::new("plain.tmt")).unwrap();
+        assert_eq!(plain_icon, None);
     }
 }

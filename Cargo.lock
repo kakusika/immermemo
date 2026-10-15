@@ -2605,6 +2605,7 @@ name = "immermemo-index"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "immermemo-render-tomet",
  "immermemo-vault",
  "rusqlite",
  "tempfile",

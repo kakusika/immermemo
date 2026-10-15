@@ -43,8 +43,8 @@ pub fn update_provider_ui_state(app: &App, remote: Option<&str>) {
 pub use action::apply_bottom_bar_config;
 
 use session::{
-    SESSION, Session, open_initial_or_last_note, open_note_by_rel_path, refresh_list,
-    refresh_vault_list, vault_display_name,
+    SESSION, Session, load_cached_list, open_initial_or_last_note, open_note_by_rel_path,
+    refresh_list, refresh_vault_list, vault_display_name,
 };
 
 slint::include_modules!();
@@ -179,7 +179,10 @@ pub fn run(
     let session = Rc::new(RefCell::new(Session::new(core)));
 
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
-    refresh_list(&app, &session);
+    let had_cached_notes = load_cached_list(&app, &session);
+    if !had_cached_notes {
+        refresh_list(&app, &session);
+    }
     refresh_vault_list(&app, &session);
     if session.borrow().notes.is_empty() {
         app.set_list_open(true);
@@ -191,6 +194,14 @@ pub fn run(
         if !opened_from_widget {
             open_initial_or_last_note(&app, &session);
         }
+    }
+    if had_cached_notes {
+        let (weak, session_rc) = (app.as_weak(), session.clone());
+        slint::Timer::single_shot(std::time::Duration::from_millis(50), move || {
+            if let Some(app) = weak.upgrade() {
+                refresh_list(&app, &session_rc);
+            }
+        });
     }
     if session.borrow().remote.is_some() {
         session::schedule_auto_sync(&app, std::time::Duration::from_millis(500));

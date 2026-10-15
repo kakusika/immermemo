@@ -316,6 +316,18 @@ impl Session {
         RefreshListOutcome { conflict_count }
     }
 
+    /// Loads cached note lists from SQLite index without walking the filesystem.
+    pub fn load_cached_list_data(&mut self) -> RefreshListOutcome {
+        let previous = self.current_path();
+        let all = self.index.list_all().unwrap_or_default();
+        let vault_dir = self.vault_dir.clone();
+        self.notes = all.iter().map(|n| vault_dir.join(&n.path)).collect();
+        self.conflicted = all.iter().map(|n| n.has_conflict).collect();
+        let conflict_count = self.conflicted.iter().filter(|&&c| c).count();
+        self.editor.current = previous.and_then(|p| self.notes.iter().position(|n| *n == p));
+        RefreshListOutcome { conflict_count }
+    }
+
     /// Performs search filtering and prepares directory source cache.
     pub fn update_filtered_list_data(&mut self) -> FilteredListOutcome {
         let hits = self.index.search(&self.search_query).unwrap_or_default();

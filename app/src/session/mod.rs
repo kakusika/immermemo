@@ -76,6 +76,18 @@ pub fn refresh_list(app: &App, session: &Rc<RefCell<Session>>) {
     update_filtered_list(app, session);
 }
 
+/// Loads note list from index without walking the filesystem. Returns whether any notes were cached.
+pub fn load_cached_list(app: &App, session: &Rc<RefCell<Session>>) -> bool {
+    let mut s = session.borrow_mut();
+    let outcome = s.load_cached_list_data();
+    let has_notes = !s.notes.is_empty();
+    crate::widget::export_recent_notes(&s.index);
+    drop(s);
+    app.set_conflict_count(outcome.conflict_count as i32);
+    update_filtered_list(app, session);
+    has_notes
+}
+
 pub fn update_filtered_list(app: &App, session: &Rc<RefCell<Session>>) {
     let outcome = session.borrow_mut().update_filtered_list_data();
     let names: Vec<SharedString> = outcome.names.into_iter().map(SharedString::from).collect();
@@ -124,13 +136,11 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
             if let Ok(idx) = usize::try_from(entry.note_index) {
                 if let Some(abs_path) = s.notes.get(idx) {
                     if let Ok(rel_path) = abs_path.strip_prefix(&s.vault_dir) {
-                        if let Ok(Some(body)) = s.index.body_for(rel_path) {
-                            if let Some((name, pkg)) = crate::render::classify::note_icon(&body) {
-                                icon_by_path.insert(
-                                    abs_path.clone(),
-                                    crate::render::icon_image(&name, &pkg),
-                                );
-                            }
+                        if let Ok(Some((name, pkg))) = s.index.icon_for(rel_path) {
+                            icon_by_path.insert(
+                                abs_path.clone(),
+                                crate::render::icon_image(&name, &pkg),
+                            );
                         }
                     }
                 }
