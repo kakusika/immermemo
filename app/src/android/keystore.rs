@@ -16,8 +16,7 @@ use jni::objects::{JObject, JString, JValue};
 use jni::sys::jint;
 use jni::{JNIEnv, JavaVM};
 
-use crate::credentials::TokenStore;
-use immermemo_core::token_blob;
+use immermemo_core::{TokenStore, token_blob};
 
 /// The alias the key is filed under in the Keystore. Fixed: this app has
 /// exactly one token to protect.

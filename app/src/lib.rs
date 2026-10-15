@@ -1,7 +1,6 @@
 pub mod action;
 mod callbacks;
 pub mod cert;
-pub mod credentials;
 pub mod forgejo;
 pub mod github;
 pub mod gitlab;
@@ -9,7 +8,6 @@ mod haptic;
 pub mod qr;
 pub mod render;
 mod session;
-mod sync;
 pub mod transfer;
 mod widget;
 
@@ -309,7 +307,7 @@ mod tests {
         std::fs::write(&note_path, &conflicted_text).unwrap();
 
         let app_data = AppData::new(tmp.path().join("data"));
-        let token_store: Arc<dyn TokenStore> = Arc::new(credentials::PlainFileTokenStore::new(
+        let token_store: Arc<dyn TokenStore> = Arc::new(immermemo_core::PlainFileTokenStore::new(
             tmp.path().join("token"),
         ));
         let mut core = immermemo_core::Session::new(
@@ -665,7 +663,7 @@ mod tests {
         session: &Rc<RefCell<Session>>,
         multi_note_path: &Path,
     ) {
-        let ts = session::format_timestamp(1700000000);
+        let ts = immermemo_core::format_timestamp(1700000000);
         assert!(ts.contains("2023-11-14"));
 
         let rev1 = immermemo_core::FileRevision {

@@ -4,11 +4,11 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
 
-use immermemo_core::{History, notes};
+use immermemo_core::{History, format_timestamp, notes};
 use slint::{ModelRc, SharedString, VecModel};
 
 use crate::{App, NoteBodyItemView};
-use super::util::{format_timestamp, set_status};
+use super::util::set_status;
 use super::{
     Session, schedule_auto_sync, update_note_stats, update_rendered_body,
 };

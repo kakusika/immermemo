@@ -1,4 +1,4 @@
-//! Runs one `Vault::sync` for the window, off the UI thread.
+//! Runs one `Vault::sync`, off the UI thread.
 //!
 //! Deliberately knows nothing about where credentials come from -- that is
 //! `crate::credentials`' job -- or where the gitdir lives -- that is
@@ -6,9 +6,8 @@
 
 use std::path::Path;
 
-use immermemo_core::{
-    CertificateVerifier, CredentialProvider, DeviceIdentity, SyncReport, Vault,
-};
+use immermemo_identity::DeviceIdentity;
+use immermemo_sync::{CertificateVerifier, CredentialProvider, SyncReport, Vault};
 
 /// Runs a sync against `remote` and returns the resulting `SyncReport`.
 /// `identity` (plain data, loaded by the caller before this runs --
@@ -37,7 +36,8 @@ pub fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use immermemo_core::AppData;
+    use crate::CONFLICT_MARKER;
+    use immermemo_vault::appdata::AppData;
     use std::path::PathBuf;
     use tempfile::TempDir;
 
@@ -128,10 +128,7 @@ mod tests {
 
         // The window reopens notes by path, so they must be absolute.
         assert_eq!(conflicted, vec![b.notes.path().join("note.tmt")]);
-        assert!(
-            b.read("note.tmt")
-                .contains(immermemo_core::CONFLICT_MARKER)
-        );
+        assert!(b.read("note.tmt").contains(CONFLICT_MARKER));
     }
 
     #[test]

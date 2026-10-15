@@ -5,13 +5,12 @@ use std::rc::Rc;
 
 use slint::{ComponentHandle, SharedString};
 
-use crate::credentials::TokenCredentials;
-use crate::sync;
+use immermemo_core::{TokenCredentials, format_time_only, sync};
 use crate::{App, SettingsAdapter};
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use crate::cert;
 
-use super::util::{format_time_only, set_status};
+use super::util::set_status;
 use super::{
     SESSION, Session, close_current_note_and_show_list_or_reopen, open_note, refresh_list,
     show_list_or_reopen, vault_display_name,

@@ -9,6 +9,7 @@ immermemo-index = { workspace = true }
 immermemo-sync = { workspace = true }
 immermemo-vault = { workspace = true }
 immermemo-credentials = { workspace = true }
+immermemo-provider = { workspace = true }
 #= Tomet
 tomet = { workspace = true, features = ["edit", "merge", "parser", "printer", "stats"] }
 

@@ -1,8 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use immermemo::TokenStoreFactory;
-use immermemo::credentials::{PlainFileTokenStore, TokenStore};
+use immermemo_core::{PlainFileTokenStore, TokenStore, TokenStoreFactory};
 
 fn main() -> anyhow::Result<()> {
     let mut args = std::env::args().skip(1);

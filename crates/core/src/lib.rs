@@ -3,10 +3,15 @@
 //! Independent of Slint or graphical UI frameworks, allowing lightweight,
 //! fast compilation and standalone unit testing of note application workflows.
 
+pub mod credentials;
 pub mod directory;
 pub mod editor;
+pub mod format;
 pub mod navigation;
 pub mod session;
+pub mod sync;
+
+pub use format::{days_to_ymd, format_time_only, format_timestamp};
 
 // Domain facade re-exports:
 pub use immermemo_identity::DeviceIdentity;
@@ -18,6 +23,7 @@ pub use immermemo_sync::{
 pub use immermemo_credentials::{
     PlainFileTokenStore, SshKeyStore, TokenStore, TokenStoreFactory, token_blob,
 };
+pub use credentials::TokenCredentials;
 pub use immermemo_vault::appdata::{Account, AppData};
 pub mod notes {
     pub use immermemo_vault::notes::*;

@@ -2572,6 +2572,7 @@ dependencies = [
  "immermemo-credentials",
  "immermemo-identity",
  "immermemo-index",
+ "immermemo-provider",
  "immermemo-render-tomet",
  "immermemo-sync",
  "immermemo-vault",

@@ -7,10 +7,10 @@
 //! An `ssh://` remote uses the in-app Ed25519 keypair if present, falling
 //! back to desktop ssh-agent when available.
 
-pub use immermemo_core::{
-    AppData, CredentialProvider, PlainFileTokenStore, SshKeyStore, TokenStore, TokenStoreFactory,
-};
+use immermemo_credentials::{SshKeyStore, TokenStore};
 use immermemo_provider::GitLabProvider;
+use immermemo_sync::CredentialProvider;
+use immermemo_vault::appdata::AppData;
 
 /// Credentials backed by whatever [`TokenStore`] the platform provides,
 /// plus optional in-app SSH keys stored in [`AppData`].
@@ -90,6 +90,7 @@ impl<S: TokenStore> CredentialProvider for TokenCredentials<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use immermemo_credentials::PlainFileTokenStore;
 
     #[test]
     fn ssh_credentials_uses_in_app_key_when_available() {
