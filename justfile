@@ -140,9 +140,12 @@ apk-auto:
             ;;
     esac
 
+desktop_cflags := "-fno-unwind-tables -fno-asynchronous-unwind-tables -ffunction-sections -fdata-sections -DOPENSSL_NO_SM2_PRECOMP -DSQLITE_OMIT_JSON -DSQLITE_OMIT_SHARED_CACHE -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_LIKE_DOESNT_MATCH_BLOBS"
+desktop_rustflags := "-C force-unwind-tables=no -C link-arg=-Wl,--gc-sections"
+
 # Build the release desktop binary and copy it into dist/
 desktop:
-    cargo build --release -p immermemo --bin immermemo
+    RUSTFLAGS="{{desktop_rustflags}}" CFLAGS="{{desktop_cflags}}" CXXFLAGS="{{desktop_cflags}}" cargo build --release -p immermemo --bin immermemo
     @mkdir -p {{dist}}
     cp target/release/immermemo {{dist}}/immermemo-desktop
     @echo "Built: {{dist}}/immermemo-desktop"
