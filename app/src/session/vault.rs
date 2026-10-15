@@ -15,6 +15,7 @@ use super::{
 };
 
 pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
+    crate::callbacks::migrate_legacy_remotes(&session.borrow());
     let s = session.borrow();
     let names: Vec<SharedString> = s
         .known_vaults

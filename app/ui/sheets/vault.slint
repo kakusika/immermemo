@@ -93,7 +93,7 @@ export component VaultSheet inherits Rectangle {
             }
 
             for name[i] in root.vaults: Rectangle {
-                height: Metrics.touch;
+                height: (root.vault-subtitles.length > i && root.vault-subtitles[i] != "") ? 56px : Metrics.touch;
                 background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
                 property <bool> long-pressed: false;
 

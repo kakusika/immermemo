@@ -16,8 +16,67 @@ use crate::session::{
     vault_path_from_input,
 };
 
+/// Migrates any legacy remote URL on known vaults into registered accounts if not yet present.
+pub fn migrate_legacy_remotes(session: &Session) {
+    for vault in &session.known_vaults {
+        if session.app_data.load_vault_account(vault).is_some() {
+            continue;
+        }
+        let Some(remote_url) = session.app_data.load_remote(vault) else {
+            continue;
+        };
+        let trimmed = remote_url.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        let maybe_account = if let Some((user, _)) = immermemo_provider::GitHubProvider::parse_remote(trimmed) {
+            Some(immermemo_core::Account {
+                id: format!("github:{user}"),
+                provider: "github".to_string(),
+                instance_url: "https://github.com".to_string(),
+                username: user,
+                display_name: None,
+                avatar_url: None,
+            })
+        } else if let Some((host, user, _)) = immermemo_provider::ForgejoProvider::parse_any_remote(trimmed) {
+            let instance = if host.starts_with("http://") || host.starts_with("https://") {
+                host
+            } else {
+                format!("https://{host}")
+            };
+            Some(immermemo_core::Account {
+                id: format!("forgejo:{instance}:{user}"),
+                provider: "forgejo".to_string(),
+                instance_url: instance,
+                username: user,
+                display_name: None,
+                avatar_url: None,
+            })
+        } else {
+            None
+        };
+
+        if let Some(acc) = maybe_account {
+            let acc_id = acc.id.clone();
+            let _ = session.app_data.add_account(acc);
+            let _ = session.app_data.save_vault_account(vault, &acc_id);
+            if let Ok(token) = session.token_store.load() {
+                if let Some(t) = token {
+                    if let Ok(token_path) = session.app_data.account_token_path(&acc_id) {
+                        if let Ok(acc_store) = (session.token_store_for)(&token_path) {
+                            let _ = acc_store.save(&t);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Refreshes the list of provider accounts and vault account link in the Settings sheet.
 pub fn refresh_accounts_ui(app: &App, session: &Session) {
+    migrate_legacy_remotes(session);
     let settings = app.global::<SettingsAdapter>();
     let accounts = session.app_data.load_accounts();
     let ui_accounts: Vec<AccountData> = accounts

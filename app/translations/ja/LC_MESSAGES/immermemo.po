@@ -1802,3 +1802,43 @@ msgstr "グラフビュー設定"
 msgctxt "SettingsSheet"
 msgid "Settings for interactive note graph will appear here."
 msgstr "ノートの関連グラフ表示の設定がここに表示されます。"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Accounts & Sync"
+msgstr "アカウントと同期"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Manage provider accounts and sync vaults."
+msgstr "プロバイダーアカウントと保管庫同期の管理。"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Connected Accounts ({})"
+msgstr "接続済みアカウント ({})"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "No provider accounts connected. Add an account below to sync vaults."
+msgstr "接続済みのアカウントがありません。以下からアカウントを追加して保管庫を同期できます。"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Active"
+msgstr "使用中"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "+ Vault"
+msgstr "+ 保管庫"
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Current Vault: "
+msgstr "現在の保管庫: "
+
+#: app/ui/sheets/settings/settings.slint
+msgctxt "SettingsSheet"
+msgid "Add Provider Account"
+msgstr "プロバイダーアカウントを追加"
