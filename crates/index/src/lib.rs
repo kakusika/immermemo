@@ -6,27 +6,20 @@
 //! Designed to scale to tens of thousands of notes without performing full filesystem
 //! walks or per-file disk reads on every UI refresh or keystroke search.
 
-use std::collections::{HashMap, HashSet};
+mod reconcile;
+mod schema;
+mod search;
+
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use rusqlite::{Connection, Row, params};
+use rusqlite::{Connection, params};
 use tomet::merge::CONFLICT_MARKER;
 
-/// Shared by every place that writes a note row: insert it fresh, or
-/// overwrite every column if the path already exists.
-const UPSERT_NOTE_SQL: &str =
-    "INSERT INTO notes (path, title, mtime_secs, mtime_nanos, size, has_conflict, body, icon_name, icon_pkg)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-     ON CONFLICT(path) DO UPDATE SET
-        title = excluded.title,
-        mtime_secs = excluded.mtime_secs,
-        mtime_nanos = excluded.mtime_nanos,
-        size = excluded.size,
-        has_conflict = excluded.has_conflict,
-        body = excluded.body,
-        icon_name = excluded.icon_name,
-        icon_pkg = excluded.icon_pkg";
+pub use reconcile::ReconcileReport;
+use reconcile::mtime_parts;
+use schema::UPSERT_NOTE_SQL;
+pub use search::{SearchHit, extract_snippet};
 
 /// An indexed note in the vault.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,31 +32,9 @@ pub struct IndexedNote {
     pub has_conflict: bool,
 }
 
-/// A search result hit.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SearchHit {
-    /// Relative path from the vault root.
-    pub path: PathBuf,
-    /// Display title.
-    pub title: String,
-    /// Whether this note currently contains `@mobile.conflict` markers.
-    pub has_conflict: bool,
-    /// Optional contextual snippet from the note's content.
-    pub snippet: Option<String>,
-}
-
-/// Summary of changes detected during a filesystem reconciliation.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct ReconcileReport {
-    pub added: usize,
-    pub updated: usize,
-    pub removed: usize,
-    pub unchanged: usize,
-}
-
 /// SQLite-backed index for a vault.
 pub struct NoteIndex {
-    conn: Connection,
+    pub(crate) conn: Connection,
 }
 
 impl NoteIndex {
@@ -73,239 +44,15 @@ impl NoteIndex {
             std::fs::create_dir_all(parent)?;
         }
         let conn = Connection::open(db_path)?;
-        Self::init(conn)
+        schema::init_connection(&conn)?;
+        Ok(Self { conn })
     }
 
     /// Opens an in-memory index database (primarily for testing).
     pub fn open_in_memory() -> anyhow::Result<Self> {
         let conn = Connection::open_in_memory()?;
-        Self::init(conn)
-    }
-
-    fn init(conn: Connection) -> anyhow::Result<Self> {
-        conn.execute_batch(
-            "PRAGMA journal_mode = WAL;
-            PRAGMA synchronous = NORMAL;",
-        )?;
-
-        let version: u32 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if version == 0 {
-            conn.execute_batch(
-                "CREATE TABLE IF NOT EXISTS notes (
-                    path TEXT PRIMARY KEY,
-                    title TEXT NOT NULL,
-                    mtime_secs INTEGER NOT NULL,
-                    mtime_nanos INTEGER NOT NULL,
-                    size INTEGER NOT NULL,
-                    has_conflict INTEGER NOT NULL DEFAULT 0,
-                    body TEXT NOT NULL,
-                    icon_name TEXT,
-                    icon_pkg TEXT
-                );
-
-                CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
-                    path UNINDEXED,
-                    title,
-                    body,
-                    tokenize = 'trigram'
-                );
-
-                CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON notes BEGIN
-                    INSERT INTO notes_fts (path, title, body) VALUES (new.path, new.title, new.body);
-                END;
-
-                CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON notes BEGIN
-                    DELETE FROM notes_fts WHERE path = old.path;
-                END;
-
-                CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON notes BEGIN
-                    DELETE FROM notes_fts WHERE path = old.path;
-                    INSERT INTO notes_fts (path, title, body) VALUES (new.path, new.title, new.body);
-                END;
-
-                PRAGMA user_version = 2;
-                ",
-            )?;
-        } else if version == 1 {
-            let _ = conn.execute("ALTER TABLE notes ADD COLUMN icon_name TEXT;", []);
-            let _ = conn.execute("ALTER TABLE notes ADD COLUMN icon_pkg TEXT;", []);
-            let _ = conn.execute("PRAGMA user_version = 2;", []);
-        }
+        schema::init_connection(&conn)?;
         Ok(Self { conn })
-    }
-
-    /// Reconciles the database with the filesystem under `vault_dir`.
-    ///
-    /// Walks the directory tree for `.tmt` files. Compares file size and modification time
-    /// against cached values in the database. Unchanged files skip disk content reads entirely.
-    /// Notes that no longer exist on disk are removed from the index.
-    pub fn reconcile_filesystem(&mut self, vault_dir: &Path) -> anyhow::Result<ReconcileReport> {
-        let mut report = ReconcileReport::default();
-        let mut disk_files: Vec<(PathBuf, u64, u64, u32)> = Vec::new(); // (rel_path, size, mtime_secs, mtime_nanos)
-
-        collect_tmt_files(vault_dir, &mut disk_files);
-
-        // Looked up once per cached row below rather than linearly
-        // scanning `disk_files` each time -- this is the only place a
-        // vault with many thousands of notes would otherwise pay O(n*m).
-        let disk_meta: HashMap<PathBuf, (u64, u64, u32)> = disk_files
-            .iter()
-            .map(|(path, size, secs, nanos)| (path.clone(), (*size, *secs, *nanos)))
-            .collect();
-
-        let tx = self.conn.transaction()?;
-
-        // Retrieve existing paths and their cached metadata.
-        let mut cached_notes: HashMap<PathBuf, (u64, u64, u32)> = HashMap::new();
-        {
-            let mut stmt = tx.prepare("SELECT path, size, mtime_secs, mtime_nanos FROM notes")?;
-            let mut rows = stmt.query([])?;
-            let mut to_remove: Vec<PathBuf> = Vec::new();
-
-            while let Some(row) = rows.next()? {
-                let path_str: String = row.get(0)?;
-                let rel_path = PathBuf::from(&path_str);
-                let cached_size: u64 = row.get(1)?;
-                let cached_secs: u64 = row.get(2)?;
-                let cached_nanos: u32 = row.get(3)?;
-                match disk_meta.get(&rel_path) {
-                    None => to_remove.push(rel_path),
-                    Some((size, secs, nanos)) => {
-                        if *size == cached_size && *secs == cached_secs && *nanos == cached_nanos {
-                            report.unchanged += 1;
-                        }
-                        cached_notes.insert(rel_path, (cached_size, cached_secs, cached_nanos));
-                    }
-                }
-            }
-
-            // Remove files from database that are no longer on disk
-            let mut del_stmt = tx.prepare_cached("DELETE FROM notes WHERE path = ?1")?;
-            for path in to_remove {
-                del_stmt.execute(params![path.to_string_lossy()])?;
-                report.removed += 1;
-            }
-        }
-
-        // Process disk files: insert new, update modified
-        {
-            let mut upsert_stmt = tx.prepare_cached(UPSERT_NOTE_SQL)?;
-
-            for (rel_path, size, mtime_secs, mtime_nanos) in disk_files {
-                let cached = cached_notes.get(&rel_path);
-                let needs_read = match cached {
-                    Some(&(cached_size, cached_sec, cached_nano)) => {
-                        cached_size != size || cached_sec != mtime_secs || cached_nano != mtime_nanos
-                    }
-                    None => true,
-                };
-
-                if needs_read {
-                    let path_str = rel_path.to_string_lossy().to_string();
-                    let abs_path = vault_dir.join(&rel_path);
-                    if let Ok(body) = std::fs::read_to_string(&abs_path) {
-                        let has_conflict = body.contains(CONFLICT_MARKER);
-                        let title = display_name_from_rel(&rel_path);
-                        let is_new = cached.is_none();
-                        let (icon_name, icon_pkg) =
-                            immermemo_render_tomet::extract_note_icon(&body)
-                                .map(|(n, p)| (Some(n), Some(p)))
-                                .unwrap_or((None, None));
-
-                        upsert_stmt.execute(params![
-                            &path_str,
-                            &title,
-                            mtime_secs,
-                            mtime_nanos,
-                            size,
-                            if has_conflict { 1 } else { 0 },
-                            &body,
-                            icon_name,
-                            icon_pkg,
-                        ])?;
-
-                        if is_new {
-                            report.added += 1;
-                        } else {
-                            report.updated += 1;
-                        }
-                    }
-                }
-            }
-        }
-
-        tx.commit()?;
-        Ok(report)
-    }
-
-    /// Incrementally updates the database based on paths from a sync operation.
-    ///
-    /// Updates only `updated_notes` and deletes `deleted_notes` without scanning the filesystem.
-    pub fn apply_sync_report(
-        &mut self,
-        vault_dir: &Path,
-        updated_notes: &[PathBuf],
-        deleted_notes: &[PathBuf],
-        notes_needing_resolution: &[PathBuf],
-    ) -> anyhow::Result<()> {
-        let conflict_set: HashSet<&Path> = notes_needing_resolution
-            .iter()
-            .map(|p| p.as_path())
-            .collect();
-        let tx = self.conn.transaction()?;
-
-        {
-            let mut del_stmt = tx.prepare_cached("DELETE FROM notes WHERE path = ?1")?;
-            for rel_path in deleted_notes {
-                del_stmt.execute(params![rel_path.to_string_lossy()])?;
-            }
-        }
-
-        {
-            let mut upsert_stmt = tx.prepare_cached(UPSERT_NOTE_SQL)?;
-
-            for rel_path in updated_notes {
-                let abs_path = vault_dir.join(rel_path);
-                if let Ok(meta) = abs_path.metadata() {
-                    let size = meta.len();
-                    let (mtime_secs, mtime_nanos) =
-                        mtime_parts(meta.modified().unwrap_or(SystemTime::UNIX_EPOCH));
-                    let body = std::fs::read_to_string(&abs_path).unwrap_or_default();
-                    let has_conflict =
-                        conflict_set.contains(rel_path.as_path()) || body.contains(CONFLICT_MARKER);
-                    let title = display_name_from_rel(rel_path);
-                    let path_str = rel_path.to_string_lossy().to_string();
-                    let (icon_name, icon_pkg) =
-                        immermemo_render_tomet::extract_note_icon(&body)
-                            .map(|(n, p)| (Some(n), Some(p)))
-                            .unwrap_or((None, None));
-
-                    upsert_stmt.execute(params![
-                        &path_str,
-                        &title,
-                        mtime_secs,
-                        mtime_nanos,
-                        size,
-                        if has_conflict { 1 } else { 0 },
-                        &body,
-                        icon_name,
-                        icon_pkg,
-                    ])?;
-                }
-            }
-        }
-
-        // Ensure conflict markers for any other notes needing resolution are recorded
-        {
-            let mut conflict_stmt =
-                tx.prepare_cached("UPDATE notes SET has_conflict = 1 WHERE path = ?1")?;
-            for rel_path in notes_needing_resolution {
-                conflict_stmt.execute(params![rel_path.to_string_lossy()])?;
-            }
-        }
-
-        tx.commit()?;
-        Ok(())
     }
 
     /// Records or updates a note directly in the index (e.g. after a local save).
@@ -404,11 +151,7 @@ impl NoteIndex {
     /// Every indexed note's relative path alongside its cached body (the
     /// same text already stored for FTS search, not a fresh disk read) --
     /// for a caller that needs to derive something from a note's content
-    /// without paying for a full `reconcile_filesystem` walk. The only
-    /// caller today is `immermemo`'s note-list icon (`@meta{ icon:
-    /// @doc.icon(...) }`): this crate stays a plain path/title/mtime
-    /// cache, so the `.tmt` parsing that reads lives in `immermemo-render-tomet`
-    /// instead, downstream of this.
+    /// without paying for a full `reconcile_filesystem` walk.
     pub fn bodies(&self) -> anyhow::Result<Vec<(PathBuf, String)>> {
         let mut stmt = self.conn.prepare("SELECT path, body FROM notes")?;
         let rows = stmt.query_map([], |row| {
@@ -492,231 +235,10 @@ impl NoteIndex {
         )?;
         Ok(count as usize)
     }
-
-    /// Searches notes by query case-insensitively across title and body content.
-    ///
-    /// Notes matching in the title are ranked before body-only matches.
-    /// Body matches utilize SQLite FTS5 trigram full-text indexing with BM25 ranking,
-    /// falling back cleanly to substring matching for short queries (< 3 chars).
-    pub fn search(&self, query: &str) -> anyhow::Result<Vec<SearchHit>> {
-        let query = query.trim();
-        if query.is_empty() {
-            let all = self.list_all()?;
-            return Ok(all
-                .into_iter()
-                .map(|n| SearchHit {
-                    path: n.path,
-                    title: n.title,
-                    has_conflict: n.has_conflict,
-                    snippet: None,
-                })
-                .collect());
-        }
-
-        let mut hits = Vec::new();
-        let mut seen_paths = HashSet::new();
-
-        // 1. Title matches (ranked first)
-        {
-            let escaped = escape_like(query);
-            let pattern = format!("%{escaped}%");
-            let mut stmt = self.conn.prepare(
-                "SELECT path, title, has_conflict, body FROM notes
-                 WHERE title LIKE ?1 ESCAPE '\\'
-                 ORDER BY path ASC",
-            )?;
-
-            let rows = stmt.query_map(params![&pattern], row_to_note_fields)?;
-
-            for r in rows {
-                let (path, title, has_conflict, body) = r?;
-                let snippet = extract_snippet(&body, query);
-                seen_paths.insert(path.clone());
-                hits.push(SearchHit {
-                    path,
-                    title,
-                    has_conflict,
-                    snippet,
-                });
-            }
-        }
-
-        // 2. Body-only matches
-        let query_char_count = query.chars().count();
-        let mut body_hits = Vec::new();
-
-        if query_char_count >= 3 {
-            // Attempt FTS5 search with BM25 ranking
-            let fts_query = format!("\"{}\"", query.replace('"', "\"\""));
-            let fts_result = self.conn.prepare(
-                "SELECT notes.path, notes.title, notes.has_conflict, notes.body
-                 FROM notes_fts
-                 JOIN notes ON notes.path = notes_fts.path
-                 WHERE notes_fts MATCH ?1
-                 ORDER BY notes_fts.rank",
-            );
-
-            if let Ok(mut stmt) = fts_result {
-                if let Ok(rows) = stmt.query_map(params![&fts_query], row_to_note_fields) {
-                    for r in rows.flatten() {
-                        let (path, title, has_conflict, body) = r;
-                        if !seen_paths.contains(&path) {
-                            if let Some(snippet) = extract_snippet(&body, query) {
-                                seen_paths.insert(path.clone());
-                                body_hits.push(SearchHit {
-                                    path,
-                                    title,
-                                    has_conflict,
-                                    snippet: Some(snippet),
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // If query < 3 characters or FTS didn't catch everything, fall back to LIKE on body
-        if body_hits.is_empty() || query_char_count < 3 {
-            let escaped = escape_like(query);
-            let pattern = format!("%{escaped}%");
-            let mut stmt = self.conn.prepare(
-                "SELECT path, title, has_conflict, body FROM notes
-                 WHERE body LIKE ?1 ESCAPE '\\'
-                 ORDER BY path ASC",
-            )?;
-
-            let rows = stmt.query_map(params![&pattern], row_to_note_fields)?;
-
-            for r in rows.flatten() {
-                let (path, title, has_conflict, body) = r;
-                if !seen_paths.contains(&path) {
-                    if let Some(snippet) = extract_snippet(&body, query) {
-                        seen_paths.insert(path.clone());
-                        body_hits.push(SearchHit {
-                            path,
-                            title,
-                            has_conflict,
-                            snippet: Some(snippet),
-                        });
-                    }
-                }
-            }
-        }
-
-        hits.extend(body_hits);
-        Ok(hits)
-    }
 }
 
-/// The `(path, title, has_conflict, body)` shape every `search()` query
-/// reads a row into, shared by its title-match, FTS and LIKE-fallback
-/// passes -- they differ only in which `WHERE` clause found the row.
-fn row_to_note_fields(row: &Row) -> rusqlite::Result<(PathBuf, String, bool, String)> {
-    let path_str: String = row.get(0)?;
-    let title: String = row.get(1)?;
-    let conflict_int: i32 = row.get(2)?;
-    let body: String = row.get(3)?;
-    Ok((PathBuf::from(path_str), title, conflict_int != 0, body))
-}
-
-fn display_name_from_rel(rel_path: &Path) -> String {
+pub(crate) fn display_name_from_rel(rel_path: &Path) -> String {
     rel_path.with_extension("").to_string_lossy().to_string()
-}
-
-fn mtime_parts(time: SystemTime) -> (u64, u32) {
-    match time.duration_since(SystemTime::UNIX_EPOCH) {
-        Ok(d) => (d.as_secs(), d.subsec_nanos()),
-        Err(_) => (0, 0),
-    }
-}
-
-fn escape_like(s: &str) -> String {
-    s.replace('\\', "\\\\")
-        .replace('%', "\\%")
-        .replace('_', "\\_")
-}
-
-fn collect_tmt_files(root: &Path, found: &mut Vec<(PathBuf, u64, u64, u32)>) {
-    immermemo_vault::notes::walk_tmt_files(root, &mut |path, meta| {
-        if let Ok(rel) = path.strip_prefix(root) {
-            let (secs, nanos) = mtime_parts(meta.modified().unwrap_or(SystemTime::UNIX_EPOCH));
-            found.push((rel.to_path_buf(), meta.len(), secs, nanos));
-        }
-    });
-}
-
-/// Contextual snippet extraction matching Immermemo's display formatting.
-pub fn extract_snippet(content: &str, query: &str) -> Option<String> {
-    for line in content.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        if let Some(char_idx) = find_case_insensitive_char_idx(trimmed, query) {
-            let chars: Vec<char> = trimmed.chars().collect();
-            let total_chars = chars.len();
-            const MAX_CHARS: usize = 60;
-            const CONTEXT_BEFORE: usize = 20;
-
-            if total_chars <= MAX_CHARS {
-                return Some(trimmed.to_string());
-            }
-
-            let start_char = char_idx.saturating_sub(CONTEXT_BEFORE);
-            let end_char = (start_char + MAX_CHARS).min(total_chars);
-            let start_char = if end_char == total_chars {
-                total_chars.saturating_sub(MAX_CHARS)
-            } else {
-                start_char
-            };
-
-            let mut snippet = String::new();
-            if start_char > 0 {
-                snippet.push_str("...");
-            }
-            snippet.extend(&chars[start_char..end_char]);
-            if end_char < total_chars {
-                snippet.push_str("...");
-            }
-            return Some(snippet);
-        }
-    }
-    None
-}
-
-fn find_case_insensitive_char_idx(haystack: &str, needle: &str) -> Option<usize> {
-    let needle_lower: Vec<char> = needle.chars().flat_map(|c| c.to_lowercase()).collect();
-    if needle_lower.is_empty() {
-        return None;
-    }
-    let haystack_chars: Vec<char> = haystack.chars().collect();
-    if haystack_chars.is_empty() {
-        return None;
-    }
-
-    for i in 0..haystack_chars.len() {
-        let mut matched = true;
-        let mut h_idx = i;
-        let mut n_idx = 0;
-        while n_idx < needle_lower.len() {
-            if h_idx >= haystack_chars.len() {
-                matched = false;
-                break;
-            }
-            let h_lowered: Vec<char> = haystack_chars[h_idx].to_lowercase().collect();
-            if h_lowered.is_empty() || !needle_lower[n_idx..].starts_with(&h_lowered) {
-                matched = false;
-                break;
-            }
-            n_idx += h_lowered.len();
-            h_idx += 1;
-        }
-        if matched && n_idx == needle_lower.len() {
-            return Some(i);
-        }
-    }
-    None
 }
 
 #[cfg(test)]

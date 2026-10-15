@@ -386,20 +386,6 @@ fn icon_look(input: LookInput) -> Look {
     }
 }
 
-/// `body`'s `@meta{ icon: @doc.icon(name, pkg) }`, if present -- the same
-/// `(name, pkg)` shape [`icon_name_pkg`] returns for a body-inline
-/// occurrence, so a note's list-row icon and an inline `@doc.icon` in its
-/// own body resolve through the same path downstream
-/// (`super::icon_image`). `None` for no such meta entry, or one whose
-/// value isn't specifically a `(doc, icon)` element (`meta_element`
-/// already filters to "is the value an element at all"; this narrows
-/// further).
-pub(crate) fn note_icon(body: &str) -> Option<(String, String)> {
-    let (identity, args) = immermemo_render_tomet::meta_element(body, "icon")?;
-    (identity.namespace.as_deref() == Some("doc") && identity.name == "icon")
-        .then(|| icon_name_pkg(&args))
-}
-
 /// `None` if `identity` has no [`REGISTRY`] entry -- callers decide the
 /// fallback themselves, since it differs by whether `identity` came in
 /// through `@use` (see the module doc).

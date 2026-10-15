@@ -87,7 +87,6 @@ pub fn export_recent_notes(_index: &NoteIndex) {
         let snapshot_path = snapshot_path.clone();
         let activity_ref = activity_ref.clone();
         let class_loader_ref = class_loader_ref.clone();
-        let vm = vm.clone();
 
         std::thread::spawn(move || {
             if let Err(e) = std::fs::write(&snapshot_path, json) {
