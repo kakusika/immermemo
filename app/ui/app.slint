@@ -27,7 +27,8 @@ import {
 } from "@origiri-mobile/widgets.slint";
 export { PickerIconEntry } from "sheets/icon_picker.slint";
 import { NoteIconKind, NoteIconView } from "widgets/note_icon.slint";
-export { NoteIconKind, NoteIconView }
+import { NoteBannerView } from "widgets/note_banner.slint";
+export { NoteIconKind, NoteIconView, NoteBannerView }
 import { NotePropertyEntry } from "pages/editor/properties.slint";
 export { NotePropertyEntry }
 import { SettingsAdapter, VaultData } from "adapters/settings.slint";
@@ -197,6 +198,8 @@ export component App inherits Window {
     in property <string> current-title;
     // The open note's own `@meta{ icon: ... }`, drawn on the mini card.
     in property <NoteIconView> current-icon;
+    // The open note's `@meta{ banner: ... }`, drawn above its title.
+    in property <NoteBannerView> current-banner;
     in property <string> current-note-path: "";
     in property <string> note-kind: "";
     in property <[NotePropertyEntry]> note-metadata: [];
@@ -731,6 +734,7 @@ export component App inherits Window {
                 sheet-progress: root.sheet-progress;
                 sheet-y-offset: (1.0 - root.sheet-progress) * root.mini-card-resting-y;
                 title: root.current-title;
+                banner: root.current-banner;
                 has-note: root.current >= 0;
                 note-count: root.notes.length;
                 has-conflict: root.current-has-conflict;

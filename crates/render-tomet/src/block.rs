@@ -10,7 +10,7 @@ use crate::types::{ParseFailed, RenderBlockKind, RenderItem, TextStyle, whole_so
 
 /// Bare built-in names that stand as a thing of their own.
 pub(crate) const ATOMIC_BARE_ELEMENTS: &[&str] = &[
-    "ruby", "link", "conflict", "task", "raw", "code", "callout", "quote",
+    "ruby", "link", "embed", "conflict", "task", "raw", "code", "callout", "quote",
 ];
 
 /// Whether `el`'s sigil is a bare (non-`@use`'d) name in [`ATOMIC_BARE_ELEMENTS`].

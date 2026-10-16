@@ -101,11 +101,17 @@ pub fn bind_note_callbacks(app: &App, session: &SessionRef) {
     });
 
     app.on_reflow_note_body({
-        let weak = app.as_weak();
+        let (weak, session) = (app.as_weak(), session.clone());
         move |max_width: f32| {
             let app = weak.unwrap();
             let body = app.get_body();
-            app.set_note_body_items(render::note_body_items(body.as_str(), &app, max_width));
+            let base = session::media_base(&app, &session);
+            app.set_note_body_items(render::note_body_items(
+                body.as_str(),
+                &app,
+                max_width,
+                &base,
+            ));
         }
     });
 
@@ -324,7 +330,8 @@ fn apply_symbol_insertion(body: &str, sym: &str, cursor: usize, anchor: usize) -
 
 fn handle_edit(app: &App, session: &SessionRef, text: &str) {
     let max_width = app.get_body_content_width();
-    app.set_note_body_items(render::note_body_items(text, app, max_width));
+    let base = session::media_base(app, session);
+    app.set_note_body_items(render::note_body_items(text, app, max_width, &base));
     session::update_note_stats(app, session, text);
     {
         let mut s = session.borrow_mut();

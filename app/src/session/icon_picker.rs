@@ -69,7 +69,10 @@ pub fn apply_icon_selection(app: &App, session: &SessionRef, name: &str) {
             if is_current {
                 let max_width = app.get_body_content_width();
                 app.set_body(new_body.clone().into());
-                app.set_note_body_items(crate::render::note_body_items(&new_body, app, max_width));
+                let base = super::media_base(app, session);
+                app.set_note_body_items(crate::render::note_body_items(
+                    &new_body, app, max_width, &base,
+                ));
             }
             schedule_auto_sync(app, std::time::Duration::from_secs(5));
         }

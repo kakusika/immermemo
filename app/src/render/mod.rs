@@ -26,12 +26,14 @@
 pub mod classify;
 pub mod flow;
 
-use classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
+use classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone, image_label};
 pub use flow::note_body_items as classify_note_body_items;
 use flow::{FlowParagraph, NoteBodyContent, NoteBodyItem};
+use immermemo_media::Preset;
 use origiri_richtext_flow::{Fragment, Measure, layout_block};
 use slint::{ModelRc, VecModel};
 
+use crate::thumbs::MediaBase;
 use crate::{
     App, ConflictSideBlock, NoteBodyItemView, RenderedBlock, RenderedBlockShape, RenderedBlockTone,
     RichTextFragment, RichTextLine,
@@ -45,10 +47,15 @@ use crate::{
 /// time `body` *or* `max_width` changes -- see `session::update_rendered_body`,
 /// `callbacks::note`'s `on_edited` and `on_reflow_note_body` handlers, the
 /// three places that happens.
-pub fn note_body_items(body: &str, app: &App, max_width: f32) -> ModelRc<NoteBodyItemView> {
+pub fn note_body_items(
+    body: &str,
+    app: &App,
+    max_width: f32,
+    base: &MediaBase,
+) -> ModelRc<NoteBodyItemView> {
     let items: Vec<NoteBodyItemView> = classify_note_body_items(body)
         .into_iter()
-        .map(|item| to_note_body_item_view(item, app, max_width))
+        .map(|item| to_note_body_item_view(item, app, max_width, base))
         .collect();
     ModelRc::new(VecModel::from(items))
 }
@@ -65,8 +72,14 @@ pub fn heading_font_size(base_size: f32, level: usize) -> f32 {
 
 /// Converts one classified/flowed item into its Slint model row, wrapping a
 /// flowed paragraph against `max_width`. Public so `examples/snap.rs` can
-/// build the same rows from hand-made items.
-pub fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> NoteBodyItemView {
+/// build the same rows from hand-made items. `base` is where the images the
+/// item refers to are looked up.
+pub fn to_note_body_item_view(
+    item: NoteBodyItem,
+    app: &App,
+    max_width: f32,
+    base: &MediaBase,
+) -> NoteBodyItemView {
     let indent_px = item.depth as f32 * 16.0;
     let prefix_px = if !item.prefix.is_empty() { 20.0 } else { 0.0 };
     let flow_max_width = (max_width - indent_px - prefix_px).max(40.0);
@@ -78,7 +91,7 @@ pub fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> 
             heading_level,
             depth: item.depth as i32,
             prefix: item.prefix.into(),
-            block: to_rendered_block(&block),
+            block: to_stacked_rendered_block(&block, base),
             lines: ModelRc::default(),
         },
         NoteBodyContent::Flowed(paragraph) => NoteBodyItemView {
@@ -186,6 +199,16 @@ fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> Ri
     }
 }
 
+/// [`to_rendered_block`], plus the picture of an image block, which only a
+/// block standing on its own row has room to draw.
+fn to_stacked_rendered_block(block: &ClassifiedBlock, base: &MediaBase) -> RenderedBlock {
+    let mut rendered = to_rendered_block(block);
+    if block.shape == BlockShape::Image {
+        rendered.picture = base.picture(&block.target, Preset::Body);
+    }
+    rendered
+}
+
 fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
     RenderedBlock {
         shape: to_rendered_block_shape(block.shape),
@@ -202,6 +225,7 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
         } else {
             slint::Image::default()
         },
+        picture: slint::Image::default(),
         checked: block.checked,
         side_a: ModelRc::new(VecModel::from(
             block
@@ -228,6 +252,7 @@ fn to_rendered_block_shape(shape: BlockShape) -> RenderedBlockShape {
         BlockShape::Ruby => RenderedBlockShape::Ruby,
         BlockShape::Link => RenderedBlockShape::Link,
         BlockShape::Icon => RenderedBlockShape::Icon,
+        BlockShape::Image => RenderedBlockShape::Picture,
         BlockShape::Task => RenderedBlockShape::Task,
         BlockShape::Code => RenderedBlockShape::Code,
         BlockShape::Callout => RenderedBlockShape::Callout,
@@ -251,15 +276,15 @@ fn to_rendered_block_tone(tone: Tone) -> RenderedBlockTone {
 /// look an unrecognized `@use`'d element gets -- "show *something*"
 /// rather than a silently blank leaf.
 fn to_conflict_side_block(leaf: &ConflictLeafBlock) -> ConflictSideBlock {
-    let shape = if leaf.shape == BlockShape::Conflict {
+    let shape = if matches!(leaf.shape, BlockShape::Conflict | BlockShape::Image) {
         BlockShape::Badge
     } else {
         leaf.shape
     };
-    let text = if leaf.shape == BlockShape::Conflict {
-        "conflict".to_owned()
-    } else {
-        leaf.text.clone()
+    let text = match leaf.shape {
+        BlockShape::Conflict => "conflict".to_owned(),
+        BlockShape::Image => image_label(&leaf.text, &leaf.target),
+        _ => leaf.text.clone(),
     };
     ConflictSideBlock {
         shape: to_rendered_block_shape(shape),
@@ -319,6 +344,7 @@ pub(crate) mod seam_tests {
             "Before.\n\n@conflict(a: [Mine.], b: [Theirs.])\n",
             app,
             1000.0,
+            &MediaBase::none(),
         );
         assert_eq!(model.row_count(), 2);
         let first = model.row_data(0).unwrap();
@@ -341,13 +367,18 @@ pub(crate) mod seam_tests {
     /// non-empty image, and an unvendored one degrades to an empty one
     /// instead of panicking.
     pub(crate) fn a_doc_icon_resolves_to_a_real_image_and_an_unknown_one_to_empty(app: &App) {
-        let model = note_body_items("@doc.icon(\"star\")\n", app, 1000.0);
+        let model = note_body_items("@doc.icon(\"star\")\n", app, 1000.0, &MediaBase::none());
         assert_eq!(model.row_count(), 1);
         let item = model.row_data(0).unwrap();
         assert_eq!(item.block.shape, RenderedBlockShape::Icon);
         assert!(item.block.icon_image.size().width > 0);
 
-        let model = note_body_items("@doc.icon(\"not-a-real-icon-slug\")\n", app, 1000.0);
+        let model = note_body_items(
+            "@doc.icon(\"not-a-real-icon-slug\")\n",
+            app,
+            1000.0,
+            &MediaBase::none(),
+        );
         assert_eq!(model.row_count(), 1);
         let item = model.row_data(0).unwrap();
         assert_eq!(item.block.icon_image.size().width, 0);
@@ -361,7 +392,7 @@ pub(crate) mod seam_tests {
     // in the mix.
     pub(crate) fn a_wide_inline_conflict_paragraph_flows_onto_one_line(app: &App) {
         let src = "The @conflict(a: [slow], b: [lazy]) fox jumps.\n";
-        let model = note_body_items(src, app, 10_000.0);
+        let model = note_body_items(src, app, 10_000.0, &MediaBase::none());
         assert_eq!(model.row_count(), 1);
         let item = model.row_data(0).unwrap();
         assert!(item.is_flow);
@@ -373,7 +404,7 @@ pub(crate) mod seam_tests {
         // Real font metrics, not a fake fixed-width measure -- too narrow
         // for the whole sentence (and its two colored runs) to fit on one
         // line.
-        let model = note_body_items(src, app, 80.0);
+        let model = note_body_items(src, app, 80.0, &MediaBase::none());
         let item = model.row_data(0).unwrap();
         assert!(item.is_flow);
         assert!(
@@ -385,7 +416,7 @@ pub(crate) mod seam_tests {
 
     pub(crate) fn task_items_convert_into_the_generated_model(app: &App) {
         let src = "@task()[Open task]\n\n@task(x)[Done task]\n";
-        let model = note_body_items(src, app, 1000.0);
+        let model = note_body_items(src, app, 1000.0, &MediaBase::none());
         assert_eq!(model.row_count(), 2);
 
         let first = model.row_data(0).unwrap();
@@ -404,7 +435,7 @@ pub(crate) mod seam_tests {
     pub(crate) fn inline_conflict_maintains_identity_and_order_across_resizes(app: &App) {
         let src = "まえ @conflict(a: [うんこ], b: [うんち]) うしろ\n";
         for width in [10_000.0, 500.0, 300.0, 180.0, 100.0, 60.0] {
-            let model = note_body_items(src, app, width);
+            let model = note_body_items(src, app, width, &MediaBase::none());
             assert_eq!(model.row_count(), 1);
             let item = model.row_data(0).unwrap();
             assert!(item.is_flow);
@@ -441,7 +472,7 @@ pub(crate) mod seam_tests {
 
     pub(crate) fn list_items_carry_depth_prefix_and_links(app: &App) {
         let src = "- An item with @link(\"https://example.com\")[a link]\n  - Nested item\n-. Numbered item\n";
-        let model = note_body_items(src, app, 1000.0);
+        let model = note_body_items(src, app, 1000.0, &MediaBase::none());
         assert_eq!(model.row_count(), 3);
 
         let item0 = model.row_data(0).unwrap();
@@ -473,7 +504,7 @@ pub(crate) mod seam_tests {
 
     pub(crate) fn heading_items_carry_level_in_generated_model(app: &App) {
         let src = "= Heading 1\n\n== Heading 2\n\n=== Heading 3\n";
-        let model = note_body_items(src, app, 1000.0);
+        let model = note_body_items(src, app, 1000.0, &MediaBase::none());
         assert_eq!(model.row_count(), 3);
 
         let item0 = model.row_data(0).unwrap();
@@ -488,7 +519,7 @@ pub(crate) mod seam_tests {
 
     pub(crate) fn code_and_callout_items_convert_into_the_generated_model(app: &App) {
         let src = "```rust\nfn main() {}\n```\n\n@callout(warning)[Watch out!]\n";
-        let model = note_body_items(src, app, 1000.0);
+        let model = note_body_items(src, app, 1000.0, &MediaBase::none());
         assert_eq!(model.row_count(), 2);
 
         let item0 = model.row_data(0).unwrap();

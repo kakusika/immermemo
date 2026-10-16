@@ -4,6 +4,11 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+#= Tomet
+# `links`: resolving a `ref:` name to the file it means, as every Tomet vault
+# does (no SQLite: this crate and `immermemo-index` share one `libsqlite3`).
+tomet = { workspace = true, features = ["links"] }
+
 #= Crates.io
 anyhow = { workspace = true }
 image = { workspace = true }

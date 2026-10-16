@@ -9,14 +9,16 @@
 //! crate with no Slint dependency can be unit-tested against `.tmt`
 //! fixtures directly, which a crate wired into a widget tree cannot.
 
+mod banner;
 mod block;
 mod icon;
 mod inline;
 mod meta;
 mod types;
 
+pub use banner::{NoteBanner, extract_note_banner};
 pub use block::{classify, classify_blocks};
-pub use icon::{DEFAULT_ICON_PKG, NoteIcon, extract_note_icon, text_icon_cells};
+pub use icon::{DEFAULT_ICON_PKG, NoteIcon, extract_note_icon, media_target, text_icon_cells};
 pub use meta::{
     extract_note_kind, extract_note_metadata, is_metadata_element, is_metadata_render_item,
     meta_element,

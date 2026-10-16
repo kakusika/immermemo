@@ -1,0 +1,55 @@
+// Copyright © 2026 Immermemo contributors
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+
+// A note's `@meta{ banner: ... }`, resolved in Rust (`immermemo::note_icon::
+// banner_view`). `declared` is whether the note names a banner at all;
+// `picture` is its image once loaded (empty while it is being fetched and
+// decoded, and for good if the reference leads nowhere readable);
+// `focus-y` is which vertical position, from 0 (top) to 1 (bottom), stays
+// in view when the picture is cropped to the banner's shape (`banner-y`).
+export struct NoteBannerView {
+    declared: bool,
+    picture: image,
+    focus-y: float,
+}
+
+// The wide image across the top of a note. It keeps its place (a quiet
+// placeholder) while the picture is not there, so the note does not jump
+// when it arrives -- and stays that way for a reference that never loads,
+// which is also how the author sees that it is broken.
+export component NoteBanner inherits Rectangle {
+    in property <NoteBannerView> banner;
+
+    property <bool> loaded: root.banner.picture.width > 0;
+    // The picture scaled to just cover this box, then shifted so `focus-y`
+    // decides which rows of the overflow are cut.
+    property <length> cover-width: max(root.width, root.height * root.banner.picture.width / max(1, root.banner.picture.height));
+    property <length> cover-height: max(root.height, root.width * root.banner.picture.height / max(1, root.banner.picture.width));
+
+    height: 160px * Metrics.ui-scale;
+    border-radius: Metrics.radius-lg;
+    clip: true;
+    background: Palette.foreground.with-alpha(0.06);
+
+    if !root.loaded: Icon {
+        source: TablerIcons.photo;
+        width: Metrics.icon-lg;
+        height: Metrics.icon-lg;
+        color: Colors.muted;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+
+    if root.loaded: Image {
+        source: root.banner.picture;
+        width: root.cover-width;
+        height: root.cover-height;
+        x: (root.width - self.width) / 2;
+        y: -(root.cover-height - root.height) * root.banner.focus-y;
+        image-fit: fill;
+    }
+}

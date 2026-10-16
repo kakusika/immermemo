@@ -36,7 +36,13 @@ pub fn bind_appearance_callbacks(
             app.set_editor_font_size(crate::theme::editor_font_px(choice));
             let body = app.get_body();
             let max_width = app.get_body_content_width();
-            app.set_note_body_items(render::note_body_items(body.as_str(), &app, max_width));
+            let base = crate::session::media_base(&app, &session);
+            app.set_note_body_items(render::note_body_items(
+                body.as_str(),
+                &app,
+                max_width,
+                &base,
+            ));
             let _ = session.borrow().app_data.save_font_size(choice);
         }
     });
@@ -50,7 +56,13 @@ pub fn bind_appearance_callbacks(
             crate::theme::apply_theme(&app, &session_borrow.app_data);
             let body = app.get_body();
             let max_width = app.get_body_content_width();
-            app.set_note_body_items(render::note_body_items(body.as_str(), &app, max_width));
+            let base = crate::session::media_base(&app, &session);
+            app.set_note_body_items(render::note_body_items(
+                body.as_str(),
+                &app,
+                max_width,
+                &base,
+            ));
         }
     });
 

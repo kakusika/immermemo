@@ -12,8 +12,8 @@ use slint::{ComponentHandle, ModelRc, PhysicalSize, VecModel};
 
 use immermemo::render::to_note_body_item_view;
 use immermemo::{
-    AccountData, App, BreadcrumbSegment, DirectoryEntry, NoteIconKind, NoteIconView,
-    PickerIconEntry, SettingsAdapter,
+    AccountData, App, BreadcrumbSegment, DirectoryEntry, MediaBase, NoteBannerView, NoteIconKind,
+    NoteIconView, PickerIconEntry, SettingsAdapter,
 };
 
 struct Headless {
@@ -430,11 +430,51 @@ fn main() {
     app.set_note_body_items(ModelRc::new(VecModel::from(
         immermemo::render::flow::note_body_items(body)
             .into_iter()
-            .map(|item| to_note_body_item_view(item, &app, max_width))
+            .map(|item| to_note_body_item_view(item, &app, max_width, &MediaBase::none()))
             .collect::<Vec<_>>(),
     )));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor-note-body.ppm"));
+
+    // A banner above the title and a body image, as they look once loaded
+    // (a gradient stands in for the decoded pictures, no network or vault
+    // here): first the banner at two crop positions, then a body image that
+    // is still loading next to one that has arrived.
+    let gradient = |w: u32, h: u32| {
+        let mut buf = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::new(w, h);
+        for (i, px) in buf.make_mut_slice().iter_mut().enumerate() {
+            let (x, y) = ((i as u32) % w, (i as u32) / w);
+            *px = slint::Rgba8Pixel::new((x * 255 / w) as u8, (y * 255 / h) as u8, 160, 255);
+        }
+        slint::Image::from_rgba8(buf)
+    };
+    let body = "写真つきのメモ。\n\n@embed[A cat](path: \"cat.png\")\n\n@embed[Still loading](path: \"later.png\")\n\nおわり。";
+    let mut rows = immermemo::render::flow::note_body_items(body)
+        .into_iter()
+        .map(|item| to_note_body_item_view(item, &app, max_width, &MediaBase::none()))
+        .collect::<Vec<_>>();
+    if let Some(cat) = rows.iter_mut().find(|row| row.block.text == "A cat") {
+        cat.block.picture = gradient(600, 300);
+    }
+    app.set_body(body.into());
+    app.set_note_body_items(ModelRc::new(VecModel::from(rows)));
+    app.set_current_banner(NoteBannerView {
+        declared: true,
+        picture: gradient(1280, 640),
+        focus_y: 0.25,
+    });
+    render(&window, size, &format!("{prefix}-editor-banner.ppm"));
+    app.set_current_banner(NoteBannerView {
+        declared: true,
+        picture: slint::Image::default(),
+        focus_y: 0.5,
+    });
+    render(
+        &window,
+        size,
+        &format!("{prefix}-editor-banner-loading.ppm"),
+    );
+    app.set_current_banner(NoteBannerView::default());
 
     // Verify headings, code blocks, callouts, list items, and clickable links
     let list_links_body = "= 見出しレベル 1 (大見出し)\n\n\
@@ -470,7 +510,7 @@ fn main() {
     app.set_note_body_items(ModelRc::new(VecModel::from(
         immermemo::render::flow::note_body_items(list_links_body)
             .into_iter()
-            .map(|item| to_note_body_item_view(item, &app, max_width))
+            .map(|item| to_note_body_item_view(item, &app, max_width, &MediaBase::none()))
             .collect::<Vec<_>>(),
     )));
     std::thread::sleep(std::time::Duration::from_millis(300));
@@ -486,7 +526,7 @@ fn main() {
         app.set_note_body_items(ModelRc::new(VecModel::from(
             immermemo::render::flow::note_body_items(user_body)
                 .into_iter()
-                .map(|item| to_note_body_item_view(item, &app, max_w))
+                .map(|item| to_note_body_item_view(item, &app, max_w, &MediaBase::none()))
                 .collect::<Vec<_>>(),
         )));
         std::thread::sleep(std::time::Duration::from_millis(100));
@@ -503,7 +543,7 @@ fn main() {
     app.set_note_body_items(ModelRc::new(VecModel::from(
         immermemo::render::flow::note_body_items(body)
             .into_iter()
-            .map(|item| to_note_body_item_view(item, &app, max_width))
+            .map(|item| to_note_body_item_view(item, &app, max_width, &MediaBase::none()))
             .collect::<Vec<_>>(),
     )));
 
@@ -760,7 +800,7 @@ fn main() {
     app.set_note_body_items(ModelRc::new(VecModel::from(
         immermemo::render::flow::note_body_items(body)
             .into_iter()
-            .map(|item| to_note_body_item_view(item, &app, max_width))
+            .map(|item| to_note_body_item_view(item, &app, max_width, &MediaBase::none()))
             .collect::<Vec<_>>(),
     )));
     app.set_note_sheet_open(true);

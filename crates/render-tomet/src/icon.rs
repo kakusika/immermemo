@@ -81,8 +81,9 @@ fn glyph_from_args(args: &ElementArgs) -> Option<NoteIcon> {
 }
 
 /// The reference an `@embed`/`@link`/`@ref` points at: its positional
-/// string, or the first of the target-like named args.
-fn media_target(args: &ElementArgs) -> Option<String> {
+/// string, or the first of the target-like named args (`path`, `ref`,
+/// `src`, `url`, ...).
+pub fn media_target(args: &ElementArgs) -> Option<String> {
     let target = match args {
         ElementArgs::Positional(target) => target.clone(),
         ElementArgs::Named(pairs) => pairs
@@ -102,7 +103,7 @@ fn media_target(args: &ElementArgs) -> Option<String> {
 
 /// Whether a plain string names an image rather than being display text:
 /// an `http(s)` URL, or a path whose extension is an image's.
-fn is_image_reference(s: &str) -> bool {
+pub(crate) fn is_image_reference(s: &str) -> bool {
     if s.starts_with("http://") || s.starts_with("https://") {
         return true;
     }

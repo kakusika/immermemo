@@ -8,7 +8,7 @@ use crate::session::{SESSION, Session, refresh_list};
 use crate::session::{
     apply_icon_selection, copy_to_clipboard, filter_icon_picker, finish_sync,
     open_first_conflicted_note, open_icon_picker, resolve_active_conflict, resolve_conflict_step,
-    set_error, set_status, sync_conflict_sheet_state, update_current_icon, update_filtered_list,
+    set_error, set_status, sync_conflict_sheet_state, update_current_header, update_filtered_list,
 };
 use immermemo_core::{AppData, History, notes};
 use slint::ComponentHandle;
@@ -33,6 +33,7 @@ fn ui_helpers_and_conflict_resolution() {
     search_filtering_updates_the_notes_and_snippets_models(&app, &session, &vault_dir);
     a_note_s_meta_icon_reaches_its_directory_entry(&app, &session, &vault_dir);
     a_note_s_image_icon_appears_once_its_thumbnail_is_ready(&app, &session, &vault_dir);
+    a_note_s_banner_and_body_image_appear_once_loaded(&app, &session, &vault_dir);
     icon_picker_selection_saves_and_is_reflected_in_the_note_list(&app, &session, &vault_dir);
     let multi_note_path =
         conflict_sheet_steps_through_and_resolves_every_conflict(&app, &session, &vault_dir);
@@ -284,13 +285,81 @@ fn a_note_s_image_icon_appears_once_its_thumbnail_is_ready(
 
     // The mini card resolves the same reference against the open note.
     app.set_current_note_path("covered.tmt".into());
-    update_current_icon(
+    update_current_header(
         app,
         session,
         "@meta{ icon: \"images/cover.png\" }\n\nHas a cover.\n",
     );
     assert_eq!(app.get_current_icon().kind, NoteIconKind::Picture);
     assert_eq!(app.get_current_icon().picture.size().width, 256);
+    app.set_current_note_path("".into());
+}
+
+/// A banner and a block-level `@embed` take the same off-thread path as an
+/// image icon: empty (the UI draws a placeholder in its place) until the
+/// worker has produced the wide copy, then the real, downscaled picture.
+fn a_note_s_banner_and_body_image_appear_once_loaded(
+    app: &App,
+    session: &SessionRef,
+    vault_dir: &Path,
+) {
+    let thumbs = crate::thumbs::tests::install_for_tests(vault_dir.join("../thumb-cache"));
+    std::fs::write(
+        vault_dir.join("images/hero.png"),
+        crate::thumbs::tests::png(2000, 500),
+    )
+    .unwrap();
+    std::fs::write(
+        vault_dir.join("images/cat.png"),
+        crate::thumbs::tests::png(600, 300),
+    )
+    .unwrap();
+    let text = "@meta{ banner: \"images/hero.png\", banner-y: 25 }\n\n\
+                Intro.\n\n\
+                @embed[A cat](path: \"images/cat.png\")\n\n\
+                Outro, with @embed[inline](path: \"images/cat.png\") in a line.\n";
+    app.set_current_note_path("pic.tmt".into());
+
+    let picture_blocks = || {
+        let base = crate::session::media_base(app, session);
+        let items = crate::render::note_body_items(text, app, 600.0, &base);
+        (0..items.row_count())
+            .map(|i| items.row_data(i).unwrap())
+            .filter(|item| !item.is_flow && item.block.shape == RenderedBlockShape::Picture)
+            .map(|item| item.block)
+            .collect::<Vec<_>>()
+    };
+
+    update_current_header(app, session, text);
+    let banner = app.get_current_banner();
+    assert!(banner.declared);
+    assert_eq!(banner.picture.size().width, 0, "not produced yet");
+    assert_eq!(banner.focus_y, 0.25);
+    let pictures = picture_blocks();
+    assert_eq!(pictures.len(), 1, "only the block-level embed is a picture");
+    assert_eq!(pictures[0].text, "A cat");
+    assert_eq!(pictures[0].picture.size().width, 0, "not produced yet");
+
+    thumbs.settle();
+    update_current_header(app, session, text);
+    let banner = app.get_current_banner();
+    assert_eq!(
+        (banner.picture.size().width, banner.picture.size().height),
+        (1280, 320)
+    );
+    let pictures = picture_blocks();
+    assert_eq!(
+        (
+            pictures[0].picture.size().width,
+            pictures[0].picture.size().height
+        ),
+        (600, 300),
+        "smaller than the preset, so not enlarged"
+    );
+
+    // No banner: nothing declared, so nothing is reserved above the title.
+    update_current_header(app, session, "Plain.\n");
+    assert!(!app.get_current_banner().declared);
     app.set_current_note_path("".into());
 }
 

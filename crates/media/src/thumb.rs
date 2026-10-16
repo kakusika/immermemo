@@ -16,25 +16,32 @@ pub const DECODE_MAX_DIMENSION: u32 = 8192;
 /// The most memory the decoder may allocate for one image, in bytes.
 pub const DECODE_MAX_ALLOC: u64 = 256 * 1024 * 1024;
 
-/// How small a thumbnail is made, by where it is shown.
+/// How small an image is made, by where it is shown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Preset {
     /// A note's icon in a list, a tile or the mini card: 256px on the long
     /// edge, enough for a ~100px tile at 2.5x density.
     Thumb,
+    /// A note's banner across the top of the note: 1280px on the long edge.
+    Banner,
+    /// An image embedded in a note's body: 1280px on the long edge.
+    Body,
 }
 
 impl Preset {
-    /// The longest edge, in pixels, a thumbnail of this preset has.
+    /// The longest edge, in pixels, an image of this preset has.
     pub fn max_edge(self) -> u32 {
         match self {
             Self::Thumb => 256,
+            Self::Banner | Self::Body => 1280,
         }
     }
 
     pub(crate) fn dir_name(self) -> &'static str {
         match self {
             Self::Thumb => "thumb",
+            Self::Banner => "banner",
+            Self::Body => "body",
         }
     }
 }
@@ -193,6 +200,23 @@ mod tests {
         assert_eq!(size(&thumb), (256, 128));
         let thumb = make_thumbnail(&png(300, 900, 255), Preset::Thumb).unwrap();
         assert_eq!(size(&thumb), (85, 256));
+    }
+
+    #[test]
+    fn the_wide_presets_keep_far_more_detail_than_a_thumbnail() {
+        for preset in [Preset::Banner, Preset::Body] {
+            let thumb = make_thumbnail(&png(3000, 1500, 255), preset).unwrap();
+            assert_eq!(size(&thumb), (1280, 640), "{preset:?}");
+        }
+    }
+
+    #[test]
+    fn each_preset_is_cached_apart() {
+        let dirs: std::collections::HashSet<_> = [Preset::Thumb, Preset::Banner, Preset::Body]
+            .into_iter()
+            .map(Preset::dir_name)
+            .collect();
+        assert_eq!(dirs.len(), 3);
     }
 
     #[test]

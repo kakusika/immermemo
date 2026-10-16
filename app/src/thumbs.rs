@@ -2,7 +2,7 @@
 //! thread (see `immermemo_media`), kept decoded and ready for it.
 //!
 //! Asking for a picture never blocks. [`picture`] answers from the decoded
-//! cache or with an empty image, and queues the missing thumbnail for a
+//! cache or with an empty image, and queues the missing image for a
 //! small pool of worker threads; when one finishes, the UI thread is woken,
 //! takes in what is ready, and re-renders the lists and the mini card once
 //! (a short delay merges a burst of completions into one refresh). The empty
@@ -12,7 +12,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex};
@@ -28,7 +28,11 @@ use crate::App;
 const WORKERS: usize = 3;
 
 /// How many decoded thumbnails stay in memory (at most ~256KB each).
-const DECODED_CAPACITY: usize = 96;
+const DECODED_THUMBS: usize = 96;
+
+/// How many decoded banner and body images stay in memory. They are far
+/// larger (up to ~4MB each), and only a few are ever on screen.
+const DECODED_WIDE: usize = 8;
 
 /// How much disk the thumbnail cache may use.
 pub const CACHE_BUDGET_BYTES: u64 = 64 * 1024 * 1024;
@@ -41,9 +45,10 @@ const REFRESH_DELAY: Duration = Duration::from_millis(50);
 const FETCH_TIMEOUT: Duration = Duration::from_secs(15);
 
 type Wake = Arc<dyn Fn() + Send + Sync>;
-type Finished = (CacheKey, Result<Thumbnail, String>);
+type Finished = (Preset, CacheKey, Result<Thumbnail, String>);
 
 struct Job {
+    preset: Preset,
     key: CacheKey,
     source: MediaSource,
     cache: Arc<MediaCache>,
@@ -60,7 +65,8 @@ pub struct Thumbs {
     finished_tx: Sender<Finished>,
     finished_rx: Receiver<Finished>,
     wake: Wake,
-    decoded: RefCell<CLruCache<CacheKey, slint::Image>>,
+    decoded_thumbs: RefCell<CLruCache<CacheKey, slint::Image>>,
+    decoded_wide: RefCell<CLruCache<CacheKey, slint::Image>>,
     pending: RefCell<std::collections::HashSet<CacheKey>>,
     failed: RefCell<HashMap<CacheKey, Instant>>,
 }
@@ -85,9 +91,9 @@ impl Thumbs {
                     {
                         let result = job
                             .cache
-                            .produce(&job.source, Preset::Thumb, &*job.fetcher)
+                            .produce(&job.source, job.preset, &*job.fetcher)
                             .map_err(|error| format!("{error:#}"));
-                        let _ = job.finished.send((job.key, result));
+                        let _ = job.finished.send((job.preset, job.key, result));
                         (job.wake)();
                     }
                 });
@@ -109,22 +115,28 @@ impl Thumbs {
             finished_tx,
             finished_rx,
             wake,
-            decoded: RefCell::new(CLruCache::new(
-                NonZeroUsize::new(DECODED_CAPACITY).expect("capacity is non-zero"),
-            )),
+            decoded_thumbs: RefCell::new(lru(DECODED_THUMBS)),
+            decoded_wide: RefCell::new(lru(DECODED_WIDE)),
             pending: RefCell::default(),
             failed: RefCell::default(),
         }
     }
 
-    /// `source`'s thumbnail if it is decoded and ready; otherwise an empty
-    /// image, with the thumbnail queued unless it is already on its way or
-    /// failed recently.
-    pub fn picture(&self, source: &MediaSource) -> slint::Image {
-        let Some(key) = CacheKey::new(source, Preset::Thumb) else {
+    fn decoded(&self, preset: Preset) -> &RefCell<CLruCache<CacheKey, slint::Image>> {
+        match preset {
+            Preset::Thumb => &self.decoded_thumbs,
+            Preset::Banner | Preset::Body => &self.decoded_wide,
+        }
+    }
+
+    /// `source` as an image of `preset`'s size if it is decoded and ready;
+    /// otherwise an empty image, with it queued unless it is already on its
+    /// way or failed recently.
+    pub fn picture(&self, source: &MediaSource, preset: Preset) -> slint::Image {
+        let Some(key) = CacheKey::new(source, preset) else {
             return slint::Image::default();
         };
-        if let Some(image) = self.decoded.borrow_mut().get(&key) {
+        if let Some(image) = self.decoded(preset).borrow_mut().get(&key) {
             return image.clone();
         }
         let failed_recently = self
@@ -134,6 +146,7 @@ impl Thumbs {
             .is_some_and(|at| at.elapsed() < FAILURE_TTL);
         if !failed_recently && self.pending.borrow_mut().insert(key.clone()) {
             let job = Job {
+                preset,
                 key: key.clone(),
                 source: source.clone(),
                 cache: self.cache.clone(),
@@ -158,13 +171,13 @@ impl Thumbs {
         taken
     }
 
-    fn accept(&self, (key, result): Finished) {
+    fn accept(&self, (preset, key, result): Finished) {
         self.pending.borrow_mut().remove(&key);
         match result {
             Ok(thumb) => match to_image(thumb) {
                 Some(image) => {
                     self.failed.borrow_mut().remove(&key);
-                    self.decoded.borrow_mut().put(key, image);
+                    self.decoded(preset).borrow_mut().put(key, image);
                 }
                 None => {
                     self.failed.borrow_mut().insert(key, Instant::now());
@@ -186,6 +199,40 @@ impl Thumbs {
             };
             self.accept(finished);
         }
+    }
+}
+
+fn lru(capacity: usize) -> CLruCache<CacheKey, slint::Image> {
+    CLruCache::new(NonZeroUsize::new(capacity).expect("capacity is non-zero"))
+}
+
+/// Where a note's relative image references are resolved: the vault, and the
+/// note the reference was written in.
+#[derive(Debug, Clone, Default)]
+pub struct MediaBase {
+    pub vault_dir: PathBuf,
+    pub note_rel: PathBuf,
+}
+
+impl MediaBase {
+    pub fn new(vault_dir: &Path, note_rel: &Path) -> Self {
+        Self {
+            vault_dir: vault_dir.to_owned(),
+            note_rel: note_rel.to_owned(),
+        }
+    }
+
+    /// No note: nothing resolves, every picture stays empty.
+    pub fn none() -> Self {
+        Self::default()
+    }
+
+    /// `reference`'s image of `preset`'s size, or an empty one while it is
+    /// not ready or if the reference leads nowhere readable.
+    pub fn picture(&self, reference: &str, preset: Preset) -> slint::Image {
+        MediaSource::resolve(reference, &self.vault_dir, &self.note_rel)
+            .map(|source| picture(&source, preset))
+            .unwrap_or_default()
     }
 }
 
@@ -258,11 +305,13 @@ fn install(thumbs: Thumbs) {
     THUMBS.with(|slot| *slot.borrow_mut() = Some(Rc::new(thumbs)));
 }
 
-/// `source`'s thumbnail as an image, or an empty one while it is not ready
-/// (or if the pipeline has not been started).
-pub fn picture(source: &MediaSource) -> slint::Image {
+/// `source` as an image of `preset`'s size, or an empty one while it is not
+/// ready (or if the pipeline has not been started).
+pub fn picture(source: &MediaSource, preset: Preset) -> slint::Image {
     let thumbs = THUMBS.with(|slot| slot.borrow().clone());
-    thumbs.map(|t| t.picture(source)).unwrap_or_default()
+    thumbs
+        .map(|t| t.picture(source, preset))
+        .unwrap_or_default()
 }
 
 fn on_thumbnails_ready() {
@@ -290,7 +339,8 @@ fn refresh_screens() {
         crate::session::refresh_directory_views(&app, &session);
     }
     let body = app.get_body();
-    crate::session::update_current_icon(&app, &session, &body);
+    crate::session::update_rendered_body(&app, &session, &body);
+    crate::session::update_current_header(&app, &session, &body);
 }
 
 #[cfg(test)]
@@ -340,9 +390,13 @@ pub(crate) mod tests {
         let source = MediaSource::resolve("p.png", dir.path(), Path::new("n.tmt")).unwrap();
         let (thumbs, _) = pipeline(dir.path(), None);
 
-        assert_eq!(thumbs.picture(&source).size().width, 0, "not ready yet");
+        assert_eq!(
+            thumbs.picture(&source, Preset::Thumb).size().width,
+            0,
+            "not ready yet"
+        );
         thumbs.settle();
-        let ready = thumbs.picture(&source);
+        let ready = thumbs.picture(&source, Preset::Thumb);
         assert_eq!((ready.size().width, ready.size().height), (256, 128));
     }
 
@@ -352,11 +406,11 @@ pub(crate) mod tests {
         let (thumbs, fetcher) = pipeline(dir.path(), Some(png(64, 64)));
         let source = MediaSource::Remote("https://example.com/a.png".to_owned());
         for _ in 0..5 {
-            thumbs.picture(&source);
+            thumbs.picture(&source, Preset::Thumb);
         }
         thumbs.settle();
         assert_eq!(fetcher.calls.load(Ordering::SeqCst), 1);
-        assert!(thumbs.picture(&source).size().width > 0);
+        assert!(thumbs.picture(&source, Preset::Thumb).size().width > 0);
     }
 
     #[test]
@@ -364,10 +418,10 @@ pub(crate) mod tests {
         let dir = tempfile::tempdir().unwrap();
         let (thumbs, fetcher) = pipeline(dir.path(), None);
         let source = MediaSource::Remote("https://example.com/down.png".to_owned());
-        assert_eq!(thumbs.picture(&source).size().width, 0);
+        assert_eq!(thumbs.picture(&source, Preset::Thumb).size().width, 0);
         thumbs.settle();
         for _ in 0..3 {
-            assert_eq!(thumbs.picture(&source).size().width, 0);
+            assert_eq!(thumbs.picture(&source, Preset::Thumb).size().width, 0);
         }
         thumbs.settle();
         assert_eq!(fetcher.calls.load(Ordering::SeqCst), 1);
@@ -378,14 +432,14 @@ pub(crate) mod tests {
         let dir = tempfile::tempdir().unwrap();
         let source = MediaSource::Remote("https://example.com/a.png".to_owned());
         let (first, fetcher) = pipeline(dir.path(), Some(png(64, 64)));
-        first.picture(&source);
+        first.picture(&source, Preset::Thumb);
         first.settle();
         drop(first);
 
         let (second, again) = pipeline(dir.path(), None);
-        second.picture(&source);
+        second.picture(&source, Preset::Thumb);
         second.settle();
-        assert!(second.picture(&source).size().width > 0);
+        assert!(second.picture(&source, Preset::Thumb).size().width > 0);
         assert_eq!(fetcher.calls.load(Ordering::SeqCst), 1);
         assert_eq!(again.calls.load(Ordering::SeqCst), 0);
     }

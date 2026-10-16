@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
-import { Icon } from "@origiri-icons/icons.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 
 // What `immermemo-editor`'s `classify_body()` found in one top-level
 // block of the note body, as the editor's view-mode display (see
@@ -26,6 +26,11 @@ export enum RenderedBlockShape {
     // A `@doc.icon(name, pkg)` -- `icon-image` is the resolved image (see
     // `RenderedBlock.icon-image`'s doc).
     icon,
+    // A block-level `@embed[alt](path: "x.png")` -- `picture` is the
+    // image once it is loaded (see `RenderedBlock.picture`), `text` the alt
+    // text. Never reaches a `ConflictSideBlock`: inside a `@conflict` side an
+    // image is normalized to `badge` (see `to_conflict_side_block`).
+    picture,
     // A `@conflict(a: [...], b: [...])` -- `side-a`/`side-b` hold each
     // side's own content (see `immermemo_editor::classify::BlockShape::
     // Conflict`'s doc). `text`/`reading` unused (empty), same as every
@@ -94,6 +99,10 @@ export struct RenderedBlock {
     // own `@image-url()` can only ever resolve a fixed literal per call
     // site, never a runtime string). Empty elsewhere.
     icon-image: image,
+    // The loaded image, meaningful only for `picture`: empty until it has
+    // been fetched and decoded (`immermemo::thumbs`), and for good if the
+    // reference leads nowhere readable. Drawn at its own aspect ratio.
+    picture: image,
     checked: bool,
     // `@conflict`'s two sides, meaningful only for `conflict`. Empty for
     // every other shape, same convention as `reading`.
@@ -552,6 +561,48 @@ export component RenderedBlockView inherits VerticalLayout {
             clicked => {
                 root.link-clicked(root.block.target);
             }
+        }
+    }
+
+    if root.block.shape == RenderedBlockShape.picture: pic := Rectangle {
+        // Until the image is loaded, a quiet placeholder holds the room a
+        // typical picture takes, so the text below it moves once, not
+        // never-quite-where-it-was.
+        property <bool> loaded: root.block.picture.width > 0;
+        width: 100%;
+        height: pic.loaded
+            ? pic.width * root.block.picture.height / root.block.picture.width
+            : 140px * Metrics.ui-scale;
+        border-radius: Metrics.radius-md;
+        clip: true;
+        background: Palette.foreground.with-alpha(0.06);
+
+        if !pic.loaded: VerticalLayout {
+            alignment: center;
+            spacing: Metrics.spacing-xs;
+
+            Icon {
+                source: TablerIcons.photo;
+                width: Metrics.icon-lg;
+                height: Metrics.icon-lg;
+                color: Colors.muted;
+                x: (parent.width - self.width) / 2;
+            }
+
+            if root.block.text != "": Text {
+                text: root.block.text;
+                font-size: Metrics.font-sm;
+                color: Colors.muted;
+                horizontal-alignment: center;
+                overflow: elide;
+            }
+        }
+
+        if pic.loaded: Image {
+            source: root.block.picture;
+            width: parent.width;
+            height: parent.height;
+            image-fit: cover;
         }
     }
 

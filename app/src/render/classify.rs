@@ -75,6 +75,17 @@ pub enum BlockShape {
     /// the same way it stays free of every other UI-framework type.
     /// [`icon_look`] is what gives `(Some("doc"), "icon")` this shape.
     Icon,
+    /// A bare `@embed[alt](path: "x.png")` standing as an entire block by
+    /// itself -- `target` is the image reference as written (a vault path or
+    /// a URL), `text` is the alt text (empty if there is none). Fetching and
+    /// decoding the image is a Slint-side concern
+    /// ([`crate::render::to_note_body_item_view`]), same split as
+    /// [`BlockShape::Icon`]. Inline in a paragraph, or inside a `@conflict`
+    /// side, it has no room to draw a picture and shows as a
+    /// [`BlockShape::Badge`] instead (see [`image_label`]).
+    /// [`image_look`] is what gives the bare `(None, "embed")` identity this
+    /// shape.
+    Image,
     /// A `@task(status)[label]` or `-@task(status) label` -- `text` is the
     /// task label, `secondary_text` is the raw status string, and `checked`
     /// is true if status indicates completion.
@@ -224,6 +235,7 @@ const REGISTRY: &[RegistryRow] = &[
     (None, "callout", callout_look),
     (None, "quote", callout_look),
     (Some("doc"), "icon", icon_look),
+    (None, "embed", image_look),
 ];
 
 /// The icon package `@doc.icon(name)` resolves against when it omits
@@ -495,6 +507,32 @@ fn icon_look(input: LookInput) -> Look {
         side_a: Vec::new(),
         side_b: Vec::new(),
     }
+}
+
+/// `@embed[alt](path: "x.png")` -- `target` is the reference (the
+/// positional string, or `path`/`ref`/`src`/`url`/`target`/`href`), `text`
+/// the alt text.
+fn image_look(input: LookInput) -> Look {
+    Look {
+        shape: BlockShape::Image,
+        tone: Tone::Neutral,
+        text: input.content.unwrap_or_default().to_owned(),
+        target: immermemo_render_tomet::media_target(input.args).unwrap_or_default(),
+        secondary_text: String::new(),
+        checked: false,
+        side_a: Vec::new(),
+        side_b: Vec::new(),
+    }
+}
+
+/// What an image shows as where it has no room for a picture: its alt text,
+/// or else the file name its reference ends in.
+pub(super) fn image_label(alt: &str, target: &str) -> String {
+    if !alt.is_empty() {
+        return alt.to_owned();
+    }
+    let path = target.split(['?', '#']).next().unwrap_or(target);
+    path.rsplit('/').next().unwrap_or(path).to_owned()
 }
 
 /// `None` if `identity` has no [`REGISTRY`] entry -- callers decide the
@@ -803,6 +841,32 @@ mod tests {
         assert_eq!(blocks[0].shape, BlockShape::Link);
         assert_eq!(blocks[0].text, "note");
         assert_eq!(blocks[0].target, "ref:note");
+    }
+
+    #[test]
+    fn an_embed_block_carries_its_reference_and_alt_text() {
+        for (src, alt, target) in [
+            (
+                "@embed[A cat](path: \"img/cat.png\")\n",
+                "A cat",
+                "img/cat.png",
+            ),
+            ("@embed(\"cat.png\")\n", "", "cat.png"),
+            ("@embed(ref: \"cat.png\")\n", "", "cat.png"),
+        ] {
+            let blocks = classify_body(src);
+            assert_eq!(blocks.len(), 1, "{src}");
+            assert_eq!(blocks[0].shape, BlockShape::Image, "{src}");
+            assert_eq!(blocks[0].text, alt, "{src}");
+            assert_eq!(blocks[0].target, target, "{src}");
+        }
+    }
+
+    #[test]
+    fn an_image_with_no_room_for_a_picture_is_labeled_by_its_alt_text_or_file_name() {
+        assert_eq!(image_label("A cat", "img/cat.png"), "A cat");
+        assert_eq!(image_label("", "img/cat.png?v=2"), "cat.png");
+        assert_eq!(image_label("", "https://example.com/a/b.jpg"), "b.jpg");
     }
 
     #[test]

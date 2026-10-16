@@ -5,10 +5,12 @@ use tomet::ast::{Block, Document, Element, ElementValue, Entry, Inline, Sigil, V
 use crate::inline::inline_content;
 use crate::types::{ElementArgs, ElementIdentity, RenderItem};
 
-/// Reads `src`'s top-level `@meta{ ... }` group's `key` entry value, whatever
-/// its shape (a string, an element, ...), if present.
-pub(crate) fn meta_value(src: &str, key: &str) -> Option<Value> {
-    let doc: Document = tomet::parser::parse_document(src).ok()?;
+/// Every `key: value` entry of `src`'s top-level `@meta{ ... }` group, in
+/// source order. Empty if there is no such group.
+pub(crate) fn meta_pairs(src: &str) -> Vec<(String, Value)> {
+    let Ok(doc) = tomet::parser::parse_document(src) else {
+        return Vec::new();
+    };
     let meta = doc.blocks.iter().find_map(|block| match block {
         Block::Element(el) => {
             let Sigil::Named(name) = &el.sigil else {
@@ -17,14 +19,25 @@ pub(crate) fn meta_value(src: &str, key: &str) -> Option<Value> {
             (name.namespace.is_none() && name.name == "meta").then_some(el)
         }
         _ => None,
-    })?;
-    let ElementValue::Group(entries) = meta.value.as_ref()? else {
-        return None;
+    });
+    let Some(ElementValue::Group(entries)) = meta.and_then(|el| el.value.as_ref()) else {
+        return Vec::new();
     };
-    entries.iter().find_map(|entry| match entry {
-        Entry::Pair(entry_key, value) if entry_key == key => Some(value.clone()),
-        _ => None,
-    })
+    entries
+        .iter()
+        .filter_map(|entry| match entry {
+            Entry::Pair(key, value) => Some((key.clone(), value.clone())),
+            _ => None,
+        })
+        .collect()
+}
+
+/// `src`'s top-level `@meta{ ... }` group's `key` entry value, whatever its
+/// shape (a string, an element, ...), if present.
+pub(crate) fn meta_value(src: &str, key: &str) -> Option<Value> {
+    meta_pairs(src)
+        .into_iter()
+        .find_map(|(entry_key, value)| (entry_key == key).then_some(value))
 }
 
 /// Reads `src`'s top-level `@meta{ ... }` group's `key` entry, if present

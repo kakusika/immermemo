@@ -1,4 +1,4 @@
-//! Images a note refers to, turned into small thumbnails kept in a disposable
+//! Images a note refers to, turned into downscaled copies kept in a disposable
 //! disk cache.
 //!
 //! A note names an image only by a *reference* written in the note itself --
@@ -17,7 +17,9 @@
 //! SHA-256 of the source's *identity*:
 //!
 //! - a remote image: its URL;
-//! - a vault file: its path, size and modification time. A content hash would
+//! - a vault file: its path, size and modification time (a bare file name that
+//!   no path finds -- `ref:+a.png` -- is looked up by Tomet's `VaultLinkIndex`,
+//!   the one closest to the note winning); A content hash would
 //!   mean reading every original on every list refresh; instead a checkout
 //!   that rewrites mtimes costs one redundant re-thumbnail, never a wrong
 //!   image.
@@ -26,6 +28,16 @@
 //! files (a hit refreshes the file's mtime). A source that failed to load is
 //! remembered for [`FAILURE_TTL`] so a broken URL is not refetched on every
 //! refresh.
+//!
+//! # Git LFS
+//!
+//! A vault may send its images through Git LFS (`*.png filter=lfs` in
+//! `.gitattributes`). The app syncs with libgit2, which never runs the LFS
+//! filter, so such an image sits in the vault as a ~130-byte *pointer* file
+//! and the real bytes stay on the LFS server. [`LfsPointer`] recognizes one,
+//! and reading it fails with that reason rather than "unknown image format".
+//! Fetching the object (the LFS batch API, addressed by the pointer's
+//! SHA-256, which would also make a perfect cache key) is not implemented.
 //!
 //! # Formats
 //!
@@ -53,7 +65,7 @@ mod source;
 mod thumb;
 
 pub use cache::{CacheKey, FAILURE_TTL, MediaCache};
-pub use source::{Fetcher, MAX_LOCAL_BYTES, MAX_REMOTE_BYTES, MediaSource};
+pub use source::{Fetcher, LfsPointer, MAX_LOCAL_BYTES, MAX_REMOTE_BYTES, MediaSource};
 pub use thumb::{
     DECODE_MAX_ALLOC, DECODE_MAX_DIMENSION, MAX_SVG_BYTES, Preset, Thumbnail, make_thumbnail,
 };

@@ -1,12 +1,13 @@
-//! A note's declared icon, resolved into the [`NoteIconView`] the UI draws.
+//! A note's declared icon and banner, resolved into the views the UI draws.
 
 use std::path::Path;
 
-use immermemo_media::MediaSource;
-use immermemo_render_tomet::{NoteIcon, text_icon_cells};
+use immermemo_media::Preset;
+use immermemo_render_tomet::{NoteBanner, NoteIcon, text_icon_cells};
 use slint::{ModelRc, SharedString, VecModel};
 
-use crate::{NoteIconKind, NoteIconView};
+use crate::thumbs::MediaBase;
+use crate::{NoteBannerView, NoteIconKind, NoteIconView};
 
 /// The view for the icon of the note at `note_rel` in `vault_dir`. An image
 /// icon shows its thumbnail once there is one (see [`crate::thumbs`]); until
@@ -14,9 +15,9 @@ use crate::{NoteIconKind, NoteIconView};
 /// carries an empty picture.
 pub fn resolve_view(icon: Option<&NoteIcon>, vault_dir: &Path, note_rel: &Path) -> NoteIconView {
     let picture = match icon {
-        Some(NoteIcon::Image(reference)) => MediaSource::resolve(reference, vault_dir, note_rel)
-            .map(|source| crate::thumbs::picture(&source))
-            .unwrap_or_default(),
+        Some(NoteIcon::Image(reference)) => {
+            MediaBase::new(vault_dir, note_rel).picture(reference, Preset::Thumb)
+        }
         _ => slint::Image::default(),
     };
     icon_view(icon, picture)
@@ -61,5 +62,23 @@ pub fn icon_view(icon: Option<&NoteIcon>, picture: slint::Image) -> NoteIconView
             picture,
             ..empty()
         },
+    }
+}
+
+/// The view for the banner of the note at `note_rel` in `vault_dir`: its
+/// picture once there is one (see [`crate::thumbs`]), and where to crop it
+/// (centred unless `banner-y` says otherwise).
+pub fn banner_view(
+    banner: Option<&NoteBanner>,
+    vault_dir: &Path,
+    note_rel: &Path,
+) -> NoteBannerView {
+    let Some(banner) = banner else {
+        return NoteBannerView::default();
+    };
+    NoteBannerView {
+        declared: true,
+        picture: MediaBase::new(vault_dir, note_rel).picture(&banner.reference, Preset::Banner),
+        focus_y: banner.focus_y.map_or(0.5, |y| y / 100.0),
     }
 }

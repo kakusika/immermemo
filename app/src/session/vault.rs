@@ -157,7 +157,7 @@ pub fn switch_vault(app: &App, session: &SessionRef, vault_dir: PathBuf) {
     app.set_remote_configured(remote.is_some());
     crate::update_provider_ui_state(app, remote.as_deref());
     app.set_current_title(SharedString::new());
-    update_rendered_body(app, "");
+    update_rendered_body(app, session, "");
     app.set_last_sync_error(SharedString::new());
     app.set_sync_error_copied(false);
     app.set_last_synced_at(SharedString::new());

@@ -38,7 +38,8 @@ use immermemo_render_tomet::{RenderBlockKind, RenderItem, TextStyle, classify_bl
 use origiri_richtext_flow::{Block, Inline};
 
 use super::classify::{
-    BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone, classify_body, to_classified_block,
+    BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone, classify_body, image_label,
+    to_classified_block,
 };
 
 /// `render-tomet`'s [`TextStyle`] (bold/italic/mark/strikeout -- the same
@@ -213,7 +214,7 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
                     );
                 } else {
                     let id = elements.len() as u64;
-                    elements.push(classified);
+                    elements.push(without_picture(classified));
                     content.push(Inline::Element { id });
                 }
             }
@@ -226,6 +227,17 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
         },
         elements,
     }
+}
+
+/// An image in the middle of a line has no room to draw its picture: it
+/// stands as a labeled pill, like any other element nobody has a look for.
+fn without_picture(mut block: ClassifiedBlock) -> ClassifiedBlock {
+    if block.shape == BlockShape::Image {
+        block.text = image_label(&block.text, &block.target);
+        block.target = String::new();
+        block.shape = BlockShape::Badge;
+    }
+    block
 }
 
 /// One side of an inline `@conflict`, flattened into
@@ -257,7 +269,7 @@ fn push_conflict_side(
             leaf.tone
         };
         let id = elements.len() as u64;
-        elements.push(ClassifiedBlock {
+        elements.push(without_picture(ClassifiedBlock {
             shape: leaf.shape,
             tone,
             text: leaf.text,
@@ -267,7 +279,7 @@ fn push_conflict_side(
             checked: leaf.checked,
             side_a: Vec::new(),
             side_b: Vec::new(),
-        });
+        }));
         content.push(Inline::Element { id });
     }
 }
@@ -276,6 +288,19 @@ fn push_conflict_side(
 mod tests {
     use super::super::classify::Tone;
     use super::*;
+
+    #[test]
+    fn an_image_in_the_middle_of_a_line_flows_as_a_labeled_pill() {
+        let paragraphs = flow_paragraphs("See @embed[A cat](path: \"img/cat.png\") here.\n");
+        assert_eq!(paragraphs.len(), 1);
+        let element = &paragraphs[0].elements[0];
+        assert_eq!(element.shape, BlockShape::Badge);
+        assert_eq!(element.text, "A cat");
+        assert_eq!(element.target, "");
+
+        let paragraphs = flow_paragraphs("See @embed(path: \"img/cat.png\") here.\n");
+        assert_eq!(paragraphs[0].elements[0].text, "cat.png");
+    }
 
     #[test]
     fn note_body_items_mixes_stacked_and_flowed_items_in_source_order() {

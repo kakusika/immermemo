@@ -35,7 +35,7 @@ fn open_note_inner(app: &App, session: &SessionRef, index: usize) -> Option<Stri
             app.set_current_has_conflict(opened.has_conflict);
             app.set_can_undo(opened.can_undo);
             app.set_can_redo(opened.can_redo);
-            update_rendered_body(app, &opened.body);
+            update_rendered_body(app, session, &opened.body);
             update_note_stats(app, session, &opened.body);
             set_status(app, "");
             app.set_active_conflict_index(0);
@@ -171,6 +171,6 @@ pub fn close_current_note_and_show_list_or_reopen(
     session.borrow_mut().editor.history = None;
     app.set_current_title(SharedString::new());
     show_history_state(app, &session.borrow());
-    update_rendered_body(app, "");
+    update_rendered_body(app, session, "");
     show_list_or_reopen(app, session, switch_to_files_tab);
 }

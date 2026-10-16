@@ -28,7 +28,9 @@ pub fn history_preview(
     let Ok(text) = std::fs::read_to_string(&abs_path) else {
         return (String::new(), ModelRc::default());
     };
-    let items = crate::render::note_body_items(&text, app, max_width);
+    // A preview of a neighbouring note draws no pictures: it is a glance.
+    let items =
+        crate::render::note_body_items(&text, app, max_width, &crate::thumbs::MediaBase::none());
     session
         .borrow_mut()
         .history_preview_cache
@@ -65,7 +67,7 @@ pub fn apply_restored(app: &App, session: &SessionRef, restored: Option<immermem
             app.set_conflicted(ModelRc::new(VecModel::from(s.conflicted.clone())));
         }
     }
-    update_rendered_body(app, &result.body);
+    update_rendered_body(app, session, &result.body);
     update_note_stats(app, session, &result.body);
     app.invoke_set_cursor(result.cursor as i32);
     show_history_state(app, &session.borrow());
@@ -101,7 +103,7 @@ pub fn restore_note_version(app: &App, session: &SessionRef, rev_idx: usize) {
     match outcome {
         Err(msg) => set_error(app, msg),
         Ok(restored) => {
-            update_rendered_body(app, &restored.body);
+            update_rendered_body(app, session, &restored.body);
             app.set_can_undo(restored.can_undo);
             app.set_can_redo(restored.can_redo);
             update_note_stats(app, session, &restored.body);

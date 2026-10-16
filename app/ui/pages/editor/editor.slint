@@ -12,6 +12,7 @@ import { NoteBodyItemView, NoteBodyView } from "../../render/note_body.slint";
 import { ViewSwitcher, NavPill } from "../../components.slint";
 import { PropertiesView, NotePropertyEntry } from "properties.slint";
 import { EditorToolbar } from "toolbar.slint";
+import { NoteBanner, NoteBannerView } from "../../widgets/note_banner.slint";
 
 export { NotePropertyEntry } from "properties.slint";
 
@@ -154,6 +155,8 @@ component HistoryPreviewPanel inherits Rectangle {
 
 export component EditorScreen inherits Rectangle {
     in property <string> title;
+    // The note's own `@meta{ banner: ... }`, drawn above the title in view mode.
+    in property <NoteBannerView> banner;
     in property <bool> has-note: false;
     in property <int> note-count: 0;
     in property <bool> has-conflict: false;
@@ -781,6 +784,10 @@ export component EditorScreen inherits Rectangle {
                                 padding-top: Metrics.spacing-lg;
                                 padding-bottom: Metrics.spacing-3xl + (root.edit-mode ? 48px : 0px);
                                 spacing: Metrics.spacing-md;
+
+                                if !root.edit-mode && root.banner.declared: NoteBanner {
+                                    banner: root.banner;
+                                }
 
                                 // In-body note title (Notion / Apple Notes style)
                                 Text {

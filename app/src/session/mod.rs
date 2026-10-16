@@ -230,12 +230,23 @@ pub fn navigate_directory_folder(app: &App, session: &Rc<RefCell<Session>>, key:
     refresh_directory_views(app, session);
 }
 
+/// Where the open note's relative image references resolve: the vault, and
+/// the note (`current-note-path`) they were written in.
+pub fn media_base(app: &App, session: &SessionRef) -> crate::thumbs::MediaBase {
+    let vault_dir = session.borrow().vault_dir.clone();
+    crate::thumbs::MediaBase::new(
+        &vault_dir,
+        std::path::Path::new(app.get_current_note_path().as_str()),
+    )
+}
+
 /// Sets `body` and recomputes `note-body-items` in the same step.
-pub fn update_rendered_body(app: &App, text: &str) {
+pub fn update_rendered_body(app: &App, session: &SessionRef, text: &str) {
     app.set_body(text.into());
     let max_width = app.get_body_content_width();
     if max_width > 0.0 {
-        app.set_note_body_items(crate::render::note_body_items(text, app, max_width));
+        let base = media_base(app, session);
+        app.set_note_body_items(crate::render::note_body_items(text, app, max_width, &base));
     } else {
         app.set_note_body_items(ModelRc::default());
     }
@@ -250,7 +261,7 @@ pub fn update_note_stats(app: &App, session: &SessionRef, text: &str) {
     app.set_line_count(stats.line_count);
     let kind = immermemo_render_tomet::extract_note_kind(text).unwrap_or_default();
     app.set_note_kind(kind.into());
-    update_current_icon(app, session, text);
+    update_current_header(app, session, text);
     let metadata_entries: Vec<NotePropertyEntry> =
         immermemo_render_tomet::extract_note_metadata(text)
             .into_iter()
@@ -262,14 +273,21 @@ pub fn update_note_stats(app: &App, session: &SessionRef, text: &str) {
     app.set_note_metadata(Rc::new(VecModel::from(metadata_entries)).into());
 }
 
-/// Sets the mini card's icon from the open note's `text`. The note's path
-/// (`current-note-path`) is what an image reference is resolved against.
-pub fn update_current_icon(app: &App, session: &SessionRef, text: &str) {
+/// Sets what the open note shows of its own header from its `text`: the
+/// mini card's icon and the banner above the title. The note's path
+/// (`current-note-path`) is what image references are resolved against.
+pub fn update_current_header(app: &App, session: &SessionRef, text: &str) {
     let icon = immermemo_render_tomet::extract_note_icon(text);
+    let banner = immermemo_render_tomet::extract_note_banner(text);
     let vault_dir = session.borrow().vault_dir.clone();
     let note_rel = PathBuf::from(app.get_current_note_path().as_str());
     app.set_current_icon(crate::note_icon::resolve_view(
         icon.as_ref(),
+        &vault_dir,
+        &note_rel,
+    ));
+    app.set_current_banner(crate::note_icon::banner_view(
+        banner.as_ref(),
         &vault_dir,
         &note_rel,
     ));
@@ -282,5 +300,6 @@ pub fn clear_note_stats(app: &App) {
     app.set_line_count(0);
     app.set_note_kind(SharedString::new());
     app.set_current_icon(NoteIconView::default());
+    app.set_current_banner(crate::NoteBannerView::default());
     app.set_note_metadata(Rc::new(VecModel::from(Vec::<NotePropertyEntry>::new())).into());
 }

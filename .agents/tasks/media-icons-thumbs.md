@@ -98,12 +98,59 @@ Stages 1 and 2 are implemented and verified here: `cargo test --workspace`
 mini card). NOT verified: Android/iOS builds, and a real device (rounded
 picture corners are femtovg-only, see Stage 1 notes).
 
-**Stage 3 (banner, images in the note body) has not been started** -- wait
-for the user to confirm stages 1 and 2 on a device first. Then: add a
-`banner` (+ `banner-y`) meta key next to `icon` in `render-tomet`, an index
-column (schema v4), a `Preset::Banner` (1600px, as tomet-book) in
-`crates/media`, and body images in `app/src/render`. Reuse `thumbs`; a banner
-must not go through the 96-entry decoded cache at full size.
+Stages 1 and 2 were confirmed on a device by the user and committed
+(`feat: free-form note icons and cached image thumbnails`).
+
+## Stage 3 -- banner and images in the note body (in progress)
+
+Defaults chosen (change only if the user objects):
+
+- Banner: `@meta{ banner: "images/hero.jpg", banner-y: 30 }` (string path/URL
+  or `@embed(...)`; `banner-y` is a 0-100 vertical focal percent, same as
+  tomet-book's `object-position`). Drawn full-bleed above the title in the
+  editor's scrolling content, ~160dp tall, `cover`, view mode only. No index
+  column (banners are not shown in lists), so no schema change.
+- Body image: a block-level `@embed[alt](path: "x.png")` (tomet's own form;
+  `@embed(ref: name)` name lookup is NOT supported) drawn full width at its
+  own aspect ratio, rounded. Not inline in a paragraph, no tap-to-zoom.
+- `Preset::Banner` and `Preset::Body`, both 1280px long edge, with their own
+  tiny decoded cache (8) apart from the 96-entry thumbnail one.
+- `MediaBase { vault_dir, note_rel }` is passed explicitly to
+  `note_body_items` (no hidden global); history previews stay image-free.
+
+- [x] 3.1 `media`: `Preset::Banner`/`Body`, tests
+- [x] 3.2 `render-tomet`: `NoteBanner` + `extract_note_banner`; `embed` becomes
+      an atomic bare element; shared media-target extraction
+- [x] 3.3 app `classify`: `BlockShape::Image`; `RenderedBlock.picture`
+- [x] 3.4 `thumbs`: presets, separate wide LRU
+- [x] 3.5 thread `MediaBase` through `note_body_items`/`update_rendered_body`
+- [x] 3.6 Slint: image block, banner above the title; `current-banner`
+- [x] 3.7 refresh on ready, tests, snap, architecture.tmt, clippy, docs-check
+
+### After stage 3: name resolution and Git LFS
+
+- `ref:` names (`@link(ref:+c14d6f.png)`, the form the user's vault uses) are
+  resolved through `tomet::links::VaultLinkIndex` (tomet commit `925b859`,
+  pushed: the `links` feature, no SQLite). `Cargo.lock` now pins tomet there.
+  immermemo's own walk only supplies the file list (no dot-folders, no
+  symlinks).
+- Found on the user's real vault (`/mnt/hd-main/appdata/public/arcana`): the
+  images are **Git LFS pointer files** (131 bytes of text), because
+  `.gitattributes` sends `*.png` etc. through LFS and libgit2 never runs the
+  filter. So nothing can be shown even though the path now resolves.
+  `LfsPointer::parse` detects it and the failure says so. OPEN DECISION for
+  the user: implement fetching the LFS object (batch API with the provider
+  token, cache keyed by the pointer's sha256) or leave images in LFS vaults
+  unsupported.
+
+### Stage 3 status
+
+Implemented and verified (tests, clippy, docs-check, snap). The banner is an
+inset rounded card above the title (not full-bleed: `content-layout` has
+gutters), view mode only. Awaiting the user's check on a device, then the
+task can be closed: fold nothing further (decisions live in `crates/media`'s
+`//!` doc and `architecture.tmt`), commit, and delete this file and the
+workspace.
 
 ## When done
 
