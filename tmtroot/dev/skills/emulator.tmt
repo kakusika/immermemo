@@ -1,0 +1,15 @@
+=[ エミュレータでアプリを確かめる ]
+
+手順は `justfile` のレシピにある。ここには、レシピからは分からないことだけを書く。
+
+==[ レシピ ]
+
+-| `just avd-create`: AVDを作る(最初の1回)。
+-| `just emulator` / `just emulator-stop`: 起動と停止。
+-| `just run`: 端末に合うAPKをビルドして入れ、起動する。`just logs` でログを見る。
+
+==[ 覚えておくこと ]
+
+-| *`adb root` が使える*: このエミュレータのイメージでは、`adb root` が通る。端末の `/system/fonts` などの中身を、そのまま調べられる。
+-| *Gradleは `--offline`*: `gradle assembleRelease --offline` で、ネットワークなしでもビルドできた。
+-| *`snap` では角丸のクリップが見えない*: ソフトウェアレンダラーは角丸のクリップを無視する。角丸の見た目は、エミュレータか実機で確かめる(`offscreen-rendering.tmt`)。
