@@ -33,7 +33,9 @@
 //!   nothing this app hasn't explicitly opted into should change how it
 //!   looks.
 
-use immermemo_render_tomet::{ElementArgs, ElementIdentity, RenderItem, TextStyle, classify};
+use immermemo_render_tomet::{
+    ElementArgs, ElementIdentity, ElementItem, RenderItem, TextStyle, classify,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockShape {
@@ -184,7 +186,7 @@ pub(super) struct Look {
 }
 
 /// What a [`REGISTRY`] entry's lookup function gets to decide a [`Look`]
-/// from: `args` is `immermemo_render_tomet::RenderItem::Element::args`
+/// from: `args` is `immermemo_render_tomet::ElementItem::args`
 /// unchanged, `content` is the same item's `content` span already
 /// resolved against the note body (so a lookup function never needs to
 /// know what a [`tomet::ast::Span`] is or where the body string lives).
@@ -546,15 +548,16 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
             side_a: Vec::new(),
             side_b: Vec::new(),
         },
-        RenderItem::Element {
-            identity,
-            span,
-            content,
-            args_summary,
-            args,
-            block_args,
-            ..
-        } => {
+        RenderItem::Element(element) => {
+            let ElementItem {
+                identity,
+                span,
+                content,
+                args_summary,
+                args,
+                block_args,
+                ..
+            } = *element;
             let content_text = content.map(|span| &body[span.start.offset..span.end.offset]);
             let input = LookInput {
                 args: &args,

@@ -1,3 +1,4 @@
+import { WrappedText } from "widgets.slint";
 import { SettingsAdapter } from "../../adapters/settings.slint";
 import { Palette, LineEdit, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
@@ -48,12 +49,11 @@ component TransferToggleRow inherits Rectangle {
                 color: root.is-warning ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Palette.foreground;
             }
 
-            if root.subtitle != "": Text {
+            if root.subtitle != "": WrappedText {
                 text: root.subtitle;
                 font-size: Metrics.font-sm;
-                color: root.is-warning ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
-                wrap: word-wrap;
-            }
+                text-color: root.is-warning ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+                            }
         }
 
         VerticalLayout {
@@ -200,12 +200,11 @@ export component TransferPage inherits SettingsPage {
                 color: Colors.muted;
             }
 
-            Text {
+            WrappedText {
                 text: @tr("Paste an immermemo:// transfer link or payload below:");
                 font-size: Metrics.font-sm;
-                color: Colors.muted;
-                wrap: word-wrap;
-            }
+                text-color: Colors.muted;
+                            }
 
             LineEdit {
                 height: Metrics.touch;
@@ -230,12 +229,11 @@ export component TransferPage inherits SettingsPage {
                 }
             }
 
-            if SettingsAdapter.import-status-message != "": Text {
+            if SettingsAdapter.import-status-message != "": WrappedText {
                 text: SettingsAdapter.import-status-message;
                 font-size: 13px;
-                color: SettingsAdapter.import-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
-                wrap: word-wrap;
-            }
+                text-color: SettingsAdapter.import-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+                            }
         }
 
         if SettingsAdapter.import-preview-ready: Card {

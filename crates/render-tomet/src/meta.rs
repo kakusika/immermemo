@@ -79,7 +79,7 @@ pub fn is_metadata_element(identity: &ElementIdentity) -> bool {
 /// Returns true if a classified `RenderItem` is a metadata element.
 pub fn is_metadata_render_item(item: &RenderItem) -> bool {
     match item {
-        RenderItem::Element { identity, .. } => is_metadata_element(identity),
+        RenderItem::Element(el) => is_metadata_element(&el.identity),
         _ => false,
     }
 }

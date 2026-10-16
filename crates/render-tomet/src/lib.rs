@@ -20,7 +20,7 @@ pub use meta::{
     is_metadata_render_item, meta_element,
 };
 pub use types::{
-    ElementArgs, ElementIdentity, ParseFailed, RenderBlockKind, RenderItem, TextStyle,
+    ElementArgs, ElementIdentity, ElementItem, ParseFailed, RenderBlockKind, RenderItem, TextStyle,
 };
 
 #[cfg(test)]
@@ -124,7 +124,8 @@ mod tests {
         let items = classify("@task(x)[Todo]\n");
         assert_eq!(items.len(), 1);
         match &items[0] {
-            RenderItem::Element { identity, args, .. } => {
+            RenderItem::Element(el) => {
+                let ElementItem { identity, args, .. } = el.as_ref();
                 assert_eq!(identity.namespace, None);
                 assert_eq!(identity.name, "task");
                 assert_eq!(*args, ElementArgs::Positional("x".to_string()));
@@ -136,7 +137,8 @@ mod tests {
         let items = classify("-@task(x) Todo\n");
         assert_eq!(items.len(), 1);
         match &items[0] {
-            RenderItem::Element { identity, args, .. } => {
+            RenderItem::Element(el) => {
+                let ElementItem { identity, args, .. } = el.as_ref();
                 assert_eq!(identity.namespace, None);
                 assert_eq!(identity.name, "task");
                 assert_eq!(*args, ElementArgs::Positional("x".to_string()));
@@ -164,7 +166,7 @@ mod tests {
         let identities: Vec<&ElementIdentity> = items
             .iter()
             .filter_map(|item| match item {
-                RenderItem::Element { identity, .. } => Some(identity),
+                RenderItem::Element(el) => Some(&el.identity),
                 _ => None,
             })
             .collect();
@@ -177,7 +179,7 @@ mod tests {
         let args_summaries: Vec<&str> = items
             .iter()
             .filter_map(|item| match item {
-                RenderItem::Element { args_summary, .. } => Some(args_summary.as_str()),
+                RenderItem::Element(el) => Some(el.args_summary.as_str()),
                 _ => None,
             })
             .collect();
@@ -193,12 +195,13 @@ mod tests {
         let items = classify("@conflict(a: [Mine text.], b: [Their text.])\n");
         assert_eq!(items.len(), 1);
         match &items[0] {
-            RenderItem::Element {
-                identity,
-                content,
-                block_args,
-                ..
-            } => {
+            RenderItem::Element(el) => {
+                let ElementItem {
+                    identity,
+                    content,
+                    block_args,
+                    ..
+                } = el.as_ref();
                 assert_eq!(identity.namespace, None);
                 assert_eq!(identity.name, "conflict");
                 assert_eq!(
@@ -228,7 +231,7 @@ mod tests {
             .iter()
             .map(|item| match item {
                 RenderItem::Text(_, _) => "text",
-                RenderItem::Element { .. } => "element",
+                RenderItem::Element(_) => "element",
             })
             .collect();
         assert_eq!(kinds, vec!["text", "element", "text"]);
@@ -243,9 +246,10 @@ mod tests {
         };
         assert_eq!(&src[last.start.offset..last.end.offset], " after.");
 
-        let RenderItem::Element { block_args, .. } = &items[1] else {
+        let RenderItem::Element(el) = &items[1] else {
             unreachable!()
         };
+        let block_args = &el.block_args;
         assert_eq!(block_args.len(), 2);
         assert_eq!(block_args[0].0, "a");
         assert_eq!(block_args[1].0, "b");
@@ -256,12 +260,13 @@ mod tests {
         let items = classify("@deck.bookmark(label: \"Chapter 1\")\n");
         assert_eq!(items.len(), 1);
         match &items[0] {
-            RenderItem::Element {
-                identity,
-                args_summary,
-                data_summary,
-                ..
-            } => {
+            RenderItem::Element(el) => {
+                let ElementItem {
+                    identity,
+                    args_summary,
+                    data_summary,
+                    ..
+                } = el.as_ref();
                 assert_eq!(identity.namespace.as_deref(), Some("deck"));
                 assert_eq!(identity.name, "bookmark");
                 assert_eq!(args_summary, "label");
@@ -372,7 +377,7 @@ mod tests {
             .iter()
             .map(|item| match item {
                 RenderItem::Text(_, _) => "text",
-                RenderItem::Element { .. } => "element",
+                RenderItem::Element(_) => "element",
             })
             .collect();
         assert_eq!(kinds, vec!["text", "text", "element", "text", "text"]);
@@ -389,12 +394,13 @@ mod tests {
         let items = classify(src);
         assert_eq!(items.len(), 3);
         match &items[1] {
-            RenderItem::Element {
-                identity,
-                content,
-                args,
-                ..
-            } => {
+            RenderItem::Element(el) => {
+                let ElementItem {
+                    identity,
+                    content,
+                    args,
+                    ..
+                } = el.as_ref();
                 assert_eq!(identity.namespace, None);
                 assert_eq!(identity.name, "ruby");
                 let content = content.expect("expected a content span");
@@ -412,7 +418,7 @@ mod tests {
     fn a_ruby_element_with_a_missing_reading_arg_has_no_named_args() {
         let items = classify("plain @ruby[漢字] plain\n");
         match &items[1] {
-            RenderItem::Element { args, .. } => assert_eq!(args, &ElementArgs::None),
+            RenderItem::Element(el) => assert_eq!(el.args, ElementArgs::None),
             other => panic!("expected an Element item, got {other:?}"),
         }
     }
@@ -441,9 +447,10 @@ mod tests {
         let items = classify(src);
         assert_eq!(items.len(), 1);
         match &items[0] {
-            RenderItem::Element {
-                identity, content, ..
-            } => {
+            RenderItem::Element(el) => {
+                let ElementItem {
+                    identity, content, ..
+                } = el.as_ref();
                 assert_eq!(identity.name, "ruby");
                 let content = content.expect("expected a content span");
                 assert_eq!(&src[content.start.offset..content.end.offset], "漢字");
@@ -458,12 +465,13 @@ mod tests {
         let items = classify(src);
         assert_eq!(items.len(), 3);
         match &items[1] {
-            RenderItem::Element {
-                identity,
-                content,
-                args,
-                ..
-            } => {
+            RenderItem::Element(el) => {
+                let ElementItem {
+                    identity,
+                    content,
+                    args,
+                    ..
+                } = el.as_ref();
                 assert_eq!(identity.namespace, None);
                 assert_eq!(identity.name, "link");
                 assert_eq!(
@@ -481,9 +489,9 @@ mod tests {
     fn a_bare_link_with_a_named_target_arg_is_read_correctly() {
         let items = classify("plain @link(target:\"file:a/b.tmt\")[the file] plain\n");
         match &items[1] {
-            RenderItem::Element { args, .. } => assert_eq!(
-                args,
-                &ElementArgs::Named(vec![("target".to_owned(), "file:a/b.tmt".to_owned())])
+            RenderItem::Element(el) => assert_eq!(
+                el.args,
+                ElementArgs::Named(vec![("target".to_owned(), "file:a/b.tmt".to_owned())])
             ),
             other => panic!("expected an Element item, got {other:?}"),
         }
@@ -493,7 +501,7 @@ mod tests {
     fn a_link_with_no_display_content_has_no_content_span() {
         let items = classify("plain @link(target:\"ref:note\") plain\n");
         match &items[1] {
-            RenderItem::Element { content, .. } => assert_eq!(*content, None),
+            RenderItem::Element(el) => assert_eq!(el.content, None),
             other => panic!("expected an Element item, got {other:?}"),
         }
     }
@@ -503,7 +511,7 @@ mod tests {
         let items = classify("@link(\"https://example.com\")[see here]\n");
         assert_eq!(items.len(), 1);
         match &items[0] {
-            RenderItem::Element { identity, .. } => assert_eq!(identity.name, "link"),
+            RenderItem::Element(el) => assert_eq!(el.identity.name, "link"),
             other => panic!("expected an Element item, got {other:?}"),
         }
     }
@@ -552,9 +560,12 @@ mod tests {
             }
         );
         // "First item with ", @link, "\n" or span text
-        assert!(groups[0].1.iter().any(
-            |item| matches!(item, RenderItem::Element { identity, .. } if identity.name == "link")
-        ));
+        assert!(
+            groups[0]
+                .1
+                .iter()
+                .any(|item| matches!(item, RenderItem::Element(el) if el.identity.name == "link"))
+        );
 
         assert_eq!(
             groups[1].0,
@@ -605,7 +616,8 @@ mod tests {
         assert_eq!(items.len(), 2);
 
         match &items[0] {
-            RenderItem::Element { identity, args, .. } => {
+            RenderItem::Element(el) => {
+                let ElementItem { identity, args, .. } = el.as_ref();
                 assert_eq!(identity.name, "raw");
                 assert_eq!(identity.namespace, None);
                 assert_eq!(
@@ -617,7 +629,8 @@ mod tests {
         }
 
         match &items[1] {
-            RenderItem::Element { identity, args, .. } => {
+            RenderItem::Element(el) => {
+                let ElementItem { identity, args, .. } = el.as_ref();
                 assert_eq!(identity.name, "callout");
                 assert_eq!(identity.namespace, None);
                 assert_eq!(*args, ElementArgs::Positional("warning".to_string()));

@@ -2,6 +2,25 @@ import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 
+// A paragraph that wraps at whatever width its parent layout gives it, and is
+// as tall as that wrapping needs. A bare wrapping `Text` inside a `Card`
+// reports a height measured at a width that ignores the card's padding, so
+// the card comes out a line or so short and its last row sticks out below it.
+export component WrappedText inherits Rectangle {
+    in property <string> text;
+    in property <length> font-size: Metrics.font-sm;
+    in property <color> text-color: Colors.muted;
+    height: label.preferred-height;
+
+    label := Text {
+        width: parent.width;
+        text: root.text;
+        font-size: root.font-size;
+        color: root.text-color;
+        wrap: word-wrap;
+    }
+}
+
 // A unified header for settings items or sections:
 // - Title in bold foreground color
 // - Optional subtitle/description in muted color
@@ -18,12 +37,11 @@ export component SettingHeader inherits VerticalLayout {
         color: Palette.foreground;
     }
 
-    if root.subtitle != "": Text {
+    if root.subtitle != "": WrappedText {
         text: root.subtitle;
         font-size: Metrics.font-sm;
-        color: Colors.muted;
-        wrap: word-wrap;
-    }
+        text-color: Colors.muted;
+            }
 }
 
 // A tappable row for the Settings list: icon, label, and a trailing

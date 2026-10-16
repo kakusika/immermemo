@@ -3,7 +3,7 @@
 use tomet::ast::{Block, Element, ElementValue, Entry, Inline, Sigil, Span, Value};
 
 use crate::block::{classify_blocks_flat, is_atomic_bare};
-use crate::types::{ElementArgs, ElementIdentity, RenderItem, TextStyle};
+use crate::types::{ElementArgs, ElementIdentity, ElementItem, RenderItem, TextStyle};
 
 /// `el`'s own `[content]` as a flat run of `Inline`s.
 pub(crate) fn inline_content(el: &Element) -> Option<&[Inline]> {
@@ -120,7 +120,7 @@ pub(crate) fn element_item(el: &Element) -> Option<RenderItem> {
     let Sigil::Named(name) = &el.sigil else {
         return None;
     };
-    Some(RenderItem::Element {
+    Some(RenderItem::Element(Box::new(ElementItem {
         identity: ElementIdentity {
             namespace: name.namespace.clone(),
             name: name.name.clone(),
@@ -134,10 +134,10 @@ pub(crate) fn element_item(el: &Element) -> Option<RenderItem> {
         data_summary: summarize_data(el.value.as_ref()),
         args: element_args(el.args.as_ref()),
         block_args: block_args(el.args.as_ref()),
-    })
+    })))
 }
 
-/// [`RenderItem::Element::block_args`] -- recursively classified.
+/// [`ElementItem::block_args`] -- recursively classified.
 pub(crate) fn block_args(args: Option<&Value>) -> Vec<(String, Vec<RenderItem>)> {
     let Some(Value::Map(entries)) = args else {
         return Vec::new();
@@ -172,7 +172,7 @@ pub(crate) fn element_args(args: Option<&Value>) -> ElementArgs {
 
 /// Whether `item` is a [`RenderItem::Element`] that came in through `@use` (has a namespace).
 pub(crate) fn is_namespaced(item: &RenderItem) -> bool {
-    matches!(item, RenderItem::Element { identity, .. } if identity.namespace.is_some())
+    matches!(item, RenderItem::Element(el) if el.identity.namespace.is_some())
 }
 
 /// A short description of an element's `(args)`, for a caller that falls

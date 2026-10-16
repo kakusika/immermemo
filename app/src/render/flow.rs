@@ -107,7 +107,7 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
                     index,
                 } => {
                     let is_task = items.len() == 1
-                        && matches!(&items[0], RenderItem::Element { identity, .. } if identity.name == "task");
+                        && matches!(&items[0], RenderItem::Element(el) if el.identity.name == "task");
                     let prefix = if is_task {
                         String::new()
                     } else if ordered {
@@ -124,11 +124,11 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
             let source_span = if let (Some(first), Some(last)) = (items.first(), items.last()) {
                 let start = match first {
                     RenderItem::Text(s, _) => s.start,
-                    RenderItem::Element { span, .. } => span.start,
+                    RenderItem::Element(el) => el.span.start,
                 };
                 let end = match last {
                     RenderItem::Text(s, _) => s.end,
-                    RenderItem::Element { span, .. } => span.end,
+                    RenderItem::Element(el) => el.span.end,
                 };
                 Some(tomet::ast::Span::new(start, end))
             } else {
@@ -192,7 +192,7 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
                 content: body[span.start.offset..span.end.offset].to_string(),
                 style: to_richtext_style(style).to_style_id(),
             }),
-            item @ RenderItem::Element { .. } => {
+            item @ RenderItem::Element(_) => {
                 let classified = to_classified_block(body, item);
                 if classified.shape == BlockShape::Conflict {
                     push_conflict_side(

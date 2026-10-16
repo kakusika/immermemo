@@ -55,9 +55,10 @@
 //!
 //! Only `.tmt` files go through [`tomet::merge::merge`]. A non-`.tmt`
 //! file (an attachment) that both sides changed differently currently just
-//! keeps `local`'s bytes -- there is no policy yet for attachments at all
-//! (`docs/design.md` lists this as an open question: Git LFS is the
-//! leading candidate, but nothing here implements it).
+//! keeps `local`'s bytes -- there is no policy yet for attachments at all.
+//! The design (`tmtroot/architecture.tmt`) keeps attachments out of git
+//! entirely, in a separate store, and lists where that store lives as an
+//! open question; nothing here implements it.
 //!
 //! A modify/delete conflict (one side edited a file, the other deleted it)
 //! resolves by keeping the edit. This is a real, deliberate default --

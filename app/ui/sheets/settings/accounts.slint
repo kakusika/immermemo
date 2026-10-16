@@ -4,6 +4,7 @@ import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { TablerIcons } from "@origiri-icons/icons.slint";
 import { IconButton, SegmentedControl, Card, Section, Divider } from "@origiri-mobile/widgets.slint";
 import { AccountAvatar } from "../../widgets/account_avatar.slint";
+import { WrappedText } from "widgets.slint";
 import { SettingsPage } from "page.slint";
 
 // A label above a single-line text field, as every form in this sheet lays them out.
@@ -46,11 +47,8 @@ component TokenAccountForm inherits VerticalLayout {
     callback connect();
     spacing: Metrics.spacing-md;
 
-    Text {
+    WrappedText {
         text: root.intro;
-        font-size: Metrics.font-sm;
-        color: Colors.muted;
-        wrap: word-wrap;
     }
 
     FormField {
@@ -72,11 +70,10 @@ component TokenAccountForm inherits VerticalLayout {
         text <=> root.repo-draft;
     }
 
-    if root.status-message != "": Text {
+    if root.status-message != "": WrappedText {
         text: root.status-message;
-        color: root.status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+        text-color: root.status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
         font-size: 13px;
-        wrap: word-wrap;
     }
 
     HorizontalLayout {
@@ -144,12 +141,11 @@ export component AccountsPage inherits SettingsPage {
                     }
                 }
 
-                if SettingsAdapter.sync-status != "": Text {
+                if SettingsAdapter.sync-status != "": WrappedText {
                     text: SettingsAdapter.sync-status;
                     font-size: 12px;
-                    color: Colors.muted;
-                    wrap: word-wrap;
-                }
+                    text-color: Colors.muted;
+                                    }
             }
 
             Button {
@@ -176,12 +172,11 @@ export component AccountsPage inherits SettingsPage {
             }
         }
 
-        if SettingsAdapter.accounts.length == 0: Text {
+        if SettingsAdapter.accounts.length == 0: WrappedText {
             text: @tr("No accounts connected yet.");
             font-size: 13px;
-            color: Colors.muted;
-            wrap: word-wrap;
-        }
+            text-color: Colors.muted;
+                    }
 
         for acc in SettingsAdapter.accounts: Rectangle {
             height: 56px;
@@ -298,12 +293,11 @@ export component AccountsPage inherits SettingsPage {
 
                 if !SettingsAdapter.github-auth-pending: VerticalLayout {
                     spacing: Metrics.spacing-md;
-                    Text {
+                    WrappedText {
                         text: @tr("Sign in to automatically create and sync a private notes repository.");
                         font-size: Metrics.font-sm;
-                        color: Colors.muted;
-                        wrap: word-wrap;
-                    }
+                        text-color: Colors.muted;
+                                            }
 
                     HorizontalLayout {
                         alignment: end;
@@ -317,12 +311,11 @@ export component AccountsPage inherits SettingsPage {
 
                 if SettingsAdapter.github-auth-pending: VerticalLayout {
                     spacing: Metrics.spacing-md;
-                    Text {
+                    WrappedText {
                         text: @tr("Confirm this one-time code on GitHub:");
                         font-size: Metrics.font-sm;
-                        color: Colors.muted;
-                        wrap: word-wrap;
-                    }
+                        text-color: Colors.muted;
+                                            }
 
                     Rectangle {
                         height: 52px;
@@ -339,12 +332,11 @@ export component AccountsPage inherits SettingsPage {
                         }
                     }
 
-                    Text {
+                    WrappedText {
                         text: SettingsAdapter.github-auth-status != "" ? SettingsAdapter.github-auth-status : @tr("Waiting for browser authorization...");
                         font-size: Metrics.font-sm;
-                        color: Colors.muted;
-                        wrap: word-wrap;
-                    }
+                        text-color: Colors.muted;
+                                            }
 
                     HorizontalLayout {
                         spacing: 8px;
@@ -411,12 +403,11 @@ export component AccountsPage inherits SettingsPage {
             if SettingsAdapter.sync-provider-tab == 3: VerticalLayout {
                 spacing: Metrics.spacing-md;
 
-                Text {
+                WrappedText {
                     text: @tr("Connect an arbitrary Git repository over HTTPS or SSH.");
                     font-size: Metrics.font-sm;
-                    color: Colors.muted;
-                    wrap: word-wrap;
-                }
+                    text-color: Colors.muted;
+                                    }
 
                 VerticalLayout {
                     spacing: 4px;
@@ -466,12 +457,11 @@ export component AccountsPage inherits SettingsPage {
                     }
                 }
 
-                if SettingsAdapter.sync-status != "": Text {
+                if SettingsAdapter.sync-status != "": WrappedText {
                     text: SettingsAdapter.sync-status;
                     font-size: 13px;
-                    color: Colors.muted;
-                    wrap: word-wrap;
-                }
+                    text-color: Colors.muted;
+                                    }
 
                 HorizontalLayout {
                     spacing: 8px;

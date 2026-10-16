@@ -47,24 +47,30 @@ pub enum RenderItem {
     /// A named element, identified at the source-text level only --
     /// `@use`'d (`identity.namespace: Some`) or one of
     /// [`crate::block::ATOMIC_BARE_ELEMENTS`] (`identity.namespace: None`) alike.
-    Element {
-        identity: ElementIdentity,
-        span: Span,
-        /// The element's own `[content]` span, if it has one -- `None`
-        /// for an element with no bracketed content at all.
-        content: Option<Span>,
-        /// A generic fallback description of `(args)`/`{value}`.
-        args_summary: String,
-        data_summary: String,
-        /// Every string-valued entry of `(args)`, structured instead of flattened.
-        args: ElementArgs,
-        /// Every `key: [...]` (`Value::Blocks`) entry of `(args)`,
-        /// recursively classified the same way this element's own `[content]` is.
-        block_args: Vec<(String, Vec<RenderItem>)>,
-    },
+    /// Boxed: an element carries far more than a text run, and most items
+    /// are text.
+    Element(Box<ElementItem>),
 }
 
-/// [`RenderItem::Element::args`]'s shape -- string-valued args only, read
+/// What [`RenderItem::Element`] knows about one named element.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ElementItem {
+    pub identity: ElementIdentity,
+    pub span: Span,
+    /// The element's own `[content]` span, if it has one -- `None`
+    /// for an element with no bracketed content at all.
+    pub content: Option<Span>,
+    /// A generic fallback description of `(args)`/`{value}`.
+    pub args_summary: String,
+    pub data_summary: String,
+    /// Every string-valued entry of `(args)`, structured instead of flattened.
+    pub args: ElementArgs,
+    /// Every `key: [...]` (`Value::Blocks`) entry of `(args)`,
+    /// recursively classified the same way this element's own `[content]` is.
+    pub block_args: Vec<(String, Vec<RenderItem>)>,
+}
+
+/// [`ElementItem::args`]'s shape -- string-valued args only, read
 /// generically off `(args)` without knowing what any key means.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum ElementArgs {
