@@ -13,6 +13,7 @@ name = "immermemo"
 path = "src/main.rs"
 
 [dependencies]
+immermemo-buildinfo = { workspace = true }
 immermemo-core = { workspace = true }
 immermemo-credentials = { workspace = true }
 immermemo-media = { workspace = true }

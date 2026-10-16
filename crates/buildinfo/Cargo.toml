@@ -1,0 +1,5 @@
+[package]
+name = "immermemo-buildinfo"
+version.workspace = true
+edition.workspace = true
+build = "build.rs"

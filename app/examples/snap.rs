@@ -613,6 +613,8 @@ fn main() {
     // Every other Settings page and the states within them, so a layout
     // refactor of the sheet can be diffed screen by screen.
     let settings = app.global::<SettingsAdapter>();
+    settings.set_app_version("0.1.0".into());
+    settings.set_build_id("0b9bc064+ · 2026-10-16 14:05 UTC".into());
     let snap_settings = |name: &str| {
         std::thread::sleep(std::time::Duration::from_millis(300));
         render(&window, size, &format!("{prefix}-settings-{name}.ppm"));

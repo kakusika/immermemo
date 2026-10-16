@@ -16,6 +16,14 @@ export component AboutPage inherits SettingsPage {
             color: Palette.foreground;
         }
 
+        // Selectable would be handier to copy, but a plain line is enough to
+        // compare against the build just made.
+        Text {
+            text: @tr("Build {}", SettingsAdapter.build-id);
+            font-size: 12px;
+            color: Colors.muted;
+        }
+
         if SettingsAdapter.emoji-font != "": WrappedText {
             text: @tr("Emoji font: {}", SettingsAdapter.emoji-font);
             font-size: 12px;

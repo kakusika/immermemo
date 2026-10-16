@@ -139,6 +139,8 @@ fn show_saved_settings(app: &App, core: &immermemo_core::Session, appearance: &t
     settings.set_ssh_key_present(ssh_pub.is_some());
     settings.set_ssh_public_key(ssh_pub.unwrap_or_default().into());
     settings.set_ssh_key_copied(false);
+    settings.set_app_version(env!("CARGO_PKG_VERSION").into());
+    settings.set_build_id(immermemo_buildinfo::label().into());
     #[cfg(target_os = "android")]
     settings.set_emoji_font(crate::platform::android::fonts::report().into());
 }

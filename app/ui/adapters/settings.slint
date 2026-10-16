@@ -108,7 +108,10 @@ export global SettingsAdapter {
     callback home-actions-changed();
 
     // App info
-    in property <string> app-version: "0.1.0";
+    in property <string> app-version;
+    // Which build this is (commit and build time), to tell a phone's install
+    // from the build just made.
+    in property <string> build-id;
     // Which emoji font the device offered and which was used (Android only;
     // empty elsewhere, where the system's own emoji font is used as it is).
     in property <string> emoji-font;

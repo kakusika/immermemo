@@ -3,6 +3,7 @@ resolver = "3"
 
 members = [
   "app",
+  "crates/buildinfo",
   "crates/core",
   "crates/credentials",
   "crates/identity",
@@ -22,6 +23,7 @@ edition = "2024"
 rust-version = "1.85"
 
 [workspace.dependencies]
+immermemo-buildinfo = { path = "crates/buildinfo" }
 immermemo-core = { path = "crates/core" }
 immermemo-credentials = { path = "crates/credentials" }
 immermemo-identity = { path = "crates/identity" }

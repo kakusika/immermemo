@@ -2723,6 +2723,7 @@ dependencies = [
  "directories",
  "i-slint-backend-android-activity",
  "image",
+ "immermemo-buildinfo",
  "immermemo-core",
  "immermemo-credentials",
  "immermemo-media",
@@ -2745,6 +2746,10 @@ dependencies = [
  "ureq",
  "webbrowser",
 ]
+
+[[package]]
+name = "immermemo-buildinfo"
+version = "0.1.0"
 
 [[package]]
 name = "immermemo-core"

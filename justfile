@@ -133,6 +133,13 @@ run: install
 stop:
     adb shell am force-stop {{package}}
 
+# This tree's build label, as "Settings > About" shows it for a release build:
+# the commit, the fingerprint of the uncommitted sources, and the time. To tell
+# whether the app on a phone was built from the tree as it is now, compare the
+# first two parts (the time differs by design).
+build-id:
+    @cargo run -q --release -p immermemo-buildinfo --example label
+
 # Tail this session's log output from the running app
 logs:
     adb logcat --pid="$(adb shell pidof {{package}})"
