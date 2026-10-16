@@ -1,0 +1,99 @@
+import { SettingsAdapter } from "../../adapters/settings.slint";
+import { Metrics } from "@origiri-mobile/tokens.slint";
+import { TablerIcons } from "@origiri-icons/icons.slint";
+import { Card, Section, Divider } from "@origiri-mobile/widgets.slint";
+import { SettingsPage } from "page.slint";
+import { CategoryRow } from "widgets.slint";
+
+export component SettingsMenuPage inherits SettingsPage {
+    in-out property <int> page;
+
+    content-spacing: 24px;
+
+    Section {
+        title: @tr("Vaults & Sync");
+
+        Card {
+            content-padding: Metrics.spacing-xs;
+            content-spacing: 0px;
+
+            CategoryRow {
+                icon: TablerIcons.files;
+                label-text: @tr("Vaults");
+                clicked => { root.page = 3; }
+            }
+
+            Divider { }
+
+            CategoryRow {
+                icon: TablerIcons.user;
+                label-text: @tr("Accounts");
+                clicked => { root.page = 2; }
+            }
+
+            Divider { }
+
+            CategoryRow {
+                icon: TablerIcons.qrcode;
+                label-text: @tr("Transfer & Share");
+                clicked => {
+                    root.page = 5;
+                    SettingsAdapter.refresh-transfer-qr();
+                }
+            }
+        }
+    }
+
+    Section {
+        title: @tr("Appearance");
+
+        Card {
+            content-padding: Metrics.spacing-xs;
+            content-spacing: 0px;
+
+            CategoryRow {
+                icon: TablerIcons.palette;
+                label-text: @tr("Appearance");
+                clicked => { root.page = 1; }
+            }
+        }
+    }
+
+    Section {
+        title: @tr("Navigation & Views");
+
+        Card {
+            content-padding: Metrics.spacing-xs;
+            content-spacing: 0px;
+
+            CategoryRow {
+                icon: TablerIcons.layout-bottombar;
+                label-text: @tr("Navigation & Views");
+                clicked => { root.page = 7; }
+            }
+        }
+    }
+
+    Section {
+        title: @tr("Other & Info");
+
+        Card {
+            content-padding: Metrics.spacing-xs;
+            content-spacing: 0px;
+
+            CategoryRow {
+                icon: TablerIcons.adjustments;
+                label-text: @tr("Advanced");
+                clicked => { root.page = 6; }
+            }
+
+            Divider { }
+
+            CategoryRow {
+                icon: TablerIcons.info-circle;
+                label-text: @tr("About");
+                clicked => { root.page = 4; }
+            }
+        }
+    }
+}

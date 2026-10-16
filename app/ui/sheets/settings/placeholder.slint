@@ -1,0 +1,19 @@
+import { Card } from "@origiri-mobile/widgets.slint";
+import { Metrics } from "@origiri-mobile/tokens.slint";
+import { SettingsPage } from "page.slint";
+import { SettingHeader } from "widgets.slint";
+
+// A sub-page that has a place in the menu but no settings yet.
+export component PlaceholderPage inherits SettingsPage {
+    in property <string> title;
+    in property <string> subtitle;
+
+    Card {
+        content-spacing: Metrics.spacing-md;
+
+        SettingHeader {
+            title: root.title;
+            subtitle: root.subtitle;
+        }
+    }
+}

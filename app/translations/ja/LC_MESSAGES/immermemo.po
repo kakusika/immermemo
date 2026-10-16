@@ -2124,3 +2124,547 @@ msgstr "アカウントを接続"
 msgctxt "App"
 msgid "Copy Vault Path"
 msgstr "保管庫のパスをコピー"
+
+msgctxt "SettingsMenuPage"
+msgid "Vaults & Sync"
+msgstr "保管庫と同期"
+
+msgctxt "SettingsMenuPage"
+msgid "Vaults"
+msgstr "保管庫"
+
+msgctxt "SettingsMenuPage"
+msgid "Accounts"
+msgstr "アカウント"
+
+msgctxt "SettingsMenuPage"
+msgid "Transfer & Share"
+msgstr "設定の引き継ぎ・共有"
+
+msgctxt "SettingsMenuPage"
+msgid "Appearance"
+msgstr "外観"
+
+msgctxt "SettingsMenuPage"
+msgid "Navigation & Views"
+msgstr "ナビゲーションと画面"
+
+msgctxt "SettingsMenuPage"
+msgid "Other & Info"
+msgstr "その他・情報"
+
+msgctxt "SettingsMenuPage"
+msgid "Advanced"
+msgstr "高度な設定"
+
+msgctxt "SettingsMenuPage"
+msgid "About"
+msgstr "このアプリ"
+
+msgctxt "AppearancePage"
+msgid "Appearance"
+msgstr "外観"
+
+msgctxt "AppearancePage"
+msgid "Theme"
+msgstr "テーマ"
+
+msgctxt "AppearancePage"
+msgid "System"
+msgstr "システム"
+
+msgctxt "AppearancePage"
+msgid "Light"
+msgstr "ライト"
+
+msgctxt "AppearancePage"
+msgid "Dark"
+msgstr "ダーク"
+
+msgctxt "AppearancePage"
+msgid "Color Source"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Choose wallpaper dynamic color or custom accent color."
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "System Wallpaper"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Custom"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Accent Seed Color"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Palette Style"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Material 3 color generation variant for tonal palettes."
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Tonal Spot"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Vivid"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Expressive"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Fruit Salad"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Rainbow"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Spritz"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Monochrome"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Contrast"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Increases luminance separation between surfaces and content."
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Standard"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "Medium"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "High"
+msgstr ""
+
+msgctxt "AppearancePage"
+msgid "UI Scale"
+msgstr "UIの拡大率"
+
+msgctxt "AppearancePage"
+msgid "Display"
+msgstr "表示"
+
+msgctxt "AppearancePage"
+msgid "Editor Font Size"
+msgstr "エディタのフォントサイズ"
+
+msgctxt "AppearancePage"
+msgid "Small (14)"
+msgstr "小 (14)"
+
+msgctxt "AppearancePage"
+msgid "Medium (17)"
+msgstr "中 (17)"
+
+msgctxt "AppearancePage"
+msgid "Large (20)"
+msgstr "大 (20)"
+
+msgctxt "AppearancePage"
+msgid "Status Bar"
+msgstr "ステータスバー"
+
+msgctxt "AppearancePage"
+msgid "Hide it while editing a note (for a less distracting full-screen view), or everywhere in the app."
+msgstr "ノート編集中に非表示にして執筆に集中するか、アプリ全体で常に非表示にします。"
+
+msgctxt "AppearancePage"
+msgid "Show"
+msgstr "常に表示"
+
+msgctxt "AppearancePage"
+msgid "Hide While Editing"
+msgstr "編集中のみ非表示"
+
+msgctxt "AppearancePage"
+msgid "Always Hide"
+msgstr "常に非表示"
+
+msgctxt "TokenAccountForm"
+msgid "Repository Name"
+msgstr "リポジトリ名"
+
+msgctxt "TokenAccountForm"
+msgid "Connecting..."
+msgstr "接続中..."
+
+msgctxt "TokenAccountForm"
+msgid "Connect Account"
+msgstr "アカウントを接続"
+
+msgctxt "AccountsPage"
+msgid "Vault: "
+msgstr "保管庫: "
+
+msgctxt "AccountsPage"
+msgid "Syncing..."
+msgstr "同期中..."
+
+msgctxt "AccountsPage"
+msgid "Sync Now"
+msgstr "今すぐ同期"
+
+msgctxt "AccountsPage"
+msgid "Connected Accounts"
+msgstr "接続済みアカウント"
+
+msgctxt "AccountsPage"
+msgid "No accounts connected yet."
+msgstr "接続済みのアカウントがありません。"
+
+msgctxt "AccountsPage"
+msgid "Active"
+msgstr "使用中"
+
+msgctxt "AccountsPage"
+msgid "+ Vault"
+msgstr "+ 保管庫"
+
+msgctxt "AccountsPage"
+msgid "+ Add Account"
+msgstr "+ アカウントを追加"
+
+msgctxt "AccountsPage"
+msgid "Add Account"
+msgstr "アカウントを追加"
+
+msgctxt "AccountsPage"
+msgid "GitHub"
+msgstr "GitHub"
+
+msgctxt "AccountsPage"
+msgid "Forgejo / Gitea"
+msgstr "Forgejo / Gitea"
+
+msgctxt "AccountsPage"
+msgid "GitLab"
+msgstr "GitLab"
+
+msgctxt "AccountsPage"
+msgid "Custom Git"
+msgstr "カスタム Git"
+
+msgctxt "AccountsPage"
+msgid "Sign in to automatically create and sync a private notes repository."
+msgstr "サインインすると、プライベートなノートリポジトリが自動的に作成・同期されます。サインインすると、専用のプライベートリポジトリを自動作成して同期します。"
+
+msgctxt "AccountsPage"
+msgid "Connect with GitHub"
+msgstr "GitHub と連携"
+
+msgctxt "AccountsPage"
+msgid "Confirm this one-time code on GitHub:"
+msgstr "GitHub でこの確認コードを承認してください:"
+
+msgctxt "AccountsPage"
+msgid "Waiting for browser authorization..."
+msgstr "ブラウザでの認証を待機中..."
+
+msgctxt "AccountsPage"
+msgid "Cancel"
+msgstr "キャンセル"
+
+msgctxt "AccountsPage"
+msgid "Open in Browser"
+msgstr "ブラウザで開く"
+
+msgctxt "AccountsPage"
+msgid "Connect Codeberg or your self-hosted Forgejo/Gitea instance using a Personal Access Token."
+msgstr "Personal Access Token を使用して Codeberg またはセルフホストの Forgejo/Gitea インスタンスに接続します。"
+
+msgctxt "AccountsPage"
+msgid "Instance URL"
+msgstr "インスタンス URL"
+
+msgctxt "AccountsPage"
+msgid "Personal Access Token"
+msgstr "Personal Access Token"
+
+msgctxt "AccountsPage"
+msgid "Token with repo and user permissions"
+msgstr "repo および user 権限を持つトークン"
+
+msgctxt "AccountsPage"
+msgid "Connect to GitLab.com or a self-hosted instance using a Personal Access Token with api scope."
+msgstr "api スコープの Personal Access Token を使用して GitLab.com またはセルフホストの GitLab インスタンスに接続します。"
+
+msgctxt "AccountsPage"
+msgid "GitLab Instance URL"
+msgstr "GitLab インスタンス URL"
+
+msgctxt "AccountsPage"
+msgid "Personal Access Token (api scope)"
+msgstr "Personal Access Token (api スコープ)"
+
+msgctxt "AccountsPage"
+msgid "Token with api permission"
+msgstr "api 権限を持つトークン"
+
+msgctxt "AccountsPage"
+msgid "Connect an arbitrary Git repository over HTTPS or SSH."
+msgstr "HTTPS または SSH を使用して任意の Git リポジトリに接続します。"
+
+msgctxt "AccountsPage"
+msgid "Remote repository URL"
+msgstr "リモートリポジトリのURL"
+
+msgctxt "AccountsPage"
+msgid "https://git.example.com/notes.git or git@..."
+msgstr "https://git.example.com/notes.git または git@..."
+
+msgctxt "AccountsPage"
+msgid "Access token (if using HTTPS)"
+msgstr "アクセストークン (HTTPS の場合)"
+
+msgctxt "AccountsPage"
+msgid "Leave blank to keep the saved token"
+msgstr "保存済みのトークンを使う場合は空欄のまま"
+
+msgctxt "AccountsPage"
+msgid "Personal access token"
+msgstr "パーソナルアクセストークン"
+
+msgctxt "AccountsPage"
+msgid "Using SSH? Ensure your public key is registered on the server."
+msgstr "SSH を使用しますか？ 公開鍵がサーバーに登録されていることを確認してください。"
+
+msgctxt "AccountsPage"
+msgid "SSH Key"
+msgstr "SSH 鍵"
+
+msgctxt "AccountsPage"
+msgid "Save Remote"
+msgstr "リモートを保存"
+
+msgctxt "VaultsPage"
+msgid "Vaults"
+msgstr "保管庫"
+
+msgctxt "VaultsPage"
+msgid "{} vaults"
+msgstr "{} 件の保管庫"
+
+msgctxt "VaultsPage"
+msgid "In Use"
+msgstr "使用中"
+
+msgctxt "VaultsPage"
+msgid "Switch"
+msgstr "切り替え"
+
+msgctxt "VaultsPage"
+msgid "+ Add Vault"
+msgstr "+ 保管庫を追加"
+
+msgctxt "AboutPage"
+msgid "Immermemo v{}"
+msgstr "Immermemo v{}"
+
+msgctxt "AboutPage"
+msgid "A mobile note app for writing Tomet (.tmt) notes, synced over git without git touching user files."
+msgstr "Tomet (.tmt) 形式のノートを書くモバイルノートアプリ。gitがユーザーのファイルに触れることなく同期します。"
+
+msgctxt "AboutPage"
+msgid "AST-level three-way merge with conflict tracking (@conflict)."
+msgstr "AST単位の3-wayマージと競合追跡 (@conflict) に対応しています。"
+
+msgctxt "TransferPage"
+msgid "Export (Show QR)"
+msgstr "書き出し (QR表示)"
+
+msgctxt "TransferPage"
+msgid "Import"
+msgstr "取り込み"
+
+msgctxt "TransferPage"
+msgid "Select items to include:"
+msgstr "含める項目を選択:"
+
+msgctxt "TransferPage"
+msgid "Appearance & UI"
+msgstr "外観・UI設定"
+
+msgctxt "TransferPage"
+msgid "Theme, font size, and UI scale"
+msgstr "テーマ、フォントサイズ、UIスケール"
+
+msgctxt "TransferPage"
+msgid "Remote Sync URL"
+msgstr "同期先URL"
+
+msgctxt "TransferPage"
+msgid "Active vault remote git repository URL"
+msgstr "現在のアクティブボルトのGitリモートURL"
+
+msgctxt "TransferPage"
+msgid "Include Access Token"
+msgstr "アクセストークンを含める"
+
+msgctxt "TransferPage"
+msgid "⚠️ Contains sensitive personal credentials"
+msgstr "⚠️ 機密情報を含みます"
+
+msgctxt "TransferPage"
+msgid "Scan with another device:"
+msgstr "別の端末でスキャン:"
+
+msgctxt "TransferPage"
+msgid "Copied to Clipboard!"
+msgstr "クリップボードにコピーしました！"
+
+msgctxt "TransferPage"
+msgid "Copy Transfer Link"
+msgstr "引き継ぎリンクをコピー"
+
+msgctxt "TransferPage"
+msgid "Import Settings"
+msgstr "設定の取り込み"
+
+msgctxt "TransferPage"
+msgid "Paste an immermemo:// transfer link or payload below:"
+msgstr "immermemo:// 引き継ぎリンクまたはデータを貼り付けてください:"
+
+msgctxt "TransferPage"
+msgid "immermemo://import#... or JSON"
+msgstr "immermemo://import#... または JSON"
+
+msgctxt "TransferPage"
+msgid "Paste Clipboard"
+msgstr "クリップボードから貼付"
+
+msgctxt "TransferPage"
+msgid "Review & Apply"
+msgstr "確認して適用"
+
+msgctxt "TransferPage"
+msgid "Settings Ready to Import"
+msgstr "取り込み可能な設定"
+
+msgctxt "TransferPage"
+msgid "✓ Appearance & UI settings"
+msgstr "✓ 外観・UI設定"
+
+msgctxt "TransferPage"
+msgid "✓ Remote URL: "
+msgstr "✓ リモートURL:"
+
+msgctxt "TransferPage"
+msgid "⚠️ Access Token (will update saved token)"
+msgstr "⚠️ アクセストークン (保存済みトークンを更新)"
+
+msgctxt "TransferPage"
+msgid "Cancel"
+msgstr "キャンセル"
+
+msgctxt "TransferPage"
+msgid "Apply Settings"
+msgstr "設定を適用"
+
+msgctxt "AdvancedPage"
+msgid "In-App SSH Key"
+msgstr "アプリ内 SSH 鍵"
+
+msgctxt "AdvancedPage"
+msgid "Enables Git over SSH synchronization on mobile and desktop without external agents."
+msgstr "外部エージェント不要で、モバイルおよびデスクトップでの Git over SSH 同期を可能にします。"
+
+msgctxt "AdvancedPage"
+msgid "Copy this public key and add it to your GitHub, GitLab, or Forgejo SSH Keys:"
+msgstr "この公開鍵をコピーして、GitHub、GitLab、または Forgejo の SSH Keys に追加してください:"
+
+msgctxt "AdvancedPage"
+msgid "Regenerate Key"
+msgstr "鍵を再生成"
+
+msgctxt "AdvancedPage"
+msgid "Copied!"
+msgstr "コピー完了!"
+
+msgctxt "AdvancedPage"
+msgid "Copy Public Key"
+msgstr "公開鍵をコピー"
+
+msgctxt "AdvancedPage"
+msgid "Generate a secure Ed25519 SSH keypair directly inside the app to sync with SSH remotes (git@...)."
+msgstr "SSH リモート (git@...) と同期するために、アプリ内で安全な Ed25519 鍵ペアを生成します。"
+
+msgctxt "AdvancedPage"
+msgid "Generate SSH Key"
+msgstr "SSH 鍵を生成"
+
+msgctxt "NavigationPage"
+msgid "Navigation"
+msgstr "ナビゲーション"
+
+msgctxt "NavigationPage"
+msgid "Bottom Navigation Bar"
+msgstr "ボトムナビゲーションバー"
+
+msgctxt "NavigationPage"
+msgid "Page Settings"
+msgstr "ページ設定"
+
+msgctxt "NavigationPage"
+msgid "Directory"
+msgstr "ディレクトリ"
+
+msgctxt "NavigationPage"
+msgid "Daily Notes"
+msgstr "デイリーノート"
+
+msgctxt "NavigationPage"
+msgid "Starred"
+msgstr "スター付き"
+
+msgctxt "NavigationPage"
+msgid "Recent"
+msgstr "最近の更新"
+
+msgctxt "NavigationPage"
+msgid "Graph View"
+msgstr "グラフビュー"
+
+msgctxt "BottomNavPage"
+msgid "Bottom Navigation Bar"
+msgstr "ボトムナビゲーションバー"
+
+msgctxt "BottomNavPage"
+msgid "Choose which items appear on the bottom navigation bar."
+msgstr "ボトムナビゲーションバーに表示する項目を選択します。"
+
+msgctxt "DirectoryPage"
+msgid "Default View"
+msgstr "デフォルト表示"
+
+msgctxt "DirectoryPage"
+msgid "Choose how folder contents are displayed by default."
+msgstr "フォルダ内のデフォルトの表示形式を選択します。"
+
+msgctxt "DirectoryPage"
+msgid "List"
+msgstr "リスト"
+
+msgctxt "DirectoryPage"
+msgid "Grid"
+msgstr "グリッド"

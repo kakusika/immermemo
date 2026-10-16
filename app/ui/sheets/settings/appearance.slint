@@ -1,0 +1,276 @@
+import { SettingsAdapter } from "../../adapters/settings.slint";
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+import { SegmentedControl, Card, Section, Divider } from "@origiri-mobile/widgets.slint";
+import { SettingsPage } from "page.slint";
+import { SettingHeader } from "widgets.slint";
+
+// A circular color chip for selecting a Material 3 seed color.
+// One accent color to pick as the theme's seed. Knows its own hex string
+// (what gets saved) next to the color it paints, because Slint cannot turn
+// one into the other.
+component ColorSeedChip inherits Rectangle {
+    in property <string> hex;
+    in property <color> chip-color;
+    property <bool> is-selected: SettingsAdapter.color-seed == root.hex;
+
+    width: 38px * Metrics.ui-scale;
+    height: 38px * Metrics.ui-scale;
+    border-radius: self.height / 2;
+    border-width: root.is-selected ? 2px * Metrics.ui-scale : 0px;
+    border-color: Colors.primary;
+    background: transparent;
+
+    Rectangle {
+        width: root.is-selected ? (parent.width - 8px * Metrics.ui-scale) : (parent.width - 4px * Metrics.ui-scale);
+        height: root.is-selected ? (parent.height - 8px * Metrics.ui-scale) : (parent.height - 4px * Metrics.ui-scale);
+        border-radius: self.height / 2;
+        background: root.chip-color;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+
+        animate width, height {
+            duration: 120ms;
+            easing: ease-out;
+        }
+
+        if root.is-selected: VerticalLayout {
+            alignment: center;
+            HorizontalLayout {
+                alignment: center;
+                VerticalLayout {
+                    alignment: center;
+                    Icon {
+                        source: TablerIcons.check;
+                        width: 14px * Metrics.ui-scale;
+                        height: 14px * Metrics.ui-scale;
+                        color: #ffffff;
+                    }
+                }
+            }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => {
+            SettingsAdapter.color-seed = root.hex;
+            SettingsAdapter.color-seed-changed(root.hex);
+        }
+    }
+}
+
+struct SeedChoice {
+    hex: string,
+    color: color,
+}
+
+export component AppearancePage inherits SettingsPage {
+    // The accent colors on offer, two rows of four.
+    property <[SeedChoice]> seed-colors-row-1: [
+        { hex: "#6750A4", color: #6750A4 },
+        { hex: "#1971C2", color: #1971C2 },
+        { hex: "#0CA678", color: #0CA678 },
+        { hex: "#2F9E44", color: #2F9E44 },
+    ];
+    property <[SeedChoice]> seed-colors-row-2: [
+        { hex: "#F59F00", color: #F59F00 },
+        { hex: "#F76707", color: #F76707 },
+        { hex: "#E03131", color: #E03131 },
+        { hex: "#D6336C", color: #D6336C },
+    ];
+
+    content-spacing: 24px;
+
+    Section {
+        title: @tr("Appearance");
+
+        Card {
+            content-spacing: Metrics.spacing-lg;
+
+            // Theme Selector
+            VerticalLayout {
+                spacing: Metrics.spacing-sm;
+
+                SettingHeader {
+                    title: @tr("Theme");
+                }
+
+                SegmentedControl {
+                    options: [@tr("System"), @tr("Light"), @tr("Dark")];
+                    selected: SettingsAdapter.theme-choice;
+                    changed(i) => {
+                        SettingsAdapter.theme-choice = i;
+                        SettingsAdapter.theme-changed(i);
+                    }
+                }
+            }
+
+            Divider { }
+
+            // Dynamic Color Source Selector
+            VerticalLayout {
+                spacing: Metrics.spacing-sm;
+
+                SettingHeader {
+                    title: @tr("Color Source");
+                    subtitle: @tr("Choose wallpaper dynamic color or custom accent color.");
+                }
+
+                SegmentedControl {
+                    options: [@tr("System Wallpaper"), @tr("Custom")];
+                    selected: SettingsAdapter.color-source;
+                    changed(i) => {
+                        SettingsAdapter.color-source = i;
+                        SettingsAdapter.color-source-changed(i);
+                    }
+                }
+            }
+
+            // Custom Seed Color Picker
+            if SettingsAdapter.color-source == 1: VerticalLayout {
+                spacing: Metrics.spacing-sm;
+
+                SettingHeader {
+                    title: @tr("Accent Seed Color");
+                }
+
+                VerticalLayout {
+                    spacing: Metrics.spacing-md;
+                    alignment: center;
+
+                    for row in [root.seed-colors-row-1, root.seed-colors-row-2]: HorizontalLayout {
+                        spacing: Metrics.spacing-lg;
+                        alignment: center;
+
+                        for seed in row: ColorSeedChip {
+                            hex: seed.hex;
+                            chip-color: seed.color;
+                        }
+                    }
+                }
+            }
+
+            Divider { }
+
+            // Palette Style Selector
+            VerticalLayout {
+                spacing: Metrics.spacing-sm;
+
+                SettingHeader {
+                    title: @tr("Palette Style");
+                    subtitle: @tr("Material 3 color generation variant for tonal palettes.");
+                }
+
+                VerticalLayout {
+                    spacing: Metrics.spacing-xs;
+
+                    SegmentedControl {
+                        options: [@tr("Tonal Spot"), @tr("Vivid"), @tr("Expressive")];
+                        selected: SettingsAdapter.palette-style < 3 ? SettingsAdapter.palette-style : -1;
+                        changed(i) => {
+                            SettingsAdapter.palette-style = i;
+                            SettingsAdapter.palette-style-changed(i);
+                        }
+                    }
+
+                    SegmentedControl {
+                        options: [@tr("Fruit Salad"), @tr("Rainbow"), @tr("Spritz"), @tr("Monochrome")];
+                        selected: SettingsAdapter.palette-style >= 3 ? (SettingsAdapter.palette-style - 3) : -1;
+                        changed(i) => {
+                            SettingsAdapter.palette-style = i + 3;
+                            SettingsAdapter.palette-style-changed(i + 3);
+                        }
+                    }
+                }
+            }
+
+            Divider { }
+
+            // Contrast Level Selector
+            VerticalLayout {
+                spacing: Metrics.spacing-sm;
+
+                SettingHeader {
+                    title: @tr("Contrast");
+                    subtitle: @tr("Increases luminance separation between surfaces and content.");
+                }
+
+                SegmentedControl {
+                    options: [@tr("Standard"), @tr("Medium"), @tr("High")];
+                    selected: SettingsAdapter.contrast-level;
+                    changed(i) => {
+                        SettingsAdapter.contrast-level = i;
+                        SettingsAdapter.contrast-level-changed(i);
+                    }
+                }
+            }
+
+            Divider { }
+
+            // UI Scale Selector
+            VerticalLayout {
+                spacing: Metrics.spacing-sm;
+
+                SettingHeader {
+                    title: @tr("UI Scale");
+                }
+
+                SegmentedControl {
+                    options: ["90%", "100%", "110%", "125%"];
+                    selected: Metrics.ui-scale < 0.95 ? 0 : (Metrics.ui-scale <= 1.05 ? 1 : (Metrics.ui-scale <= 1.18 ? 2 : 3));
+                    changed(i) => {
+                        Metrics.ui-scale = [0.9, 1.0, 1.1, 1.25][i];
+                    }
+                }
+            }
+        }
+    }
+
+    Section {
+        title: @tr("Display");
+
+        Card {
+            content-spacing: Metrics.spacing-lg;
+
+            // Font Size Selector
+            VerticalLayout {
+                spacing: Metrics.spacing-sm;
+
+                SettingHeader {
+                    title: @tr("Editor Font Size");
+                }
+
+                SegmentedControl {
+                    options: [@tr("Small (14)"), @tr("Medium (17)"), @tr("Large (20)")];
+                    selected: SettingsAdapter.font-size-choice;
+                    changed(i) => {
+                        SettingsAdapter.font-size-choice = i;
+                        SettingsAdapter.font-size-changed(i);
+                    }
+                }
+            }
+
+            Divider { }
+
+            // Status Bar Selector
+            VerticalLayout {
+                spacing: Metrics.spacing-sm;
+
+                SettingHeader {
+                    title: @tr("Status Bar");
+                    subtitle: @tr("Hide it while editing a note (for a less distracting full-screen view), or everywhere in the app.");
+                }
+
+                SegmentedControl {
+                    options: [@tr("Show"), @tr("Hide While Editing"), @tr("Always Hide")];
+                    selected: SettingsAdapter.status-bar-choice;
+                    changed(i) => {
+                        SettingsAdapter.status-bar-choice = i;
+                        SettingsAdapter.status-bar-changed(i);
+                    }
+                }
+            }
+        }
+    }
+}

@@ -20,6 +20,19 @@ TRANS_DIR = APP_DIR / "translations"
 POT_FILE = TRANS_DIR / "immermemo.pot"
 
 
+def po_field(block, key):
+    """The (possibly multi-line) quoted value of `key` in one PO entry, or None.
+
+    A long string is written as `key ""` followed by continuation lines that
+    each hold one quoted fragment; the value is the fragments joined.
+    """
+    m = re.search(r'^' + re.escape(key) + r'\s+"((?:[^"\\]|\\.)*)"[ \t]*\n?((?:^"(?:[^"\\]|\\.)*"[ \t]*\n?)*)', block, re.M)
+    if not m:
+        return None
+    parts = [m.group(1)] + re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(2))
+    return "".join(parts)
+
+
 def parse_po_blocks(file_path):
     """Parse a PO/POT file into a list of entry dicts."""
     if not file_path.exists():
@@ -35,40 +48,16 @@ def parse_po_blocks(file_path):
         if not trimmed:
             continue
 
-        # Header block check (empty msgid)
-        if re.search(r'^msgid\s+""', trimmed, re.M) and not re.search(r'^msgctxt', trimmed, re.M):
+        ctxt = po_field(trimmed, "msgctxt")
+        msg_id = po_field(trimmed, "msgid")
+        # The header is the entry whose msgid is empty (and has no context).
+        if msg_id == "" and ctxt is None:
             entries.append({"header": True, "block": block})
             continue
 
-        ctxt_m = re.search(r'^msgctxt\s+"((?:[^"\\]|\\.)*)"', trimmed, re.M)
-        id_m = re.search(r'^msgid\s+"((?:[^"\\]|\\.)*)"', trimmed, re.M)
-        str_m = re.search(r'^msgstr\s+"((?:[^"\\]|\\.)*)"', trimmed, re.M)
-
-        # Multi-line msgid support
-        if not id_m:
-            id_multi_m = re.search(r'^msgid\s+""\n((?:^".*"\n?)+)', trimmed, re.M)
-            if id_multi_m:
-                lines = re.findall(r'"((?:[^"\\]|\\.)*)"', id_multi_m.group(1))
-                msg_id = "".join(lines)
-            else:
-                msg_id = None
-        else:
-            msg_id = id_m.group(1)
-
-        if not str_m:
-            plural_m = re.search(r'^msgstr\[0\]\s+"((?:[^"\\]|\\.)*)"', trimmed, re.M)
-            str_multi_m = re.search(r'^msgstr\s+""\n((?:^".*"\n?)+)', trimmed, re.M)
-            if plural_m:
-                msg_str = plural_m.group(1)
-            elif str_multi_m:
-                lines = re.findall(r'"((?:[^"\\]|\\.)*)"', str_multi_m.group(1))
-                msg_str = "".join(lines)
-            else:
-                msg_str = ""
-        else:
-            msg_str = str_m.group(1)
-
-        ctxt = ctxt_m.group(1) if ctxt_m else None
+        msg_str = po_field(trimmed, "msgstr")
+        if msg_str is None:
+            msg_str = po_field(trimmed, "msgstr[0]") or ""
         if msg_id is not None:
             entries.append({
                 "header": False,

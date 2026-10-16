@@ -1,0 +1,399 @@
+import { SettingsAdapter } from "../../adapters/settings.slint";
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+import { Card, Divider } from "@origiri-mobile/widgets.slint";
+import { SettingsPage } from "page.slint";
+import { SettingHeader } from "widgets.slint";
+
+// A row for configuring bottom navigation bar items:
+// - Left: isolated drag handle area & icon (grip-vertical)
+// - Middle: item icon, title
+// - Right: settings icon (to the left of eye) and eye visibility toggle (omitted for Home)
+component NavToggleRow inherits Rectangle {
+    in property <image> icon;
+    in property <string> title;
+    in-out property <bool> checked: false;
+    in property <bool> show-eye: true;
+    in property <bool> show-settings: true;
+    in property <bool> is-dragging: false;
+    callback toggled(bool);
+    callback settings-clicked();
+
+    min-height: Metrics.touch;
+    border-radius: Metrics.radius-sm;
+    background: transparent;
+
+    HorizontalLayout {
+        padding-left: Metrics.spacing-xs;
+        padding-right: Metrics.spacing-xs;
+        spacing: Metrics.spacing-sm;
+
+        // 1. Left: Isolated Drag Handle Area
+        VerticalLayout {
+            alignment: center;
+            drag-handle := Rectangle {
+                width: 28px;
+                height: 36px;
+                border-radius: Metrics.radius-sm;
+                background: root.is-dragging ? Palette.foreground.with-alpha(0.12) : transparent;
+
+                Icon {
+                    source: TablerIcons.grip-vertical;
+                    width: 20px;
+                    height: 20px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    color: root.is-dragging ? Palette.accent-background : Colors.muted.with-alpha(0.65);
+                }
+            }
+        }
+
+        // 2. Navigation Item Icon
+        if root.icon.width > 0: VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                Icon {
+                    source: root.icon;
+                    width: 24px;
+                    height: 24px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    color: (!root.show-eye || root.checked) ? Palette.accent-background : Colors.muted;
+                }
+            }
+        }
+
+        // 3. Navigation Item Title
+        Text {
+            horizontal-stretch: 1;
+            text: root.title;
+            font-size: Metrics.font-body + 1px;
+            font-weight: (!root.show-eye || root.checked) ? 600 : 400;
+            vertical-alignment: center;
+            color: (!root.show-eye || root.checked) ? Palette.foreground : Colors.muted;
+        }
+
+        // 4. Settings icon button (to the left of the eye)
+        if root.show-settings: VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 36px;
+                height: 36px;
+                border-radius: Metrics.radius-sm;
+                background: settings-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+                animate background { duration: 120ms; }
+
+                Icon {
+                    source: TablerIcons.settings;
+                    width: 22px;
+                    height: 22px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    color: settings-touch.pressed ? Palette.foreground : Colors.muted;
+                }
+
+                settings-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.settings-clicked();
+                    }
+                }
+            }
+        }
+
+        // 5. Eye visibility toggle icon button (omitted for Home!)
+        if root.show-eye: VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 36px;
+                height: 36px;
+                border-radius: Metrics.radius-sm;
+                background: eye-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+                animate background { duration: 120ms; }
+
+                Icon {
+                    source: root.checked ? TablerIcons.eye : TablerIcons.eye-off;
+                    width: 22px;
+                    height: 22px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    color: root.checked ? Palette.accent-background : Colors.muted.with-alpha(0.55);
+                }
+
+                eye-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.checked = !root.checked;
+                        root.toggled(root.checked);
+                    }
+                }
+            }
+        }
+
+        // 6. Spacer placeholder when show-eye is false so settings icon stays aligned
+        if !root.show-eye: VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 36px;
+                height: 36px;
+            }
+        }
+    }
+}
+
+// Helper component that binds a bottom nav row by its item ID
+component BottomNavConfigItem inherits Rectangle {
+    in property <int> item-id;
+    in property <int> item-index;
+    in property <bool> is-dragging: false;
+    in property <length> drag-dy: 0px;
+    callback drag-started();
+    callback drag-moved(length);
+    callback drag-ended(length);
+    callback open-directory();
+    callback open-daily();
+    callback open-starred();
+    callback open-recent();
+    callback open-graph();
+
+    min-height: Metrics.touch;
+    z: root.is-dragging ? 100 : 0;
+
+    // Ghost placeholder shown in the original slot during drag
+    if root.is-dragging: Rectangle {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: 100%;
+        border-radius: Metrics.radius-sm;
+        background: Palette.foreground.with-alpha(0.04);
+        border-width: 1px;
+        border-color: Palette.accent-background.with-alpha(0.25);
+    }
+
+    // Row content: stays in-place normally, floats smoothly with drag-dy when dragged
+    row-content := Rectangle {
+        x: 0px;
+        y: root.is-dragging ? root.drag-dy : 0px;
+        width: 100%;
+        height: 100%;
+        border-radius: Metrics.radius-sm;
+        background: root.is-dragging ? Palette.background : transparent;
+        drop-shadow-blur: root.is-dragging ? 16px : 0px;
+        drop-shadow-offset-y: root.is-dragging ? 4px : 0px;
+        drop-shadow-color: root.is-dragging ? (Palette.color-scheme == ColorScheme.dark ? #000000dd : #00000030) : transparent;
+
+        if root.item-id == 0: NavToggleRow {
+            icon: TablerIcons.home;
+            title: @tr("Home");
+            checked: true;
+            show-eye: false;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+        }
+
+        if root.item-id == 1: NavToggleRow {
+            icon: TablerIcons.search;
+            title: @tr("Search");
+            checked <=> SettingsAdapter.nav-show-search;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 2: NavToggleRow {
+            icon: TablerIcons.files;
+            title: @tr("Library");
+            checked <=> SettingsAdapter.nav-show-library;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 3: NavToggleRow {
+            icon: TablerIcons.folder;
+            title: @tr("Directory");
+            checked <=> SettingsAdapter.nav-show-directory;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            settings-clicked => { root.open-directory(); }
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 4: NavToggleRow {
+            icon: TablerIcons.calendar;
+            title: @tr("Daily Notes");
+            checked <=> SettingsAdapter.nav-show-daily;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            settings-clicked => { root.open-daily(); }
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 5: NavToggleRow {
+            icon: TablerIcons.star;
+            title: @tr("Starred");
+            checked <=> SettingsAdapter.nav-show-starred;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            settings-clicked => { root.open-starred(); }
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 6: NavToggleRow {
+            icon: TablerIcons.clock;
+            title: @tr("Recent");
+            checked <=> SettingsAdapter.nav-show-recent;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            settings-clicked => { root.open-recent(); }
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 7: NavToggleRow {
+            icon: TablerIcons.git-fork;
+            title: @tr("Graph View");
+            checked <=> SettingsAdapter.nav-show-graph;
+            show-eye: true;
+            show-settings: true;
+            is-dragging: root.is-dragging;
+            settings-clicked => { root.open-graph(); }
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 8: NavToggleRow {
+            icon: TablerIcons.plus;
+            title: @tr("New Note");
+            checked <=> SettingsAdapter.nav-show-new-note;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 9: NavToggleRow {
+            icon: TablerIcons.cloud;
+            title: @tr("Sync");
+            checked <=> SettingsAdapter.nav-show-sync;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 10: NavToggleRow {
+            icon: TablerIcons.folder;
+            title: @tr("Switch Vault");
+            checked <=> SettingsAdapter.nav-show-switch-vault;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+
+        if root.item-id == 11: NavToggleRow {
+            icon: TablerIcons.settings;
+            title: @tr("Settings");
+            checked <=> SettingsAdapter.nav-show-settings;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.bottom-bar-changed(); }
+        }
+    }
+
+    // Drag handle touch area placed strictly over the left grip handle
+    drag-touch := TouchArea {
+        x: 0px;
+        y: 0px;
+        width: 36px;
+        height: 100%;
+        mouse-cursor: grab;
+        moved => {
+            let dy = self.mouse-y - self.pressed-y;
+            root.drag-moved(dy);
+        }
+        changed pressed => {
+            if (self.pressed) {
+                root.drag-started();
+            } else {
+                let dy = self.mouse-y - self.pressed-y;
+                root.drag-ended(dy);
+            }
+        }
+    }
+}
+
+export component BottomNavPage inherits SettingsPage {
+    in-out property <int> page;
+    in-out property <int> previous-page;
+    property <int> active-drag-idx: -1;
+    property <length> active-drag-dy: 0px;
+
+    enabled: root.active-drag-idx < 0;
+
+    Card {
+        content-spacing: Metrics.spacing-md;
+
+        SettingHeader {
+            title: @tr("Bottom Navigation Bar");
+            subtitle: @tr("Choose which items appear on the bottom navigation bar.");
+        }
+
+        Divider { }
+
+        for id[idx] in SettingsAdapter.nav-order: BottomNavConfigItem {
+            item-id: id;
+            item-index: idx;
+            is-dragging: root.active-drag-idx == idx;
+            drag-dy: root.active-drag-idx == idx ? root.active-drag-dy : 0px;
+            drag-started => {
+                root.active-drag-idx = idx;
+                root.active-drag-dy = 0px;
+            }
+            drag-moved(dy) => {
+                root.active-drag-dy = dy;
+            }
+            drag-ended(dy) => {
+                let steps = round(root.active-drag-dy / 52px);
+                if (steps != 0) {
+                    let target = clamp(idx + steps, 0, SettingsAdapter.nav-order.length - 1);
+                    if (target != idx) {
+                        SettingsAdapter.move-nav-item(idx, target);
+                    }
+                }
+                root.active-drag-idx = -1;
+                root.active-drag-dy = 0px;
+            }
+            open-directory => {
+                root.previous-page = 11;
+                root.page = 12;
+            }
+            open-daily => {
+                root.previous-page = 11;
+                root.page = 13;
+            }
+            open-starred => {
+                root.previous-page = 11;
+                root.page = 14;
+            }
+            open-recent => {
+                root.previous-page = 11;
+                root.page = 15;
+            }
+            open-graph => {
+                root.previous-page = 11;
+                root.page = 16;
+            }
+        }
+    }
+}

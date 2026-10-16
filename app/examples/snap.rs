@@ -497,6 +497,89 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-settings-bottom-nav.ppm"));
 
+    // Every other Settings page and the states within them, so a layout
+    // refactor of the sheet can be diffed screen by screen.
+    let settings = app.global::<SettingsAdapter>();
+    let snap_settings = |name: &str| {
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        render(&window, size, &format!("{prefix}-settings-{name}.ppm"));
+    };
+    settings.set_color_source(1);
+    app.set_settings_page(1);
+    snap_settings("interface-custom-color");
+    settings.set_color_source(0);
+    for (page, name) in [
+        (3, "vaults"),
+        (4, "about"),
+        (5, "transfer-share"),
+        (6, "advanced"),
+        (7, "navigation"),
+        (12, "directory"),
+        (13, "daily-notes"),
+        (14, "starred"),
+        (15, "recent"),
+        (16, "graph"),
+    ] {
+        app.set_settings_page(page);
+        snap_settings(name);
+    }
+    app.set_settings_page(5);
+    settings.set_transfer_tab(1);
+    snap_settings("transfer-import");
+    settings.set_transfer_tab(0);
+    // Accounts: the list, then the add-account form's every tab and state.
+    app.set_settings_page(2);
+    let account = |id: &str, provider: &str, user: &str| AccountData {
+        id: id.into(),
+        provider: provider.into(),
+        instance_url: "https://example.org".into(),
+        username: user.into(),
+        display_name: "".into(),
+        avatar: slint::Image::default(),
+        has_avatar: false,
+    };
+    settings.set_accounts(ModelRc::new(VecModel::from(vec![
+        account("github:octocat", "github", "octocat"),
+        account("gitlab:https://gitlab.com:alice", "gitlab", "alice"),
+    ])));
+    snap_settings("accounts-list");
+    settings.set_adding_account(true);
+    settings.set_sync_provider_tab(0);
+    snap_settings("accounts-add-github");
+    settings.set_github_auth_pending(true);
+    settings.set_github_user_code("WDAS-5821".into());
+    settings.set_github_verification_uri("https://github.com/login/device".into());
+    settings.set_github_auth_status("Waiting for browser authorization...".into());
+    snap_settings("accounts-add-github-pending");
+    settings.set_github_auth_pending(false);
+    settings.set_sync_provider_tab(1);
+    snap_settings("accounts-add-forgejo");
+    settings.set_forgejo_status_message("Repository setup failed: 401 Unauthorized".into());
+    settings.set_forgejo_status_is_error(true);
+    snap_settings("accounts-add-forgejo-error");
+    settings.set_forgejo_connecting(true);
+    snap_settings("accounts-add-forgejo-connecting");
+    settings.set_forgejo_connecting(false);
+    settings.set_forgejo_connected(true);
+    settings.set_forgejo_username("alice".into());
+    settings.set_forgejo_instance("https://codeberg.org".into());
+    settings.set_forgejo_repo_name("immermemo-notes".into());
+    snap_settings("accounts-add-forgejo-connected");
+    settings.set_sync_provider_tab(2);
+    snap_settings("accounts-add-gitlab");
+    settings.set_gitlab_connecting(true);
+    settings.set_gitlab_status_message("Connecting and setting up private repository...".into());
+    snap_settings("accounts-add-gitlab-connecting");
+    settings.set_gitlab_connecting(false);
+    settings.set_gitlab_connected(true);
+    settings.set_gitlab_username("alice".into());
+    settings.set_gitlab_instance("https://gitlab.com".into());
+    settings.set_gitlab_repo_name("immermemo-notes".into());
+    snap_settings("accounts-add-gitlab-connected");
+    settings.set_sync_provider_tab(3);
+    snap_settings("accounts-add-custom");
+    settings.set_adding_account(false);
+
     app.set_settings_page(0);
     app.set_settings_sheet_open(false);
 

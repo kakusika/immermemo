@@ -89,6 +89,35 @@ component SheetDragState {
     }
 }
 
+// A full-screen sheet's container: owns the drag state for it, and is only
+// visible while the sheet is at all open. The sheet goes inside, wired to
+// `progress`, `y-offset` and the three drag functions below.
+component SheetHost inherits Rectangle {
+    in property <bool> open: false;
+    // How far the sheet travels between closed and open (the window's height).
+    in property <length> travel;
+    out property <float> progress: drag.sheet-progress;
+    out property <length> y-offset: (1.0 - root.progress) * root.travel;
+    callback close();
+    callback haptic();
+
+    public function moved(dy: length) { drag.moved(dy, max(100px, root.travel)); }
+    public function swiped(dy: length, velocity: float) { drag.swiped(dy, velocity); }
+    public function cancelled() { drag.cancelled(); }
+
+    width: 100%;
+    height: 100%;
+    visible: root.progress > 0.01;
+
+    drag := SheetDragState {
+        open: root.open;
+        close => { root.close(); }
+        haptic => { root.haptic(); }
+    }
+
+    @children
+}
+
 export component App inherits Window {
     title: "immermemo";
     preferred-width: 960px;
@@ -527,42 +556,6 @@ export component App inherits Window {
         easing: ease-out;
     }
 
-    // One `SheetDragState` per note-sheet-style full-screen sheet (see
-    // that component's own doc comment) -- independent from each other
-    // and from the note editor sheet's own drag state above.
-    vault-sheet-drag := SheetDragState {
-        open: root.vault-sheet-open;
-        close => { root.vault-sheet-open = false; }
-        haptic => { root.trigger-haptic(); }
-    }
-
-    icon-picker-drag := SheetDragState {
-        open: root.icon-picker-open;
-        close => { root.icon-picker-open = false; }
-        haptic => { root.trigger-haptic(); }
-    }
-
-    history-sheet-drag := SheetDragState {
-        open: root.history-sheet-open;
-        close => { root.history-sheet-open = false; }
-        haptic => { root.trigger-haptic(); }
-    }
-
-    vault-history-drag := SheetDragState {
-        open: root.vault-history-open;
-        close => { root.vault-history-open = false; }
-        haptic => { root.trigger-haptic(); }
-    }
-
-    settings-sheet-drag := SheetDragState {
-        open: root.settings-sheet-open;
-        close => {
-            root.settings-sheet-open = false;
-            root.close-settings();
-        }
-        haptic => { root.trigger-haptic(); }
-    }
-
     public function open-settings-sheet() {
         root.open-settings();
         root.trigger-haptic();
@@ -704,11 +697,11 @@ export component App inherits Window {
             width: 100%;
             height: 100%;
             property <float> combined-progress: max(root.sheet-progress, max(
-                vault-sheet-drag.sheet-progress, max(
-                    icon-picker-drag.sheet-progress, max(
-                        history-sheet-drag.sheet-progress, max(
-                            vault-history-drag.sheet-progress,
-                            settings-sheet-drag.sheet-progress)))));
+                vault-sheet-host.progress, max(
+                    icon-picker-host.progress, max(
+                        history-sheet-host.progress, max(
+                            vault-history-host.progress,
+                            settings-sheet-host.progress)))));
             background: #000000.with-alpha(0.35 * self.combined-progress);
             visible: self.combined-progress > 0.01;
         }
@@ -1199,19 +1192,20 @@ export component App inherits Window {
             cancel => { root.delete-selected-confirm-open = false; }
         }
 
-        Rectangle {
-            width: 100%;
-            height: 100%;
-            visible: settings-sheet-drag.sheet-progress > 0.01;
+        settings-sheet-host := SheetHost {
+            open: root.settings-sheet-open;
+            travel: root.height;
+            close => { root.settings-sheet-open = false; root.close-settings(); }
+            haptic => { root.trigger-haptic(); }
 
             settings-sheet := SettingsSheet {
                 width: 100%;
                 height: 100%;
-                sheet-progress: settings-sheet-drag.sheet-progress;
-                sheet-y-offset: (1.0 - settings-sheet-drag.sheet-progress) * root.height;
-                sheet-drag-moved(dy) => { settings-sheet-drag.moved(dy, max(100px, root.height)); }
-                sheet-drag-swiped(dy, v) => { settings-sheet-drag.swiped(dy, v); }
-                sheet-drag-cancelled => { settings-sheet-drag.cancelled(); }
+                sheet-progress: settings-sheet-host.progress;
+                sheet-y-offset: settings-sheet-host.y-offset;
+                sheet-drag-moved(dy) => { settings-sheet-host.moved(dy); }
+                sheet-drag-swiped(dy, v) => { settings-sheet-host.swiped(dy, v); }
+                sheet-drag-cancelled => { settings-sheet-host.cancelled(); }
                 show-back: true;
                 page <=> root.settings-page;
                 directory-mode <=> files-screen.directory-mode;
@@ -1224,19 +1218,20 @@ export component App inherits Window {
             }
         }
 
-        Rectangle {
-            width: 100%;
-            height: 100%;
-            visible: vault-sheet-drag.sheet-progress > 0.01;
+        vault-sheet-host := SheetHost {
+            open: root.vault-sheet-open;
+            travel: root.height;
+            close => { root.vault-sheet-open = false; }
+            haptic => { root.trigger-haptic(); }
 
             VaultSheet {
                 width: 100%;
                 height: 100%;
-                sheet-progress: vault-sheet-drag.sheet-progress;
-                sheet-y-offset: (1.0 - vault-sheet-drag.sheet-progress) * root.height;
-                sheet-drag-moved(dy) => { vault-sheet-drag.moved(dy, max(100px, root.height)); }
-                sheet-drag-swiped(dy, v) => { vault-sheet-drag.swiped(dy, v); }
-                sheet-drag-cancelled => { vault-sheet-drag.cancelled(); }
+                sheet-progress: vault-sheet-host.progress;
+                sheet-y-offset: vault-sheet-host.y-offset;
+                sheet-drag-moved(dy) => { vault-sheet-host.moved(dy); }
+                sheet-drag-swiped(dy, v) => { vault-sheet-host.swiped(dy, v); }
+                sheet-drag-cancelled => { vault-sheet-host.cancelled(); }
                 vaults: root.vaults;
                 vault-subtitles: root.vault-subtitles;
                 current: root.current-vault;
@@ -1253,19 +1248,20 @@ export component App inherits Window {
             }
         }
 
-        Rectangle {
-            width: 100%;
-            height: 100%;
-            visible: icon-picker-drag.sheet-progress > 0.01;
+        icon-picker-host := SheetHost {
+            open: root.icon-picker-open;
+            travel: root.height;
+            close => { root.icon-picker-open = false; }
+            haptic => { root.trigger-haptic(); }
 
             IconPickerSheet {
                 width: 100%;
                 height: 100%;
-                sheet-progress: icon-picker-drag.sheet-progress;
-                sheet-y-offset: (1.0 - icon-picker-drag.sheet-progress) * root.height;
-                sheet-drag-moved(dy) => { icon-picker-drag.moved(dy, max(100px, root.height)); }
-                sheet-drag-swiped(dy, v) => { icon-picker-drag.swiped(dy, v); }
-                sheet-drag-cancelled => { icon-picker-drag.cancelled(); }
+                sheet-progress: icon-picker-host.progress;
+                sheet-y-offset: icon-picker-host.y-offset;
+                sheet-drag-moved(dy) => { icon-picker-host.moved(dy); }
+                sheet-drag-swiped(dy, v) => { icon-picker-host.swiped(dy, v); }
+                sheet-drag-cancelled => { icon-picker-host.cancelled(); }
                 query <=> root.icon-picker-query;
                 results: root.icon-picker-results;
                 inset-top: root.inset-top;
@@ -1324,20 +1320,21 @@ export component App inherits Window {
             next-conflict => { root.next-conflict-step(); }
         }
 
-        Rectangle {
-            width: 100%;
-            height: 100%;
-            visible: history-sheet-drag.sheet-progress > 0.01;
+        history-sheet-host := SheetHost {
+            open: root.history-sheet-open;
+            travel: root.height;
+            close => { root.history-sheet-open = false; }
+            haptic => { root.trigger-haptic(); }
 
             HistorySheet {
                 width: 100%;
                 height: 100%;
                 open: true;
-                sheet-progress: history-sheet-drag.sheet-progress;
-                sheet-y-offset: (1.0 - history-sheet-drag.sheet-progress) * root.height;
-                sheet-drag-moved(dy) => { history-sheet-drag.moved(dy, max(100px, root.height)); }
-                sheet-drag-swiped(dy, v) => { history-sheet-drag.swiped(dy, v); }
-                sheet-drag-cancelled => { history-sheet-drag.cancelled(); }
+                sheet-progress: history-sheet-host.progress;
+                sheet-y-offset: history-sheet-host.y-offset;
+                sheet-drag-moved(dy) => { history-sheet-host.moved(dy); }
+                sheet-drag-swiped(dy, v) => { history-sheet-host.swiped(dy, v); }
+                sheet-drag-cancelled => { history-sheet-host.cancelled(); }
                 note-title: root.current-title;
                 commits: root.history-commits;
                 dates: root.history-dates;
@@ -1350,20 +1347,21 @@ export component App inherits Window {
             }
         }
 
-        Rectangle {
-            width: 100%;
-            height: 100%;
-            visible: vault-history-drag.sheet-progress > 0.01;
+        vault-history-host := SheetHost {
+            open: root.vault-history-open;
+            travel: root.height;
+            close => { root.vault-history-open = false; }
+            haptic => { root.trigger-haptic(); }
 
             VaultHistorySheet {
                 width: 100%;
                 height: 100%;
                 open: true;
-                sheet-progress: vault-history-drag.sheet-progress;
-                sheet-y-offset: (1.0 - vault-history-drag.sheet-progress) * root.height;
-                sheet-drag-moved(dy) => { vault-history-drag.moved(dy, max(100px, root.height)); }
-                sheet-drag-swiped(dy, v) => { vault-history-drag.swiped(dy, v); }
-                sheet-drag-cancelled => { vault-history-drag.cancelled(); }
+                sheet-progress: vault-history-host.progress;
+                sheet-y-offset: vault-history-host.y-offset;
+                sheet-drag-moved(dy) => { vault-history-host.moved(dy); }
+                sheet-drag-swiped(dy, v) => { vault-history-host.swiped(dy, v); }
+                sheet-drag-cancelled => { vault-history-host.cancelled(); }
                 vault-name: root.current-vault-name;
                 commits: root.vault-history-commits;
                 dates: root.vault-history-dates;

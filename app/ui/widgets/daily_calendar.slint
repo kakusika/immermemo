@@ -1,0 +1,341 @@
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+
+// A month calendar for picking a day in the Daily Notes view.
+export component DailyCalendarView inherits Rectangle {
+    property <int> display-year: 2026;
+    property <int> display-month: 10;
+    property <int> selected-day: 14;
+    in-out property <bool> show-month-picker: false;
+    property <[int]> months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+    pure function short-month-name(m: int) -> string {
+        if (m == 1) { return @tr("Jan"); }
+        if (m == 2) { return @tr("Feb"); }
+        if (m == 3) { return @tr("Mar"); }
+        if (m == 4) { return @tr("Apr"); }
+        if (m == 5) { return @tr("May"); }
+        if (m == 6) { return @tr("Jun"); }
+        if (m == 7) { return @tr("Jul"); }
+        if (m == 8) { return @tr("Aug"); }
+        if (m == 9) { return @tr("Sep"); }
+        if (m == 10) { return @tr("Oct"); }
+        if (m == 11) { return @tr("Nov"); }
+        return @tr("Dec");
+    }
+
+    pure function days-in-month(y: int, m: int) -> int {
+        if (m == 2) {
+            let is-leap = (Math.mod(y, 4) == 0 && Math.mod(y, 100) != 0) || Math.mod(y, 400) == 0;
+            return is-leap ? 29 : 28;
+        }
+        if (m == 4 || m == 6 || m == 9 || m == 11) {
+            return 30;
+        }
+        return 31;
+    }
+
+    pure function month-t(m: int) -> int {
+        if (m == 1) { return 0; }
+        if (m == 2) { return 3; }
+        if (m == 3) { return 2; }
+        if (m == 4) { return 5; }
+        if (m == 5) { return 0; }
+        if (m == 6) { return 3; }
+        if (m == 7) { return 5; }
+        if (m == 8) { return 1; }
+        if (m == 9) { return 4; }
+        if (m == 10) { return 6; }
+        if (m == 11) { return 2; }
+        return 4;
+    }
+
+    pure function start-weekday(y: int, m: int) -> int {
+        let adj-y = m < 3 ? y - 1 : y;
+        let offset = month-t(m);
+        let d = adj-y + (adj-y / 4) - (adj-y / 100) + (adj-y / 400) + offset + 1;
+        return Math.mod(Math.mod(d, 7) + 7, 7);
+    }
+
+    pure function month-name(m: int) -> string {
+        if (m == 1) { return @tr("January"); }
+        if (m == 2) { return @tr("February"); }
+        if (m == 3) { return @tr("March"); }
+        if (m == 4) { return @tr("April"); }
+        if (m == 5) { return @tr("May"); }
+        if (m == 6) { return @tr("June"); }
+        if (m == 7) { return @tr("July"); }
+        if (m == 8) { return @tr("August"); }
+        if (m == 9) { return @tr("September"); }
+        if (m == 10) { return @tr("October"); }
+        if (m == 11) { return @tr("November"); }
+        return @tr("December");
+    }
+
+    function prev-month() {
+        if (root.display-month == 1) {
+            root.display-month = 12;
+            root.display-year -= 1;
+        } else {
+            root.display-month -= 1;
+        }
+    }
+
+    function next-month() {
+        if (root.display-month == 12) {
+            root.display-month = 1;
+            root.display-year += 1;
+        } else {
+            root.display-month += 1;
+        }
+    }
+
+    function prev-year() {
+        root.display-year -= 1;
+    }
+
+    function next-year() {
+        root.display-year += 1;
+    }
+
+    property <[int]> grid-indices: [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41
+    ];
+
+    property <[string]> weekdays: [@tr("Su"), @tr("Mo"), @tr("Tu"), @tr("We"), @tr("Th"), @tr("Fr"), @tr("Sa")];
+
+    property <int> total-slots: root.start-weekday(root.display-year, root.display-month) + root.days-in-month(root.display-year, root.display-month);
+
+    background: Colors.surface-elevated;
+    border-radius: Metrics.radius-lg;
+    border-width: 1px;
+    border-color: Palette.color-scheme == ColorScheme.dark
+        ? Palette.foreground.with-alpha(0.08)
+        : Palette.foreground.with-alpha(0.06);
+    height: calendar-layout.preferred-height;
+
+    swipe := SwipeGestureHandler {
+        handle-swipe-left: true;
+        handle-swipe-right: true;
+        width: 100%;
+        height: 100%;
+
+        swiped => {
+            let dx = self.current-position.x - self.pressed-position.x;
+            if (dx < -30px) {
+                root.next-month();
+            } else if (dx > 30px) {
+                root.prev-month();
+            }
+        }
+
+        calendar-layout := VerticalLayout {
+            alignment: start;
+            padding-top: 6px * Metrics.ui-scale;
+            padding-bottom: 6px * Metrics.ui-scale;
+            padding-left: 2px * Metrics.ui-scale;
+            padding-right: 2px * Metrics.ui-scale;
+            spacing: 2px * Metrics.ui-scale;
+
+            // Header: Clickable Month button (no arrows)
+            HorizontalLayout {
+                alignment: center;
+
+                Rectangle {
+                    height: 28px * Metrics.ui-scale;
+                    border-radius: self.height / 2;
+                    background: header-touch.pressed
+                        ? Palette.foreground.with-alpha(0.12)
+                        : (root.show-month-picker ? Palette.accent-background.with-alpha(0.16) : Palette.foreground.with-alpha(0.06));
+                    border-width: 1px;
+                    border-color: root.show-month-picker ? Palette.accent-background.with-alpha(0.3) : transparent;
+                    animate background { duration: 150ms; }
+
+                    header-touch := TouchArea {
+                        clicked => {
+                            root.show-month-picker = !root.show-month-picker;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 12px * Metrics.ui-scale;
+                        padding-right: 10px * Metrics.ui-scale;
+                        spacing: 4px * Metrics.ui-scale;
+                        alignment: center;
+
+                        Text {
+                            text: root.month-name(root.display-month);
+                            font-size: Metrics.font-sub;
+                            font-weight: 700;
+                            color: root.show-month-picker ? Palette.accent-background : Palette.foreground;
+                            vertical-alignment: center;
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                source: root.show-month-picker ? TablerIcons.chevron-up : TablerIcons.chevron-down;
+                                width: 14px * Metrics.ui-scale;
+                                height: 14px * Metrics.ui-scale;
+                                color: root.show-month-picker ? Palette.accent-background : Colors.muted;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Horizontal scrollable month picker chips (height 0 when hidden to prevent layout gap)
+            if root.show-month-picker: Flickable {
+                height: root.show-month-picker ? 28px * Metrics.ui-scale : 0px;
+                interactive: true;
+                mouse-drag-pan-enabled: true;
+                content-height: self.height;
+                content-width: months-layout.preferred-width;
+
+                months-layout := HorizontalLayout {
+                    spacing: Metrics.spacing-xs;
+                    padding-left: Metrics.spacing-xs;
+                    padding-right: Metrics.spacing-xs;
+
+                    for m in root.months: Rectangle {
+                        property <bool> is-selected: m == root.display-month;
+                        height: 26px * Metrics.ui-scale;
+                        width: chip-layout.preferred-width;
+                        border-radius: self.height / 2;
+                        background: is-selected
+                            ? Palette.accent-background
+                            : (chip-touch.pressed ? Palette.foreground.with-alpha(0.12) : Palette.foreground.with-alpha(0.06));
+                        animate background { duration: 100ms; }
+
+                        chip-touch := TouchArea {
+                            clicked => {
+                                root.display-month = m;
+                                root.selected-day = min(root.selected-day, root.days-in-month(root.display-year, m));
+                            }
+                        }
+
+                        chip-layout := HorizontalLayout {
+                            padding-left: 10px * Metrics.ui-scale;
+                            padding-right: 10px * Metrics.ui-scale;
+                            alignment: center;
+
+                            Text {
+                                text: root.short-month-name(m);
+                                font-size: Metrics.font-sub;
+                                font-weight: is-selected ? 700 : 500;
+                                color: is-selected ? Palette.accent-foreground : Palette.foreground;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Weekday labels
+            HorizontalLayout {
+                for day in root.weekdays: Text {
+                    horizontal-stretch: 1;
+                    text: day;
+                    font-size: Metrics.font-caption;
+                    font-weight: 600;
+                    color: Colors.muted;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            // Days Grid
+            GridLayout {
+                spacing: 0px;
+
+                for idx in root.grid-indices: Rectangle {
+                    row: idx / 7;
+                    col: Math.mod(idx, 7);
+                    property <bool> row-needed: idx < 35 || root.total-slots > 35;
+                    height: self.row-needed ? 28px * Metrics.ui-scale : 0px;
+                    visible: self.row-needed;
+
+                    property <int> start-day: root.start-weekday(root.display-year, root.display-month);
+                    property <int> days-count: root.days-in-month(root.display-year, root.display-month);
+                    property <int> day-val: idx - start-day + 1;
+                    property <bool> is-valid-day: day-val >= 1 && day-val <= days-count;
+                    property <bool> is-selected: is-valid-day && day-val == root.selected-day;
+                    property <bool> is-today: is-valid-day && root.display-year == 2026 && root.display-month == 10 && day-val == 14;
+
+                    day-touch := TouchArea {
+                        enabled: is-valid-day;
+                        clicked => {
+                            root.selected-day = day-val;
+                        }
+                    }
+
+                    Rectangle {
+                        width: 26px * Metrics.ui-scale;
+                        height: 26px * Metrics.ui-scale;
+                        border-radius: self.height / 2;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        background: is-selected
+                            ? Palette.accent-background
+                            : (day-touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent);
+                        border-width: (!is-selected && is-today) ? 1.5px : 0px;
+                        border-color: Palette.accent-background;
+
+                        Text {
+                            text: is-valid-day ? day-val : "";
+                            font-size: Metrics.font-sub;
+                            font-weight: (is-selected || is-today) ? 700 : 500;
+                            color: is-selected
+                                ? Palette.accent-foreground
+                                : (is-today ? Palette.accent-background : (is-valid-day ? Palette.foreground : transparent));
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

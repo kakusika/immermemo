@@ -1,0 +1,92 @@
+import { Metrics } from "@origiri-mobile/tokens.slint";
+import { TablerIcons } from "@origiri-icons/icons.slint";
+import { Card, Section, Divider } from "@origiri-mobile/widgets.slint";
+import { SettingsPage } from "page.slint";
+import { CategoryRow } from "widgets.slint";
+
+export component NavigationPage inherits SettingsPage {
+    in-out property <int> page;
+    in-out property <int> previous-page;
+
+    content-spacing: 24px;
+
+    Section {
+        title: @tr("Navigation");
+
+        Card {
+            content-padding: Metrics.spacing-xs;
+            content-spacing: 0px;
+
+            CategoryRow {
+                icon: TablerIcons.layout-bottombar;
+                label-text: @tr("Bottom Navigation Bar");
+                clicked => {
+                    root.previous-page = 7;
+                    root.page = 11;
+                }
+            }
+        }
+    }
+
+    Section {
+        title: @tr("Page Settings");
+
+        Card {
+            content-padding: Metrics.spacing-xs;
+            content-spacing: 0px;
+
+            CategoryRow {
+                icon: TablerIcons.folder;
+                label-text: @tr("Directory");
+                clicked => {
+                    root.previous-page = 7;
+                    root.page = 12;
+                }
+            }
+
+            Divider { }
+
+            CategoryRow {
+                icon: TablerIcons.calendar;
+                label-text: @tr("Daily Notes");
+                clicked => {
+                    root.previous-page = 7;
+                    root.page = 13;
+                }
+            }
+
+            Divider { }
+
+            CategoryRow {
+                icon: TablerIcons.star;
+                label-text: @tr("Starred");
+                clicked => {
+                    root.previous-page = 7;
+                    root.page = 14;
+                }
+            }
+
+            Divider { }
+
+            CategoryRow {
+                icon: TablerIcons.clock;
+                label-text: @tr("Recent");
+                clicked => {
+                    root.previous-page = 7;
+                    root.page = 15;
+                }
+            }
+
+            Divider { }
+
+            CategoryRow {
+                icon: TablerIcons.git-fork;
+                label-text: @tr("Graph View");
+                clicked => {
+                    root.previous-page = 7;
+                    root.page = 16;
+                }
+            }
+        }
+    }
+}

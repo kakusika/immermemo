@@ -1,0 +1,173 @@
+import { SettingsAdapter } from "../../adapters/settings.slint";
+import { Palette, Button } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+import { IconButton, Card, Divider } from "@origiri-mobile/widgets.slint";
+import { AccountAvatar } from "../../widgets/account_avatar.slint";
+import { SettingsPage } from "page.slint";
+
+export component VaultsPage inherits SettingsPage {
+    Card {
+        content-spacing: Metrics.spacing-md;
+
+        HorizontalLayout {
+            spacing: 8px;
+
+            VerticalLayout {
+                alignment: center;
+                Icon {
+                    source: TablerIcons.folder;
+                    width: Metrics.icon-md;
+                    height: Metrics.icon-md;
+                    color: Palette.accent-background;
+                }
+            }
+
+            Text {
+                horizontal-stretch: 1;
+                text: @tr("Vaults");
+                font-size: 16px;
+                font-weight: 600;
+                color: Palette.foreground;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: @tr("{} vaults", SettingsAdapter.vaults.length);
+                font-size: Metrics.font-sm;
+                color: Colors.muted;
+                vertical-alignment: center;
+            }
+        }
+
+        Divider { }
+
+        for v[idx] in SettingsAdapter.vaults: VerticalLayout {
+            spacing: 0px;
+
+            if idx > 0: Rectangle {
+                height: 1px;
+                background: Colors.separator;
+            }
+
+            Rectangle {
+                min-height: 56px;
+                border-radius: Metrics.radius-md;
+                background: v.is-current
+                    ? Palette.accent-background.with-alpha(0.08)
+                    : transparent;
+
+                HorizontalLayout {
+                    padding-left: 14px;
+                    padding-right: 6px;
+                    padding-top: 8px;
+                    padding-bottom: 8px;
+                    spacing: 8px;
+
+                    // Left: vault identity icon
+                    VerticalLayout {
+                        alignment: center;
+                        if v.has-account: AccountAvatar {
+                            avatar: v.account-avatar;
+                            has-avatar: v.account-has-avatar;
+                            provider: v.account-provider;
+                            avatar-size: 26px;
+                        }
+                        if !v.has-account: Icon {
+                            source: v.is-current ? TablerIcons.folder-check : TablerIcons.folder;
+                            width: 22px;
+                            height: 22px;
+                            color: v.is-current ? Palette.accent-background : Colors.muted;
+                        }
+                    }
+
+                    // Center: vault name and subtitle (stretches to take available width)
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        alignment: center;
+                        spacing: 2px;
+
+                        HorizontalLayout {
+                            alignment: start;
+                            spacing: 8px;
+
+                            Text {
+                                text: v.name;
+                                font-size: 15px;
+                                font-weight: v.is-current ? 600 : 500;
+                                color: v.is-current ? Palette.accent-background : Palette.foreground;
+                                vertical-alignment: center;
+                            }
+
+                            if v.is-current: Rectangle {
+                                border-radius: 4px;
+                                background: Palette.accent-background.with-alpha(0.18);
+                                HorizontalLayout {
+                                    padding-left: 6px;
+                                    padding-right: 6px;
+                                    padding-top: 2px;
+                                    padding-bottom: 2px;
+                                    Text {
+                                        text: @tr("In Use");
+                                        font-size: 11px;
+                                        font-weight: 600;
+                                        color: Palette.accent-background;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+                        }
+
+                        if v.subtitle != "": Text {
+                            text: v.subtitle;
+                            font-size: 12px;
+                            color: Colors.muted;
+                            overflow: elide;
+                        }
+                    }
+
+                    // Right: checkmark for active vault (same width as IconButton for vertical alignment)
+                    if v.is-current: Rectangle {
+                        width: Metrics.touch;
+                        Icon {
+                            source: TablerIcons.check;
+                            width: 20px;
+                            height: 20px;
+                            color: Palette.accent-background;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    // Right: action buttons for other vaults
+                    if !v.is-current: HorizontalLayout {
+                        spacing: 2px;
+                        alignment: center;
+
+                        Button {
+                            text: @tr("Switch");
+                            clicked => {
+                                SettingsAdapter.switch-vault(v.original-index);
+                            }
+                        }
+
+                        if SettingsAdapter.vaults.length > 1: IconButton {
+                            icon: TablerIcons.trash;
+                            clicked => {
+                                SettingsAdapter.delete-vault(v.original-index);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Button {
+        text: @tr("+ Add Vault");
+        primary: true;
+        clicked => {
+            SettingsAdapter.add-vault();
+        }
+    }
+}

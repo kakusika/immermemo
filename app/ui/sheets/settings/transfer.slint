@@ -1,0 +1,285 @@
+import { SettingsAdapter } from "../../adapters/settings.slint";
+import { Palette, LineEdit, Button } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+import { ActionRow, SegmentedControl, Card, Divider } from "@origiri-mobile/widgets.slint";
+import { SettingsPage } from "page.slint";
+
+// A toggle row for selecting which transfer items to include in export.
+component TransferToggleRow inherits Rectangle {
+    in property <image> icon;
+    in property <string> title;
+    in property <string> subtitle: "";
+    in-out property <bool> checked: false;
+    in property <bool> is-warning: false;
+    callback toggled(bool);
+
+    min-height: Metrics.touch;
+    border-radius: Metrics.radius-sm;
+    background: touch.pressed ? Palette.foreground.with-alpha(0.06) : transparent;
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    HorizontalLayout {
+        padding-left: Metrics.spacing-sm;
+        padding-right: Metrics.spacing-sm;
+        spacing: Metrics.spacing-md;
+
+        if root.icon.width > 0: VerticalLayout {
+            alignment: center;
+            Icon {
+                source: root.icon;
+                width: Metrics.icon-md;
+                height: Metrics.icon-md;
+                color: root.is-warning ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Palette.accent-background;
+            }
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: root.title;
+                font-size: Metrics.font-body;
+                color: root.is-warning ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Palette.foreground;
+            }
+
+            if root.subtitle != "": Text {
+                text: root.subtitle;
+                font-size: Metrics.font-sm;
+                color: root.is-warning ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+                wrap: word-wrap;
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 24px;
+                height: 24px;
+                border-radius: 6px;
+                border-width: 1.5px;
+                border-color: root.checked ? Palette.accent-background : Colors.muted;
+                background: root.checked ? Palette.accent-background : transparent;
+                animate background {
+                    duration: 150ms;
+                    easing: ease-out;
+                }
+
+                if root.checked: Icon {
+                    source: TablerIcons.check;
+                    width: 16px;
+                    height: 16px;
+                    color: Palette.accent-foreground;
+                }
+            }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+
+export component TransferPage inherits SettingsPage {
+    SegmentedControl {
+        options: [@tr("Export (Show QR)"), @tr("Import")];
+        selected: SettingsAdapter.transfer-tab;
+        changed(i) => {
+            SettingsAdapter.transfer-tab = i;
+            if (i == 0) {
+                SettingsAdapter.refresh-transfer-qr();
+            }
+        }
+    }
+
+    if SettingsAdapter.transfer-tab == 0: VerticalLayout {
+        spacing: 16px;
+
+        Card {
+            content-spacing: Metrics.spacing-md;
+
+            Text {
+                text: @tr("Select items to include:");
+                font-size: Metrics.font-sub;
+                color: Colors.muted;
+            }
+
+            TransferToggleRow {
+                icon: TablerIcons.settings;
+                title: @tr("Appearance & UI");
+                subtitle: @tr("Theme, font size, and UI scale");
+                checked: SettingsAdapter.export-include-interface;
+                toggled(c) => {
+                    SettingsAdapter.export-include-interface = c;
+                    SettingsAdapter.export-options-changed(SettingsAdapter.export-include-interface, SettingsAdapter.export-include-remote, SettingsAdapter.export-include-token);
+                }
+            }
+
+            Divider { }
+
+            TransferToggleRow {
+                icon: TablerIcons.cloud;
+                title: @tr("Remote Sync URL");
+                subtitle: @tr("Active vault remote git repository URL");
+                checked: SettingsAdapter.export-include-remote;
+                toggled(c) => {
+                    SettingsAdapter.export-include-remote = c;
+                    SettingsAdapter.export-options-changed(SettingsAdapter.export-include-interface, SettingsAdapter.export-include-remote, SettingsAdapter.export-include-token);
+                }
+            }
+
+            Divider { }
+
+            TransferToggleRow {
+                icon: TablerIcons.lock-share;
+                title: @tr("Include Access Token");
+                subtitle: @tr("⚠️ Contains sensitive personal credentials");
+                checked: SettingsAdapter.export-include-token;
+                is-warning: true;
+                toggled(c) => {
+                    SettingsAdapter.export-include-token = c;
+                    SettingsAdapter.export-options-changed(SettingsAdapter.export-include-interface, SettingsAdapter.export-include-remote, SettingsAdapter.export-include-token);
+                }
+            }
+        }
+
+        Card {
+            content-spacing: Metrics.spacing-md;
+
+            Text {
+                text: @tr("Scan with another device:");
+                font-size: Metrics.font-sub;
+                color: Colors.muted;
+            }
+
+            HorizontalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 220px;
+                    height: 220px;
+                    border-radius: Metrics.radius-md;
+                    background: white;
+                    clip: true;
+
+                    Image {
+                        width: 200px;
+                        height: 200px;
+                        source: SettingsAdapter.qr-image;
+                        image-fit: contain;
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                alignment: center;
+                Button {
+                    text: SettingsAdapter.transfer-copied ? @tr("Copied to Clipboard!") : @tr("Copy Transfer Link");
+                    clicked => { SettingsAdapter.copy-transfer-link(); }
+                }
+            }
+        }
+    }
+
+    if SettingsAdapter.transfer-tab == 1: VerticalLayout {
+        spacing: 16px;
+
+        Card {
+            content-spacing: Metrics.spacing-md;
+
+            Text {
+                text: @tr("Import Settings");
+                font-size: Metrics.font-sub;
+                color: Colors.muted;
+            }
+
+            Text {
+                text: @tr("Paste an immermemo:// transfer link or payload below:");
+                font-size: Metrics.font-sm;
+                color: Colors.muted;
+                wrap: word-wrap;
+            }
+
+            LineEdit {
+                height: Metrics.touch;
+                placeholder-text: @tr("immermemo://import#... or JSON");
+                text <=> SettingsAdapter.import-draft;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: end;
+
+                Button {
+                    text: @tr("Paste Clipboard");
+                    clicked => { SettingsAdapter.paste-import-clipboard(); }
+                }
+
+                Button {
+                    text: @tr("Review & Apply");
+                    primary: true;
+                    enabled: SettingsAdapter.import-draft != "";
+                    clicked => { SettingsAdapter.review-import(SettingsAdapter.import-draft); }
+                }
+            }
+
+            if SettingsAdapter.import-status-message != "": Text {
+                text: SettingsAdapter.import-status-message;
+                font-size: 13px;
+                color: SettingsAdapter.import-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+                wrap: word-wrap;
+            }
+        }
+
+        if SettingsAdapter.import-preview-ready: Card {
+            content-spacing: Metrics.spacing-sm;
+
+            Text {
+                text: @tr("Settings Ready to Import");
+                font-size: 15px;
+                font-weight: 600;
+                color: Palette.foreground;
+            }
+
+            Divider { }
+
+            if SettingsAdapter.preview-has-interface: ActionRow {
+                text: @tr("✓ Appearance & UI settings");
+            }
+
+            if SettingsAdapter.preview-has-remote: ActionRow {
+                text: @tr("✓ Remote URL: ") + SettingsAdapter.preview-remote-url;
+            }
+
+            if SettingsAdapter.preview-has-token: ActionRow {
+                text: @tr("⚠️ Access Token (will update saved token)");
+                tint: Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500;
+            }
+
+            Divider { }
+
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: end;
+
+                Button {
+                    text: @tr("Cancel");
+                    clicked => { SettingsAdapter.cancel-import-preview(); }
+                }
+
+                Button {
+                    text: @tr("Apply Settings");
+                    primary: true;
+                    clicked => { SettingsAdapter.apply-import(); }
+                }
+            }
+        }
+    }
+}

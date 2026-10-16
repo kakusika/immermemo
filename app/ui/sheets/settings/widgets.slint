@@ -1,0 +1,81 @@
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+
+// A unified header for settings items or sections:
+// - Title in bold foreground color
+// - Optional subtitle/description in muted color
+export component SettingHeader inherits VerticalLayout {
+    in property <string> title;
+    in property <string> subtitle: "";
+
+    spacing: 4px;
+
+    Text {
+        text: root.title;
+        font-size: Metrics.font-sub;
+        font-weight: 600;
+        color: Palette.foreground;
+    }
+
+    if root.subtitle != "": Text {
+        text: root.subtitle;
+        font-size: Metrics.font-sm;
+        color: Colors.muted;
+        wrap: word-wrap;
+    }
+}
+
+// A tappable row for the Settings list: icon, label, and a trailing
+// chevron to show it drills into its own sub-page.
+export component CategoryRow inherits Rectangle {
+    in property <image> icon;
+    in property <string> label-text;
+    callback clicked();
+
+    height: Metrics.touch + 8px * Metrics.ui-scale;
+    border-radius: Metrics.radius-sm + 2px * Metrics.ui-scale;
+    background: touch.pressed ? Palette.foreground.with-alpha(0.08) : transparent;
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    HorizontalLayout {
+        padding-left: Metrics.spacing-md;
+        padding-right: Metrics.spacing-md;
+        spacing: Metrics.spacing-md;
+
+        VerticalLayout {
+            alignment: center;
+            Icon {
+                source: root.icon;
+                width: Metrics.icon-md;
+                height: Metrics.icon-md;
+                color: Colors.primary;
+            }
+        }
+
+        Text {
+            horizontal-stretch: 1;
+            text: root.label-text;
+            font-size: Metrics.font-body;
+            vertical-alignment: center;
+            color: Palette.foreground;
+        }
+
+        VerticalLayout {
+            alignment: center;
+            Icon {
+                source: TablerIcons.chevron-right;
+                width: Metrics.icon-sm;
+                height: Metrics.icon-sm;
+                color: Colors.muted;
+            }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}

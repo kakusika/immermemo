@@ -1,0 +1,24 @@
+import { Metrics } from "@origiri-mobile/tokens.slint";
+import { AppScrollView } from "@origiri-mobile/widgets.slint";
+
+// The scrolling, padded column every Settings sub-page is laid out in. The
+// bottom padding keeps the last row clear of the system navigation bar.
+export component SettingsPage inherits AppScrollView {
+    in property <length> inset-bottom: 0px;
+    in property <length> content-spacing: 16px;
+
+    VerticalLayout {
+        // Without this, a VerticalLayout shorter than its Flickable
+        // dumps all the leftover space onto one section instead of
+        // leaving it below the content -- see home.slint's content
+        // VerticalLayout for the full explanation.
+        alignment: start;
+        padding-left: Metrics.gutter;
+        padding-right: Metrics.gutter;
+        padding-top: 16px;
+        padding-bottom: root.inset-bottom + 24px;
+        spacing: root.content-spacing;
+
+        @children
+    }
+}

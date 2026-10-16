@@ -1,0 +1,30 @@
+import { Metrics } from "@origiri-mobile/tokens.slint";
+import { SegmentedControl, Card } from "@origiri-mobile/widgets.slint";
+import { SettingsPage } from "page.slint";
+import { SettingHeader } from "widgets.slint";
+
+export component DirectoryPage inherits SettingsPage {
+    in-out property <int> directory-mode;
+
+
+    Card {
+        content-spacing: Metrics.spacing-lg;
+
+        VerticalLayout {
+            spacing: Metrics.spacing-sm;
+
+            SettingHeader {
+                title: @tr("Default View");
+                subtitle: @tr("Choose how folder contents are displayed by default.");
+            }
+
+            SegmentedControl {
+                options: [@tr("List"), @tr("Grid")];
+                selected: root.directory-mode;
+                changed(i) => {
+                    root.directory-mode = i;
+                }
+            }
+        }
+    }
+}

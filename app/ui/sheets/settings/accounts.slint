@@ -1,0 +1,492 @@
+import { SettingsAdapter } from "../../adapters/settings.slint";
+import { Palette, LineEdit, Button } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { TablerIcons } from "@origiri-icons/icons.slint";
+import { IconButton, SegmentedControl, Card, Section, Divider } from "@origiri-mobile/widgets.slint";
+import { AccountAvatar } from "../../widgets/account_avatar.slint";
+import { SettingsPage } from "page.slint";
+
+// A label above a single-line text field, as every form in this sheet lays them out.
+component FormField inherits VerticalLayout {
+    in property <string> label;
+    in property <string> placeholder;
+    in property <InputType> input-type: InputType.text;
+    in-out property <string> text;
+    spacing: 4px;
+
+    Text {
+        text: root.label;
+        font-size: 13px;
+        color: Colors.muted;
+    }
+
+    LineEdit {
+        height: Metrics.touch;
+        placeholder-text: root.placeholder;
+        input-type: root.input-type;
+        text <=> root.text;
+    }
+}
+
+// Connecting a hosting account with a pasted Personal Access Token --
+// the same form for Forgejo / Gitea and GitLab, which differ only in the
+// words and in which `SettingsAdapter` properties the parent wires in.
+component TokenAccountForm inherits VerticalLayout {
+    in property <string> intro;
+    in property <string> instance-label;
+    in property <string> instance-placeholder;
+    in property <string> token-label;
+    in property <string> token-placeholder;
+    in-out property <string> instance-draft;
+    in-out property <string> token-draft;
+    in-out property <string> repo-draft;
+    in property <bool> connecting;
+    in property <string> status-message;
+    in property <bool> status-is-error;
+    callback connect();
+    spacing: Metrics.spacing-md;
+
+    Text {
+        text: root.intro;
+        font-size: Metrics.font-sm;
+        color: Colors.muted;
+        wrap: word-wrap;
+    }
+
+    FormField {
+        label: root.instance-label;
+        placeholder: root.instance-placeholder;
+        text <=> root.instance-draft;
+    }
+
+    FormField {
+        label: root.token-label;
+        placeholder: root.token-placeholder;
+        input-type: InputType.password;
+        text <=> root.token-draft;
+    }
+
+    FormField {
+        label: @tr("Repository Name");
+        placeholder: "immermemo-notes";
+        text <=> root.repo-draft;
+    }
+
+    if root.status-message != "": Text {
+        text: root.status-message;
+        color: root.status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+        font-size: 13px;
+        wrap: word-wrap;
+    }
+
+    HorizontalLayout {
+        alignment: end;
+        Button {
+            text: root.connecting ? @tr("Connecting...") : @tr("Connect Account");
+            primary: true;
+            enabled: !root.connecting && root.token-draft != "";
+            clicked => { root.connect(); }
+        }
+    }
+}
+
+export component AccountsPage inherits SettingsPage {
+    in-out property <int> page;
+
+
+    // 1. Current Vault Sync Header (Compact)
+    Card {
+        content-spacing: Metrics.spacing-sm;
+
+        HorizontalLayout {
+            spacing: 10px;
+            alignment: center;
+
+            if SettingsAdapter.current-vault-has-account: VerticalLayout {
+                alignment: center;
+                AccountAvatar {
+                    avatar: SettingsAdapter.current-vault-account-avatar;
+                    has-avatar: SettingsAdapter.current-vault-account-has-avatar;
+                    provider: SettingsAdapter.current-vault-account-provider;
+                    avatar-size: 28px;
+                }
+            }
+
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+                spacing: 2px;
+                HorizontalLayout {
+                    spacing: 6px;
+                    alignment: center;
+                    Text {
+                        text: @tr("Vault: ") + SettingsAdapter.current-vault-name;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: Palette.foreground;
+                    }
+
+                    if SettingsAdapter.current-vault-account-label != "": Rectangle {
+                        height: 18px;
+                        border-radius: 4px;
+                        background: Palette.accent-background.with-alpha(0.12);
+                        HorizontalLayout {
+                            padding-left: 6px;
+                            padding-right: 6px;
+                            Text {
+                                text: SettingsAdapter.current-vault-account-label;
+                                font-size: 11px;
+                                font-weight: 500;
+                                color: Palette.accent-background;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                if SettingsAdapter.sync-status != "": Text {
+                    text: SettingsAdapter.sync-status;
+                    font-size: 12px;
+                    color: Colors.muted;
+                    wrap: word-wrap;
+                }
+            }
+
+            Button {
+                text: SettingsAdapter.syncing ? @tr("Syncing...") : @tr("Sync Now");
+                primary: true;
+                enabled: !SettingsAdapter.syncing;
+                clicked => { SettingsAdapter.sync(); }
+            }
+        }
+    }
+
+    // 2. Connected Accounts Card
+    Card {
+        content-spacing: Metrics.spacing-md;
+
+        HorizontalLayout {
+            alignment: center;
+            Text {
+                text: @tr("Connected Accounts");
+                font-size: 15px;
+                font-weight: 600;
+                color: Palette.foreground;
+                horizontal-stretch: 1;
+            }
+        }
+
+        if SettingsAdapter.accounts.length == 0: Text {
+            text: @tr("No accounts connected yet.");
+            font-size: 13px;
+            color: Colors.muted;
+            wrap: word-wrap;
+        }
+
+        for acc in SettingsAdapter.accounts: Rectangle {
+            height: 56px;
+            border-radius: Metrics.radius-md;
+            background: Palette.foreground.with-alpha(0.04);
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                spacing: 10px;
+                alignment: center;
+
+                AccountAvatar {
+                    avatar: acc.avatar;
+                    has-avatar: acc.has-avatar;
+                    provider: acc.provider;
+                    avatar-size: 32px;
+                }
+
+                VerticalLayout {
+                    alignment: center;
+                    horizontal-stretch: 1;
+                    spacing: 2px;
+                    HorizontalLayout {
+                        spacing: 6px;
+                        alignment: center;
+                        Text {
+                            text: acc.username != "" ? ("@" + acc.username) : acc.id;
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: Palette.foreground;
+                        }
+
+                        if SettingsAdapter.current-vault-account-id == acc.id: Rectangle {
+                            height: 18px;
+                            border-radius: 4px;
+                            background: Palette.accent-background.with-alpha(0.15);
+                            HorizontalLayout {
+                                padding-left: 6px;
+                                padding-right: 6px;
+                                Text {
+                                    text: @tr("Active");
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    color: Palette.accent-background;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: acc.provider + " · " + acc.instance-url;
+                        font-size: 11px;
+                        color: Colors.muted;
+                    }
+                }
+
+                Button {
+                    text: @tr("+ Vault");
+                    clicked => {
+                        SettingsAdapter.create-vault-from-account(acc.id, "immermemo-notes");
+                    }
+                }
+
+                IconButton {
+                    icon: TablerIcons.trash;
+                    clicked => { SettingsAdapter.delete-account(acc.id); }
+                }
+            }
+        }
+
+        Divider { }
+
+        // "+ Add Account" Toggle Button
+        if !SettingsAdapter.adding-account: HorizontalLayout {
+            alignment: center;
+            Button {
+                text: @tr("+ Add Account");
+                primary: SettingsAdapter.accounts.length == 0;
+                clicked => { SettingsAdapter.adding-account = true; }
+            }
+        }
+
+        // Add Account Section (when toggled on)
+        if SettingsAdapter.adding-account: VerticalLayout {
+            spacing: Metrics.spacing-md;
+
+            HorizontalLayout {
+                alignment: center;
+                Text {
+                    text: @tr("Add Account");
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: Palette.foreground;
+                    horizontal-stretch: 1;
+                }
+
+                IconButton {
+                    icon: TablerIcons.x;
+                    clicked => { SettingsAdapter.adding-account = false; }
+                }
+            }
+
+            SegmentedControl {
+                options: [@tr("GitHub"), @tr("Forgejo / Gitea"), @tr("GitLab"), @tr("Custom Git")];
+                selected: SettingsAdapter.sync-provider-tab;
+                changed(i) => { SettingsAdapter.sync-provider-tab = i; }
+            }
+
+            // Tab 0: GitHub
+            if SettingsAdapter.sync-provider-tab == 0: VerticalLayout {
+                spacing: Metrics.spacing-md;
+
+                if !SettingsAdapter.github-auth-pending: VerticalLayout {
+                    spacing: Metrics.spacing-md;
+                    Text {
+                        text: @tr("Sign in to automatically create and sync a private notes repository.");
+                        font-size: Metrics.font-sm;
+                        color: Colors.muted;
+                        wrap: word-wrap;
+                    }
+
+                    HorizontalLayout {
+                        alignment: end;
+                        Button {
+                            text: @tr("Connect with GitHub");
+                            primary: true;
+                            clicked => { SettingsAdapter.connect-github(); }
+                        }
+                    }
+                }
+
+                if SettingsAdapter.github-auth-pending: VerticalLayout {
+                    spacing: Metrics.spacing-md;
+                    Text {
+                        text: @tr("Confirm this one-time code on GitHub:");
+                        font-size: Metrics.font-sm;
+                        color: Colors.muted;
+                        wrap: word-wrap;
+                    }
+
+                    Rectangle {
+                        height: 52px;
+                        border-radius: Metrics.radius-md;
+                        background: Palette.foreground.with-alpha(0.06);
+
+                        Text {
+                            text: SettingsAdapter.github-user-code;
+                            font-size: 22px;
+                            font-weight: 700;
+                            color: Palette.accent-background;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    Text {
+                        text: SettingsAdapter.github-auth-status != "" ? SettingsAdapter.github-auth-status : @tr("Waiting for browser authorization...");
+                        font-size: Metrics.font-sm;
+                        color: Colors.muted;
+                        wrap: word-wrap;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: end;
+                        Button {
+                            text: @tr("Cancel");
+                            clicked => { SettingsAdapter.cancel-github-auth(); }
+                        }
+
+                        Button {
+                            text: @tr("Open in Browser");
+                            primary: true;
+                            clicked => { SettingsAdapter.open-github-browser(); }
+                        }
+                    }
+                }
+            }
+
+            // Tab 1: Forgejo / Gitea
+            if SettingsAdapter.sync-provider-tab == 1: TokenAccountForm {
+                intro: @tr("Connect Codeberg or your self-hosted Forgejo/Gitea instance using a Personal Access Token.");
+                instance-label: @tr("Instance URL");
+                instance-placeholder: "https://codeberg.org";
+                token-label: @tr("Personal Access Token");
+                token-placeholder: @tr("Token with repo and user permissions");
+                instance-draft <=> SettingsAdapter.forgejo-instance-draft;
+                token-draft <=> SettingsAdapter.forgejo-token-draft;
+                repo-draft <=> SettingsAdapter.forgejo-repo-draft;
+                connecting: SettingsAdapter.forgejo-connecting;
+                status-message: SettingsAdapter.forgejo-status-message;
+                status-is-error: SettingsAdapter.forgejo-status-is-error;
+                connect => {
+                    SettingsAdapter.connect-forgejo(
+                        SettingsAdapter.forgejo-instance-draft,
+                        SettingsAdapter.forgejo-token-draft,
+                        SettingsAdapter.forgejo-repo-draft,
+                    );
+                }
+            }
+
+            // Tab 2: GitLab
+            if SettingsAdapter.sync-provider-tab == 2: TokenAccountForm {
+                intro: @tr("Connect to GitLab.com or a self-hosted instance using a Personal Access Token with api scope.");
+                instance-label: @tr("GitLab Instance URL");
+                instance-placeholder: "https://gitlab.com";
+                token-label: @tr("Personal Access Token (api scope)");
+                token-placeholder: @tr("Token with api permission");
+                instance-draft <=> SettingsAdapter.gitlab-instance-draft;
+                token-draft <=> SettingsAdapter.gitlab-token-draft;
+                repo-draft <=> SettingsAdapter.gitlab-repo-draft;
+                connecting: SettingsAdapter.gitlab-connecting;
+                status-message: SettingsAdapter.gitlab-status-message;
+                status-is-error: SettingsAdapter.gitlab-status-is-error;
+                connect => {
+                    SettingsAdapter.connect-gitlab(
+                        SettingsAdapter.gitlab-instance-draft,
+                        SettingsAdapter.gitlab-token-draft,
+                        SettingsAdapter.gitlab-repo-draft,
+                    );
+                }
+            }
+
+            // Tab 3: Custom Git Remote
+            if SettingsAdapter.sync-provider-tab == 3: VerticalLayout {
+                spacing: Metrics.spacing-md;
+
+                Text {
+                    text: @tr("Connect an arbitrary Git repository over HTTPS or SSH.");
+                    font-size: Metrics.font-sm;
+                    color: Colors.muted;
+                    wrap: word-wrap;
+                }
+
+                VerticalLayout {
+                    spacing: 4px;
+                    Text {
+                        text: @tr("Remote repository URL");
+                        font-size: 13px;
+                        color: Colors.muted;
+                    }
+
+                    LineEdit {
+                        height: Metrics.touch;
+                        placeholder-text: @tr("https://git.example.com/notes.git or git@...");
+                        text <=> SettingsAdapter.url-draft;
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 4px;
+                    Text {
+                        text: @tr("Access token (if using HTTPS)");
+                        font-size: 13px;
+                        color: Colors.muted;
+                    }
+
+                    LineEdit {
+                        height: Metrics.touch;
+                        placeholder-text: SettingsAdapter.has-token ? @tr("Leave blank to keep the saved token") : @tr("Personal access token");
+                        input-type: password;
+                        text <=> SettingsAdapter.token-draft;
+                    }
+                }
+
+                if SettingsAdapter.url-draft != "" && (SettingsAdapter.url-draft.starts-with("git@") || SettingsAdapter.url-draft.starts-with("ssh://")): HorizontalLayout {
+                    alignment: center;
+                    spacing: 8px;
+                    Text {
+                        horizontal-stretch: 1;
+                        text: @tr("Using SSH? Ensure your public key is registered on the server.");
+                        font-size: 12px;
+                        color: Colors.muted;
+                        wrap: word-wrap;
+                    }
+
+                    Button {
+                        text: @tr("SSH Key");
+                        clicked => { root.page = 6; }
+                    }
+                }
+
+                if SettingsAdapter.sync-status != "": Text {
+                    text: SettingsAdapter.sync-status;
+                    font-size: 13px;
+                    color: Colors.muted;
+                    wrap: word-wrap;
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: end;
+
+                    Button {
+                        text: @tr("Save Remote");
+                        primary: true;
+                        clicked => {
+                            SettingsAdapter.save-remote(SettingsAdapter.url-draft, SettingsAdapter.token-draft);
+                            SettingsAdapter.adding-account = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
