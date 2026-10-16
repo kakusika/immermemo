@@ -223,11 +223,12 @@ impl MediaSource {
                 };
                 let remote = lfs.with_context(|| {
                     format!(
-                        "{} is a Git LFS pointer ({} bytes, sha256:{}), and this vault has no \
-                         LFS server to fetch it from",
-                        path.display(),
-                        pointer.size,
-                        pointer.oid
+                        "{} is a Git LFS pointer, not the image, and this vault is not linked \
+                         to a remote to fetch it from",
+                        path.file_name().map_or_else(
+                            || path.display().to_string(),
+                            |n| n.to_string_lossy().into_owned()
+                        )
                     )
                 })?;
                 lfs::download(remote, fetcher, &pointer)
@@ -520,7 +521,7 @@ mod tests {
     }
 
     #[test]
-    fn a_vault_file_that_is_an_lfs_pointer_with_no_lfs_server_fails_with_a_clear_reason() {
+    fn a_vault_file_that_is_an_lfs_pointer_with_no_remote_fails_with_a_clear_reason() {
         let (_root, vault) = vault();
         std::fs::write(vault.join("far.png"), POINTER).unwrap();
         let source = MediaSource::resolve("far.png", &vault, Path::new("n.tmt")).unwrap();
@@ -532,8 +533,7 @@ mod tests {
         }
         let error = source.read(&NoNet, None).unwrap_err().to_string();
         assert!(error.contains("Git LFS pointer"), "{error}");
-        assert!(error.contains("no LFS server"), "{error}");
-        assert!(error.contains("563672"), "{error}");
+        assert!(error.contains("not linked to a remote"), "{error}");
     }
 
     #[test]

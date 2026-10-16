@@ -39,7 +39,7 @@ macro_rules! text_setting {
 
 impl AppData {
     fn remote_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
-        Ok(self.vault_data_dir(vault_dir)?.join("remote.txt"))
+        Ok(self.vault_data_dir(vault_dir).join("remote.txt"))
     }
 
     /// The remote URL isn't secret -- it's kept as plain text, separately
@@ -82,7 +82,7 @@ impl AppData {
     }
 
     fn last_note_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
-        Ok(self.vault_data_dir(vault_dir)?.join("last_note.txt"))
+        Ok(self.vault_data_dir(vault_dir).join("last_note.txt"))
     }
 
     pub fn load_last_note(&self, vault_dir: &Path) -> Option<PathBuf> {

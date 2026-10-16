@@ -48,7 +48,14 @@ const REFRESH_DELAY: Duration = Duration::from_millis(50);
 const FETCH_TIMEOUT: Duration = Duration::from_secs(15);
 
 type Wake = Arc<dyn Fn() + Send + Sync>;
-type Finished = (Preset, CacheKey, Result<Thumbnail, String>);
+/// Why an image could not be produced: the whole chain of causes, for the
+/// log, and the root cause alone, short enough for the status line.
+struct Failure {
+    chain: String,
+    cause: String,
+}
+
+type Finished = (Preset, CacheKey, Result<Thumbnail, Failure>);
 
 struct Job {
     lfs: Option<LfsRemote>,
@@ -73,6 +80,8 @@ pub struct Thumbs {
     decoded_wide: RefCell<CLruCache<CacheKey, slint::Image>>,
     pending: RefCell<std::collections::HashSet<CacheKey>>,
     failed: RefCell<HashMap<CacheKey, Instant>>,
+    /// Root causes of failures not yet reported to the user.
+    unreported: RefCell<Vec<String>>,
 }
 
 impl Thumbs {
@@ -96,7 +105,10 @@ impl Thumbs {
                         let result = job
                             .cache
                             .produce(&job.source, job.preset, &*job.fetcher, job.lfs.as_ref())
-                            .map_err(|error| format!("{error:#}"));
+                            .map_err(|error| Failure {
+                                chain: format!("{error:#}"),
+                                cause: error.root_cause().to_string(),
+                            });
                         let _ = job.finished.send((job.preset, job.key, result));
                         (job.wake)();
                     }
@@ -123,6 +135,7 @@ impl Thumbs {
             decoded_wide: RefCell::new(lru(DECODED_WIDE)),
             pending: RefCell::default(),
             failed: RefCell::default(),
+            unreported: RefCell::default(),
         }
     }
 
@@ -184,6 +197,11 @@ impl Thumbs {
         taken
     }
 
+    /// The reasons images failed since the last call, each once.
+    pub fn take_failures(&self) -> Vec<String> {
+        std::mem::take(&mut self.unreported.borrow_mut())
+    }
+
     fn accept(&self, (preset, key, result): Finished) {
         self.pending.borrow_mut().remove(&key);
         match result {
@@ -193,10 +211,16 @@ impl Thumbs {
                     self.decoded(preset).borrow_mut().put(key, image);
                 }
                 None => {
+                    eprintln!("media: the image could not be displayed");
+                    self.unreported
+                        .borrow_mut()
+                        .push("the image could not be displayed".to_owned());
                     self.failed.borrow_mut().insert(key, Instant::now());
                 }
             },
-            Err(_) => {
+            Err(failure) => {
+                eprintln!("media: {}", failure.chain);
+                self.unreported.borrow_mut().push(failure.cause);
                 self.failed.borrow_mut().insert(key, Instant::now());
             }
         }
@@ -365,11 +389,27 @@ pub fn picture(source: &MediaSource, preset: Preset, lfs: Option<&LfsRemote>) ->
         .unwrap_or_default()
 }
 
+/// One line for the status bar about `causes` (one root cause per image that
+/// failed): the first reason, and how many images it was.
+fn failure_summary(causes: &[String]) -> Option<String> {
+    let first = causes.first()?;
+    Some(match causes.len() {
+        1 => format!("Could not load an image: {first}"),
+        n => format!("Could not load {n} images: {first}"),
+    })
+}
+
 fn on_thumbnails_ready() {
     let thumbs = THUMBS.with(|slot| slot.borrow().clone());
     let Some(thumbs) = thumbs else { return };
     if thumbs.take_finished() == 0 {
         return;
+    }
+    // An image that cannot be shown is otherwise just a placeholder: say why.
+    if let Some(summary) = failure_summary(&thumbs.take_failures())
+        && let Some(app) = APP.with(|slot| slot.borrow().as_ref().and_then(|weak| weak.upgrade()))
+    {
+        crate::session::set_error(&app, summary);
     }
     REFRESH.with(|timer| {
         if !timer.running() {
@@ -567,6 +607,30 @@ pub(crate) mod tests {
         again.settle();
         assert!(again.picture(&source, Preset::Thumb, None).size().width > 0);
         assert_eq!(server.requests.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn a_failure_is_kept_for_the_user_with_its_root_cause_and_reported_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let (thumbs, _) = pipeline(dir.path(), None);
+        let source = MediaSource::Remote("https://example.com/down.png".to_owned());
+        thumbs.picture(&source, Preset::Thumb, None);
+        thumbs.settle();
+        assert_eq!(thumbs.take_failures(), vec!["offline".to_owned()]);
+        assert!(thumbs.take_failures().is_empty(), "reported once");
+    }
+
+    #[test]
+    fn the_status_line_names_how_many_images_failed_and_the_first_reason() {
+        assert_eq!(failure_summary(&[]), None);
+        assert_eq!(
+            failure_summary(&["offline".to_owned()]).as_deref(),
+            Some("Could not load an image: offline")
+        );
+        assert_eq!(
+            failure_summary(&["offline".to_owned(), "timed out".to_owned()]).as_deref(),
+            Some("Could not load 2 images: offline")
+        );
     }
 
     #[test]

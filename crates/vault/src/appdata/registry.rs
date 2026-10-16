@@ -6,6 +6,17 @@ use std::path::{Path, PathBuf};
 
 use super::{AppData, read_trimmed, write};
 
+/// Whether `a` and `b` are the same vault folder: the same path, or two paths
+/// that both exist and lead to one folder. Two paths that no longer exist are
+/// not the same vault merely because neither can be resolved.
+fn same_vault(a: &Path, b: &Path) -> bool {
+    a == b
+        || matches!(
+            (a.canonicalize(), b.canonicalize()),
+            (Ok(a), Ok(b)) if a == b
+        )
+}
+
 impl AppData {
     fn vault_list_file(&self) -> PathBuf {
         self.base.join("vaults.txt")
@@ -19,16 +30,19 @@ impl AppData {
             .unwrap_or_default()
     }
 
-    /// Adds `vault_dir` to the known list, if it isn't there already.
-    /// `vault_dir` must already exist -- its canonical form is what
-    /// dedupes and keys its private files, and canonicalizing a path that
-    /// isn't there yet fails.
+    /// Adds `vault_dir` to the known list, if it isn't there already -- as
+    /// its canonical path when the folder exists, so that one folder is one
+    /// spelling however it was reached (a symlink, a `..`), and its private
+    /// files keep the same key if the folder later goes missing.
     pub fn add_vault(&self, vault_dir: &Path) -> anyhow::Result<()> {
+        let vault_dir = vault_dir
+            .canonicalize()
+            .unwrap_or_else(|_| vault_dir.to_owned());
         let mut vaults = self.known_vaults();
-        if vaults.iter().any(|v| v == vault_dir) {
+        if vaults.iter().any(|v| same_vault(v, &vault_dir)) {
             return Ok(());
         }
-        vaults.push(vault_dir.to_owned());
+        vaults.push(vault_dir);
         let content = vaults
             .iter()
             .map(|p| p.display().to_string())
@@ -43,7 +57,7 @@ impl AppData {
     pub fn remove_vault(&self, vault_dir: &Path) -> anyhow::Result<()> {
         let mut vaults = self.known_vaults();
         let len_before = vaults.len();
-        vaults.retain(|v| v != vault_dir && v.canonicalize().ok() != vault_dir.canonicalize().ok());
+        vaults.retain(|v| !same_vault(v, vault_dir));
         if vaults.len() == len_before {
             return Ok(());
         }
@@ -55,16 +69,12 @@ impl AppData {
         write(&self.vault_list_file(), &content)?;
 
         // Wipe that vault's private data (git, remote.txt, token)
-        if let Ok(data_dir) = self.vault_data_dir(vault_dir) {
-            let _ = std::fs::remove_dir_all(&data_dir);
-        }
+        let _ = std::fs::remove_dir_all(self.vault_data_dir(vault_dir));
 
         // If the removed vault was the current vault, update or clear current_vault.txt
-        if self.load_current_vault().as_deref() == Some(vault_dir)
-            || self
-                .load_current_vault()
-                .and_then(|v| v.canonicalize().ok())
-                == vault_dir.canonicalize().ok()
+        if self
+            .load_current_vault()
+            .is_some_and(|current| same_vault(&current, vault_dir))
         {
             if let Some(first) = vaults.first() {
                 let _ = self.save_current_vault(first);

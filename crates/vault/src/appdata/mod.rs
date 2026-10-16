@@ -142,7 +142,7 @@ mod tests {
             .unwrap();
         data.save_current_vault(a.path()).unwrap();
 
-        let a_data_dir = data.vault_data_dir(a.path()).unwrap();
+        let a_data_dir = data.vault_data_dir(a.path());
         assert!(a_data_dir.exists());
 
         data.remove_vault(a.path()).unwrap();
@@ -283,5 +283,98 @@ mod tests {
         let updated_repo = git2::Repository::open(vault.path()).unwrap();
         let remote = updated_repo.find_remote("origin").unwrap();
         assert_eq!(remote.url(), Some("https://github.com/example/updated.git"));
+    }
+
+    #[test]
+    fn paths_that_differ_only_by_a_separator_do_not_share_private_data() {
+        let data = AppData::new(PathBuf::from("/appdata"));
+        // Neither folder exists: the key must not depend on them existing.
+        let underscore = data.vault_data_dir(Path::new("/srv/a_b"));
+        let nested = data.vault_data_dir(Path::new("/srv/a/b"));
+        assert_ne!(underscore, nested);
+        // Still readable at a glance, and a bounded length however deep the path.
+        assert!(underscore.ends_with(format!("a_b-{}", key_hash("/srv/a_b"))));
+        let deep = "/x".repeat(500);
+        assert!(
+            data.vault_data_dir(Path::new(&deep))
+                .file_name()
+                .unwrap()
+                .len()
+                < 60
+        );
+    }
+
+    fn key_hash(path: &str) -> String {
+        let key = AppData::vault_key(Path::new(path));
+        key.rsplit('-').next().unwrap().to_owned()
+    }
+
+    #[test]
+    fn a_vault_whose_folder_went_missing_keeps_its_private_data_and_it_can_be_wiped() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().join("appdata"));
+        let vault = dir.path().join("drive/notes");
+        std::fs::create_dir_all(&vault).unwrap();
+        data.add_vault(&vault).unwrap();
+        data.save_remote(&vault, "https://example.invalid/notes.git")
+            .unwrap();
+        let registered = data.known_vaults().remove(0);
+        let data_dir = data.vault_data_dir(&registered);
+        assert!(data_dir.exists());
+
+        // The drive is unmounted: the folder is gone.
+        std::fs::remove_dir_all(dir.path().join("drive")).unwrap();
+        assert_eq!(
+            data.vault_data_dir(&registered),
+            data_dir,
+            "same key without the folder"
+        );
+        assert_eq!(
+            data.load_remote(&registered).as_deref(),
+            Some("https://example.invalid/notes.git")
+        );
+
+        data.remove_vault(&registered).unwrap();
+        assert!(
+            !data_dir.exists(),
+            "its private data is wiped even though the folder is gone"
+        );
+    }
+
+    #[test]
+    fn removing_a_missing_vault_removes_only_that_vault() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().join("appdata"));
+        // Two registered vaults whose folders are both gone.
+        std::fs::write(
+            dir.path().join("appdata/vaults.txt"),
+            "/gone/one\n/gone/two\n",
+        )
+        .ok();
+        std::fs::create_dir_all(dir.path().join("appdata")).unwrap();
+        std::fs::write(
+            dir.path().join("appdata/vaults.txt"),
+            "/gone/one\n/gone/two",
+        )
+        .unwrap();
+        data.remove_vault(Path::new("/gone/one")).unwrap();
+        assert_eq!(data.known_vaults(), vec![PathBuf::from("/gone/two")]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn one_folder_reached_two_ways_is_one_vault() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().join("appdata"));
+        let vault = dir.path().join("notes");
+        std::fs::create_dir_all(&vault).unwrap();
+        let alias = dir.path().join("alias");
+        std::os::unix::fs::symlink(&vault, &alias).unwrap();
+
+        data.add_vault(&vault).unwrap();
+        data.add_vault(&alias).unwrap();
+        data.add_vault(&dir.path().join("notes/../notes")).unwrap();
+        assert_eq!(data.known_vaults(), vec![vault.canonicalize().unwrap()]);
+        assert_eq!(data.vault_data_dir(&vault), data.vault_data_dir(&alias));
     }
 }

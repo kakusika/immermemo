@@ -18,7 +18,7 @@ use crate::{
     App, SettingsAdapter, TokenStoreFactory, action, callbacks, provider, session, theme, transfer,
     update_provider_ui_state,
 };
-use immermemo_core::AppData;
+use immermemo_core::{AppData, StartVault};
 
 /// Where a vault's access token would live under `app_data_base`, without
 /// needing a running [`Session`] -- for a caller of [`run`] building its
@@ -53,12 +53,11 @@ fn select_system_translation() {
 
 /// Opens the window and runs until it is closed.
 ///
-/// `default_vault_dir` only matters the very first time the app ever
-/// runs (nothing in `app_data_base` yet): it becomes the first known
-/// vault, so a fresh desktop CLI invocation or a fresh Android install
-/// still opens straight onto a vault the way a single-vault build used
-/// to. After that, which vaults exist and which one is current come
-/// entirely from `app_data_base`.
+/// Which vaults exist and which one is current come from `app_data_base`
+/// (see [`immermemo_core::Session::start`]); `start` only adds to that: where
+/// a vault is created when none can be opened (a fresh install), and a folder
+/// the user asked to open. If the vault the app was on could not be opened,
+/// the status line says so.
 ///
 /// `app_data_base` is this platform's private storage for everything that
 /// isn't a note: each vault's own private gitdir, remote URL and (outside
@@ -69,17 +68,13 @@ fn select_system_translation() {
 /// the current vault changes, since a different vault can need a
 /// completely different store.
 pub fn run(
-    default_vault_dir: PathBuf,
+    start: StartVault,
     app_data_base: PathBuf,
     token_store_for: TokenStoreFactory,
     initial_note_path: Option<PathBuf>,
     initial_import_uri: Option<String>,
 ) -> anyhow::Result<()> {
-    let core = immermemo_core::Session::start(
-        AppData::new(app_data_base),
-        token_store_for,
-        default_vault_dir,
-    )?;
+    let core = immermemo_core::Session::start(AppData::new(app_data_base), token_store_for, start)?;
 
     let app = App::new()?;
     #[cfg(target_os = "android")]
@@ -101,6 +96,9 @@ pub fn run(
     let session = Rc::new(RefCell::new(Session::new(core)));
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
     show_initial_notes(&app, &session, initial_note_path.as_deref());
+    if let Some(notice) = session.borrow().startup_notice.clone() {
+        session::set_error(&app, notice);
+    }
 
     callbacks::bind_note_callbacks(&app, &session);
     callbacks::bind_appearance_callbacks(

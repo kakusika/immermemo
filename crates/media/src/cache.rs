@@ -410,7 +410,10 @@ mod tests {
         let error = no_remote
             .produce(&source, Preset::Thumb, &server, None)
             .unwrap_err();
-        assert!(error.to_string().contains("no LFS server"), "{error:#}");
+        assert!(
+            error.to_string().contains("not linked to a remote"),
+            "{error:#}"
+        );
 
         // A server that answers with other bytes of the same length.
         let other_dir = TempDir::new().unwrap();

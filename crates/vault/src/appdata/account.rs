@@ -88,7 +88,7 @@ impl AppData {
     }
 
     fn vault_account_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
-        Ok(self.vault_data_dir(vault_dir)?.join("account_id.txt"))
+        Ok(self.vault_data_dir(vault_dir).join("account_id.txt"))
     }
 
     /// Returns the account ID linked to this vault, if any.

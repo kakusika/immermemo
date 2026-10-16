@@ -21,7 +21,10 @@ pub fn android_main(app: slint::android::AndroidApp) {
     let base = app
         .internal_data_path()
         .expect("the app has private storage");
-    let default_vault_dir = base.join("notes");
+    let start = crate::StartVault {
+        first_run: base.join("notes"),
+        open: None,
+    };
     let app_data = AppData::new(base.clone());
     let vm_ptr = app.vm_as_ptr();
     let activity_ptr = app.activity_as_ptr();
@@ -43,7 +46,7 @@ pub fn android_main(app: slint::android::AndroidApp) {
         read_launch_import_uri(),
     );
     run(
-        default_vault_dir,
+        start,
         base,
         token_store_for,
         initial_note_path,

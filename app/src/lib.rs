@@ -1,6 +1,7 @@
 pub mod action;
 pub mod avatar;
 mod callbacks;
+pub mod cli;
 mod note_icon;
 mod platform;
 mod provider;
@@ -13,7 +14,7 @@ mod thumbs;
 pub mod transfer;
 
 pub use action::apply_bottom_bar_config;
-pub use immermemo_core::{TokenStore, TokenStoreFactory};
+pub use immermemo_core::{StartVault, TokenStore, TokenStoreFactory};
 pub use platform::cert;
 pub use provider::update_provider_ui_state;
 pub use startup::{desktop_app_data_dir, run, token_path_in};

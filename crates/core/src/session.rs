@@ -74,6 +74,20 @@ pub struct Session {
     pub current_folder: String,
     pub directory_source: Vec<(String, i32, bool)>,
     pub note_nav: BackForwardStack,
+    /// Something the user should be told about how the app started (the vault
+    /// they were on could not be opened), if anything.
+    pub startup_notice: Option<String>,
+}
+
+/// Which vault the app starts on, beyond what it remembers.
+#[derive(Debug, Clone)]
+pub struct StartVault {
+    /// Where a vault is created when none of the known vaults can be opened
+    /// (a fresh install, or every vault's folder missing). Used only then.
+    pub first_run: PathBuf,
+    /// A folder the user asked to open (`immermemo <dir>`): created if it is
+    /// missing, registered if it is new, and made the current vault.
+    pub open: Option<PathBuf>,
 }
 
 impl Session {
@@ -109,36 +123,73 @@ impl Session {
             current_folder: String::new(),
             directory_source: Vec::new(),
             note_nav: BackForwardStack::default(),
+            startup_notice: None,
         }
     }
 
-    /// Opens the session the app starts with: the vault that was current last
-    /// time (or the first known one), its token store, remote and note index.
+    /// Opens the session the app starts with.
     ///
-    /// `default_vault_dir` only matters the very first time the app runs
-    /// (no vault known yet): it becomes the first known vault, so a fresh
-    /// install still opens straight onto a vault.
+    /// Which vault that is comes from the registry: the one that was current
+    /// last time, or else the first known one whose folder exists. A vault
+    /// whose folder is missing (an unmounted drive) is skipped, never
+    /// created, and stays registered and current for the next launch;
+    /// [`Session::startup_notice`] says it was skipped. Only when no known
+    /// vault can be opened is `start.first_run` created and registered.
+    ///
+    /// `start.open` is the user asking for a folder: it is created if need be,
+    /// registered, and becomes the current vault (and stays it).
     pub fn start(
         app_data: AppData,
         token_store_for: TokenStoreFactory,
-        default_vault_dir: PathBuf,
+        start: StartVault,
     ) -> anyhow::Result<Self> {
-        let mut known_vaults = app_data.known_vaults();
-        if known_vaults.is_empty() {
-            std::fs::create_dir_all(&default_vault_dir)?;
-            app_data.add_vault(&default_vault_dir)?;
-            known_vaults.push(default_vault_dir);
+        if let Some(dir) = &start.open {
+            std::fs::create_dir_all(dir)?;
+            app_data.add_vault(dir)?;
+            app_data.save_current_vault(&dir.canonicalize()?)?;
         }
-        let vault_dir = app_data
+
+        let known_vaults = app_data.known_vaults();
+        let remembered = app_data
             .load_current_vault()
-            .filter(|v| known_vaults.contains(v))
-            .unwrap_or_else(|| known_vaults[0].clone());
-        std::fs::create_dir_all(&vault_dir)?;
+            .filter(|v| known_vaults.contains(v));
+        let in_order = remembered.iter().chain(
+            known_vaults
+                .iter()
+                .filter(|v| Some(*v) != remembered.as_ref()),
+        );
+        let (vault_dir, notice) = match in_order.clone().find(|v| v.is_dir()) {
+            Some(vault_dir) => {
+                let skipped = in_order.take_while(|v| *v != vault_dir).count();
+                let notice = (skipped > 0).then(|| {
+                    let first = remembered.as_ref().unwrap_or(&known_vaults[0]);
+                    format!(
+                        "The vault \"{}\" is not available (its folder is missing); opened \"{}\" instead.",
+                        vault_display_name(first),
+                        vault_display_name(vault_dir)
+                    )
+                });
+                (vault_dir.clone(), notice)
+            }
+            None => {
+                std::fs::create_dir_all(&start.first_run)?;
+                app_data.add_vault(&start.first_run)?;
+                let vault_dir = start.first_run.canonicalize()?;
+                let notice = (!known_vaults.is_empty()).then(|| {
+                    format!(
+                        "None of your vaults are available (their folders are missing); opened a new vault \"{}\".",
+                        vault_dir.display()
+                    )
+                });
+                (vault_dir, notice)
+            }
+        };
+        let known_vaults = app_data.known_vaults();
 
         let token_store = token_store_for(&vault_dir)?;
         let remote = app_data.load_remote(&vault_dir);
         let index = Self::open_index(&app_data, &vault_dir);
-        Ok(Self::new(
+        let mut session = Self::new(
             vault_dir,
             app_data,
             token_store,
@@ -146,7 +197,9 @@ impl Session {
             known_vaults,
             remote,
             index,
-        ))
+        );
+        session.startup_notice = notice;
+        Ok(session)
     }
 
     /// The note index for `vault_dir`, kept on disk -- or, if that database
@@ -1014,35 +1067,141 @@ mod tests {
         assert_eq!(find("missing"), None);
     }
 
+    /// A start with nothing special asked for.
+    fn plain(first_run: &Path) -> StartVault {
+        StartVault {
+            first_run: first_run.to_owned(),
+            open: None,
+        }
+    }
+
+    fn factory() -> TokenStoreFactory {
+        Box::new(|_| Ok(Arc::new(DummyTokenStore) as Arc<dyn TokenStore>))
+    }
+
     #[test]
-    fn starting_opens_the_default_vault_first_and_the_saved_current_one_after() {
+    fn a_fresh_install_gets_the_first_run_vault_and_no_notice() {
+        let tmp = TempDir::new().unwrap();
+        let data = AppData::new(tmp.path().join("data"));
+        let first = tmp.path().join("first");
+
+        let session = Session::start(data, factory(), plain(&first)).unwrap();
+        assert_eq!(session.vault_dir, first.canonicalize().unwrap());
+        assert_eq!(session.known_vaults, vec![first.canonicalize().unwrap()]);
+        assert!(first.is_dir(), "the first-run folder is created");
+        assert_eq!(session.startup_notice, None);
+    }
+
+    #[test]
+    fn a_later_launch_honors_the_saved_vault_and_ignores_the_first_run_folder() {
         let tmp = TempDir::new().unwrap();
         let data = || AppData::new(tmp.path().join("data"));
-        let factory = || -> TokenStoreFactory {
-            Box::new(|_| Ok(Arc::new(DummyTokenStore) as Arc<dyn TokenStore>))
-        };
         let (first, second) = (tmp.path().join("first"), tmp.path().join("second"));
+        Session::start(data(), factory(), plain(&first)).unwrap();
 
-        let session = Session::start(data(), factory(), first.clone()).unwrap();
-        assert_eq!(session.vault_dir, first);
-        assert_eq!(session.known_vaults, vec![first.clone()]);
-        assert!(first.is_dir(), "the vault folder is created");
-
-        // A later launch ignores the default and honors the saved choice.
-        let app_data = data();
         std::fs::create_dir_all(&second).unwrap();
-        app_data.add_vault(&second).unwrap();
-        app_data.save_current_vault(&second).unwrap();
-        let session = Session::start(data(), factory(), first.clone()).unwrap();
-        assert_eq!(session.vault_dir, second);
+        data().add_vault(&second).unwrap();
+        data()
+            .save_current_vault(&second.canonicalize().unwrap())
+            .unwrap();
+        let session = Session::start(data(), factory(), plain(&first)).unwrap();
+        assert_eq!(session.vault_dir, second.canonicalize().unwrap());
+        assert_eq!(session.known_vaults.len(), 2);
+        assert_eq!(session.startup_notice, None);
+
+        // A saved vault that is not known at all falls back to the first one.
+        data().save_current_vault(&tmp.path().join("gone")).unwrap();
+        let session = Session::start(data(), factory(), plain(&first)).unwrap();
+        assert_eq!(session.vault_dir, first.canonicalize().unwrap());
+        assert_eq!(session.startup_notice, None);
+    }
+
+    #[test]
+    fn a_vault_whose_folder_is_missing_is_skipped_not_created_and_stays_current() {
+        let tmp = TempDir::new().unwrap();
+        let data = || AppData::new(tmp.path().join("data"));
+        let (drive, local) = (tmp.path().join("drive/notes"), tmp.path().join("local"));
+        std::fs::create_dir_all(&drive).unwrap();
+        std::fs::create_dir_all(&local).unwrap();
+        data().add_vault(&drive).unwrap();
+        data().add_vault(&local).unwrap();
+        let drive = drive.canonicalize().unwrap();
+        data().save_current_vault(&drive).unwrap();
+
+        // The drive is unmounted.
+        std::fs::remove_dir_all(tmp.path().join("drive")).unwrap();
+        let session = Session::start(data(), factory(), plain(&tmp.path().join("fresh"))).unwrap();
+
+        assert_eq!(session.vault_dir, local.canonicalize().unwrap());
+        let notice = session.startup_notice.expect("the user is told");
+        assert!(
+            notice.contains("notes") && notice.contains("local"),
+            "{notice}"
+        );
+        assert!(
+            !drive.exists(),
+            "a registered vault's folder is never created"
+        );
+        assert!(
+            !tmp.path().join("fresh").exists(),
+            "nor is the first-run one"
+        );
+        assert_eq!(
+            data().load_current_vault(),
+            Some(drive),
+            "the saved choice is kept"
+        );
+        assert_eq!(session.known_vaults.len(), 2, "and it stays registered");
+    }
+
+    #[test]
+    fn with_every_vault_missing_the_first_run_vault_is_created_and_the_user_told() {
+        let tmp = TempDir::new().unwrap();
+        let data = || AppData::new(tmp.path().join("data"));
+        let gone = tmp.path().join("gone");
+        std::fs::create_dir_all(&gone).unwrap();
+        data().add_vault(&gone).unwrap();
+        std::fs::remove_dir_all(&gone).unwrap();
+
+        let first = tmp.path().join("fresh");
+        let session = Session::start(data(), factory(), plain(&first)).unwrap();
+        assert_eq!(session.vault_dir, first.canonicalize().unwrap());
+        assert!(
+            session
+                .startup_notice
+                .unwrap()
+                .contains("None of your vaults")
+        );
+        assert_eq!(session.known_vaults.len(), 2);
+    }
+
+    #[test]
+    fn asking_for_a_folder_registers_it_makes_it_current_and_it_stays() {
+        let tmp = TempDir::new().unwrap();
+        let data = || AppData::new(tmp.path().join("data"));
+        let (first, wanted) = (tmp.path().join("first"), tmp.path().join("wanted"));
+        Session::start(data(), factory(), plain(&first)).unwrap();
+
+        let open = StartVault {
+            first_run: first.clone(),
+            open: Some(wanted.clone()),
+        };
+        let session = Session::start(data(), factory(), open).unwrap();
+        assert_eq!(session.vault_dir, wanted.canonicalize().unwrap());
+        assert!(wanted.is_dir(), "an explicit request creates the folder");
         assert_eq!(session.known_vaults.len(), 2);
 
-        // A saved vault that is no longer known falls back to the first one.
-        app_data
-            .save_current_vault(&tmp.path().join("gone"))
-            .unwrap();
-        let session = Session::start(data(), factory(), first.clone()).unwrap();
-        assert_eq!(session.vault_dir, first);
+        // The next plain launch remembers it.
+        let session = Session::start(data(), factory(), plain(&first)).unwrap();
+        assert_eq!(session.vault_dir, wanted.canonicalize().unwrap());
+
+        // Asking again for a known folder (by another spelling) adds nothing.
+        let again = StartVault {
+            first_run: first,
+            open: Some(tmp.path().join("wanted/../wanted")),
+        };
+        let session = Session::start(data(), factory(), again).unwrap();
+        assert_eq!(session.known_vaults.len(), 2);
     }
 
     #[test]

@@ -1,23 +1,14 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use immermemo_core::{PlainFileTokenStore, TokenStore, TokenStoreFactory};
 
 fn main() -> anyhow::Result<()> {
-    let mut args = std::env::args().skip(1);
-    let first = args.next();
-    let (default_vault_dir, initial_import_uri) = match first {
-        Some(arg) if arg.starts_with("immermemo://") => {
-            let app_data = immermemo::desktop_app_data_dir()?;
-            let default_dir = app_data.join("notes");
-            (default_dir, Some(arg))
-        }
-        Some(dir) => {
-            let second = args.next().filter(|a| a.starts_with("immermemo://"));
-            (PathBuf::from(dir), second)
-        }
-        None => anyhow::bail!("usage: immermemo <notes-dir> [immermemo://import#...]"),
-    };
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.iter().any(|a| a == "-h" || a == "--help") {
+        println!("{}", immermemo::cli::USAGE);
+        return Ok(());
+    }
+    let launch = immermemo::cli::parse_args(args).map_err(anyhow::Error::msg)?;
     let app_data = immermemo::desktop_app_data_dir()?;
     // Plaintext, unlike Android's Keystore-backed store: fine for trying the
     // sync loop out on desktop, not for anything real.
@@ -26,11 +17,9 @@ fn main() -> anyhow::Result<()> {
         let path = immermemo::token_path_in(&base, vault_dir)?;
         Ok(Arc::new(PlainFileTokenStore::new(path)) as Arc<dyn TokenStore>)
     });
-    immermemo::run(
-        default_vault_dir,
-        app_data,
-        token_store_for,
-        None,
-        initial_import_uri,
-    )
+    let start = immermemo::StartVault {
+        first_run: app_data.join("notes"),
+        open: launch.open,
+    };
+    immermemo::run(start, app_data, token_store_for, None, launch.import_uri)
 }
