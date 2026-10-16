@@ -1,9 +1,10 @@
 //! Android entry point, platform keystore, the startup-splash handoff,
-//! and system UI (status bar) visibility.
+//! shared-storage access, and system UI (status bar) visibility.
 
 pub mod activity;
 pub mod keystore;
 pub mod splash;
+pub mod storage_access;
 pub mod system_ui;
 
 use std::sync::Arc;

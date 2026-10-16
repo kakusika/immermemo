@@ -28,6 +28,9 @@ import {
 export { PickerIconEntry } from "sheets/icon_picker.slint";
 import { NoteIconKind, NoteIconView } from "widgets/note_icon.slint";
 import { NoteBannerView } from "widgets/note_banner.slint";
+import { VaultSetupSheet } from "sheets/vault_setup.slint";
+import { AddVaultAdapter, RepoRow } from "adapters/add_vault.slint";
+export { AddVaultAdapter, RepoRow }
 export { NoteIconKind, NoteIconView, NoteBannerView }
 import { NotePropertyEntry } from "pages/editor/properties.slint";
 export { NotePropertyEntry }
@@ -338,8 +341,9 @@ export component App inherits Window {
     }
     changed theme-choice => { root.apply-theme-choice(); }
 
-    in-out property <bool> add-vault-open: false;
-    in-out property <string> add-vault-draft;
+    // The vault setup sheet (add a vault / set up one's sync); its form is
+    // `AddVaultAdapter`.
+    in-out property <bool> vault-setup-open: false;
     in property <length> extra-inset-top: 0px;
     in property <length> extra-inset-bottom: 0px;
 
@@ -390,9 +394,10 @@ export component App inherits Window {
     callback icon-picker-query-changed(string);
     callback icon-picker-select(string);
     callback open-vault-sheet();
+    // Opens the sync settings of the open vault (account and repository).
+    callback open-sync-settings();
     callback switch-vault(int);
     callback add-vault-requested();
-    callback confirm-add-vault(string);
     callback delete-vault-requested(int);
     callback confirm-delete-vault();
     callback resolve-mine();
@@ -420,8 +425,12 @@ export component App inherits Window {
             root.delete-vault-confirm-open = false;
             return true;
         }
-        if (root.add-vault-open) {
-            root.add-vault-open = false;
+        if (root.vault-setup-open) {
+            if (AddVaultAdapter.page == 1) {
+                AddVaultAdapter.page = 0;
+            } else {
+                root.vault-setup-open = false;
+            }
             return true;
         }
         if (root.rename-open) {
@@ -623,10 +632,7 @@ export component App inherits Window {
                 open-settings => {
                     root.open-settings-sheet();
                 }
-                open-account-settings => {
-                    root.settings-page = 2;
-                    root.open-settings-sheet();
-                }
+                open-account-settings => { root.open-sync-settings(); }
                 open-vault-history => { root.open-vault-history(); }
                 open-conflict-note => {
                     root.open-conflict-note();
@@ -1146,11 +1152,10 @@ export component App inherits Window {
             }
 
             ActionRow {
-                text: SettingsAdapter.current-vault-has-account ? @tr("Account Settings") : @tr("Connect Account");
+                text: @tr("Sync Settings");
                 clicked => {
                     root.vault-menu-open = false;
-                    root.settings-page = 2;
-                    root.open-settings-sheet();
+                    root.open-sync-settings();
                 }
             }
 
@@ -1301,17 +1306,24 @@ export component App inherits Window {
             cancel => { root.delete-vault-confirm-open = false; }
         }
 
-        TextInputDialog {
-            open: root.add-vault-open;
-            narrow: root.narrow;
-            title: @tr("Add vault");
-            text-draft <=> root.add-vault-draft;
-            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
-            save(input) => {
-                root.add-vault-open = false;
-                root.confirm-add-vault(input);
+        vault-setup-host := SheetHost {
+            open: root.vault-setup-open;
+            travel: root.height;
+            close => { root.vault-setup-open = false; }
+            haptic => { root.trigger-haptic(); }
+
+            VaultSetupSheet {
+                width: 100%;
+                height: 100%;
+                sheet-progress: vault-setup-host.progress;
+                sheet-y-offset: vault-setup-host.y-offset;
+                sheet-drag-moved(dy) => { vault-setup-host.moved(dy); }
+                sheet-drag-swiped(dy, v) => { vault-setup-host.swiped(dy, v); }
+                sheet-drag-cancelled => { vault-setup-host.cancelled(); }
+                inset-top: root.inset-top;
+                inset-bottom: root.inset-bottom;
+                typing: root.keyboard > 0px;
             }
-            cancel => { root.add-vault-open = false; }
         }
 
         if root.conflict-sheet-open: ConflictSheet {

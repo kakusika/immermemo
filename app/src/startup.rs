@@ -16,7 +16,6 @@ use crate::session::{
 };
 use crate::{
     App, SettingsAdapter, TokenStoreFactory, action, callbacks, provider, session, theme, transfer,
-    update_provider_ui_state,
 };
 use immermemo_core::{AppData, StartVault};
 
@@ -108,6 +107,7 @@ pub fn run(
         status_bar_choice_cell,
     );
     callbacks::bind_vault_callbacks(&app, &session);
+    callbacks::bind_vault_setup_callbacks(&app, &session);
     callbacks::bind_account_callbacks(&app, &session);
     callbacks::bind_sync_conflict_callbacks(&app, &session);
     callbacks::bind_selection_callbacks(&app, &session);
@@ -135,7 +135,6 @@ fn show_saved_settings(app: &App, core: &immermemo_core::Session, appearance: &t
     action::apply_home_actions_config(&settings, &home_actions_config);
     session::show_vault_identity(app, &core.vault_dir);
     app.set_remote_configured(core.remote.is_some());
-    update_provider_ui_state(app, core.remote.as_deref());
     let ssh_pub = core.app_data.load_ssh_public_key();
     settings.set_ssh_key_present(ssh_pub.is_some());
     settings.set_ssh_public_key(ssh_pub.unwrap_or_default().into());

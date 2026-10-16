@@ -73,8 +73,10 @@ export component VaultsPage inherits SettingsPage {
                             provider: v.account-provider;
                             avatar-size: 26px;
                         }
+                        // No account: a cloud when it syncs to a typed remote,
+                        // a crossed-out one when it does not sync at all.
                         if !v.has-account: Icon {
-                            source: v.is-current ? TablerIcons.folder-check : TablerIcons.folder;
+                            source: v.syncs ? TablerIcons.cloud : TablerIcons.cloud-off;
                             width: 22px;
                             height: 22px;
                             color: v.is-current ? Palette.accent-background : Colors.muted;

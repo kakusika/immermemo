@@ -16,7 +16,6 @@ pub mod transfer;
 pub use action::apply_bottom_bar_config;
 pub use immermemo_core::{StartVault, TokenStore, TokenStoreFactory};
 pub use platform::cert;
-pub use provider::update_provider_ui_state;
 pub use startup::{desktop_app_data_dir, run, token_path_in};
 pub use thumbs::MediaBase;
 pub use transfer::handle_incoming_import_uri;

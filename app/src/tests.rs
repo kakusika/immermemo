@@ -44,7 +44,6 @@ fn ui_helpers_and_conflict_resolution() {
     bundled_japanese_translation_is_discoverable_at_runtime();
     desktop_app_data_dir_resolves_sensible_path();
     deep_link_import_preview_opens_settings_sheet(&app);
-    provider_ui_state_tracks_github_forgejo_and_gitlab(&app);
     bottom_bar_config_applies_to_settings(&app);
     home_actions_config_applies_to_settings(&app);
 
@@ -693,59 +692,6 @@ fn deep_link_import_preview_opens_settings_sheet(app: &App) {
     );
     assert!(settings.get_preview_has_token());
     assert!(pending.borrow().is_some());
-}
-
-fn provider_ui_state_tracks_github_forgejo_and_gitlab(app: &App) {
-    let settings = app.global::<SettingsAdapter>();
-    // GitHub remote
-    update_provider_ui_state(app, Some("https://github.com/octocat/notes.git"));
-    assert!(settings.get_github_connected());
-    assert_eq!(settings.get_github_username(), "octocat");
-    assert_eq!(settings.get_github_repo_name(), "notes");
-    assert!(!settings.get_forgejo_connected());
-    assert!(!settings.get_gitlab_connected());
-
-    // Forgejo / Codeberg remote
-    update_provider_ui_state(app, Some("https://codeberg.org/alice/immermemo-vault.git"));
-    assert!(!settings.get_github_connected());
-    assert!(settings.get_forgejo_connected());
-    assert_eq!(settings.get_forgejo_username(), "alice");
-    assert_eq!(settings.get_forgejo_instance(), "codeberg.org");
-    assert_eq!(settings.get_forgejo_repo_name(), "immermemo-vault");
-    assert!(!settings.get_gitlab_connected());
-
-    // Custom self-hosted Forgejo remote
-    update_provider_ui_state(app, Some("https://git.example.com:3000/bob/my-notes"));
-    assert!(!settings.get_github_connected());
-    assert!(settings.get_forgejo_connected());
-    assert_eq!(settings.get_forgejo_username(), "bob");
-    assert_eq!(settings.get_forgejo_instance(), "git.example.com:3000");
-    assert_eq!(settings.get_forgejo_repo_name(), "my-notes");
-    assert!(!settings.get_gitlab_connected());
-
-    // GitLab.com remote
-    update_provider_ui_state(app, Some("https://gitlab.com/charlie/notes.git"));
-    assert!(!settings.get_github_connected());
-    assert!(!settings.get_forgejo_connected());
-    assert!(settings.get_gitlab_connected());
-    assert_eq!(settings.get_gitlab_username(), "charlie");
-    assert_eq!(settings.get_gitlab_instance(), "gitlab.com");
-    assert_eq!(settings.get_gitlab_repo_name(), "notes");
-
-    // Self-hosted GitLab remote with nested groups
-    update_provider_ui_state(app, Some("git@gitlab.company.org:subgroup/team/notes.git"));
-    assert!(!settings.get_github_connected());
-    assert!(!settings.get_forgejo_connected());
-    assert!(settings.get_gitlab_connected());
-    assert_eq!(settings.get_gitlab_username(), "subgroup/team");
-    assert_eq!(settings.get_gitlab_instance(), "gitlab.company.org");
-    assert_eq!(settings.get_gitlab_repo_name(), "notes");
-
-    // Disconnected
-    update_provider_ui_state(app, None);
-    assert!(!settings.get_github_connected());
-    assert!(!settings.get_forgejo_connected());
-    assert!(!settings.get_gitlab_connected());
 }
 
 fn bottom_bar_config_applies_to_settings(app: &App) {

@@ -7,7 +7,6 @@ use std::rc::Rc;
 use slint::{ComponentHandle, SharedString};
 
 use crate::session::{self};
-use crate::update_provider_ui_state;
 use crate::{App, SettingsAdapter};
 
 thread_local! {
@@ -225,11 +224,6 @@ pub fn bind_transfer_callbacks(
                     if result.remote_updated {
                         s.remote = s.app_data.load_remote(&s.vault_dir);
                         app.set_remote_configured(s.remote.is_some());
-                        update_provider_ui_state(&app, s.remote.as_deref());
-                        settings.set_url_draft(s.remote.clone().unwrap_or_default().into());
-                    }
-                    if result.token_updated {
-                        settings.set_has_token(true);
                     }
                 }
                 Err(e) => {

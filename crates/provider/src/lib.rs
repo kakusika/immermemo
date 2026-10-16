@@ -291,6 +291,37 @@ pub trait Provider: Send + Sync {
     fn parse_remote_url(&self, url: &str) -> Option<(String, String)>;
 }
 
+/// The longest a repository name may be.
+const MAX_REPOSITORY_NAME_CHARS: usize = 100;
+
+/// Checks a repository name before a host is asked to create it: ASCII
+/// letters, digits, `.`, `-` and `_` (what GitHub, Forgejo and GitLab all
+/// accept), not starting with a dot, not just dots, at most 100 characters.
+/// Surrounding whitespace is dropped. The message says what is wrong.
+pub fn validate_repository_name(name: &str) -> Result<&str, String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("The repository name can't be empty".to_owned());
+    }
+    if name.chars().count() > MAX_REPOSITORY_NAME_CHARS {
+        return Err(format!(
+            "The repository name can be at most {MAX_REPOSITORY_NAME_CHARS} characters"
+        ));
+    }
+    if let Some(bad) = name
+        .chars()
+        .find(|c| !(c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_')))
+    {
+        return Err(format!(
+            "The repository name can't contain {bad:?}: use letters, digits, - _ and ."
+        ));
+    }
+    if name.starts_with('.') {
+        return Err("The repository name can't start with a dot".to_owned());
+    }
+    Ok(name)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -365,5 +396,27 @@ mod tests {
     #[test]
     fn a_nested_path_on_a_non_gitlab_host_is_not_a_forgejo_remote() {
         assert_eq!(identify_remote("https://git.example.com/a/b/c"), None);
+    }
+
+    #[test]
+    fn a_repository_name_is_checked_before_a_host_is_asked() {
+        assert_eq!(
+            validate_repository_name("  my-notes_2.0 "),
+            Ok("my-notes_2.0")
+        );
+        for bad in [
+            "",
+            "   ",
+            "my notes",
+            "日記",
+            "a/b",
+            ".hidden",
+            "..",
+            &"n".repeat(101),
+        ] {
+            assert!(validate_repository_name(bad).is_err(), "{bad:?}");
+        }
+        let message = validate_repository_name("my notes").unwrap_err();
+        assert!(message.contains("' '"), "{message}");
     }
 }

@@ -12,8 +12,8 @@ use slint::{ComponentHandle, ModelRc, PhysicalSize, VecModel};
 
 use immermemo::render::to_note_body_item_view;
 use immermemo::{
-    AccountData, App, BreadcrumbSegment, DirectoryEntry, MediaBase, NoteBannerView, NoteIconKind,
-    NoteIconView, PickerIconEntry, SettingsAdapter,
+    AccountData, AddVaultAdapter, App, BreadcrumbSegment, DirectoryEntry, MediaBase,
+    NoteBannerView, NoteIconKind, NoteIconView, PickerIconEntry, RepoRow, SettingsAdapter,
 };
 
 struct Headless {
@@ -650,6 +650,7 @@ fn main() {
         display_name: "".into(),
         avatar: slint::Image::default(),
         has_avatar: false,
+        vault_count: if user == "octocat" { 2 } else { 0 },
     };
     settings.set_accounts(ModelRc::new(VecModel::from(vec![
         account("github:octocat", "github", "octocat"),
@@ -667,30 +668,20 @@ fn main() {
     settings.set_github_auth_pending(false);
     settings.set_sync_provider_tab(1);
     snap_settings("accounts-add-forgejo");
-    settings.set_forgejo_status_message("Repository setup failed: 401 Unauthorized".into());
+    settings.set_forgejo_status_message(
+        "Could not read the account's profile: 401 Unauthorized".into(),
+    );
     settings.set_forgejo_status_is_error(true);
     snap_settings("accounts-add-forgejo-error");
     settings.set_forgejo_connecting(true);
     snap_settings("accounts-add-forgejo-connecting");
     settings.set_forgejo_connecting(false);
-    settings.set_forgejo_connected(true);
-    settings.set_forgejo_username("alice".into());
-    settings.set_forgejo_instance("https://codeberg.org".into());
-    settings.set_forgejo_repo_name("immermemo-notes".into());
-    snap_settings("accounts-add-forgejo-connected");
     settings.set_sync_provider_tab(2);
     snap_settings("accounts-add-gitlab");
     settings.set_gitlab_connecting(true);
-    settings.set_gitlab_status_message("Connecting and setting up private repository...".into());
+    settings.set_gitlab_status_message("Connecting...".into());
     snap_settings("accounts-add-gitlab-connecting");
     settings.set_gitlab_connecting(false);
-    settings.set_gitlab_connected(true);
-    settings.set_gitlab_username("alice".into());
-    settings.set_gitlab_instance("https://gitlab.com".into());
-    settings.set_gitlab_repo_name("immermemo-notes".into());
-    snap_settings("accounts-add-gitlab-connected");
-    settings.set_sync_provider_tab(3);
-    snap_settings("accounts-add-custom");
     settings.set_adding_account(false);
 
     app.set_settings_page(0);
@@ -762,6 +753,80 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-icon-picker.ppm"));
     app.set_icon_picker_open(false);
+
+    // The vault setup sheet in each of its states.
+    let setup = app.global::<AddVaultAdapter>();
+    let snap_setup = |name: &str| {
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        render(&window, size, &format!("{prefix}-vault-setup-{name}.ppm"));
+    };
+    settings.set_accounts(ModelRc::new(VecModel::from(vec![
+        account("github:octocat", "github", "octocat"),
+        account("gitlab:https://gitlab.com:alice", "gitlab", "alice"),
+    ])));
+    app.set_vault_setup_open(true);
+    setup.set_mode(0);
+    setup.set_page(0);
+    setup.set_name("".into());
+    snap_setup("add-empty");
+    setup.set_name("Work notes".into());
+    setup.set_resulting_path("/data/folders/Work notes".into());
+    setup.set_can_submit(true);
+    snap_setup("add-in-app");
+    setup.set_storage(1);
+    setup.set_folder("/storage/emulated/0/Documents".into());
+    setup.set_can_pick_folder(true);
+    setup.set_storage_hint("Allow access to all files to keep a vault in local storage.".into());
+    setup.set_resulting_path("/storage/emulated/0/Documents/Work notes".into());
+    snap_setup("add-local-storage");
+    setup.set_storage(0);
+    setup.set_storage_hint("".into());
+    setup.set_sync(true);
+    snap_setup("sync-no-account-chosen");
+    setup.set_account_id("github:octocat".into());
+    setup.set_repo_mode(0);
+    setup.set_repo_name("Work-notes".into());
+    snap_setup("sync-new-repository");
+    setup.set_repo_mode(1);
+    setup.set_repos(ModelRc::new(VecModel::from(vec![
+        RepoRow {
+            name: "notes".into(),
+            full_name: "octocat/notes".into(),
+            is_private: true,
+        },
+        RepoRow {
+            name: "ideas".into(),
+            full_name: "octocat/ideas".into(),
+            is_private: false,
+        },
+    ])));
+    setup.set_repo_full_name("octocat/ideas".into());
+    snap_setup("sync-existing-repository");
+    setup.set_repos(ModelRc::default());
+    setup.set_repos_loading(true);
+    snap_setup("sync-loading-repositories");
+    setup.set_repos_loading(false);
+    setup.set_repos_error("Could not list the repositories: 401 Unauthorized".into());
+    snap_setup("sync-repositories-error");
+    setup.set_repos_error("".into());
+    setup.set_sync_kind(1);
+    setup.set_custom_url("https://git.example.com/me/notes.git".into());
+    snap_setup("sync-remote-url");
+    setup.set_error("Could not create the repository: name already exists".into());
+    setup.set_busy(false);
+    snap_setup("error");
+    setup.set_error("".into());
+    setup.set_busy(true);
+    snap_setup("busy");
+    setup.set_busy(false);
+    setup.set_page(1);
+    snap_setup("add-account-page");
+    setup.set_page(0);
+    setup.set_mode(1);
+    setup.set_target_name("Work notes".into());
+    setup.set_sync_kind(0);
+    snap_setup("sync-mode");
+    app.set_vault_setup_open(false);
 
     app.set_delete_confirm_open(true);
     std::thread::sleep(std::time::Duration::from_millis(300));

@@ -7,4 +7,5 @@
 pub mod android;
 pub mod cert;
 pub mod haptic;
+pub mod storage;
 pub mod widget;

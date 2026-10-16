@@ -118,8 +118,10 @@ export component VaultSheet inherits Rectangle {
                             provider: item.account-provider;
                             avatar-size: 26px;
                         }
+                        // No account: a cloud when it syncs to a typed remote,
+                        // a crossed-out one when it does not sync at all.
                         if !item.has-account: Icon {
-                            source: item.is-current ? TablerIcons.folder-check : TablerIcons.folder;
+                            source: item.syncs ? TablerIcons.cloud : TablerIcons.cloud-off;
                             width: 22px;
                             height: 22px;
                             color: item.is-current ? Palette.accent-background : Colors.muted;

@@ -1,0 +1,63 @@
+// State of the vault setup sheet: adding a vault (name, where it lives, how
+// it syncs) and setting up the sync of one that exists. The form lives here
+// (not in the sheet) so Rust can read it, validate it and report back.
+
+// One repository of the chosen account, as the "existing repository" list
+// shows it.
+export struct RepoRow {
+    name: string,
+    full-name: string,
+    is-private: bool,
+}
+
+export global AddVaultAdapter {
+    // 0: add a vault; 1: set up the sync of an existing vault.
+    in-out property <int> mode: 0;
+    // Mode 1: the name of the vault being set up.
+    in property <string> target-name: "";
+    // 0: the form; 1: adding an account (the form keeps what was typed).
+    in-out property <int> page: 0;
+
+    // Name and place (mode 0).
+    in-out property <string> name: "";
+    // 0: in the app; 1: local storage.
+    in-out property <int> storage: 0;
+    // Local storage: the folder the vault's own folder goes in.
+    in-out property <string> folder: "";
+    // Where the vault will be created, as Rust works it out from the above.
+    in property <string> resulting-path: "";
+    // Whether this device offers a folder picker (Android).
+    in property <bool> can-pick-folder: false;
+    // Something to tell about the chosen storage (e.g. a permission is
+    // missing); empty if nothing.
+    in property <string> storage-hint: "";
+
+    // Sync.
+    in-out property <bool> sync: false;
+    // 0: through an account; 1: to a remote URL typed in.
+    in-out property <int> sync-kind: 0;
+    in-out property <string> account-id: "";
+    // 0: create a new private repository; 1: choose an existing one.
+    in-out property <int> repo-mode: 0;
+    in-out property <string> repo-name: "";
+    in-out property <string> repo-query: "";
+    // The account's repositories matching `repo-query` (capped).
+    in property <[RepoRow]> repos: [];
+    in-out property <string> repo-full-name: "";
+    in property <bool> repos-loading: false;
+    in property <string> repos-error: "";
+    in-out property <string> custom-url: "";
+    in-out property <string> custom-token: "";
+
+    in property <bool> busy: false;
+    in property <string> error: "";
+    in property <bool> can-submit: false;
+
+    // A form field changed: Rust re-derives `resulting-path`, `can-submit`.
+    callback edited();
+    callback account-chosen(string);
+    callback load-repos();
+    callback pick-folder();
+    callback submit();
+    callback close();
+}

@@ -16,6 +16,7 @@ pub mod format;
 pub mod navigation;
 pub mod session;
 pub mod sync;
+pub mod vault_setup;
 
 pub use format::{format_time_only, format_timestamp};
 
@@ -50,3 +51,4 @@ pub use session::{
     ConflictFlags, EditOutcome, FilteredListOutcome, RefreshListOutcome, Session, StartVault,
     vault_display_name, vault_path_from_input,
 };
+pub use vault_setup::{NewVault, VaultSync, parse_vault_name, vault_dir_in};

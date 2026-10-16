@@ -1,5 +1,5 @@
 //! Connecting GitHub through the OAuth device flow: show the user a code,
-//! open the browser, poll until they approve, then set up the repository.
+//! open the browser, poll until they approve, then register the account.
 
 use crate::session::SessionRef;
 use std::cell::RefCell;
@@ -11,7 +11,7 @@ use std::time::Duration;
 use immermemo_provider::{AuthPollStatus, GitHubProvider, Provider, ProviderId};
 use slint::{ComponentHandle, SharedString};
 
-use super::{DEFAULT_REPO_NAME, Linked, current_session, disconnect};
+use super::{Connected, current_session};
 use crate::session::on_ui_thread;
 use crate::{App, SettingsAdapter};
 
@@ -27,7 +27,7 @@ fn fail(weak: &slint::Weak<App>, message: String) {
     on_ui_thread(weak, move |app| show_auth_status(app, false, message));
 }
 
-pub(super) fn bind(app: &App, session: &SessionRef) {
+pub(super) fn bind(app: &App, _session: &SessionRef) {
     let settings = app.global::<SettingsAdapter>();
     // Set while a sign-in is in flight; a new attempt or a cancel raises it.
     let active_auth_cancel = Rc::new(RefCell::new(None::<Arc<AtomicBool>>));
@@ -59,11 +59,6 @@ pub(super) fn bind(app: &App, session: &SessionRef) {
                 settings.set_github_verification_uri(SharedString::new());
             }
         }
-    });
-
-    settings.on_disconnect_github({
-        let (weak, session) = (app.as_weak(), session.clone());
-        move || disconnect(&weak.unwrap(), &session, ProviderId::GitHub)
     });
 
     settings.on_connect_github({
@@ -134,27 +129,26 @@ fn sign_in(weak: &slint::Weak<App>, cancel: &AtomicBool) {
     }
 
     on_ui_thread(weak, |app| {
-        show_auth_status(app, true, "Setting up private repository...");
+        show_auth_status(app, true, "Reading your GitHub profile...");
     });
-    let repo = match provider.setup_repository(&token, DEFAULT_REPO_NAME) {
-        Ok(repo) => repo,
-        Err(e) => return fail(weak, format!("Repository setup failed: {e}")),
+    let user = match provider.get_user(&token) {
+        Ok(user) => user,
+        Err(e) => return fail(weak, format!("Could not read your GitHub profile: {e}")),
     };
-    let linked = Linked {
+    let connected = Connected {
         provider: ProviderId::GitHub,
         instance_url: provider.instance_url().to_owned(),
-        user: provider.get_user(&token).ok(),
         token,
-        repo,
+        user,
     };
-    on_ui_thread(weak, move |app| finish(app, &linked));
+    on_ui_thread(weak, move |app| finish(app, &connected));
 }
 
-/// Back on the UI thread with the repository in hand: persist, show, sync.
-fn finish(app: &App, linked: &Linked) {
+/// Back on the UI thread with the credentials accepted: register the account.
+fn finish(app: &App, connected: &Connected) {
     let session = current_session();
-    let username = match linked.persist(&session) {
-        Ok(username) => username,
+    let account = match connected.register(&session) {
+        Ok(account) => account,
         Err(e) => {
             show_auth_status(app, false, e.as_str());
             crate::session::set_error(app, e);
@@ -162,9 +156,10 @@ fn finish(app: &App, linked: &Linked) {
         }
     };
     let settings = app.global::<SettingsAdapter>();
-    settings.set_github_auth_pending(false);
-    settings.set_github_connected(true);
-    settings.set_github_username(username.into());
-    settings.set_github_repo_name(linked.repo.name.as_str().into());
-    linked.show_and_sync(app, &session);
+    settings.set_github_user_code(SharedString::new());
+    settings.set_github_verification_uri(SharedString::new());
+    show_auth_status(app, false, "");
+    settings.set_adding_account(false);
+    crate::callbacks::refresh_accounts_ui(app, &session.borrow());
+    crate::session::set_status(app, format!("GitHub account @{} added", account.username));
 }

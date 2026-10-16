@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-10-16 06:58+0000\n"
+"POT-Creation-Date: 2026-10-16 12:05+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -12,1876 +12,1977 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: app/ui/app.slint:958
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:973
 msgctxt "App"
 msgid "More Actions"
 msgstr ""
 
-#: app/ui/app.slint:964
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:979
 msgctxt "App"
 msgid "New Note"
 msgstr ""
 
-#: app/ui/app.slint:974
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:989
 msgctxt "App"
 msgid "Sync Now"
 msgstr ""
 
-#: app/ui/app.slint:983 app/ui/app.slint:1124
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:998
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:998
 msgctxt "App"
 msgid "Switch Vault"
 msgstr ""
 
-#: app/ui/app.slint:992
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1007
 msgctxt "App"
 msgid "Settings"
 msgstr ""
 
-#: app/ui/app.slint:1001
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1016
 msgctxt "App"
 msgid "Home"
 msgstr ""
 
-#: app/ui/app.slint:1011
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1026
 msgctxt "App"
 msgid "Search"
 msgstr ""
 
-#: app/ui/app.slint:1021
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1036
 msgctxt "App"
 msgid "Library"
 msgstr ""
 
-#: app/ui/app.slint:1031
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1046
 msgctxt "App"
 msgid "Directory"
 msgstr ""
 
-#: app/ui/app.slint:1041
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1056
 msgctxt "App"
 msgid "Daily Notes"
 msgstr ""
 
-#: app/ui/app.slint:1051
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1066
 msgctxt "App"
 msgid "Starred"
 msgstr ""
 
-#: app/ui/app.slint:1061
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1076
 msgctxt "App"
 msgid "Recent"
 msgstr ""
 
-#: app/ui/app.slint:1071
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1086
 msgctxt "App"
 msgid "Graph View"
 msgstr ""
 
-#: app/ui/app.slint:1088
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1103
 msgctxt "App"
 msgid "Rename"
 msgstr ""
 
-#: app/ui/app.slint:1097
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1112
 msgctxt "App"
 msgid "Set Icon"
 msgstr ""
 
-#: app/ui/app.slint:1106 app/ui/app.slint:1175 app/ui/app.slint:1189
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1121
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1121
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1121
 msgctxt "App"
 msgid "Delete"
 msgstr ""
 
-#: app/ui/app.slint:1119
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1134
 msgctxt "App"
 msgid "Vault"
 msgstr ""
 
-#: app/ui/app.slint:1132
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1147
 msgctxt "App"
 msgid "Vault History"
 msgstr ""
 
-#: app/ui/app.slint:1140
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1155
 msgctxt "App"
-msgid "Account Settings"
+msgid "Sync Settings"
 msgstr ""
 
-#: app/ui/app.slint:1140
-msgctxt "App"
-msgid "Connect Account"
-msgstr ""
-
-#: app/ui/app.slint:1149
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1163
 msgctxt "App"
 msgid "Copy Vault Path"
 msgstr ""
 
-#: app/ui/app.slint:1160
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1174
 msgctxt "App"
 msgid "Rename note"
 msgstr ""
 
-#: app/ui/app.slint:1173
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1187
 msgctxt "App"
 msgid "Delete this note?"
 msgstr ""
 
-#: app/ui/app.slint:1174 app/ui/app.slint:1188
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1188
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1188
 msgctxt "App"
 msgid "This can't be undone from here."
 msgstr ""
 
-#: app/ui/app.slint:1187
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1201
 msgctxt "App"
 msgid "Delete selected notes?"
 msgstr ""
 
-#: app/ui/app.slint:1284
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1298
 msgctxt "App"
 msgid "Remove this vault?"
 msgstr ""
 
-#: app/ui/app.slint:1285
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1299
 msgctxt "App"
 msgid ""
 "Its notes will stay on disk, but its sync settings and git history will be "
 "forgotten."
 msgstr ""
 
-#: app/ui/app.slint:1286
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/app.slint:1300
 msgctxt "App"
 msgid "Remove"
 msgstr ""
 
-#: app/ui/app.slint:1298
-msgctxt "App"
-msgid "Add vault"
-msgstr ""
-
-#: app/ui/components.slint:214
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:228
 msgctxt "MiniNoteCard"
 msgid "Untitled"
 msgstr ""
 
-#: app/ui/components.slint:222
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:236
 msgctxt "MiniNoteCard"
 msgid "Conflict detected"
 msgstr ""
 
-#: app/ui/components.slint:385
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:399
 msgctxt "BottomNavBar"
 msgid "Home"
 msgstr ""
 
-#: app/ui/components.slint:394
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:408
 msgctxt "BottomNavBar"
 msgid "Search"
 msgstr ""
 
-#: app/ui/components.slint:403
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:417
 msgctxt "BottomNavBar"
 msgid "Library"
 msgstr ""
 
-#: app/ui/components.slint:413
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:427
 msgctxt "BottomNavBar"
 msgid "Directory"
 msgstr ""
 
-#: app/ui/components.slint:422
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:436
 msgctxt "BottomNavBar"
 msgid "Daily"
 msgstr ""
 
-#: app/ui/components.slint:431
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:445
 msgctxt "BottomNavBar"
 msgid "Starred"
 msgstr ""
 
-#: app/ui/components.slint:440
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:454
 msgctxt "BottomNavBar"
 msgid "Recent"
 msgstr ""
 
-#: app/ui/components.slint:449
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:463
 msgctxt "BottomNavBar"
 msgid "Graph"
 msgstr ""
 
-#: app/ui/components.slint:458
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:472
 msgctxt "BottomNavBar"
 msgid "New"
 msgstr ""
 
-#: app/ui/components.slint:467
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:481
 msgctxt "BottomNavBar"
 msgid "Sync"
 msgstr ""
 
-#: app/ui/components.slint:476
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:490
 msgctxt "BottomNavBar"
 msgid "Vault"
 msgstr ""
 
-#: app/ui/components.slint:485
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:499
 msgctxt "BottomNavBar"
 msgid "Settings"
 msgstr ""
 
-#: app/ui/components.slint:495
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/components.slint:509
 msgctxt "BottomNavBar"
 msgid "More"
 msgstr ""
 
-#: app/ui/pages/editor/editor.slint:140
-msgctxt "HistoryPreviewPanel"
-msgid "Untitled"
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:559
-msgctxt "EditorScreen"
-msgid "Conflict"
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:571
-msgctxt "EditorScreen"
-msgid "Open Resolution"
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:580
-msgctxt "EditorScreen"
-msgid "Next"
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:585
-msgctxt "EditorScreen"
-msgid "Keep Mine"
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:593
-msgctxt "EditorScreen"
-msgid "Keep Theirs"
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:614
-msgctxt "EditorScreen"
-msgid "No notes yet"
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:614
-msgctxt "EditorScreen"
-msgid "No note selected"
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:623
-msgctxt "EditorScreen"
-msgid "Create your first note to start writing."
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:624
-msgctxt "EditorScreen"
-msgid "Choose a note from the list, or create a new one."
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:648
-msgctxt "EditorScreen"
-msgid "+ New Note"
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:787
-msgctxt "EditorScreen"
-msgid "Untitled"
-msgstr ""
-
-#: app/ui/pages/editor/editor.slint:836
-msgctxt "EditorScreen"
-msgid "Tap Edit or double-tap here to write."
-msgstr ""
-
-#: app/ui/pages/editor/properties.slint:51
-msgctxt "PropertiesView"
-msgid "No note is currently open."
-msgstr ""
-
-#: app/ui/pages/editor/properties.slint:83
-msgctxt "PropertiesView"
-msgid "Note Info"
-msgstr ""
-
-#: app/ui/pages/editor/properties.slint:141
-msgctxt "PropertiesView"
-msgid "Characters"
-msgstr ""
-
-#: app/ui/pages/editor/properties.slint:158
-msgctxt "PropertiesView"
-msgid "Words"
-msgstr ""
-
-#: app/ui/pages/editor/properties.slint:175
-msgctxt "PropertiesView"
-msgid "Lines"
-msgstr ""
-
-#: app/ui/pages/editor/properties.slint:205
-msgctxt "PropertiesView"
-msgid "Properties"
-msgstr ""
-
-#: app/ui/pages/editor/properties.slint:275
-msgctxt "PropertiesView"
-msgid "{n} conflict found"
-msgid_plural "{n} conflicts found"
-msgstr[0] ""
-msgstr[1] ""
-
-#: app/ui/pages/editor/properties.slint:276
-msgctxt "PropertiesView"
-msgid "Conflict detected"
-msgstr ""
-
-#: app/ui/pages/editor/properties.slint:349
-msgctxt "PropertiesView"
-msgid "🔍 Open resolution sheet"
-msgstr ""
-
-#: app/ui/pages/files.slint:308 app/ui/pages/files.slint:352
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:316
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:316
 msgctxt "FilesScreen"
 msgid "Directory"
 msgstr ""
 
-#: app/ui/pages/files.slint:309 app/ui/pages/files.slint:359
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:317
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:317
 msgctxt "FilesScreen"
 msgid "Daily Notes"
 msgstr ""
 
-#: app/ui/pages/files.slint:310 app/ui/pages/files.slint:370
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:318
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:318
 msgctxt "FilesScreen"
 msgid "Starred"
 msgstr ""
 
-#: app/ui/pages/files.slint:311 app/ui/pages/files.slint:377
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:319
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:319
 msgctxt "FilesScreen"
 msgid "Recent"
 msgstr ""
 
-#: app/ui/pages/files.slint:312 app/ui/pages/files.slint:388
-#: app/ui/pages/files.slint:312 app/ui/pages/files.slint:388
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:320
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:320
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:320
 msgctxt "FilesScreen"
 msgid "Graph View"
 msgstr ""
 
-#: app/ui/pages/files.slint:313 app/ui/pages/files.slint:395
-#: app/ui/pages/files.slint:313 app/ui/pages/files.slint:395
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:321
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:321
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:321
 msgctxt "FilesScreen"
 msgid "All Notes"
 msgstr ""
 
-#: app/ui/pages/files.slint:314 app/ui/pages/files.slint:406
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:322
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:322
 msgctxt "FilesScreen"
 msgid "Tasks"
 msgstr ""
 
-#: app/ui/pages/files.slint:315
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:323
 msgctxt "FilesScreen"
 msgid "Library"
 msgstr ""
 
-#: app/ui/pages/files.slint:434
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:442
 msgctxt "FilesScreen"
 msgid "List"
 msgstr ""
 
-#: app/ui/pages/files.slint:434
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:442
 msgctxt "FilesScreen"
 msgid "Grid"
 msgstr ""
 
-#: app/ui/pages/files.slint:454
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:462
 msgctxt "FilesScreen"
 msgid "This folder is empty"
 msgstr ""
 
-#: app/ui/pages/files.slint:454
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:462
 msgctxt "FilesScreen"
 msgid "No notes yet"
 msgstr ""
 
-#: app/ui/pages/files.slint:462
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:470
 msgctxt "FilesScreen"
 msgid "Tap + below to create your first note"
 msgstr ""
 
-#: app/ui/pages/files.slint:624
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:631
 msgctxt "FilesScreen"
 msgid "Daily Journal"
 msgstr ""
 
-#: app/ui/pages/files.slint:631
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:638
 msgctxt "FilesScreen"
 msgid "Write today's note"
 msgstr ""
 
-#: app/ui/pages/files.slint:704
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:711
 msgctxt "FilesScreen"
 msgid "Starred Notes"
 msgstr ""
 
-#: app/ui/pages/files.slint:705
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:712
 msgctxt "FilesScreen"
 msgid "Recent Notes"
 msgstr ""
 
-#: app/ui/pages/files.slint:708
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:715
 msgctxt "FilesScreen"
 msgid "Task View"
 msgstr ""
 
-#: app/ui/pages/files.slint:716
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:723
 msgctxt "FilesScreen"
 msgid "Pinned and frequently referenced master notes."
 msgstr ""
 
-#: app/ui/pages/files.slint:717
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:724
 msgctxt "FilesScreen"
 msgid "Chronological timeline of your recent note edits."
 msgstr ""
 
-#: app/ui/pages/files.slint:718
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:725
 msgctxt "FilesScreen"
 msgid "Visual interactive graph of note connections and backlinks."
 msgstr ""
 
-#: app/ui/pages/files.slint:719
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:726
 msgctxt "FilesScreen"
 msgid "Alphabetical index of all notes across the vault."
 msgstr ""
 
-#: app/ui/pages/files.slint:720
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:727
 msgctxt "FilesScreen"
 msgid "Aggregated task checklists across all notes."
 msgstr ""
 
-#: app/ui/pages/files.slint:741
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/files.slint:748
 msgctxt "FilesScreen"
 msgid "Placeholder · Coming Soon"
 msgstr ""
 
-#: app/ui/pages/home.slint:37
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:36
 msgctxt "HomeQuickActionTile"
 msgid "Search"
 msgstr ""
 
-#: app/ui/pages/home.slint:38
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:37
 msgctxt "HomeQuickActionTile"
 msgid "Library"
 msgstr ""
 
-#: app/ui/pages/home.slint:39
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:38
 msgctxt "HomeQuickActionTile"
 msgid "Directory"
 msgstr ""
 
-#: app/ui/pages/home.slint:40
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:39
 msgctxt "HomeQuickActionTile"
 msgid "Daily Notes"
 msgstr ""
 
-#: app/ui/pages/home.slint:41
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:40
 msgctxt "HomeQuickActionTile"
 msgid "Starred"
 msgstr ""
 
-#: app/ui/pages/home.slint:42
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:41
 msgctxt "HomeQuickActionTile"
 msgid "Recent"
 msgstr ""
 
-#: app/ui/pages/home.slint:43
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:42
 msgctxt "HomeQuickActionTile"
 msgid "Graph View"
 msgstr ""
 
-#: app/ui/pages/home.slint:44
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:43
 msgctxt "HomeQuickActionTile"
 msgid "New Note"
 msgstr ""
 
-#: app/ui/pages/home.slint:45
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:44
 msgctxt "HomeQuickActionTile"
 msgid "Sync"
 msgstr ""
 
-#: app/ui/pages/home.slint:46
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:45
 msgctxt "HomeQuickActionTile"
 msgid "Switch Vault"
 msgstr ""
 
-#: app/ui/pages/home.slint:47
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:46
 msgctxt "HomeQuickActionTile"
 msgid "Settings"
 msgstr ""
 
 #. Vault info
-#: app/ui/pages/home.slint:64
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:61
 msgctxt "HomeScreen"
 msgid "Default"
 msgstr ""
 
-#: app/ui/pages/home.slint:98
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:95
 msgctxt "HomeScreen"
 msgid "Home"
 msgstr ""
 
-#: app/ui/pages/home.slint:206 app/ui/pages/home.slint:257
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:209
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:209
 msgctxt "HomeScreen"
 msgid "Notes"
 msgstr ""
 
-#: app/ui/pages/home.slint:248
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:251
 msgctxt "HomeScreen"
 msgid "Info"
 msgstr ""
 
-#: app/ui/pages/home.slint:273
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:276
 msgctxt "HomeScreen"
 msgid "Size"
 msgstr ""
 
-#: app/ui/pages/home.slint:289
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:292
 msgctxt "HomeScreen"
 msgid "Conflicts"
 msgstr ""
 
-#: app/ui/pages/home.slint:309
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:312
 msgctxt "HomeScreen"
 msgid "Sync Status"
 msgstr ""
 
-#: app/ui/pages/home.slint:339
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:342
 msgctxt "HomeScreen"
 msgid "Sync failed"
 msgstr ""
 
-#: app/ui/pages/home.slint:426
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:429
 msgctxt "HomeScreen"
 msgid "Copied"
 msgstr ""
 
-#: app/ui/pages/home.slint:426
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:429
 msgctxt "HomeScreen"
 msgid "Copy Error"
 msgstr ""
 
-#: app/ui/pages/home.slint:462
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:465
 msgctxt "HomeScreen"
 msgid "Retry"
 msgstr ""
 
-#: app/ui/pages/home.slint:497
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:500
 msgctxt "HomeScreen"
 msgid "No remote configured"
 msgstr ""
 
-#: app/ui/pages/home.slint:504
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:507
 msgctxt "HomeScreen"
 msgid "Set a git remote to enable automatic sync"
 msgstr ""
 
-#: app/ui/pages/home.slint:526
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:529
 msgctxt "HomeScreen"
 msgid "Settings"
 msgstr ""
 
-#: app/ui/pages/home.slint:555
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:558
 msgctxt "HomeScreen"
 msgid "Syncing..."
 msgstr ""
 
-#: app/ui/pages/home.slint:555
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:558
 msgctxt "HomeScreen"
 msgid "Up to date"
 msgstr ""
 
-#: app/ui/pages/home.slint:563
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:566
 msgctxt "HomeScreen"
 msgid "Checking for changes with the remote"
 msgstr ""
 
-#: app/ui/pages/home.slint:564
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:567
 msgctxt "HomeScreen"
 msgid "Last synced: {}"
 msgstr ""
 
-#: app/ui/pages/home.slint:564
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:567
 msgctxt "HomeScreen"
 msgid "Local and remote are in sync"
 msgstr ""
 
-#: app/ui/pages/home.slint:599
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:602
 msgctxt "HomeScreen"
 msgid "Sync"
 msgstr ""
 
-#: app/ui/pages/home.slint:615
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:618
 msgctxt "HomeScreen"
 msgid "Unresolved Conflicts"
 msgstr ""
 
-#: app/ui/pages/home.slint:644
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:647
 msgctxt "HomeScreen"
 msgid "{n} note has a conflict"
 msgid_plural "{n} notes have conflicts"
 msgstr[0] ""
 msgstr[1] ""
 
-#: app/ui/pages/home.slint:653
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:656
 msgctxt "HomeScreen"
 msgid "Tap to open and resolve conflicted notes →"
 msgstr ""
 
-#: app/ui/pages/home.slint:666
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/home.slint:669
 msgctxt "HomeScreen"
 msgid "Quick Actions"
 msgstr ""
 
-#: app/ui/pages/search.slint:62
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/search.slint:62
 msgctxt "SearchScreen"
 msgid "Search note titles and contents..."
 msgstr ""
 
-#: app/ui/pages/search.slint:137
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/search.slint:137
 msgctxt "SearchScreen"
 msgid "No notes match \"{}\""
 msgstr ""
 
-#: app/ui/pages/search.slint:161
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/search.slint:161
 msgctxt "SearchScreen"
 msgid "Search notes by title or contents"
 msgstr ""
 
-#: app/ui/sheets/conflict.slint:65
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/conflict.slint:65
 msgctxt "ConflictSheet"
 msgid "⚠️ Resolve Conflict"
 msgstr ""
 
-#: app/ui/sheets/conflict.slint:139 app/ui/sheets/conflict.slint:201
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/conflict.slint:139
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/conflict.slint:139
 msgctxt "ConflictSheet"
 msgid "(deleted or empty)"
 msgstr ""
 
-#: app/ui/sheets/conflict.slint:243
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/conflict.slint:243
 msgctxt "ConflictSheet"
 msgid "+ Keep Both (A → B)"
 msgstr ""
 
-#: app/ui/sheets/conflict.slint:270
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/conflict.slint:270
 msgctxt "ConflictSheet"
 msgid "◀ Previous Conflict"
 msgstr ""
 
-#: app/ui/sheets/conflict.slint:293
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/conflict.slint:293
 msgctxt "ConflictSheet"
 msgid "Next Conflict ▶"
 msgstr ""
 
-#: app/ui/sheets/history.slint:92 app/ui/sheets/history.slint:409
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/history.slint:92
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/history.slint:92
 msgctxt "HistorySheet"
 msgid "Preview"
 msgstr ""
 
-#: app/ui/sheets/history.slint:93
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/history.slint:93
 msgctxt "HistorySheet"
 msgid "History: {}"
 msgstr ""
 
-#: app/ui/sheets/history.slint:93
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/history.slint:93
 msgctxt "HistorySheet"
 msgid "Version History"
 msgstr ""
 
-#: app/ui/sheets/history.slint:135
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/history.slint:135
 msgctxt "HistorySheet"
 msgid "This note has no history yet"
 msgstr ""
 
-#: app/ui/sheets/history.slint:143
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/history.slint:143
 msgctxt "HistorySheet"
 msgid "Saving or syncing this note will record past versions here."
 msgstr ""
 
-#: app/ui/sheets/history.slint:335 app/ui/sheets/history.slint:443
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/history.slint:335
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/history.slint:335
 msgctxt "HistorySheet"
 msgid "Restore This Version"
 msgstr ""
 
-#: app/ui/sheets/history.slint:409
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/history.slint:409
 msgctxt "HistorySheet"
 msgid "{} contents"
 msgstr ""
 
-#: app/ui/sheets/icon_picker.slint:76
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/icon_picker.slint:76
 msgctxt "IconPickerSheet"
 msgid "Choose an icon"
 msgstr ""
 
-#: app/ui/sheets/icon_picker.slint:111
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/icon_picker.slint:111
 msgctxt "IconPickerSheet"
 msgid "Search icons"
 msgstr ""
 
-#: app/ui/sheets/icon_picker.slint:146
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/icon_picker.slint:146
 msgctxt "IconPickerSheet"
 msgid "No icons match"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:97
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:97
 msgctxt "SettingsSheet"
 msgid "Appearance"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:98
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:98
 msgctxt "SettingsSheet"
 msgid "Accounts"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:99
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:99
 msgctxt "SettingsSheet"
 msgid "Vaults"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:100
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:100
 msgctxt "SettingsSheet"
 msgid "About"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:101
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:101
 msgctxt "SettingsSheet"
 msgid "Transfer & Share"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:102
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:102
 msgctxt "SettingsSheet"
 msgid "Advanced"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:103
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:103
 msgctxt "SettingsSheet"
 msgid "Navigation & Views"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:104
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:104
 msgctxt "SettingsSheet"
 msgid "Bottom Navigation Bar"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:105
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:105
 msgctxt "SettingsSheet"
 msgid "Directory"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:106
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:106
 msgctxt "SettingsSheet"
 msgid "Daily Notes"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:107
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:107
 msgctxt "SettingsSheet"
 msgid "Starred"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:108
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:108
 msgctxt "SettingsSheet"
 msgid "Recent"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:109
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:109
 msgctxt "SettingsSheet"
 msgid "Graph View"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:110
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:110
 msgctxt "SettingsSheet"
 msgid "Home"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:111
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:111
 msgctxt "SettingsSheet"
 msgid "Settings"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:188
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:188
 msgctxt "SettingsSheet"
 msgid "Daily Notes Settings"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:189
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:189
 msgctxt "SettingsSheet"
 msgid "Settings for daily notes and calendar view will appear here."
 msgstr ""
 
-#: app/ui/sheets/settings.slint:198
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:198
 msgctxt "SettingsSheet"
 msgid "Starred Settings"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:199
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:199
 msgctxt "SettingsSheet"
 msgid "Settings for starred and favorite notes will appear here."
 msgstr ""
 
-#: app/ui/sheets/settings.slint:208
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:208
 msgctxt "SettingsSheet"
 msgid "Recent Settings"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:209
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:209
 msgctxt "SettingsSheet"
 msgid "Settings for edit history and timeline will appear here."
 msgstr ""
 
-#: app/ui/sheets/settings.slint:218
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:218
 msgctxt "SettingsSheet"
 msgid "Graph View Settings"
 msgstr ""
 
-#: app/ui/sheets/settings.slint:219
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings.slint:219
 msgctxt "SettingsSheet"
 msgid "Settings for interactive note graph will appear here."
 msgstr ""
 
-#: app/ui/sheets/settings/about.slint:13
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault.slint:68
+msgctxt "VaultSheet"
+msgid "Vaults"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault.slint:150
+msgctxt "VaultSheet"
+msgid "current"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault.slint:159
+msgctxt "VaultSheet"
+msgid "+ Add vault"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault.slint:182
+msgctxt "VaultSheet"
+msgid "Delete"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault.slint:191
+msgctxt "VaultSheet"
+msgid "Cannot delete the only vault"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_history.slint:63
+msgctxt "VaultHistorySheet"
+msgid "Vault History: {}"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_history.slint:63
+msgctxt "VaultHistorySheet"
+msgid "Vault History"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_history.slint:104
+msgctxt "VaultHistorySheet"
+msgid "No commit history yet"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_history.slint:112
+msgctxt "VaultHistorySheet"
+msgid "Creating or syncing notes will record the vault's history here."
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:79
+msgctxt "VaultSetupSheet"
+msgid "Add Account"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:80
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:80
+msgctxt "VaultSetupSheet"
+msgid "Add vault"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:81
+msgctxt "VaultSetupSheet"
+msgid "Sync"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:134
+msgctxt "VaultSetupSheet"
+msgid "Name"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:135
+msgctxt "VaultSetupSheet"
+msgid "My notes"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:145
+msgctxt "VaultSetupSheet"
+msgid "Where to keep it"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:152
+msgctxt "VaultSetupSheet"
+msgid "In the app"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:152
+msgctxt "VaultSetupSheet"
+msgid "Local storage"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:164
+msgctxt "VaultSetupSheet"
+msgid "Folder"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:173
+msgctxt "VaultSetupSheet"
+msgid "Choose folder"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:186
+msgctxt "VaultSetupSheet"
+msgid "It will be created at"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:199
+msgctxt "VaultSetupSheet"
+msgid "Sync with a Git host"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:213
+msgctxt "VaultSetupSheet"
+msgid "The notes stay on this device only."
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:222
+msgctxt "VaultSetupSheet"
+msgid "Account"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:222
+msgctxt "VaultSetupSheet"
+msgid "Remote URL"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:234
+msgctxt "VaultSetupSheet"
+msgid "No accounts yet. Add one to sync with it."
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:307
+msgctxt "VaultSetupSheet"
+msgid "+ Add Account"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:321
+msgctxt "VaultSetupSheet"
+msgid "New repository"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:321
+msgctxt "VaultSetupSheet"
+msgid "Existing repository"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:334
+msgctxt "VaultSetupSheet"
+msgid "Repository name"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:341
+msgctxt "VaultSetupSheet"
+msgid "A new private repository is created on the account."
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:352
+msgctxt "VaultSetupSheet"
+msgid "Search repositories"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:358
+msgctxt "VaultSetupSheet"
+msgid "Loading repositories..."
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:370
+msgctxt "VaultSetupSheet"
+msgid "No repositories found."
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:428
+msgctxt "VaultSetupSheet"
+msgid "Remote repository URL"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:429
+msgctxt "VaultSetupSheet"
+msgid "https://git.example.com/notes.git or git@..."
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:435
+msgctxt "VaultSetupSheet"
+msgid "Access token (if using HTTPS)"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:442
+msgctxt "VaultSetupSheet"
+msgid ""
+"Using SSH? Register the app's public key (Settings > Advanced) on the server."
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:461
+msgctxt "VaultSetupSheet"
+msgid "Cancel"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:467
+msgctxt "VaultSetupSheet"
+msgid "Working..."
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/vault_setup.slint:468
+msgctxt "VaultSetupSheet"
+msgid "Save"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:14
+msgctxt "DailyCalendarView"
+msgid "Jan"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:15
+msgctxt "DailyCalendarView"
+msgid "Feb"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:16
+msgctxt "DailyCalendarView"
+msgid "Mar"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:17
+msgctxt "DailyCalendarView"
+msgid "Apr"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:18
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:18
+msgctxt "DailyCalendarView"
+msgid "May"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:19
+msgctxt "DailyCalendarView"
+msgid "Jun"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:20
+msgctxt "DailyCalendarView"
+msgid "Jul"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:21
+msgctxt "DailyCalendarView"
+msgid "Aug"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:22
+msgctxt "DailyCalendarView"
+msgid "Sep"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:23
+msgctxt "DailyCalendarView"
+msgid "Oct"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:24
+msgctxt "DailyCalendarView"
+msgid "Nov"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:25
+msgctxt "DailyCalendarView"
+msgid "Dec"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:62
+msgctxt "DailyCalendarView"
+msgid "January"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:63
+msgctxt "DailyCalendarView"
+msgid "February"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:64
+msgctxt "DailyCalendarView"
+msgid "March"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:65
+msgctxt "DailyCalendarView"
+msgid "April"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:67
+msgctxt "DailyCalendarView"
+msgid "June"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:68
+msgctxt "DailyCalendarView"
+msgid "July"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:69
+msgctxt "DailyCalendarView"
+msgid "August"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:70
+msgctxt "DailyCalendarView"
+msgid "September"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:71
+msgctxt "DailyCalendarView"
+msgid "October"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:72
+msgctxt "DailyCalendarView"
+msgid "November"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:73
+msgctxt "DailyCalendarView"
+msgid "December"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Su"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Mo"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Tu"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "We"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Th"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Fr"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Sa"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/mini_note_bar.slint:114
+msgctxt "MiniNoteBar"
+msgid "Previous Note"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/mini_note_bar.slint:115
+msgctxt "MiniNoteBar"
+msgid "Next Note"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/widgets/selection_bar.slint:51
+msgctxt "SelectionBar"
+msgid "{} selected"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/about.slint:13
 msgctxt "AboutPage"
 msgid "Immermemo v{}"
 msgstr ""
 
-#: app/ui/sheets/settings/about.slint:20
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/about.slint:20
 msgctxt "AboutPage"
 msgid ""
 "A mobile note app for writing Tomet (.tmt) notes, synced over git without "
 "git touching user files."
 msgstr ""
 
-#: app/ui/sheets/settings/about.slint:30
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/about.slint:30
 msgctxt "AboutPage"
 msgid "AST-level three-way merge with conflict tracking (@conflict)."
 msgstr ""
 
-#: app/ui/sheets/settings/accounts.slint:68
-msgctxt "TokenAccountForm"
-msgid "Repository Name"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:82
-msgctxt "TokenAccountForm"
-msgid "Connecting..."
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:82
-msgctxt "TokenAccountForm"
-msgid "Connect Account"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:120
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/accounts.slint:20
 msgctxt "AccountsPage"
-msgid "Vault: "
+msgid "Accounts"
 msgstr ""
 
-#: app/ui/sheets/settings/accounts.slint:152
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/accounts.slint:29
 msgctxt "AccountsPage"
-msgid "Syncing..."
+msgid ""
+"An account is a login to a Git host. Each vault chooses which account, and "
+"which repository, it syncs with."
 msgstr ""
 
-#: app/ui/sheets/settings/accounts.slint:152
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/accounts.slint:35
 msgctxt "AccountsPage"
-msgid "Sync Now"
+msgid "No accounts yet."
 msgstr ""
 
-#: app/ui/sheets/settings/accounts.slint:167
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/accounts.slint:73
 msgctxt "AccountsPage"
-msgid "Connected Accounts"
+msgid "{} vaults"
 msgstr ""
 
-#: app/ui/sheets/settings/accounts.slint:176
-msgctxt "AccountsPage"
-msgid "No accounts connected yet."
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:221
-msgctxt "AccountsPage"
-msgid "Active"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:239
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/accounts.slint:81
 msgctxt "AccountsPage"
 msgid "+ Vault"
 msgstr ""
 
-#: app/ui/sheets/settings/accounts.slint:258
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/accounts.slint:97
 msgctxt "AccountsPage"
 msgid "+ Add Account"
 msgstr ""
 
-#: app/ui/sheets/settings/accounts.slint:271
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/accounts.slint:109
 msgctxt "AccountsPage"
 msgid "Add Account"
 msgstr ""
 
-#: app/ui/sheets/settings/accounts.slint:285
-msgctxt "AccountsPage"
-msgid "GitHub"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:285
-msgctxt "AccountsPage"
-msgid "Forgejo / Gitea"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:285
-msgctxt "AccountsPage"
-msgid "GitLab"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:285
-msgctxt "AccountsPage"
-msgid "Custom Git"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:297
-msgctxt "AccountsPage"
-msgid "Sign in to automatically create and sync a private notes repository."
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:305
-msgctxt "AccountsPage"
-msgid "Connect with GitHub"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:315
-msgctxt "AccountsPage"
-msgid "Confirm this one-time code on GitHub:"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:336
-msgctxt "AccountsPage"
-msgid "Waiting for browser authorization..."
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:345
-msgctxt "AccountsPage"
-msgid "Cancel"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:350
-msgctxt "AccountsPage"
-msgid "Open in Browser"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:360
-msgctxt "AccountsPage"
-msgid ""
-"Connect Codeberg or your self-hosted Forgejo/Gitea instance using a Personal "
-"Access Token."
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:361
-msgctxt "AccountsPage"
-msgid "Instance URL"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:363
-msgctxt "AccountsPage"
-msgid "Personal Access Token"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:364
-msgctxt "AccountsPage"
-msgid "Token with repo and user permissions"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:382
-msgctxt "AccountsPage"
-msgid ""
-"Connect to GitLab.com or a self-hosted instance using a Personal Access "
-"Token with api scope."
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:383
-msgctxt "AccountsPage"
-msgid "GitLab Instance URL"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:385
-msgctxt "AccountsPage"
-msgid "Personal Access Token (api scope)"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:386
-msgctxt "AccountsPage"
-msgid "Token with api permission"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:407
-msgctxt "AccountsPage"
-msgid "Connect an arbitrary Git repository over HTTPS or SSH."
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:415
-msgctxt "AccountsPage"
-msgid "Remote repository URL"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:422
-msgctxt "AccountsPage"
-msgid "https://git.example.com/notes.git or git@..."
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:430
-msgctxt "AccountsPage"
-msgid "Access token (if using HTTPS)"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:437
-msgctxt "AccountsPage"
-msgid "Leave blank to keep the saved token"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:437
-msgctxt "AccountsPage"
-msgid "Personal access token"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:448
-msgctxt "AccountsPage"
-msgid "Using SSH? Ensure your public key is registered on the server."
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:455
-msgctxt "AccountsPage"
-msgid "SSH Key"
-msgstr ""
-
-#: app/ui/sheets/settings/accounts.slint:471
-msgctxt "AccountsPage"
-msgid "Save Remote"
-msgstr ""
-
-#: app/ui/sheets/settings/advanced.slint:30
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/advanced.slint:30
 msgctxt "AdvancedPage"
 msgid "In-App SSH Key"
 msgstr ""
 
-#: app/ui/sheets/settings/advanced.slint:37
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/advanced.slint:37
 msgctxt "AdvancedPage"
 msgid ""
 "Enables Git over SSH synchronization on mobile and desktop without external "
 "agents."
 msgstr ""
 
-#: app/ui/sheets/settings/advanced.slint:50
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/advanced.slint:50
 msgctxt "AdvancedPage"
 msgid ""
 "Copy this public key and add it to your GitHub, GitLab, or Forgejo SSH Keys:"
 msgstr ""
 
-#: app/ui/sheets/settings/advanced.slint:83
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/advanced.slint:83
 msgctxt "AdvancedPage"
 msgid "Regenerate Key"
 msgstr ""
 
-#: app/ui/sheets/settings/advanced.slint:88
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/advanced.slint:88
 msgctxt "AdvancedPage"
 msgid "Copied!"
 msgstr ""
 
-#: app/ui/sheets/settings/advanced.slint:88
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/advanced.slint:88
 msgctxt "AdvancedPage"
 msgid "Copy Public Key"
 msgstr ""
 
-#: app/ui/sheets/settings/advanced.slint:99
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/advanced.slint:99
 msgctxt "AdvancedPage"
 msgid ""
 "Generate a secure Ed25519 SSH keypair directly inside the app to sync with "
 "SSH remotes (git@...)."
 msgstr ""
 
-#: app/ui/sheets/settings/advanced.slint:107
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/advanced.slint:107
 msgctxt "AdvancedPage"
 msgid "Generate SSH Key"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:86
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:86
 msgctxt "AppearancePage"
 msgid "Appearance"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:96
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:96
 msgctxt "AppearancePage"
 msgid "Theme"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:100
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:100
 msgctxt "AppearancePage"
 msgid "System"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:100
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:100
 msgctxt "AppearancePage"
 msgid "Light"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:100
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:100
 msgctxt "AppearancePage"
 msgid "Dark"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:116
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:116
 msgctxt "AppearancePage"
 msgid "Color Source"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:117
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:117
 msgctxt "AppearancePage"
 msgid "Choose wallpaper dynamic color or custom accent color."
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:121
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:121
 msgctxt "AppearancePage"
 msgid "System Wallpaper"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:121
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:121
 msgctxt "AppearancePage"
 msgid "Custom"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:135
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:135
 msgctxt "AppearancePage"
 msgid "Accent Seed Color"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:161
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:161
 msgctxt "AppearancePage"
 msgid "Palette Style"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:162
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:162
 msgctxt "AppearancePage"
 msgid "Material 3 color generation variant for tonal palettes."
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:169
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:169
 msgctxt "AppearancePage"
 msgid "Tonal Spot"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:169
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:169
 msgctxt "AppearancePage"
 msgid "Vivid"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:169
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:169
 msgctxt "AppearancePage"
 msgid "Expressive"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:178
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:178
 msgctxt "AppearancePage"
 msgid "Fruit Salad"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:178
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:178
 msgctxt "AppearancePage"
 msgid "Rainbow"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:178
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:178
 msgctxt "AppearancePage"
 msgid "Spritz"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:178
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:178
 msgctxt "AppearancePage"
 msgid "Monochrome"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:195
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:195
 msgctxt "AppearancePage"
 msgid "Contrast"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:196
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:196
 msgctxt "AppearancePage"
 msgid "Increases luminance separation between surfaces and content."
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:200
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:200
 msgctxt "AppearancePage"
 msgid "Standard"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:200
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:200
 msgctxt "AppearancePage"
 msgid "Medium"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:200
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:200
 msgctxt "AppearancePage"
 msgid "High"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:216
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:216
 msgctxt "AppearancePage"
 msgid "UI Scale"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:231
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:231
 msgctxt "AppearancePage"
 msgid "Display"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:241
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:241
 msgctxt "AppearancePage"
 msgid "Editor Font Size"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:245
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:245
 msgctxt "AppearancePage"
 msgid "Small (14)"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:245
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:245
 msgctxt "AppearancePage"
 msgid "Medium (17)"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:245
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:245
 msgctxt "AppearancePage"
 msgid "Large (20)"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:261
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:261
 msgctxt "AppearancePage"
 msgid "Status Bar"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:262
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:262
 msgctxt "AppearancePage"
 msgid ""
 "Hide it while editing a note (for a less distracting full-screen view), or "
 "everywhere in the app."
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:266
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:266
 msgctxt "AppearancePage"
 msgid "Show"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:266
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:266
 msgctxt "AppearancePage"
 msgid "Hide While Editing"
 msgstr ""
 
-#: app/ui/sheets/settings/appearance.slint:266
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/appearance.slint:266
 msgctxt "AppearancePage"
 msgid "Always Hide"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:192
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:192
 msgctxt "BottomNavConfigItem"
 msgid "Home"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:202
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:202
 msgctxt "BottomNavConfigItem"
 msgid "Search"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:212
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:212
 msgctxt "BottomNavConfigItem"
 msgid "Library"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:222
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:222
 msgctxt "BottomNavConfigItem"
 msgid "Directory"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:233
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:233
 msgctxt "BottomNavConfigItem"
 msgid "Daily Notes"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:244
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:244
 msgctxt "BottomNavConfigItem"
 msgid "Starred"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:255
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:255
 msgctxt "BottomNavConfigItem"
 msgid "Recent"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:266
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:266
 msgctxt "BottomNavConfigItem"
 msgid "Graph View"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:277
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:277
 msgctxt "BottomNavConfigItem"
 msgid "New Note"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:287
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:287
 msgctxt "BottomNavConfigItem"
 msgid "Sync"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:297
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:297
 msgctxt "BottomNavConfigItem"
 msgid "Switch Vault"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:307
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:307
 msgctxt "BottomNavConfigItem"
 msgid "Settings"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:350
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:350
 msgctxt "BottomNavPage"
 msgid "Bottom Navigation Bar"
 msgstr ""
 
-#: app/ui/sheets/settings/bottom_nav.slint:351
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/bottom_nav.slint:351
 msgctxt "BottomNavPage"
 msgid "Choose which items appear on the bottom navigation bar."
 msgstr ""
 
-#: app/ui/sheets/settings/directory.slint:17
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/directory.slint:17
 msgctxt "DirectoryPage"
 msgid "Default View"
 msgstr ""
 
-#: app/ui/sheets/settings/directory.slint:18
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/directory.slint:18
 msgctxt "DirectoryPage"
 msgid "Choose how folder contents are displayed by default."
 msgstr ""
 
-#: app/ui/sheets/settings/directory.slint:22
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/directory.slint:22
 msgctxt "DirectoryPage"
 msgid "List"
 msgstr ""
 
-#: app/ui/sheets/settings/directory.slint:22
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/directory.slint:22
 msgctxt "DirectoryPage"
 msgid "Grid"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:49
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:49
 msgctxt "HomeActionConfigItem"
 msgid "Search"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:59
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:59
 msgctxt "HomeActionConfigItem"
 msgid "Library"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:69
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:69
 msgctxt "HomeActionConfigItem"
 msgid "Directory"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:79
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:79
 msgctxt "HomeActionConfigItem"
 msgid "Daily Notes"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:89
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:89
 msgctxt "HomeActionConfigItem"
 msgid "Starred"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:99
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:99
 msgctxt "HomeActionConfigItem"
 msgid "Recent"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:109
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:109
 msgctxt "HomeActionConfigItem"
 msgid "Graph View"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:119
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:119
 msgctxt "HomeActionConfigItem"
 msgid "New Note"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:129
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:129
 msgctxt "HomeActionConfigItem"
 msgid "Sync"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:139
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:139
 msgctxt "HomeActionConfigItem"
 msgid "Switch Vault"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:149
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:149
 msgctxt "HomeActionConfigItem"
 msgid "Settings"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:190
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:190
 msgctxt "HomePage"
 msgid "Quick Actions"
 msgstr ""
 
-#: app/ui/sheets/settings/home.slint:191
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/home.slint:191
 msgctxt "HomePage"
 msgid ""
 "Choose which actions appear in the quick actions section on the home page."
 msgstr ""
 
-#: app/ui/sheets/settings/menu.slint:14
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/menu.slint:14
 msgctxt "SettingsMenuPage"
 msgid "Vaults & Sync"
 msgstr ""
 
-#: app/ui/sheets/settings/menu.slint:22
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/menu.slint:22
 msgctxt "SettingsMenuPage"
 msgid "Vaults"
 msgstr ""
 
-#: app/ui/sheets/settings/menu.slint:30
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/menu.slint:30
 msgctxt "SettingsMenuPage"
 msgid "Accounts"
 msgstr ""
 
-#: app/ui/sheets/settings/menu.slint:38
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/menu.slint:38
 msgctxt "SettingsMenuPage"
 msgid "Transfer & Share"
 msgstr ""
 
-#: app/ui/sheets/settings/menu.slint:48 app/ui/sheets/settings/menu.slint:56
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/menu.slint:48
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/menu.slint:48
 msgctxt "SettingsMenuPage"
 msgid "Appearance"
 msgstr ""
 
-#: app/ui/sheets/settings/menu.slint:63 app/ui/sheets/settings/menu.slint:71
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/menu.slint:63
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/menu.slint:63
 msgctxt "SettingsMenuPage"
 msgid "Navigation & Views"
 msgstr ""
 
-#: app/ui/sheets/settings/menu.slint:78
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/menu.slint:78
 msgctxt "SettingsMenuPage"
 msgid "Other & Info"
 msgstr ""
 
-#: app/ui/sheets/settings/menu.slint:86
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/menu.slint:86
 msgctxt "SettingsMenuPage"
 msgid "Advanced"
 msgstr ""
 
-#: app/ui/sheets/settings/menu.slint:94
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/menu.slint:94
 msgctxt "SettingsMenuPage"
 msgid "About"
 msgstr ""
 
-#: app/ui/sheets/settings/navigation.slint:14
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/navigation.slint:14
 msgctxt "NavigationPage"
 msgid "Navigation"
 msgstr ""
 
-#: app/ui/sheets/settings/navigation.slint:22
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/navigation.slint:22
 msgctxt "NavigationPage"
 msgid "Bottom Navigation Bar"
 msgstr ""
 
-#: app/ui/sheets/settings/navigation.slint:32
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/navigation.slint:32
 msgctxt "NavigationPage"
 msgid "Page Settings"
 msgstr ""
 
-#: app/ui/sheets/settings/navigation.slint:40
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/navigation.slint:40
 msgctxt "NavigationPage"
 msgid "Home"
 msgstr ""
 
-#: app/ui/sheets/settings/navigation.slint:51
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/navigation.slint:51
 msgctxt "NavigationPage"
 msgid "Directory"
 msgstr ""
 
-#: app/ui/sheets/settings/navigation.slint:62
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/navigation.slint:62
 msgctxt "NavigationPage"
 msgid "Daily Notes"
 msgstr ""
 
-#: app/ui/sheets/settings/navigation.slint:73
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/navigation.slint:73
 msgctxt "NavigationPage"
 msgid "Starred"
 msgstr ""
 
-#: app/ui/sheets/settings/navigation.slint:84
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/navigation.slint:84
 msgctxt "NavigationPage"
 msgid "Recent"
 msgstr ""
 
-#: app/ui/sheets/settings/navigation.slint:95
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/navigation.slint:95
 msgctxt "NavigationPage"
 msgid "Graph View"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:93
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:93
 msgctxt "TransferPage"
 msgid "Export (Show QR)"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:93
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:93
 msgctxt "TransferPage"
 msgid "Import"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:110
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:110
 msgctxt "TransferPage"
 msgid "Select items to include:"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:117
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:117
 msgctxt "TransferPage"
 msgid "Appearance & UI"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:118
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:118
 msgctxt "TransferPage"
 msgid "Theme, font size, and UI scale"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:130
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:130
 msgctxt "TransferPage"
 msgid "Remote Sync URL"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:131
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:131
 msgctxt "TransferPage"
 msgid "Active vault remote git repository URL"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:143
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:143
 msgctxt "TransferPage"
 msgid "Include Access Token"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:144
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:144
 msgctxt "TransferPage"
 msgid "⚠️ Contains sensitive personal credentials"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:158
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:158
 msgctxt "TransferPage"
 msgid "Scan with another device:"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:184
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:184
 msgctxt "TransferPage"
 msgid "Copied to Clipboard!"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:184
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:184
 msgctxt "TransferPage"
 msgid "Copy Transfer Link"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:198
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:198
 msgctxt "TransferPage"
 msgid "Import Settings"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:204
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:204
 msgctxt "TransferPage"
 msgid "Paste an immermemo:// transfer link or payload below:"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:211
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:211
 msgctxt "TransferPage"
 msgid "immermemo://import#... or JSON"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:220
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:220
 msgctxt "TransferPage"
 msgid "Paste Clipboard"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:225
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:225
 msgctxt "TransferPage"
 msgid "Review & Apply"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:243
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:243
 msgctxt "TransferPage"
 msgid "Settings Ready to Import"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:252
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:252
 msgctxt "TransferPage"
 msgid "✓ Appearance & UI settings"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:256
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:256
 msgctxt "TransferPage"
 msgid "✓ Remote URL: "
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:260
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:260
 msgctxt "TransferPage"
 msgid "⚠️ Access Token (will update saved token)"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:271
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:271
 msgctxt "TransferPage"
 msgid "Cancel"
 msgstr ""
 
-#: app/ui/sheets/settings/transfer.slint:276
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/transfer.slint:276
 msgctxt "TransferPage"
 msgid "Apply Settings"
 msgstr ""
 
-#: app/ui/sheets/settings/vaults.slint:28
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/vaults.slint:28
 msgctxt "VaultsPage"
 msgid "Vaults"
 msgstr ""
 
-#: app/ui/sheets/settings/vaults.slint:36
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/vaults.slint:36
 msgctxt "VaultsPage"
 msgid "{} vaults"
 msgstr ""
 
-#: app/ui/sheets/settings/vaults.slint:111
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/vaults.slint:113
 msgctxt "VaultsPage"
 msgid "In Use"
 msgstr ""
 
-#: app/ui/sheets/settings/vaults.slint:148
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/vaults.slint:150
 msgctxt "VaultsPage"
 msgid "Switch"
 msgstr ""
 
-#: app/ui/sheets/settings/vaults.slint:167
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/vaults.slint:169
 msgctxt "VaultsPage"
 msgid "+ Add Vault"
 msgstr ""
 
-#: app/ui/sheets/vault.slint:68
-msgctxt "VaultSheet"
-msgid "Vaults"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:74
+msgctxt "TokenAccountForm"
+msgid "Connecting..."
 msgstr ""
 
-#: app/ui/sheets/vault.slint:148
-msgctxt "VaultSheet"
-msgid "current"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:74
+msgctxt "TokenAccountForm"
+msgid "Connect Account"
 msgstr ""
 
-#: app/ui/sheets/vault.slint:157
-msgctxt "VaultSheet"
-msgid "+ Add vault"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:88
+msgctxt "AddAccountPanel"
+msgid "GitHub"
 msgstr ""
 
-#: app/ui/sheets/vault.slint:180
-msgctxt "VaultSheet"
-msgid "Delete"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:88
+msgctxt "AddAccountPanel"
+msgid "Forgejo / Gitea"
 msgstr ""
 
-#: app/ui/sheets/vault.slint:189
-msgctxt "VaultSheet"
-msgid "Cannot delete the only vault"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:88
+msgctxt "AddAccountPanel"
+msgid "GitLab"
 msgstr ""
 
-#: app/ui/sheets/vault_history.slint:63
-msgctxt "VaultHistorySheet"
-msgid "Vault History: {}"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:99
+msgctxt "AddAccountPanel"
+msgid "Sign in with GitHub to add your account."
 msgstr ""
 
-#: app/ui/sheets/vault_history.slint:63
-msgctxt "VaultHistorySheet"
-msgid "Vault History"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:113
+msgctxt "AddAccountPanel"
+msgid "Connect with GitHub"
 msgstr ""
 
-#: app/ui/sheets/vault_history.slint:104
-msgctxt "VaultHistorySheet"
-msgid "No commit history yet"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:123
+msgctxt "AddAccountPanel"
+msgid "Confirm this one-time code on GitHub:"
 msgstr ""
 
-#: app/ui/sheets/vault_history.slint:112
-msgctxt "VaultHistorySheet"
-msgid "Creating or syncing notes will record the vault's history here."
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:144
+msgctxt "AddAccountPanel"
+msgid "Waiting for browser authorization..."
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:14
-msgctxt "DailyCalendarView"
-msgid "Jan"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:153
+msgctxt "AddAccountPanel"
+msgid "Cancel"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:15
-msgctxt "DailyCalendarView"
-msgid "Feb"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:158
+msgctxt "AddAccountPanel"
+msgid "Open in Browser"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:16
-msgctxt "DailyCalendarView"
-msgid "Mar"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:167
+msgctxt "AddAccountPanel"
+msgid ""
+"Add Codeberg or your self-hosted Forgejo/Gitea account using a Personal "
+"Access Token."
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:17
-msgctxt "DailyCalendarView"
-msgid "Apr"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:168
+msgctxt "AddAccountPanel"
+msgid "Instance URL"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:18
-#: app/ui/widgets/daily_calendar.slint:18
-msgctxt "DailyCalendarView"
-msgid "May"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:170
+msgctxt "AddAccountPanel"
+msgid "Personal Access Token"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:19
-msgctxt "DailyCalendarView"
-msgid "Jun"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:171
+msgctxt "AddAccountPanel"
+msgid "Token with repo and user permissions"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:20
-msgctxt "DailyCalendarView"
-msgid "Jul"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:186
+msgctxt "AddAccountPanel"
+msgid ""
+"Add GitLab.com or a self-hosted instance using a Personal Access Token with "
+"api scope."
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:21
-msgctxt "DailyCalendarView"
-msgid "Aug"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:187
+msgctxt "AddAccountPanel"
+msgid "GitLab Instance URL"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:22
-msgctxt "DailyCalendarView"
-msgid "Sep"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:189
+msgctxt "AddAccountPanel"
+msgid "Personal Access Token (api scope)"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:23
-msgctxt "DailyCalendarView"
-msgid "Oct"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/sheets/settings/add_account.slint:190
+msgctxt "AddAccountPanel"
+msgid "Token with api permission"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:24
-msgctxt "DailyCalendarView"
-msgid "Nov"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:141
+msgctxt "HistoryPreviewPanel"
+msgid "Untitled"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:25
-msgctxt "DailyCalendarView"
-msgid "Dec"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:562
+msgctxt "EditorScreen"
+msgid "Conflict"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:62
-msgctxt "DailyCalendarView"
-msgid "January"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:574
+msgctxt "EditorScreen"
+msgid "Open Resolution"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:63
-msgctxt "DailyCalendarView"
-msgid "February"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:583
+msgctxt "EditorScreen"
+msgid "Next"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:64
-msgctxt "DailyCalendarView"
-msgid "March"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:588
+msgctxt "EditorScreen"
+msgid "Keep Mine"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:65
-msgctxt "DailyCalendarView"
-msgid "April"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:596
+msgctxt "EditorScreen"
+msgid "Keep Theirs"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:67
-msgctxt "DailyCalendarView"
-msgid "June"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:617
+msgctxt "EditorScreen"
+msgid "No notes yet"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:68
-msgctxt "DailyCalendarView"
-msgid "July"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:617
+msgctxt "EditorScreen"
+msgid "No note selected"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:69
-msgctxt "DailyCalendarView"
-msgid "August"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:626
+msgctxt "EditorScreen"
+msgid "Create your first note to start writing."
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:70
-msgctxt "DailyCalendarView"
-msgid "September"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:627
+msgctxt "EditorScreen"
+msgid "Choose a note from the list, or create a new one."
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:71
-msgctxt "DailyCalendarView"
-msgid "October"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:651
+msgctxt "EditorScreen"
+msgid "+ New Note"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:72
-msgctxt "DailyCalendarView"
-msgid "November"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:794
+msgctxt "EditorScreen"
+msgid "Untitled"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:73
-msgctxt "DailyCalendarView"
-msgid "December"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/editor.slint:843
+msgctxt "EditorScreen"
+msgid "Tap Edit or double-tap here to write."
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Su"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/properties.slint:51
+msgctxt "PropertiesView"
+msgid "No note is currently open."
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Mo"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/properties.slint:83
+msgctxt "PropertiesView"
+msgid "Note Info"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Tu"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/properties.slint:141
+msgctxt "PropertiesView"
+msgid "Characters"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "We"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/properties.slint:158
+msgctxt "PropertiesView"
+msgid "Words"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Th"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/properties.slint:175
+msgctxt "PropertiesView"
+msgid "Lines"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Fr"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/properties.slint:205
+msgctxt "PropertiesView"
+msgid "Properties"
 msgstr ""
 
-#: app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Sa"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/properties.slint:275
+msgctxt "PropertiesView"
+msgid "{n} conflict found"
+msgid_plural "{n} conflicts found"
+msgstr[0] ""
+msgstr[1] ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/properties.slint:276
+msgctxt "PropertiesView"
+msgid "Conflict detected"
 msgstr ""
 
-#: app/ui/widgets/mini_note_bar.slint:112
-msgctxt "MiniNoteBar"
-msgid "Previous Note"
-msgstr ""
-
-#: app/ui/widgets/mini_note_bar.slint:113
-msgctxt "MiniNoteBar"
-msgid "Next Note"
-msgstr ""
-
-#: app/ui/widgets/selection_bar.slint:51
-msgctxt "SelectionBar"
-msgid "{} selected"
+#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/vault-add-sheet/app/ui/pages/editor/properties.slint:349
+msgctxt "PropertiesView"
+msgid "🔍 Open resolution sheet"
 msgstr ""

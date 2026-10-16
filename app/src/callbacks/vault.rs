@@ -6,22 +6,14 @@
 
 use crate::session::SessionRef;
 
-use slint::{ComponentHandle, SharedString};
+use slint::ComponentHandle;
 
-use crate::session::{
-    copy_to_clipboard, refresh_vault_list, set_error, set_status, switch_vault,
-    vault_path_from_input,
-};
+use crate::session::{copy_to_clipboard, refresh_vault_list, set_error, set_status, switch_vault};
 use crate::{App, SettingsAdapter};
 
 fn open_vault_sheet(app: &App, session: &SessionRef) {
     refresh_vault_list(app, session);
     app.set_vault_sheet_open(true);
-}
-
-fn request_add_vault(app: &App) {
-    app.set_add_vault_draft(SharedString::new());
-    app.set_add_vault_open(true);
 }
 
 /// Asks for confirmation before removing the vault at `index` -- unless it
@@ -36,18 +28,6 @@ fn request_delete_vault(app: &App, session: &SessionRef, index: i32) {
 
 fn known_vault(session: &SessionRef, index: i32) -> Option<std::path::PathBuf> {
     session.borrow().known_vaults.get(index as usize).cloned()
-}
-
-fn add_vault(app: &App, session: &SessionRef, input: &str) {
-    let base = session.borrow().app_data.base().to_owned();
-    let result = vault_path_from_input(&base, input).and_then(|dir| {
-        session.borrow_mut().register_vault(&dir)?;
-        Ok(dir)
-    });
-    match result {
-        Ok(dir) => switch_vault(app, session, dir),
-        Err(e) => set_error(app, format!("Could not add the vault: {e}")),
-    }
 }
 
 fn delete_confirmed_vault(app: &App, session: &SessionRef) {
@@ -96,10 +76,6 @@ pub fn bind_vault_callbacks(app: &App, session: &SessionRef) {
             }
         }
     });
-    settings.on_add_vault({
-        let weak = app.as_weak();
-        move || request_add_vault(&weak.unwrap())
-    });
     settings.on_delete_vault({
         let (weak, session) = (app.as_weak(), session.clone());
         move |index| request_delete_vault(&weak.unwrap(), &session, index)
@@ -120,24 +96,12 @@ pub fn bind_vault_callbacks(app: &App, session: &SessionRef) {
             }
         }
     });
-    app.on_add_vault_requested({
-        let weak = app.as_weak();
-        move || request_add_vault(&weak.unwrap())
-    });
     app.on_delete_vault_requested({
         let (weak, session) = (app.as_weak(), session.clone());
         move |index| request_delete_vault(&weak.unwrap(), &session, index)
     });
 
     // Both sheets' confirmation dialogs.
-    app.on_confirm_add_vault({
-        let (weak, session) = (app.as_weak(), session.clone());
-        move |input| {
-            let app = weak.unwrap();
-            app.set_add_vault_open(false);
-            add_vault(&app, &session, &input);
-        }
-    });
     app.on_confirm_delete_vault({
         let (weak, session) = (app.as_weak(), session.clone());
         move || {

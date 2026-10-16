@@ -1,0 +1,203 @@
+import { SettingsAdapter } from "../../adapters/settings.slint";
+import { Palette, LineEdit, Button } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { SegmentedControl } from "@origiri-mobile/widgets.slint";
+import { WrappedText } from "widgets.slint";
+
+// A label above a single-line text field, as every form in this sheet lays them out.
+export component FormField inherits VerticalLayout {
+    in property <string> label;
+    in property <string> placeholder;
+    in property <InputType> input-type: InputType.text;
+    in-out property <string> text;
+    spacing: 4px;
+
+    Text {
+        text: root.label;
+        font-size: 13px;
+        color: Colors.muted;
+    }
+
+    LineEdit {
+        height: Metrics.touch;
+        placeholder-text: root.placeholder;
+        input-type: root.input-type;
+        text <=> root.text;
+    }
+}
+
+// Connecting a hosting account with a pasted Personal Access Token --
+// the same form for Forgejo / Gitea and GitLab, which differ only in the
+// words and in which `SettingsAdapter` properties the parent wires in. It
+// only registers the account: which repository a vault syncs to is chosen
+// when the vault is set up.
+component TokenAccountForm inherits VerticalLayout {
+    in property <string> intro;
+    in property <string> instance-label;
+    in property <string> instance-placeholder;
+    in property <string> token-label;
+    in property <string> token-placeholder;
+    in-out property <string> instance-draft;
+    in-out property <string> token-draft;
+    in property <bool> connecting;
+    in property <string> status-message;
+    in property <bool> status-is-error;
+    callback connect();
+    spacing: Metrics.spacing-md;
+
+    WrappedText {
+        text: root.intro;
+    }
+
+    FormField {
+        label: root.instance-label;
+        placeholder: root.instance-placeholder;
+        text <=> root.instance-draft;
+    }
+
+    FormField {
+        label: root.token-label;
+        placeholder: root.token-placeholder;
+        input-type: InputType.password;
+        text <=> root.token-draft;
+    }
+
+    if root.status-message != "": WrappedText {
+        text: root.status-message;
+        text-color: root.status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
+        font-size: 13px;
+    }
+
+    HorizontalLayout {
+        alignment: end;
+        Button {
+            text: root.connecting ? @tr("Connecting...") : @tr("Connect Account");
+            primary: true;
+            enabled: !root.connecting && root.token-draft != "";
+            clicked => { root.connect(); }
+        }
+    }
+}
+
+// The provider tabs and their sign-in flows, shared by the Accounts page and
+// the add-vault sheet: it registers an account and nothing else.
+export component AddAccountPanel inherits VerticalLayout {
+    spacing: Metrics.spacing-md;
+
+    SegmentedControl {
+        options: [@tr("GitHub"), @tr("Forgejo / Gitea"), @tr("GitLab")];
+        selected: SettingsAdapter.sync-provider-tab;
+        changed(i) => { SettingsAdapter.sync-provider-tab = i; }
+    }
+
+    if SettingsAdapter.sync-provider-tab == 0: VerticalLayout {
+        spacing: Metrics.spacing-md;
+
+        if !SettingsAdapter.github-auth-pending: VerticalLayout {
+            spacing: Metrics.spacing-md;
+            WrappedText {
+                text: @tr("Sign in with GitHub to add your account.");
+                font-size: Metrics.font-sm;
+                text-color: Colors.muted;
+            }
+
+            if SettingsAdapter.github-auth-status != "": WrappedText {
+                text: SettingsAdapter.github-auth-status;
+                font-size: Metrics.font-sm;
+                text-color: Colors.muted;
+            }
+
+            HorizontalLayout {
+                alignment: end;
+                Button {
+                    text: @tr("Connect with GitHub");
+                    primary: true;
+                    clicked => { SettingsAdapter.connect-github(); }
+                }
+            }
+        }
+
+        if SettingsAdapter.github-auth-pending: VerticalLayout {
+            spacing: Metrics.spacing-md;
+            WrappedText {
+                text: @tr("Confirm this one-time code on GitHub:");
+                font-size: Metrics.font-sm;
+                text-color: Colors.muted;
+            }
+
+            Rectangle {
+                height: 52px;
+                border-radius: Metrics.radius-md;
+                background: Palette.foreground.with-alpha(0.06);
+
+                Text {
+                    text: SettingsAdapter.github-user-code;
+                    font-size: 22px;
+                    font-weight: 700;
+                    color: Palette.accent-background;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            WrappedText {
+                text: SettingsAdapter.github-auth-status != "" ? SettingsAdapter.github-auth-status : @tr("Waiting for browser authorization...");
+                font-size: Metrics.font-sm;
+                text-color: Colors.muted;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: end;
+                Button {
+                    text: @tr("Cancel");
+                    clicked => { SettingsAdapter.cancel-github-auth(); }
+                }
+
+                Button {
+                    text: @tr("Open in Browser");
+                    primary: true;
+                    clicked => { SettingsAdapter.open-github-browser(); }
+                }
+            }
+        }
+    }
+
+    if SettingsAdapter.sync-provider-tab == 1: TokenAccountForm {
+        intro: @tr("Add Codeberg or your self-hosted Forgejo/Gitea account using a Personal Access Token.");
+        instance-label: @tr("Instance URL");
+        instance-placeholder: "https://codeberg.org";
+        token-label: @tr("Personal Access Token");
+        token-placeholder: @tr("Token with repo and user permissions");
+        instance-draft <=> SettingsAdapter.forgejo-instance-draft;
+        token-draft <=> SettingsAdapter.forgejo-token-draft;
+        connecting: SettingsAdapter.forgejo-connecting;
+        status-message: SettingsAdapter.forgejo-status-message;
+        status-is-error: SettingsAdapter.forgejo-status-is-error;
+        connect => {
+            SettingsAdapter.connect-forgejo(
+                SettingsAdapter.forgejo-instance-draft,
+                SettingsAdapter.forgejo-token-draft,
+            );
+        }
+    }
+
+    if SettingsAdapter.sync-provider-tab == 2: TokenAccountForm {
+        intro: @tr("Add GitLab.com or a self-hosted instance using a Personal Access Token with api scope.");
+        instance-label: @tr("GitLab Instance URL");
+        instance-placeholder: "https://gitlab.com";
+        token-label: @tr("Personal Access Token (api scope)");
+        token-placeholder: @tr("Token with api permission");
+        instance-draft <=> SettingsAdapter.gitlab-instance-draft;
+        token-draft <=> SettingsAdapter.gitlab-token-draft;
+        connecting: SettingsAdapter.gitlab-connecting;
+        status-message: SettingsAdapter.gitlab-status-message;
+        status-is-error: SettingsAdapter.gitlab-status-is-error;
+        connect => {
+            SettingsAdapter.connect-gitlab(
+                SettingsAdapter.gitlab-instance-draft,
+                SettingsAdapter.gitlab-token-draft,
+            );
+        }
+    }
+}

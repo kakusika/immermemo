@@ -564,7 +564,7 @@ impl Session {
     }
 
     /// The vault's own token store -- never the shared account's.
-    fn own_token_store(&self) -> anyhow::Result<Arc<dyn TokenStore>> {
+    pub(crate) fn own_token_store(&self) -> anyhow::Result<Arc<dyn TokenStore>> {
         (self.token_store_for)(&self.vault_dir)
     }
 
@@ -754,6 +754,7 @@ pub fn vault_path_from_input(input: &str) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{NewVault, VaultSync};
     use tempfile::TempDir;
 
     struct DummyTokenStore;
@@ -1251,5 +1252,228 @@ mod tests {
 
         let pushed = git2::Repository::open_bare(remote.path()).unwrap();
         assert!(pushed.find_reference("refs/heads/main").is_ok());
+    }
+
+    /// A session over `vault_dir` whose token stores are the in-memory ones
+    /// of `stores`.
+    fn session_with_stores(tmp: &TempDir, stores: &Stores) -> (Session, PathBuf, AppData) {
+        let vault_dir = tmp.path().join("vault");
+        std::fs::create_dir_all(&vault_dir).unwrap();
+        let vault_dir = vault_dir.canonicalize().unwrap();
+        let app_data = AppData::new(tmp.path().join("data"));
+        app_data.add_vault(&vault_dir).unwrap();
+        let session = Session::new(
+            vault_dir.clone(),
+            app_data.clone(),
+            stores.at(&vault_dir),
+            {
+                let stores = stores.clone();
+                Box::new(move |path| Ok(stores.at(path) as Arc<dyn TokenStore>))
+            },
+            vec![vault_dir.clone()],
+            None,
+            NoteIndex::open_in_memory().unwrap(),
+        );
+        (session, vault_dir, app_data)
+    }
+
+    fn synced_through(user: &str) -> VaultSync {
+        VaultSync::Account {
+            account_id: format!("github:{user}"),
+            remote_url: format!("https://github.com/{user}/notes.git"),
+        }
+    }
+
+    #[test]
+    fn an_account_is_registered_on_its_own_and_touches_no_vault() {
+        let tmp = TempDir::new().unwrap();
+        let stores = Stores::default();
+        let (session, vault_dir, app_data) = session_with_stores(&tmp, &stores);
+
+        session.add_account(account("a"), "tok-a").unwrap();
+        assert_eq!(app_data.get_account("github:a"), Some(account("a")));
+        assert_eq!(
+            stores
+                .token(&app_data.account_token_path("github:a").unwrap())
+                .as_deref(),
+            Some("tok-a")
+        );
+        assert_eq!(app_data.load_vault_account(&vault_dir), None);
+        assert_eq!(app_data.load_remote(&vault_dir), None);
+        assert_eq!(session.remote, None);
+
+        // Adding it again replaces its token.
+        session.add_account(account("a"), "tok-a2").unwrap();
+        assert_eq!(
+            stores
+                .token(&app_data.account_token_path("github:a").unwrap())
+                .as_deref(),
+            Some("tok-a2")
+        );
+    }
+
+    #[test]
+    fn a_vault_syncs_through_an_account_or_a_typed_remote_and_can_stop() {
+        let tmp = TempDir::new().unwrap();
+        let stores = Stores::default();
+        let (mut session, vault_dir, app_data) = session_with_stores(&tmp, &stores);
+        session.add_account(account("a"), "tok-a").unwrap();
+        session.add_account(account("b"), "tok-b").unwrap();
+        let token_of = |id: &str| stores.token(&app_data.account_token_path(id).unwrap());
+
+        session
+            .set_vault_sync(&vault_dir, &synced_through("a"))
+            .unwrap();
+        assert_eq!(
+            session.remote.as_deref(),
+            Some("https://github.com/a/notes.git")
+        );
+        assert_eq!(
+            app_data.load_vault_account(&vault_dir).as_deref(),
+            Some("github:a")
+        );
+        // From here on the vault authenticates through the account.
+        session.token_store.save("refreshed-a").unwrap();
+        assert_eq!(token_of("github:a").as_deref(), Some("refreshed-a"));
+
+        // Another account re-points this vault only.
+        session
+            .set_vault_sync(&vault_dir, &synced_through("b"))
+            .unwrap();
+        assert_eq!(token_of("github:a").as_deref(), Some("refreshed-a"));
+        assert_eq!(token_of("github:b").as_deref(), Some("tok-b"));
+
+        // A typed remote drops the account link and uses its own token.
+        session
+            .set_vault_sync(
+                &vault_dir,
+                &VaultSync::Custom {
+                    remote_url: "https://git.example.com/me/notes.git".to_owned(),
+                    token: "typed".to_owned(),
+                },
+            )
+            .unwrap();
+        assert_eq!(app_data.load_vault_account(&vault_dir), None);
+        assert_eq!(stores.token(&vault_dir).as_deref(), Some("typed"));
+        assert_eq!(
+            token_of("github:b").as_deref(),
+            Some("tok-b"),
+            "B untouched"
+        );
+
+        // An empty token keeps the one already saved.
+        session
+            .set_vault_sync(
+                &vault_dir,
+                &VaultSync::Custom {
+                    remote_url: "https://git.example.com/me/other.git".to_owned(),
+                    token: String::new(),
+                },
+            )
+            .unwrap();
+        assert_eq!(stores.token(&vault_dir).as_deref(), Some("typed"));
+
+        // Stopping forgets the remote, the link and the vault's own token only.
+        session.clear_vault_sync(&vault_dir);
+        assert_eq!(session.remote, None);
+        assert_eq!(app_data.load_remote(&vault_dir), None);
+        assert_eq!(stores.token(&vault_dir).as_deref(), Some(""));
+        assert_eq!(token_of("github:b").as_deref(), Some("tok-b"));
+        assert!(app_data.get_account("github:b").is_some(), "accounts stay");
+    }
+
+    #[test]
+    fn a_vault_cannot_sync_through_an_account_that_is_not_registered() {
+        let tmp = TempDir::new().unwrap();
+        let stores = Stores::default();
+        let (mut session, vault_dir, app_data) = session_with_stores(&tmp, &stores);
+        assert!(
+            session
+                .set_vault_sync(&vault_dir, &synced_through("nobody"))
+                .is_err()
+        );
+        assert_eq!(session.remote, None);
+        assert_eq!(app_data.load_remote(&vault_dir), None);
+    }
+
+    #[test]
+    fn another_vaults_sync_can_be_set_without_touching_the_open_one() {
+        let tmp = TempDir::new().unwrap();
+        let stores = Stores::default();
+        let (mut session, vault_dir, app_data) = session_with_stores(&tmp, &stores);
+        session.add_account(account("a"), "tok-a").unwrap();
+        let other = tmp.path().join("other");
+        session.register_vault(&other).unwrap();
+        let other = other.canonicalize().unwrap();
+
+        session
+            .set_vault_sync(&other, &synced_through("a"))
+            .unwrap();
+        assert_eq!(
+            app_data.load_remote(&other).as_deref(),
+            Some("https://github.com/a/notes.git")
+        );
+        assert_eq!(session.remote, None, "the open vault is unchanged");
+        assert_eq!(app_data.load_remote(&vault_dir), None);
+    }
+
+    #[test]
+    fn adding_a_vault_registers_it_and_sets_how_it_syncs() {
+        let tmp = TempDir::new().unwrap();
+        let stores = Stores::default();
+        let (mut session, vault_dir, app_data) = session_with_stores(&tmp, &stores);
+        session.add_account(account("a"), "tok-a").unwrap();
+
+        let dir = tmp.path().join("folders/work");
+        let added = session
+            .add_vault(&NewVault {
+                dir: dir.clone(),
+                sync: Some(synced_through("a")),
+            })
+            .unwrap();
+        assert_eq!(added, dir.canonicalize().unwrap());
+        assert!(dir.is_dir(), "the folder is created");
+        assert_eq!(session.known_vaults.len(), 2);
+        assert_eq!(
+            app_data.load_remote(&added).as_deref(),
+            Some("https://github.com/a/notes.git")
+        );
+        assert_eq!(
+            app_data.load_vault_account(&added).as_deref(),
+            Some("github:a")
+        );
+        assert_eq!(session.vault_dir, vault_dir, "adding does not switch");
+
+        // A vault that does not sync.
+        let local = session
+            .add_vault(&NewVault {
+                dir: tmp.path().join("folders/local"),
+                sync: None,
+            })
+            .unwrap();
+        assert_eq!(app_data.load_remote(&local), None);
+
+        // The same folder again is refused, by any spelling.
+        let again = session.add_vault(&NewVault {
+            dir: tmp.path().join("folders/../folders/work"),
+            sync: None,
+        });
+        assert!(again.is_err());
+        assert_eq!(session.known_vaults.len(), 3);
+    }
+
+    #[test]
+    fn a_vault_whose_sync_cannot_be_set_is_not_left_behind() {
+        let tmp = TempDir::new().unwrap();
+        let stores = Stores::default();
+        let (mut session, _, app_data) = session_with_stores(&tmp, &stores);
+        let dir = tmp.path().join("folders/broken");
+        let result = session.add_vault(&NewVault {
+            dir: dir.clone(),
+            sync: Some(synced_through("nobody")),
+        });
+        assert!(result.is_err());
+        assert_eq!(app_data.known_vaults().len(), 1, "it was forgotten again");
+        assert!(session.known_vaults.len() <= 2);
     }
 }

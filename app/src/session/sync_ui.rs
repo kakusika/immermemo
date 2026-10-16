@@ -5,15 +5,15 @@ use std::cell::RefCell;
 
 use slint::{ComponentHandle, SharedString};
 
+use crate::App;
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use crate::platform::cert;
-use crate::{App, SettingsAdapter};
 use immermemo_core::format_time_only;
 
 use super::util::{set_error, set_status};
 use super::{
     SESSION, close_current_note_and_show_list_or_reopen, open_note, refresh_list,
-    show_list_or_reopen, show_vault_identity,
+    show_list_or_reopen,
 };
 
 thread_local! {
@@ -31,13 +31,9 @@ pub fn start_sync(app: &App, session: &SessionRef) {
         match s.prepare_sync() {
             Ok(Some(job)) => job,
             Ok(None) => {
-                set_status(app, "No remote linked yet");
-                let settings = app.global::<SettingsAdapter>();
-                settings.set_url_draft(SharedString::new());
-                settings.set_token_draft(SharedString::new());
-                settings.set_has_token(false);
-                show_vault_identity(app, &s.vault_dir);
-                app.set_settings_open(true);
+                set_status(app, "This vault does not sync yet");
+                // Offer to set that up.
+                app.invoke_open_sync_settings();
                 return;
             }
             Err(e) => {

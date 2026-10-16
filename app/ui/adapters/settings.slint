@@ -9,6 +9,8 @@ export struct AccountData {
     display-name: string,
     avatar: image,
     has-avatar: bool,
+    // How many vaults sync through this account.
+    vault-count: int,
 }
 
 export struct VaultData {
@@ -18,6 +20,8 @@ export struct VaultData {
     is-current: bool,
     original-index: int,
     has-account: bool,
+    // Whether the vault syncs at all (through an account or a typed remote).
+    syncs: bool,
     account-provider: string,
     account-avatar: image,
     account-has-avatar: bool,
@@ -31,21 +35,17 @@ export struct HomeQuickActionRow {
 export global SettingsAdapter {
     // Accounts list
     in property <[AccountData]> accounts: [];
-    in-out property <bool> adding-account: false;
-    in property <string> current-vault-account-id: "";
-    in property <string> current-vault-account-label: "";
+    // The open vault's sync account, if it syncs through one (shown on Home).
     in property <bool> current-vault-has-account: false;
     in property <string> current-vault-account-provider: "";
     in property <image> current-vault-account-avatar;
     in property <bool> current-vault-account-has-avatar: false;
+    in-out property <bool> adding-account: false;
 
     // Vaults list
     in property <[VaultData]> vaults: [];
 
     // Remote sync properties
-    in property <bool> has-token: false;
-    in-out property <string> url-draft: "";
-    in-out property <string> token-draft: "";
     in property <bool> syncing: false;
     in property <string> sync-status: "";
 
@@ -127,26 +127,15 @@ export global SettingsAdapter {
     in-out property <int> transfer-tab: 0;
 
     // Cloud Provider Sync properties
-    in property <bool> github-connected: false;
-    in property <string> github-username: "";
-    in property <string> github-repo-name: "";
     in property <bool> github-auth-pending: false;
     in property <string> github-user-code: "";
     in property <string> github-verification-uri: "";
     in property <string> github-auth-status: "";
 
-    in property <bool> forgejo-connected: false;
-    in property <string> forgejo-username: "";
-    in property <string> forgejo-instance: "";
-    in property <string> forgejo-repo-name: "";
     in property <bool> forgejo-connecting: false;
     in property <string> forgejo-status-message: "";
     in property <bool> forgejo-status-is-error: false;
 
-    in property <bool> gitlab-connected: false;
-    in property <string> gitlab-username: "";
-    in property <string> gitlab-instance: "";
-    in property <string> gitlab-repo-name: "";
     in property <bool> gitlab-connecting: false;
     in property <string> gitlab-status-message: "";
     in property <bool> gitlab-status-is-error: false;
@@ -154,13 +143,10 @@ export global SettingsAdapter {
     in-out property <int> sync-provider-tab: 0; // 0: GitHub, 1: Forgejo / Gitea, 2: GitLab
     in-out property <string> forgejo-instance-draft: "https://codeberg.org";
     in-out property <string> forgejo-token-draft: "";
-    in-out property <string> forgejo-repo-draft: "immermemo-notes";
 
     in-out property <string> gitlab-instance-draft: "https://gitlab.com";
     in-out property <string> gitlab-token-draft: "";
-    in-out property <string> gitlab-repo-draft: "immermemo-notes";
 
-    in-out property <bool> show-advanced-remote: false;
 
     // In-app SSH key
     in property <bool> ssh-key-present: false;
@@ -168,7 +154,6 @@ export global SettingsAdapter {
     in property <bool> ssh-key-copied: false;
 
     // Callbacks
-    callback save-remote(string, string);
     callback sync();
     callback open-vaults();
     callback status-bar-changed(int);
@@ -190,19 +175,17 @@ export global SettingsAdapter {
     callback connect-github();
     callback open-github-browser();
     callback cancel-github-auth();
-    callback disconnect-github();
 
-    callback connect-forgejo(string, string, string);
-    callback disconnect-forgejo();
+    callback connect-forgejo(string, string);
 
-    callback connect-gitlab(string, string, string);
-    callback disconnect-gitlab();
+    callback connect-gitlab(string, string);
 
     callback generate-ssh-key();
     callback copy-ssh-public-key();
 
     callback delete-account(string);
-    callback create-vault-from-account(string, string);
+    // Opens the add-vault sheet with this account already chosen for sync.
+    callback new-vault-with-account(string);
 
     callback switch-vault(int);
     callback add-vault();

@@ -3,6 +3,18 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- A vault kept in the device's shared storage is read and written by
+         path (std::fs, libgit2), which Android 11+ allows only with "all
+         files access"; before that the storage permission does. Asked for
+         only when the user chooses local storage for a vault. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+
     <application android:label="@string/app_name">
 
         <activity

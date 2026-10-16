@@ -33,7 +33,6 @@ fn vault_account_info(
 }
 
 pub fn refresh_vault_list(app: &App, session: &SessionRef) {
-    crate::provider::migrate_legacy_remotes(&session.borrow());
     let s = session.borrow();
     let names: Vec<SharedString> = s
         .known_vaults
@@ -53,7 +52,7 @@ pub fn refresh_vault_list(app: &App, session: &SessionRef) {
             } else if let Some(url) = s.app_data.load_remote(p) {
                 url.into()
             } else {
-                "Local".into()
+                "This device only".into()
             }
         })
         .collect();
@@ -67,7 +66,7 @@ pub fn refresh_vault_list(app: &App, session: &SessionRef) {
         let subtitle = subtitles
             .get(curr_idx)
             .cloned()
-            .unwrap_or_else(|| "Local".into());
+            .unwrap_or_else(|| "This device only".into());
         let (has_account, account_provider, account_avatar, account_has_avatar) =
             vault_account_info(&s.app_data, p, app.as_weak());
         ui_vaults.push(VaultData {
@@ -77,6 +76,7 @@ pub fn refresh_vault_list(app: &App, session: &SessionRef) {
             is_current: true,
             original_index: curr_idx as i32,
             has_account,
+            syncs: s.app_data.load_remote(p).is_some(),
             account_provider,
             account_avatar,
             account_has_avatar,
@@ -90,7 +90,7 @@ pub fn refresh_vault_list(app: &App, session: &SessionRef) {
         let subtitle = subtitles
             .get(idx)
             .cloned()
-            .unwrap_or_else(|| "Local".into());
+            .unwrap_or_else(|| "This device only".into());
         let (has_account, account_provider, account_avatar, account_has_avatar) =
             vault_account_info(&s.app_data, p, app.as_weak());
         ui_vaults.push(VaultData {
@@ -100,6 +100,7 @@ pub fn refresh_vault_list(app: &App, session: &SessionRef) {
             is_current: false,
             original_index: idx as i32,
             has_account,
+            syncs: s.app_data.load_remote(p).is_some(),
             account_provider,
             account_avatar,
             account_has_avatar,
@@ -155,7 +156,6 @@ pub fn switch_vault(app: &App, session: &SessionRef, vault_dir: PathBuf) {
     super::sync_selection_to_ui(app, session);
     app.set_search_query(SharedString::new());
     app.set_remote_configured(remote.is_some());
-    crate::update_provider_ui_state(app, remote.as_deref());
     app.set_current_title(SharedString::new());
     update_rendered_body(app, session, "");
     app.set_last_sync_error(SharedString::new());
@@ -175,28 +175,4 @@ pub fn switch_vault(app: &App, session: &SessionRef, vault_dir: PathBuf) {
     if remote.is_some() {
         schedule_auto_sync(app, std::time::Duration::from_millis(500));
     }
-}
-
-/// Turns what the user typed in the "Add vault" dialog into an actual
-/// vault directory -- desktop takes it as a path outright; mobile platforms
-/// (Android, iOS) have no arbitrary filesystem folder access, so it names
-/// a subfolder of the private sandbox storage the app already uses.
-#[cfg(any(target_os = "android", target_os = "ios"))]
-pub fn vault_path_from_input(base: &std::path::Path, input: &str) -> anyhow::Result<PathBuf> {
-    anyhow::ensure!(!input.is_empty(), "the name can't be empty");
-    anyhow::ensure!(
-        !input.contains(['/', '\\']),
-        "the name can't contain a path separator"
-    );
-    anyhow::ensure!(
-        input != "vaults" && input != "vaults.txt" && input != "current_vault.txt",
-        "that name is reserved for the app's own data"
-    );
-    Ok(base.join(input))
-}
-
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-pub fn vault_path_from_input(_base: &std::path::Path, input: &str) -> anyhow::Result<PathBuf> {
-    anyhow::ensure!(!input.trim().is_empty(), "the path can't be empty");
-    Ok(immermemo_core::vault_path_from_input(input))
 }

@@ -1,0 +1,478 @@
+import { Palette, LineEdit, Button, Switch } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+import {
+    IconButton,
+    TopBar,
+    AppScrollView,
+    SegmentedControl,
+    Card,
+    Divider,
+} from "@origiri-mobile/widgets.slint";
+import { SheetDragArea } from "../components.slint";
+import { AddVaultAdapter } from "../adapters/add_vault.slint";
+import { SettingsAdapter } from "../adapters/settings.slint";
+import { AccountAvatar } from "../widgets/account_avatar.slint";
+import { FormField, AddAccountPanel } from "settings/add_account.slint";
+import { WrappedText } from "settings/widgets.slint";
+
+// The sheet for adding a vault, and for setting up how an existing vault
+// syncs: one screen, three questions --
+//
+// 1. its name (adding only);
+// 2. where it lives: in the app, or in local storage (adding only);
+// 3. whether it syncs, and with what: an account (a new private repository
+//    or an existing one) or a remote URL typed in.
+//
+// The form's state is `AddVaultAdapter`'s; this component only shows it and
+// reports edits and the two buttons. What an edit means (the path a name
+// leads to, whether the form can be submitted, the account's repositories)
+// is Rust's (`immermemo::callbacks::vault_setup`).
+export component VaultSetupSheet inherits Rectangle {
+    in property <length> inset-top: 0px;
+    in property <length> inset-bottom: 0px;
+    // How far the sheet has animated open and the pixel offset that
+    // follows from it -- same contract as `IconPickerSheet`.
+    in property <float> sheet-progress: 1.0;
+    in property <length> sheet-y-offset: 0px;
+    callback sheet-drag-moved(length);
+    callback sheet-drag-swiped(length, float);
+    callback sheet-drag-cancelled();
+
+    // A field is being typed in (the keyboard is up): a drag down is then
+    // not a request to dismiss the sheet.
+    in property <bool> typing: false;
+
+    property <bool> adding: AddVaultAdapter.mode == 0;
+
+    background: Colors.page-background;
+
+    header-gesture := SheetDragArea {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: root.inset-top + Metrics.bar-height;
+        inset-top: root.inset-top;
+        sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
+        sheet-drag-swiped(dy, v) => { root.sheet-drag-swiped(dy, v); }
+        sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
+
+        TopBar {
+            y: root.sheet-y-offset;
+            width: 100%;
+            height: 100%;
+            inset-top: root.inset-top;
+
+            IconButton {
+                icon: AddVaultAdapter.page == 1 ? TablerIcons.chevron-left : TablerIcons.x;
+                clicked => {
+                    if (AddVaultAdapter.page == 1) {
+                        AddVaultAdapter.page = 0;
+                    } else {
+                        AddVaultAdapter.close();
+                    }
+                }
+            }
+
+            Text {
+                horizontal-stretch: 1;
+                text: AddVaultAdapter.page == 1 ? @tr("Add Account")
+                    : root.adding ? @tr("Add vault")
+                    : @tr("Sync") + ": " + AddVaultAdapter.target-name;
+                font-size: 20px;
+                font-weight: 600;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+    }
+
+    body-gesture := SheetDragArea {
+        x: 0px;
+        y: root.inset-top + Metrics.bar-height;
+        width: 100%;
+        height: root.height - (root.inset-top + Metrics.bar-height) - root.inset-bottom;
+        // Typing, or scrolling away from the top, must not read as a drag to dismiss.
+        enabled: !root.typing && form-scroll.content-y >= -1px;
+        sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
+        sheet-drag-swiped(dy, v) => { root.sheet-drag-swiped(dy, v); }
+        sheet-drag-cancelled => { root.sheet-drag-cancelled(); }
+
+        VerticalLayout {
+            y: root.sheet-y-offset;
+            width: 100%;
+            height: 100%;
+
+            Rectangle {
+                height: 1px;
+                background: Colors.separator;
+            }
+
+            form-scroll := AppScrollView {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    // Children keep their own heights: without this a short
+                    // form is stretched to fill the sheet.
+                    alignment: start;
+                    padding-left: Metrics.gutter;
+                    padding-right: Metrics.gutter;
+                    padding-top: Metrics.spacing-md;
+                    padding-bottom: Metrics.spacing-3xl;
+                    spacing: Metrics.spacing-md;
+
+                    // Adding an account, in place, so the form is kept.
+                    if AddVaultAdapter.page == 1: Card {
+                        content-spacing: Metrics.spacing-md;
+                        AddAccountPanel { }
+                    }
+
+                    if AddVaultAdapter.page == 0 && root.adding: Card {
+                        content-spacing: Metrics.spacing-md;
+
+                        FormField {
+                            label: @tr("Name");
+                            placeholder: @tr("My notes");
+                            text <=> AddVaultAdapter.name;
+                            changed text => { AddVaultAdapter.edited(); }
+                        }
+                    }
+
+                    if AddVaultAdapter.page == 0 && root.adding: Card {
+                        content-spacing: Metrics.spacing-md;
+
+                        Text {
+                            text: @tr("Where to keep it");
+                            font-size: 15px;
+                            font-weight: 600;
+                            color: Palette.foreground;
+                        }
+
+                        SegmentedControl {
+                            options: [@tr("In the app"), @tr("Local storage")];
+                            selected: AddVaultAdapter.storage;
+                            changed(i) => {
+                                AddVaultAdapter.storage = i;
+                                AddVaultAdapter.edited();
+                            }
+                        }
+
+                        if AddVaultAdapter.storage == 1: VerticalLayout {
+                            spacing: Metrics.spacing-sm;
+
+                            FormField {
+                                label: @tr("Folder");
+                                placeholder: "/storage/emulated/0/Documents";
+                                text <=> AddVaultAdapter.folder;
+                                changed text => { AddVaultAdapter.edited(); }
+                            }
+
+                            if AddVaultAdapter.can-pick-folder: HorizontalLayout {
+                                alignment: end;
+                                Button {
+                                    text: @tr("Choose folder");
+                                    clicked => { AddVaultAdapter.pick-folder(); }
+                                }
+                            }
+                        }
+
+                        if AddVaultAdapter.storage-hint != "": WrappedText {
+                            text: AddVaultAdapter.storage-hint;
+                            font-size: Metrics.font-sm;
+                            text-color: Colors.muted;
+                        }
+
+                        if AddVaultAdapter.resulting-path != "": WrappedText {
+                            text: @tr("It will be created at") + " " + AddVaultAdapter.resulting-path;
+                            font-size: Metrics.font-sm;
+                            text-color: Colors.muted;
+                        }
+                    }
+
+                    if AddVaultAdapter.page == 0: Card {
+                        content-spacing: Metrics.spacing-md;
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Text {
+                                horizontal-stretch: 1;
+                                text: @tr("Sync with a Git host");
+                                font-size: 15px;
+                                font-weight: 600;
+                                color: Palette.foreground;
+                                vertical-alignment: center;
+                            }
+
+                            Switch {
+                                checked <=> AddVaultAdapter.sync;
+                                toggled => { AddVaultAdapter.edited(); }
+                            }
+                        }
+
+                        if !AddVaultAdapter.sync: WrappedText {
+                            text: @tr("The notes stay on this device only.");
+                            font-size: Metrics.font-sm;
+                            text-color: Colors.muted;
+                        }
+
+                        if AddVaultAdapter.sync: VerticalLayout {
+                            spacing: Metrics.spacing-md;
+
+                            SegmentedControl {
+                                options: [@tr("Account"), @tr("Remote URL")];
+                                selected: AddVaultAdapter.sync-kind;
+                                changed(i) => {
+                                    AddVaultAdapter.sync-kind = i;
+                                    AddVaultAdapter.edited();
+                                }
+                            }
+
+                            if AddVaultAdapter.sync-kind == 0: VerticalLayout {
+                                spacing: Metrics.spacing-md;
+
+                                if SettingsAdapter.accounts.length == 0: WrappedText {
+                                    text: @tr("No accounts yet. Add one to sync with it.");
+                                    font-size: Metrics.font-sm;
+                                    text-color: Colors.muted;
+                                }
+
+                                for acc in SettingsAdapter.accounts: Rectangle {
+                                    height: 56px;
+                                    border-radius: Metrics.radius-md;
+                                    border-width: AddVaultAdapter.account-id == acc.id ? 2px : 0px;
+                                    border-color: Palette.accent-background;
+                                    background: AddVaultAdapter.account-id == acc.id
+                                        ? Palette.accent-background.with-alpha(0.10)
+                                        : Palette.foreground.with-alpha(0.04);
+
+                                    TouchArea {
+                                        clicked => {
+                                            AddVaultAdapter.account-id = acc.id;
+                                            AddVaultAdapter.account-chosen(acc.id);
+                                        }
+                                    }
+
+                                    HorizontalLayout {
+                                        padding-left: 12px;
+                                        padding-right: 12px;
+                                        spacing: 10px;
+                                        alignment: start;
+
+                                        VerticalLayout {
+                                            alignment: center;
+                                            AccountAvatar {
+                                                avatar: acc.avatar;
+                                                has-avatar: acc.has-avatar;
+                                                provider: acc.provider;
+                                                avatar-size: 32px;
+                                            }
+                                        }
+
+                                        VerticalLayout {
+                                            alignment: center;
+                                            horizontal-stretch: 1;
+                                            spacing: 2px;
+
+                                            Text {
+                                                text: acc.username != "" ? ("@" + acc.username) : acc.id;
+                                                font-size: 14px;
+                                                font-weight: 600;
+                                                color: Palette.foreground;
+                                                overflow: elide;
+                                            }
+
+                                            Text {
+                                                text: acc.provider + " · " + acc.instance-url;
+                                                font-size: 11px;
+                                                color: Colors.muted;
+                                                overflow: elide;
+                                            }
+                                        }
+
+                                        if AddVaultAdapter.account-id == acc.id: VerticalLayout {
+                                            alignment: center;
+                                            Icon {
+                                                source: TablerIcons.check;
+                                                width: 20px;
+                                                height: 20px;
+                                                color: Palette.accent-background;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                HorizontalLayout {
+                                    alignment: start;
+                                    Button {
+                                        text: @tr("+ Add Account");
+                                        clicked => {
+                                            SettingsAdapter.sync-provider-tab = 0;
+                                            AddVaultAdapter.page = 1;
+                                        }
+                                    }
+                                }
+
+                                if AddVaultAdapter.account-id != "": VerticalLayout {
+                                    spacing: Metrics.spacing-md;
+
+                                    Divider { }
+
+                                    SegmentedControl {
+                                        options: [@tr("New repository"), @tr("Existing repository")];
+                                        selected: AddVaultAdapter.repo-mode;
+                                        changed(i) => {
+                                            AddVaultAdapter.repo-mode = i;
+                                            AddVaultAdapter.edited();
+                                            if (i == 1) { AddVaultAdapter.load-repos(); }
+                                        }
+                                    }
+
+                                    if AddVaultAdapter.repo-mode == 0: VerticalLayout {
+                                        spacing: Metrics.spacing-sm;
+
+                                        FormField {
+                                            label: @tr("Repository name");
+                                            placeholder: "immermemo-notes";
+                                            text <=> AddVaultAdapter.repo-name;
+                                            changed text => { AddVaultAdapter.edited(); }
+                                        }
+
+                                        WrappedText {
+                                            text: @tr("A new private repository is created on the account.");
+                                            font-size: Metrics.font-sm;
+                                            text-color: Colors.muted;
+                                        }
+                                    }
+
+                                    if AddVaultAdapter.repo-mode == 1: VerticalLayout {
+                                        spacing: Metrics.spacing-sm;
+
+                                        LineEdit {
+                                            height: Metrics.touch;
+                                            placeholder-text: @tr("Search repositories");
+                                            text <=> AddVaultAdapter.repo-query;
+                                            edited(text) => { AddVaultAdapter.edited(); }
+                                        }
+
+                                        if AddVaultAdapter.repos-loading: Text {
+                                            text: @tr("Loading repositories...");
+                                            font-size: Metrics.font-sm;
+                                            color: Colors.muted;
+                                        }
+
+                                        if AddVaultAdapter.repos-error != "": WrappedText {
+                                            text: AddVaultAdapter.repos-error;
+                                            font-size: Metrics.font-sm;
+                                            text-color: Colors.warning;
+                                        }
+
+                                        if !AddVaultAdapter.repos-loading && AddVaultAdapter.repos-error == "" && AddVaultAdapter.repos.length == 0: Text {
+                                            text: @tr("No repositories found.");
+                                            font-size: Metrics.font-sm;
+                                            color: Colors.muted;
+                                        }
+
+                                        for repo in AddVaultAdapter.repos: Rectangle {
+                                            height: 48px;
+                                            border-radius: Metrics.radius-md;
+                                            border-width: AddVaultAdapter.repo-full-name == repo.full-name ? 2px : 0px;
+                                            border-color: Palette.accent-background;
+                                            background: AddVaultAdapter.repo-full-name == repo.full-name
+                                                ? Palette.accent-background.with-alpha(0.10)
+                                                : Palette.foreground.with-alpha(0.04);
+
+                                            TouchArea {
+                                                clicked => {
+                                                    AddVaultAdapter.repo-full-name = repo.full-name;
+                                                    AddVaultAdapter.edited();
+                                                }
+                                            }
+
+                                            HorizontalLayout {
+                                                padding-left: 12px;
+                                                padding-right: 12px;
+                                                spacing: 8px;
+                                                alignment: start;
+
+                                                VerticalLayout {
+                                                    alignment: center;
+                                                    horizontal-stretch: 1;
+                                                    Text {
+                                                        text: repo.full-name;
+                                                        font-size: 14px;
+                                                        color: Palette.foreground;
+                                                        horizontal-alignment: left;
+                                                        overflow: elide;
+                                                    }
+                                                }
+
+                                                if repo.is-private: VerticalLayout {
+                                                    alignment: center;
+                                                    Icon {
+                                                        source: TablerIcons.lock;
+                                                        width: 16px;
+                                                        height: 16px;
+                                                        color: Colors.muted;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if AddVaultAdapter.sync-kind == 1: VerticalLayout {
+                                spacing: Metrics.spacing-md;
+
+                                FormField {
+                                    label: @tr("Remote repository URL");
+                                    placeholder: @tr("https://git.example.com/notes.git or git@...");
+                                    text <=> AddVaultAdapter.custom-url;
+                                    changed text => { AddVaultAdapter.edited(); }
+                                }
+
+                                FormField {
+                                    label: @tr("Access token (if using HTTPS)");
+                                    input-type: InputType.password;
+                                    text <=> AddVaultAdapter.custom-token;
+                                    changed text => { AddVaultAdapter.edited(); }
+                                }
+
+                                WrappedText {
+                                    text: @tr("Using SSH? Register the app's public key (Settings > Advanced) on the server.");
+                                    font-size: Metrics.font-sm;
+                                    text-color: Colors.muted;
+                                }
+                            }
+                        }
+                    }
+
+                    if AddVaultAdapter.page == 0 && AddVaultAdapter.error != "": WrappedText {
+                        text: AddVaultAdapter.error;
+                        font-size: Metrics.font-sm;
+                        text-color: Colors.warning;
+                    }
+
+                    if AddVaultAdapter.page == 0: HorizontalLayout {
+                        spacing: 8px;
+                        alignment: end;
+
+                        Button {
+                            text: @tr("Cancel");
+                            enabled: !AddVaultAdapter.busy;
+                            clicked => { AddVaultAdapter.close(); }
+                        }
+
+                        Button {
+                            text: AddVaultAdapter.busy ? @tr("Working...")
+                                : root.adding ? @tr("Add vault") : @tr("Save");
+                            primary: true;
+                            enabled: AddVaultAdapter.can-submit && !AddVaultAdapter.busy;
+                            clicked => { AddVaultAdapter.submit(); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

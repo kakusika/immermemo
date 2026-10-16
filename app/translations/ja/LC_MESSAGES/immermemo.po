@@ -2733,3 +2733,259 @@ msgctxt "SettingsSheet"
 msgid "Home"
 msgstr "ホーム"
 
+
+msgctxt "App"
+msgid "Sync Settings"
+msgstr "同期の設定"
+
+msgctxt "VaultSetupSheet"
+msgid "Add Account"
+msgstr "アカウントを追加"
+
+msgctxt "VaultSetupSheet"
+msgid "Add vault"
+msgstr "保管庫を追加"
+
+msgctxt "VaultSetupSheet"
+msgid "Sync"
+msgstr "同期"
+
+msgctxt "VaultSetupSheet"
+msgid "Name"
+msgstr "名前"
+
+msgctxt "VaultSetupSheet"
+msgid "My notes"
+msgstr "マイノート"
+
+msgctxt "VaultSetupSheet"
+msgid "Where to keep it"
+msgstr "保管場所"
+
+msgctxt "VaultSetupSheet"
+msgid "In the app"
+msgstr "アプリ内"
+
+msgctxt "VaultSetupSheet"
+msgid "Local storage"
+msgstr "ローカルストレージ"
+
+msgctxt "VaultSetupSheet"
+msgid "Folder"
+msgstr "フォルダ"
+
+msgctxt "VaultSetupSheet"
+msgid "Choose folder"
+msgstr "フォルダを選ぶ"
+
+msgctxt "VaultSetupSheet"
+msgid "It will be created at"
+msgstr "作成される場所:"
+
+msgctxt "VaultSetupSheet"
+msgid "Sync with a Git host"
+msgstr "Git ホストと同期する"
+
+msgctxt "VaultSetupSheet"
+msgid "The notes stay on this device only."
+msgstr "ノートはこの端末にだけ保存されます。"
+
+msgctxt "VaultSetupSheet"
+msgid "Account"
+msgstr "アカウント"
+
+msgctxt "VaultSetupSheet"
+msgid "Remote URL"
+msgstr "リモート URL"
+
+msgctxt "VaultSetupSheet"
+msgid "No accounts yet. Add one to sync with it."
+msgstr "アカウントがまだありません。同期するには追加してください。"
+
+msgctxt "VaultSetupSheet"
+msgid "+ Add Account"
+msgstr "+ アカウントを追加"
+
+msgctxt "VaultSetupSheet"
+msgid "New repository"
+msgstr "新しいリポジトリ"
+
+msgctxt "VaultSetupSheet"
+msgid "Existing repository"
+msgstr "既存のリポジトリ"
+
+msgctxt "VaultSetupSheet"
+msgid "Repository name"
+msgstr "リポジトリ名"
+
+msgctxt "VaultSetupSheet"
+msgid "A new private repository is created on the account."
+msgstr "アカウントに新しい非公開リポジトリを作成します。"
+
+msgctxt "VaultSetupSheet"
+msgid "Search repositories"
+msgstr "リポジトリを検索"
+
+msgctxt "VaultSetupSheet"
+msgid "Loading repositories..."
+msgstr "リポジトリを読み込み中..."
+
+msgctxt "VaultSetupSheet"
+msgid "No repositories found."
+msgstr "リポジトリが見つかりません。"
+
+msgctxt "VaultSetupSheet"
+msgid "Remote repository URL"
+msgstr "リモートリポジトリのURL"
+
+msgctxt "VaultSetupSheet"
+msgid "https://git.example.com/notes.git or git@..."
+msgstr "https://git.example.com/notes.git または git@..."
+
+msgctxt "VaultSetupSheet"
+msgid "Access token (if using HTTPS)"
+msgstr "アクセストークン (HTTPS の場合)"
+
+msgctxt "VaultSetupSheet"
+msgid "Using SSH? Register the app's public key (Settings > Advanced) on the server."
+msgstr "SSH を使いますか？ アプリの公開鍵（設定 > 詳細設定）をサーバーに登録してください。"
+
+msgctxt "VaultSetupSheet"
+msgid "Cancel"
+msgstr "キャンセル"
+
+msgctxt "VaultSetupSheet"
+msgid "Working..."
+msgstr "処理中..."
+
+msgctxt "VaultSetupSheet"
+msgid "Save"
+msgstr "保存"
+
+msgctxt "AccountsPage"
+msgid "Accounts"
+msgstr "アカウント"
+
+msgctxt "AccountsPage"
+msgid "An account is a login to a Git host. Each vault chooses which account, and which repository, it syncs with."
+msgstr "アカウントは Git ホストへのログインです。各保管庫が、どのアカウントのどのリポジトリと同期するかを選びます。"
+
+msgctxt "AccountsPage"
+msgid "No accounts yet."
+msgstr "アカウントはまだありません。"
+
+msgctxt "AccountsPage"
+msgid "{} vaults"
+msgstr "{} 件の保管庫"
+
+msgctxt "HomeActionConfigItem"
+msgid "Search"
+msgstr "検索"
+
+msgctxt "HomeActionConfigItem"
+msgid "Library"
+msgstr "ライブラリ"
+
+msgctxt "HomeActionConfigItem"
+msgid "Directory"
+msgstr "ディレクトリ"
+
+msgctxt "HomeActionConfigItem"
+msgid "Daily Notes"
+msgstr "デイリーノート"
+
+msgctxt "HomeActionConfigItem"
+msgid "Starred"
+msgstr "スター付き"
+
+msgctxt "HomeActionConfigItem"
+msgid "Recent"
+msgstr "最近のノート"
+
+msgctxt "HomeActionConfigItem"
+msgid "Graph View"
+msgstr "グラフビュー"
+
+msgctxt "HomeActionConfigItem"
+msgid "New Note"
+msgstr "新しいノート"
+
+msgctxt "HomeActionConfigItem"
+msgid "Sync"
+msgstr "同期"
+
+msgctxt "HomeActionConfigItem"
+msgid "Switch Vault"
+msgstr "保管庫の切り替え"
+
+msgctxt "HomeActionConfigItem"
+msgid "Settings"
+msgstr "設定"
+
+msgctxt "AddAccountPanel"
+msgid "GitHub"
+msgstr "GitHub"
+
+msgctxt "AddAccountPanel"
+msgid "Forgejo / Gitea"
+msgstr "Forgejo / Gitea"
+
+msgctxt "AddAccountPanel"
+msgid "GitLab"
+msgstr "GitLab"
+
+msgctxt "AddAccountPanel"
+msgid "Sign in with GitHub to add your account."
+msgstr "GitHub でサインインしてアカウントを追加します。"
+
+msgctxt "AddAccountPanel"
+msgid "Connect with GitHub"
+msgstr "GitHub と連携"
+
+msgctxt "AddAccountPanel"
+msgid "Confirm this one-time code on GitHub:"
+msgstr "GitHub でこの確認コードを承認してください:"
+
+msgctxt "AddAccountPanel"
+msgid "Waiting for browser authorization..."
+msgstr "ブラウザでの認証を待機中..."
+
+msgctxt "AddAccountPanel"
+msgid "Cancel"
+msgstr "キャンセル"
+
+msgctxt "AddAccountPanel"
+msgid "Open in Browser"
+msgstr "ブラウザで開く"
+
+msgctxt "AddAccountPanel"
+msgid "Add Codeberg or your self-hosted Forgejo/Gitea account using a Personal Access Token."
+msgstr "個人用アクセストークンで、Codeberg またはセルフホストの Forgejo/Gitea のアカウントを追加します。"
+
+msgctxt "AddAccountPanel"
+msgid "Instance URL"
+msgstr "インスタンス URL"
+
+msgctxt "AddAccountPanel"
+msgid "Personal Access Token"
+msgstr "Personal Access Token"
+
+msgctxt "AddAccountPanel"
+msgid "Token with repo and user permissions"
+msgstr "repo および user 権限を持つトークン"
+
+msgctxt "AddAccountPanel"
+msgid "Add GitLab.com or a self-hosted instance using a Personal Access Token with api scope."
+msgstr "api スコープの個人用アクセストークンで、GitLab.com またはセルフホストのインスタンスを追加します。"
+
+msgctxt "AddAccountPanel"
+msgid "GitLab Instance URL"
+msgstr "GitLab インスタンス URL"
+
+msgctxt "AddAccountPanel"
+msgid "Personal Access Token (api scope)"
+msgstr "Personal Access Token (api スコープ)"
+
+msgctxt "AddAccountPanel"
+msgid "Token with api permission"
+msgstr "api 権限を持つトークン"

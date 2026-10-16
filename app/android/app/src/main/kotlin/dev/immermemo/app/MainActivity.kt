@@ -1,10 +1,16 @@
 package dev.immermemo.app
 
+import android.Manifest
 import android.app.NativeActivity
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.view.View
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import java.util.concurrent.atomic.AtomicBoolean
@@ -94,6 +100,81 @@ class MainActivity : NativeActivity() {
     }
 
     private external fun notifyDeepLink(uri: String)
+
+    private external fun notifyFolderPicked(uri: String)
+
+    /**
+     * Whether the app may read and write the device's shared storage by path,
+     * which a vault kept outside the app's own folder needs: "all files
+     * access" from Android 11, the storage permission before it. Called over
+     * JNI from `app/src/platform/android/storage_access.rs`.
+     */
+    @Suppress("unused")
+    fun hasAllFilesAccess(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+                PackageManager.PERMISSION_GRANTED
+        }
+
+    /**
+     * Asks for what [hasAllFilesAccess] checks: from Android 11 the system's
+     * "all files access" screen for this app (the user flips the switch there
+     * and comes back), before that the ordinary permission prompt.
+     */
+    @Suppress("unused")
+    fun requestAllFilesAccess() {
+        runOnUiThread {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                try {
+                    startActivity(
+                        Intent(
+                            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                            Uri.parse("package:$packageName"),
+                        ),
+                    )
+                } catch (_: Throwable) {
+                    // Some builds lack the per-app screen: the general list does.
+                    startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                }
+            } else {
+                requestPermissions(
+                    arrayOf(
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    ),
+                    REQUEST_STORAGE_PERMISSION,
+                )
+            }
+        }
+    }
+
+    /**
+     * Opens the system's folder picker; the answer comes back through
+     * [onActivityResult] to [notifyFolderPicked] as a tree URI, which the
+     * native side turns into a path (`app/src/platform/storage.rs`).
+     */
+    @Suppress("unused")
+    fun pickFolder() {
+        runOnUiThread {
+            @Suppress("DEPRECATION")
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQUEST_PICK_FOLDER)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_PICK_FOLDER && resultCode == RESULT_OK) {
+            val uri = data?.data?.toString() ?: return
+            try {
+                notifyFolderPicked(uri)
+            } catch (_: UnsatisfiedLinkError) {
+                // Native runtime not loaded yet
+            }
+        }
+    }
 
     @Suppress("unused")
     fun markFirstFrameRendered() {
@@ -187,5 +268,7 @@ class MainActivity : NativeActivity() {
 
     companion object {
         private const val SPLASH_TIMEOUT_MS = 500L
+        private const val REQUEST_PICK_FOLDER = 4701
+        private const val REQUEST_STORAGE_PERMISSION = 4702
     }
 }
