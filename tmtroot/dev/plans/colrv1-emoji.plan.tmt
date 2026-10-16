@@ -24,8 +24,8 @@
 
 未確認:
 
-- swash / femtovg / Slintの側にCOLRv1対応の計画や課題があるか。検索では見つからなかった。
-- 上流の新しい版で解決しているか。
+- femtovg / Slintの側にCOLRv1対応の計画や課題があるか。
+- 上流の新しい版で解決しているか。swashの課題は、2026-10-17の時点で、2021-09-22から更新がない(下の `upstream` を参照)。
 
 ==#(impact)
 
@@ -41,6 +41,27 @@
 
 検討中の回避策は `tmtroot/dev/plans/android-emoji.plan.tmt` を参照。
 
+==#(upstream)
+
+上流の状況(2026-10-17に確認)。URLは、GitHubで会話するときの入口として残す。
+
+===[ swash: COLRv1の描画(この問題の本体) ]
+
+- dfrg/swash #21 「Add support for COLRv1」: https://github.com/dfrg/swash/issues/21 、開いたまま。COLR v1の表の解析と、アウトラインAPIでの公開を求めている。最後の更新は2021-09-22で、動きはない。
+- 起票は不要。新しい課題を立てるより、#21に「Android 13以降の端末の絵文字フォントがCOLRv1で、Slint(femtovg)では空白になる」という実害を、コメントで足すほうが筋がよい。
+- swashのリリース(0.2.0〜0.2.2、2025年)の説明には、COLRへの言及がない。コードの変更までは見ていない。
+
+===[ parley / fontique: 絵文字のフォント選択(この問題の原因ではない) ]
+
+Slintは、文字レイアウトをparleyに任せている。絵文字のフォント選択は、parleyが決めている。Androidでは、`platform/android/fonts.rs` が絵文字のファミリを差し替えている。
+
+- parley 0.12.0(2026-10-09): https://github.com/linebender/parley/releases 。このアプリが使っているのは0.11.1。
+- linebender/parley #811(0.12.0に入った): https://github.com/linebender/parley/pull/811 。絵文字の判定(Unicode TR51の絵文字列)が正確になった。素の数字や `#` `*` `©` `®` に絵文字フォントが選ばれる問題(#744)も直った。フォントを選ぶ順は変わっていない。
+- linebender/parley #745(開いている): https://github.com/linebender/parley/pull/745 。`U+FE0F` / `U+FE0E` を尊重したフォント選択。fontiqueの `QueryFont` に破壊的変更が入る。
+- linebender/parley #692(開いている): https://github.com/linebender/parley/pull/692 。絵文字のファミリを先頭へ移す案。利用者が選んだフォントに絵文字があっても、上書きしてしまう。
+- 0.12.0の `select_font` は、テキストのフォントの並びを先に試し、`Emoji` のファミリを最後に付ける。今回のAndroidの原因(描ける形式のフォントが端末にない)とは別の話で、この問題を直すものではない。
+- Slint側: https://github.com/slint-ui/slint/pull/13964 (fontiqueとparleyを0.12へ上げる、2026-10-11に閉じた)。このアプリのSlint 1.18.1には入っていない。どのリリースに入るかは確認していない。
+
 ==#(resolved-when)
 
 次のいずれかで、解決とみなす。
@@ -50,5 +71,5 @@
 
 ==#(report)
 
-- 状態: 起票していない。
-- 起票先の候補: swash (dfrg/swash)。femtovgとSlintは、swashの対応を待つ立場である。
+- 状態: 新規の起票はしない。swashに既存の課題(#21)がある。
+- コメントを足す先: dfrg/swash #21。femtovgとSlintは、swashの対応を待つ立場である。
