@@ -15,10 +15,12 @@
 
 pub mod appdata;
 pub mod notes;
+pub mod size;
 pub mod transfer;
 
 pub use appdata::{Account, AppData};
 pub use notes::{SearchResult, display_name, has_conflict_marker};
+pub use size::{compute_vault_size, format_vault_size};
 pub use transfer::{
     ApplyResult, ExportOptions, InterfaceTransfer, SyncTransfer, TransferPayload, apply_payload,
     build_payload, decode_payload, encode_payload,

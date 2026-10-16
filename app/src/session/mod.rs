@@ -110,6 +110,10 @@ pub fn update_filtered_list(app: &App, session: &Rc<RefCell<Session>>) {
     app.set_snippets(ModelRc::new(VecModel::from(snippets)));
     app.set_current(outcome.ui_current.map_or(-1, |i| i as i32));
 
+    let vault_dir = session.borrow().vault_dir.clone();
+    let bytes = immermemo_core::compute_vault_size(&vault_dir);
+    app.set_vault_size(immermemo_core::format_vault_size(bytes).into());
+
     session.borrow_mut().directory_views_dirty = true;
     if app.get_active_tab() == 2 && app.get_files_page() == 1 {
         refresh_directory_views(app, session);

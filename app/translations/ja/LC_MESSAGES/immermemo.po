@@ -2668,3 +2668,68 @@ msgstr "リスト"
 msgctxt "DirectoryPage"
 msgid "Grid"
 msgstr "グリッド"
+
+msgctxt "HomeScreen"
+msgid "Size"
+msgstr "サイズ"
+
+msgctxt "HomeQuickActionTile"
+msgid "Search"
+msgstr "検索"
+
+msgctxt "HomeQuickActionTile"
+msgid "Library"
+msgstr "ライブラリ"
+
+msgctxt "HomeQuickActionTile"
+msgid "Directory"
+msgstr "ディレクトリ"
+
+msgctxt "HomeQuickActionTile"
+msgid "Daily Notes"
+msgstr "デイリーノート"
+
+msgctxt "HomeQuickActionTile"
+msgid "Starred"
+msgstr "スター付き"
+
+msgctxt "HomeQuickActionTile"
+msgid "Recent"
+msgstr "最近のノート"
+
+msgctxt "HomeQuickActionTile"
+msgid "Graph View"
+msgstr "グラフビュー"
+
+msgctxt "HomeQuickActionTile"
+msgid "New Note"
+msgstr "新しいノート"
+
+msgctxt "HomeQuickActionTile"
+msgid "Sync"
+msgstr "同期"
+
+msgctxt "HomeQuickActionTile"
+msgid "Switch Vault"
+msgstr "保管庫の切り替え"
+
+msgctxt "HomeQuickActionTile"
+msgid "Settings"
+msgstr "設定"
+
+msgctxt "HomePage"
+msgid "Quick Actions"
+msgstr "クイックアクション"
+
+msgctxt "HomePage"
+msgid "Choose which actions appear in the quick actions section on the home page."
+msgstr "ホーム画面のクイックアクションに表示する項目を選択します。"
+
+msgctxt "NavigationPage"
+msgid "Home"
+msgstr "ホーム"
+
+msgctxt "SettingsSheet"
+msgid "Home"
+msgstr "ホーム"
+

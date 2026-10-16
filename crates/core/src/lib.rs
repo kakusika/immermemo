@@ -24,6 +24,7 @@ pub use immermemo_credentials::{PlainFileTokenStore, TokenStore, TokenStoreFacto
 pub use immermemo_index::{IndexedNote, NoteIndex};
 pub use immermemo_sync::{CertificateVerifier, ConflictSide, FileRevision, SyncReport, tls};
 pub use immermemo_vault::appdata::{Account, AppData};
+pub use immermemo_vault::{compute_vault_size, format_vault_size};
 pub mod notes {
     pub use immermemo_vault::notes::{
         SearchResult, create, delete, display_name, has_conflict_marker, rename,

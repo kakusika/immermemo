@@ -14,6 +14,45 @@ import {
 import { SettingsAdapter } from "../adapters/settings.slint";
 import { AccountAvatar } from "../widgets/account_avatar.slint";
 
+component HomeQuickActionTile inherits IconTile {
+    in property <int> action-id;
+
+    pure function action-icon(id: int) -> image {
+        if id == 1 { return TablerIcons.search; }
+        if id == 2 { return TablerIcons.files; }
+        if id == 3 { return TablerIcons.folder; }
+        if id == 4 { return TablerIcons.calendar; }
+        if id == 5 { return TablerIcons.star; }
+        if id == 6 { return TablerIcons.clock; }
+        if id == 7 { return TablerIcons.git-fork; }
+        if id == 8 { return TablerIcons.plus; }
+        if id == 9 { return TablerIcons.refresh; }
+        if id == 10 { return TablerIcons.folder; }
+        if id == 11 { return TablerIcons.settings; }
+        return TablerIcons.plus;
+    }
+
+    pure function action-title(id: int) -> string {
+        if id == 1 { return @tr("Search"); }
+        if id == 2 { return @tr("Library"); }
+        if id == 3 { return @tr("Directory"); }
+        if id == 4 { return @tr("Daily Notes"); }
+        if id == 5 { return @tr("Starred"); }
+        if id == 6 { return @tr("Recent"); }
+        if id == 7 { return @tr("Graph View"); }
+        if id == 8 { return @tr("New Note"); }
+        if id == 9 { return @tr("Sync"); }
+        if id == 10 { return @tr("Switch Vault"); }
+        if id == 11 { return @tr("Settings"); }
+        return "";
+    }
+
+    icon: root.action-icon(root.action-id);
+    label-text: root.action-title(root.action-id);
+    tint: root.action-id == 8 ? Palette.accent-background : Palette.foreground;
+    tile-height: 80px * Metrics.ui-scale;
+}
+
 export component HomeScreen inherits Rectangle {
     in property <length> inset-top: 0px;
     in property <length> inset-bottom: 0px;
@@ -22,6 +61,7 @@ export component HomeScreen inherits Rectangle {
     in property <string> vault-name: @tr("Default");
     in property <string> vault-path: "";
     in property <int> note-count: 0;
+    in property <string> vault-size: "";
     in property <int> conflict-count: 0;
     in property <string> status: "";
     in property <bool> syncing: false;
@@ -31,6 +71,7 @@ export component HomeScreen inherits Rectangle {
     in property <string> last-synced-at: "";
 
     callback new-note();
+    callback action-triggered(int);
     callback sync();
     callback open-vaults();
     callback open-vault-menu();
@@ -94,16 +135,22 @@ export component HomeScreen inherits Rectangle {
                 // Section: Active Vault Card
                 // ----------------------------------------------------
                 Card {
+                    content-padding: 0px;
+
                     HorizontalLayout {
-                        spacing: 12px;
+                        padding-top: Metrics.spacing-sm + 2px * Metrics.ui-scale;
+                        padding-bottom: Metrics.spacing-sm + 2px * Metrics.ui-scale;
+                        padding-left: Metrics.spacing-md + 2px * Metrics.ui-scale;
+                        padding-right: Metrics.spacing-md + 2px * Metrics.ui-scale;
+                        spacing: 12px * Metrics.ui-scale;
 
                         // Left: Account/Vault Avatar (tapping opens account settings)
                         VerticalLayout {
                             alignment: center;
 
                             Rectangle {
-                                width: 44px;
-                                height: 44px;
+                                width: 56px * Metrics.ui-scale;
+                                height: 56px * Metrics.ui-scale;
 
                                 TouchArea {
                                     mouse-cursor: pointer;
@@ -114,16 +161,16 @@ export component HomeScreen inherits Rectangle {
                                     avatar: SettingsAdapter.current-vault-account-avatar;
                                     has-avatar: SettingsAdapter.current-vault-account-has-avatar;
                                     provider: SettingsAdapter.current-vault-account-provider;
-                                    avatar-size: 42px;
+                                    avatar-size: 56px * Metrics.ui-scale;
                                     x: (parent.width - self.width) / 2;
                                     y: (parent.height - self.height) / 2;
                                 }
                                 if !SettingsAdapter.current-vault-has-account: Rectangle {
-                                    width: 42px;
-                                    height: 42px;
+                                    width: 56px * Metrics.ui-scale;
+                                    height: 56px * Metrics.ui-scale;
                                     x: (parent.width - self.width) / 2;
                                     y: (parent.height - self.height) / 2;
-                                    border-radius: 21px;
+                                    border-radius: 28px * Metrics.ui-scale;
                                     background: Palette.color-scheme == ColorScheme.dark
                                         ? Palette.accent-background.with-alpha(0.18)
                                         : Palette.accent-background.with-alpha(0.12);
@@ -132,8 +179,8 @@ export component HomeScreen inherits Rectangle {
 
                                     Icon {
                                         source: TablerIcons.folder;
-                                        width: 22px;
-                                        height: 22px;
+                                        width: 30px * Metrics.ui-scale;
+                                        height: 30px * Metrics.ui-scale;
                                         color: Palette.accent-background;
                                         x: (parent.width - self.width) / 2;
                                         y: (parent.height - self.height) / 2;
@@ -217,6 +264,22 @@ export component HomeScreen inherits Rectangle {
 
                                 Text {
                                     text: root.note-count;
+                                    font-size: Metrics.font-body;
+                                    font-weight: 600;
+                                    color: Palette.foreground;
+                                }
+                            }
+
+                            VerticalLayout {
+                                spacing: 2px * Metrics.ui-scale;
+                                Text {
+                                    text: @tr("Size");
+                                    font-size: Metrics.font-sm;
+                                    color: Colors.muted;
+                                }
+
+                                Text {
+                                    text: root.vault-size != "" ? root.vault-size : "—";
                                     font-size: Metrics.font-body;
                                     font-weight: 600;
                                     color: Palette.foreground;
@@ -602,29 +665,33 @@ export component HomeScreen inherits Rectangle {
                 // ----------------------------------------------------
                 // Section: Quick Actions
                 // ----------------------------------------------------
-                // Vault switching and Settings are already one tap away
-                // (the Vault Card's icon button, the bottom nav Settings
-                // tab) so they don't need a quick action of their own.
-                Section {
+                if SettingsAdapter.home-quick-action-rows.length > 0: Section {
                     title: @tr("Quick Actions");
 
-                    HorizontalLayout {
+                    VerticalLayout {
                         spacing: Metrics.spacing-sm;
 
-                        IconTile {
-                            icon: TablerIcons.plus;
-                            label-text: @tr("New Note");
-                            tint: Palette.accent-background;
-                            clicked => { root.new-note(); }
-                        }
+                        for row in SettingsAdapter.home-quick-action-rows: HorizontalLayout {
+                            spacing: Metrics.spacing-sm;
 
-                        // Reserved grid slots for upcoming quick actions.
-                        Rectangle {
-                            horizontal-stretch: 1;
-                        }
+                            for id in row.items: HomeQuickActionTile {
+                                action-id: id;
+                                clicked => { root.action-triggered(id); }
+                            }
 
-                        Rectangle {
-                            horizontal-stretch: 1;
+                            if row.empty-slots >= 1: Rectangle {
+                                horizontal-stretch: 1;
+                                min-width: 0px;
+                                preferred-width: 0px;
+                                background: transparent;
+                            }
+
+                            if row.empty-slots >= 2: Rectangle {
+                                horizontal-stretch: 1;
+                                min-width: 0px;
+                                preferred-width: 0px;
+                                background: transparent;
+                            }
                         }
                     }
                 }

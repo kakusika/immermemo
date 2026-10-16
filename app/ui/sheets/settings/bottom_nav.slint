@@ -10,7 +10,7 @@ import { SettingHeader } from "widgets.slint";
 // - Left: isolated drag handle area & icon (grip-vertical)
 // - Middle: item icon, title
 // - Right: settings icon (to the left of eye) and eye visibility toggle (omitted for Home)
-component NavToggleRow inherits Rectangle {
+export component NavToggleRow inherits Rectangle {
     in property <image> icon;
     in property <string> title;
     in-out property <bool> checked: false;
@@ -153,6 +153,7 @@ component BottomNavConfigItem inherits Rectangle {
     callback drag-started();
     callback drag-moved(length);
     callback drag-ended(length);
+    callback open-home();
     callback open-directory();
     callback open-daily();
     callback open-starred();
@@ -193,6 +194,7 @@ component BottomNavConfigItem inherits Rectangle {
             show-eye: false;
             show-settings: true;
             is-dragging: root.is-dragging;
+            settings-clicked => { root.open-home(); }
         }
 
         if root.item-id == 1: NavToggleRow {
@@ -373,6 +375,10 @@ export component BottomNavPage inherits SettingsPage {
                 }
                 root.active-drag-idx = -1;
                 root.active-drag-dy = 0px;
+            }
+            open-home => {
+                root.previous-page = 11;
+                root.page = 17;
             }
             open-directory => {
                 root.previous-page = 11;

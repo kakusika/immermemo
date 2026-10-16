@@ -9,6 +9,7 @@ import { AdvancedPage } from "settings/advanced.slint";
 import { AppearancePage } from "settings/appearance.slint";
 import { BottomNavPage } from "settings/bottom_nav.slint";
 import { DirectoryPage } from "settings/directory.slint";
+import { HomePage } from "settings/home.slint";
 import { NavigationPage } from "settings/navigation.slint";
 import { PlaceholderPage } from "settings/placeholder.slint";
 import { SettingsMenuPage } from "settings/menu.slint";
@@ -106,6 +107,7 @@ export component SettingsSheet inherits Rectangle {
                     : root.page == 14 ? @tr("Starred")
                     : root.page == 15 ? @tr("Recent")
                     : root.page == 16 ? @tr("Graph View")
+                    : root.page == 17 ? @tr("Home")
                     : @tr("Settings");
                 font-size: 20px;
                 font-weight: 600;
@@ -215,6 +217,14 @@ export component SettingsSheet inherits Rectangle {
                 inset-bottom: root.inset-bottom;
                 title: @tr("Graph View Settings");
                 subtitle: @tr("Settings for interactive note graph will appear here.");
+            }
+
+            // --------------------------------------------------------
+            // Home Subpage
+            // --------------------------------------------------------
+            if root.page == 17: HomePage {
+                vertical-stretch: 1;
+                inset-bottom: root.inset-bottom;
             }
 
             // --------------------------------------------------------

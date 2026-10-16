@@ -310,6 +310,7 @@ export component App inherits Window {
     in property <int> current-vault: -1;
     in property <string> current-vault-name: "";
     in property <string> current-vault-path: "";
+    in property <string> vault-size: "";
     in-out property <bool> settings-sheet-open: false;
     in-out property <bool> settings-open <=> root.settings-sheet-open;
     in-out property <int> settings-page: 0;
@@ -598,6 +599,7 @@ export component App inherits Window {
                 inset-bottom: root.screen-inset-bottom;
                 vault-name: root.current-vault-name;
                 vault-path: root.current-vault-path;
+                vault-size: root.vault-size;
                 note-count: root.notes.length;
                 conflict-count: root.conflict-count;
                 status: root.status;
@@ -611,6 +613,7 @@ export component App inherits Window {
                     root.open-note-sheet();
                     pane.focus-editor();
                 }
+                action-triggered(id) => { root.trigger-action(id); }
                 sync => { root.sync(); }
                 open-vaults => { root.open-vault-sheet(); }
                 open-vault-menu => { root.vault-menu-open = true; }

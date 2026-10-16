@@ -227,6 +227,20 @@ mod tests {
     }
 
     #[test]
+    fn home_quick_actions_config_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let data = AppData::new(dir.path().to_owned());
+        assert_eq!(data.load_home_quick_actions_config(), None);
+
+        data.save_home_quick_actions_config("new_note,search,daily")
+            .unwrap();
+        assert_eq!(
+            data.load_home_quick_actions_config(),
+            Some("new_note,search,daily".to_string())
+        );
+    }
+
+    #[test]
     fn in_tree_gitdir_is_used_when_present() {
         let dir = tempfile::tempdir().unwrap();
         let data = AppData::new(dir.path().join("appdata"));

@@ -130,6 +130,11 @@ fn show_saved_settings(app: &App, core: &immermemo_core::Session, appearance: &t
         .load_bottom_bar_config()
         .unwrap_or_else(|| "home,search,library,quick".to_string());
     action::apply_bottom_bar_config(&settings, &bottom_bar_config);
+    let home_actions_config = core
+        .app_data
+        .load_home_quick_actions_config()
+        .unwrap_or_else(|| "new_note".to_string());
+    action::apply_home_actions_config(&settings, &home_actions_config);
     session::show_vault_identity(app, &core.vault_dir);
     app.set_remote_configured(core.remote.is_some());
     update_provider_ui_state(app, core.remote.as_deref());

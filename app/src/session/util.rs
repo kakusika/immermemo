@@ -52,4 +52,8 @@ pub fn show_vault_identity(app: &App, vault_dir: &Path) {
     settings.set_current_vault_path(path.clone());
     app.set_current_vault_name(name);
     app.set_current_vault_path(path);
+
+    let bytes = immermemo_core::compute_vault_size(vault_dir);
+    let size_str = immermemo_core::format_vault_size(bytes);
+    app.set_vault_size(size_str.into());
 }

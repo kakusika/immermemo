@@ -124,6 +124,8 @@ impl AppData {
     text_setting! {
         /// The comma-separated bottom navigation bar items, in order.
         "bottom_bar.txt", load_bottom_bar_config, save_bottom_bar_config;
+        /// The comma-separated home quick action items, in order.
+        "home_quick_actions.txt", load_home_quick_actions_config, save_home_quick_actions_config;
         /// The accent seed color as `#RRGGBB`.
         "color_seed.txt", load_color_seed, save_color_seed;
     }

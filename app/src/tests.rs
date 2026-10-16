@@ -45,6 +45,7 @@ fn ui_helpers_and_conflict_resolution() {
     deep_link_import_preview_opens_settings_sheet(&app);
     provider_ui_state_tracks_github_forgejo_and_gitlab(&app);
     bottom_bar_config_applies_to_settings(&app);
+    home_actions_config_applies_to_settings(&app);
 
     // `render::seam_tests` needs the same shared `app` for the same
     // one-event-loop-per-process reason -- see that module's doc.
@@ -723,4 +724,60 @@ fn bottom_bar_config_applies_to_settings(app: &App) {
 
     // Restore default
     apply_bottom_bar_config(&settings, "home,search,new_note,library");
+}
+
+fn home_actions_config_applies_to_settings(app: &App) {
+    let settings = app.global::<SettingsAdapter>();
+
+    action::apply_home_actions_config(&settings, "new_note,search,daily");
+    assert!(settings.get_home_show_new_note());
+    assert!(settings.get_home_show_search());
+    assert!(settings.get_home_show_daily());
+    assert!(!settings.get_home_show_library());
+    assert!(!settings.get_home_show_directory());
+    assert!(!settings.get_home_show_starred());
+    assert!(!settings.get_home_show_recent());
+    assert!(!settings.get_home_show_graph());
+    assert!(!settings.get_home_show_sync());
+
+    let enabled: Vec<i32> = settings.get_home_enabled_actions().iter().collect();
+    assert_eq!(
+        enabled,
+        vec![
+            action::ActionId::NewNote.to_i32(),
+            action::ActionId::Search.to_i32(),
+            action::ActionId::Daily.to_i32(),
+        ]
+    );
+
+    let rows: Vec<HomeQuickActionRow> = settings.get_home_quick_action_rows().iter().collect();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].empty_slots, 0);
+    assert_eq!(rows[0].items.iter().count(), 3);
+
+    // 5 items across 2 rows
+    action::apply_home_actions_config(&settings, "new_note,search,daily,directory,starred");
+    let rows5: Vec<HomeQuickActionRow> = settings.get_home_quick_action_rows().iter().collect();
+    assert_eq!(rows5.len(), 2);
+    assert_eq!(rows5[0].items.iter().count(), 3);
+    assert_eq!(rows5[0].empty_slots, 0);
+    assert_eq!(rows5[1].items.iter().count(), 2);
+    assert_eq!(rows5[1].empty_slots, 1);
+
+    let serialized = action::serialize_home_actions_config(&settings);
+    assert_eq!(serialized, "new_note,search,daily,directory,starred");
+
+    // Empty config defaults to NewNote
+    action::apply_home_actions_config(&settings, "");
+    assert!(settings.get_home_show_new_note());
+    assert!(!settings.get_home_show_search());
+    let enabled_default: Vec<i32> = settings.get_home_enabled_actions().iter().collect();
+    assert_eq!(enabled_default, vec![action::ActionId::NewNote.to_i32()]);
+    let rows_default: Vec<HomeQuickActionRow> = settings.get_home_quick_action_rows().iter().collect();
+    assert_eq!(rows_default.len(), 1);
+    assert_eq!(rows_default[0].items.iter().count(), 1);
+    assert_eq!(rows_default[0].empty_slots, 2);
+
+    // Restore
+    action::apply_home_actions_config(&settings, "new_note");
 }

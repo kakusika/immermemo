@@ -1,0 +1,221 @@
+import { SettingsAdapter } from "../../adapters/settings.slint";
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { TablerIcons } from "@origiri-icons/icons.slint";
+import { Card, Divider } from "@origiri-mobile/widgets.slint";
+import { SettingsPage } from "page.slint";
+import { SettingHeader } from "widgets.slint";
+import { NavToggleRow } from "bottom_nav.slint";
+
+// Helper component that binds a quick action row by its item ID
+component HomeActionConfigItem inherits Rectangle {
+    in property <int> item-id;
+    in property <int> item-index;
+    in property <bool> is-dragging: false;
+    in property <length> drag-dy: 0px;
+    callback drag-started();
+    callback drag-moved(length);
+    callback drag-ended(length);
+
+    min-height: Metrics.touch;
+    z: root.is-dragging ? 100 : 0;
+
+    // Ghost placeholder shown in the original slot during drag
+    if root.is-dragging: Rectangle {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: 100%;
+        border-radius: Metrics.radius-sm;
+        background: Palette.foreground.with-alpha(0.04);
+        border-width: 1px;
+        border-color: Palette.accent-background.with-alpha(0.25);
+    }
+
+    // Row content: stays in-place normally, floats smoothly with drag-dy when dragged
+    row-content := Rectangle {
+        x: 0px;
+        y: root.is-dragging ? root.drag-dy : 0px;
+        width: 100%;
+        height: 100%;
+        border-radius: Metrics.radius-sm;
+        background: root.is-dragging ? Palette.background : transparent;
+        drop-shadow-blur: root.is-dragging ? 16px : 0px;
+        drop-shadow-offset-y: root.is-dragging ? 4px : 0px;
+        drop-shadow-color: root.is-dragging ? (Palette.color-scheme == ColorScheme.dark ? #000000dd : #00000030) : transparent;
+
+        if root.item-id == 1: NavToggleRow {
+            icon: TablerIcons.search;
+            title: @tr("Search");
+            checked <=> SettingsAdapter.home-show-search;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
+
+        if root.item-id == 2: NavToggleRow {
+            icon: TablerIcons.files;
+            title: @tr("Library");
+            checked <=> SettingsAdapter.home-show-library;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
+
+        if root.item-id == 3: NavToggleRow {
+            icon: TablerIcons.folder;
+            title: @tr("Directory");
+            checked <=> SettingsAdapter.home-show-directory;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
+
+        if root.item-id == 4: NavToggleRow {
+            icon: TablerIcons.calendar;
+            title: @tr("Daily Notes");
+            checked <=> SettingsAdapter.home-show-daily;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
+
+        if root.item-id == 5: NavToggleRow {
+            icon: TablerIcons.star;
+            title: @tr("Starred");
+            checked <=> SettingsAdapter.home-show-starred;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
+
+        if root.item-id == 6: NavToggleRow {
+            icon: TablerIcons.clock;
+            title: @tr("Recent");
+            checked <=> SettingsAdapter.home-show-recent;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
+
+        if root.item-id == 7: NavToggleRow {
+            icon: TablerIcons.git-fork;
+            title: @tr("Graph View");
+            checked <=> SettingsAdapter.home-show-graph;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
+
+        if root.item-id == 8: NavToggleRow {
+            icon: TablerIcons.plus;
+            title: @tr("New Note");
+            checked <=> SettingsAdapter.home-show-new-note;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
+
+        if root.item-id == 9: NavToggleRow {
+            icon: TablerIcons.refresh;
+            title: @tr("Sync");
+            checked <=> SettingsAdapter.home-show-sync;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
+
+        if root.item-id == 10: NavToggleRow {
+            icon: TablerIcons.folder;
+            title: @tr("Switch Vault");
+            checked <=> SettingsAdapter.home-show-switch-vault;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
+
+        if root.item-id == 11: NavToggleRow {
+            icon: TablerIcons.settings;
+            title: @tr("Settings");
+            checked <=> SettingsAdapter.home-show-settings;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
+    }
+
+    // Drag handle touch area placed strictly over the left grip handle
+    drag-touch := TouchArea {
+        x: 0px;
+        y: 0px;
+        width: 36px;
+        height: 100%;
+        mouse-cursor: grab;
+        moved => {
+            let dy = self.mouse-y - self.pressed-y;
+            root.drag-moved(dy);
+        }
+        changed pressed => {
+            if (self.pressed) {
+                root.drag-started();
+            } else {
+                let dy = self.mouse-y - self.pressed-y;
+                root.drag-ended(dy);
+            }
+        }
+    }
+}
+
+export component HomePage inherits SettingsPage {
+    property <int> active-drag-idx: -1;
+    property <length> active-drag-dy: 0px;
+
+    enabled: root.active-drag-idx < 0;
+
+    Card {
+        content-spacing: Metrics.spacing-md;
+
+        SettingHeader {
+            title: @tr("Quick Actions");
+            subtitle: @tr("Choose which actions appear in the quick actions section on the home page.");
+        }
+
+        Divider { }
+
+        for id[idx] in SettingsAdapter.home-actions-order: HomeActionConfigItem {
+            item-id: id;
+            item-index: idx;
+            is-dragging: root.active-drag-idx == idx;
+            drag-dy: root.active-drag-idx == idx ? root.active-drag-dy : 0px;
+            drag-started => {
+                root.active-drag-idx = idx;
+                root.active-drag-dy = 0px;
+            }
+            drag-moved(dy) => {
+                root.active-drag-dy = dy;
+            }
+            drag-ended(dy) => {
+                let steps = round(root.active-drag-dy / 52px);
+                if (steps != 0) {
+                    let target = clamp(idx + steps, 0, SettingsAdapter.home-actions-order.length - 1);
+                    if (target != idx) {
+                        SettingsAdapter.move-home-action-item(idx, target);
+                    }
+                }
+                root.active-drag-idx = -1;
+                root.active-drag-dy = 0px;
+            }
+        }
+    }
+}

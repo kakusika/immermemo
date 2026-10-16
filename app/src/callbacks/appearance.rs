@@ -146,6 +146,42 @@ pub fn bind_appearance_callbacks(
         }
     });
 
+    let save_home_actions = |session: &std::rc::Rc<std::cell::RefCell<crate::session::Session>>,
+                             settings: &SettingsAdapter| {
+        crate::action::update_home_enabled_actions(settings);
+        let serialized = crate::action::serialize_home_actions_config(settings);
+        let _ = session
+            .borrow()
+            .app_data
+            .save_home_quick_actions_config(&serialized);
+    };
+
+    settings.on_home_actions_changed({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            let settings = app.global::<SettingsAdapter>();
+            save_home_actions(&session, &settings);
+        }
+    });
+
+    settings.on_move_home_action_item({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |from_idx, to_idx| {
+            let app = weak.unwrap();
+            let settings = app.global::<SettingsAdapter>();
+            let mut order: Vec<i32> = settings.get_home_actions_order().iter().collect();
+            let len = order.len() as i32;
+            if from_idx >= 0 && from_idx < len && to_idx >= 0 && to_idx < len && from_idx != to_idx
+            {
+                let item = order.remove(from_idx as usize);
+                order.insert(to_idx as usize, item);
+                settings.set_home_actions_order(std::rc::Rc::new(slint::VecModel::from(order)).into());
+                save_home_actions(&session, &settings);
+            }
+        }
+    });
+
     #[cfg(target_os = "android")]
     app.on_note_sheet_open_changed({
         let status_bar_choice_cell = status_bar_choice_cell.clone();

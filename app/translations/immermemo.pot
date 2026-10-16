@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-10-16 05:02+0000\n"
+"POT-Creation-Date: 2026-10-16 06:58+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -12,1762 +12,1876 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:214
-msgctxt "MiniNoteCard"
-msgid "Untitled"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:222
-msgctxt "MiniNoteCard"
-msgid "Conflict detected"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:385
-msgctxt "BottomNavBar"
-msgid "Home"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:394
-msgctxt "BottomNavBar"
-msgid "Search"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:403
-msgctxt "BottomNavBar"
-msgid "Library"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:413
-msgctxt "BottomNavBar"
-msgid "Directory"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:422
-msgctxt "BottomNavBar"
-msgid "Daily"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:431
-msgctxt "BottomNavBar"
-msgid "Starred"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:440
-msgctxt "BottomNavBar"
-msgid "Recent"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:449
-msgctxt "BottomNavBar"
-msgid "Graph"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:458
-msgctxt "BottomNavBar"
-msgid "New"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:467
-msgctxt "BottomNavBar"
-msgid "Sync"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:476
-msgctxt "BottomNavBar"
-msgid "Vault"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:485
-msgctxt "BottomNavBar"
-msgid "Settings"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/components.slint:495
-msgctxt "BottomNavBar"
-msgid "More"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:955
+#: app/ui/app.slint:958
 msgctxt "App"
 msgid "More Actions"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:961
+#: app/ui/app.slint:964
 msgctxt "App"
 msgid "New Note"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:971
+#: app/ui/app.slint:974
 msgctxt "App"
 msgid "Sync Now"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:980
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:980
+#: app/ui/app.slint:983 app/ui/app.slint:1124
 msgctxt "App"
 msgid "Switch Vault"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:989
+#: app/ui/app.slint:992
 msgctxt "App"
 msgid "Settings"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:998
+#: app/ui/app.slint:1001
 msgctxt "App"
 msgid "Home"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1008
+#: app/ui/app.slint:1011
 msgctxt "App"
 msgid "Search"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1018
+#: app/ui/app.slint:1021
 msgctxt "App"
 msgid "Library"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1028
+#: app/ui/app.slint:1031
 msgctxt "App"
 msgid "Directory"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1038
+#: app/ui/app.slint:1041
 msgctxt "App"
 msgid "Daily Notes"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1048
+#: app/ui/app.slint:1051
 msgctxt "App"
 msgid "Starred"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1058
+#: app/ui/app.slint:1061
 msgctxt "App"
 msgid "Recent"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1068
+#: app/ui/app.slint:1071
 msgctxt "App"
 msgid "Graph View"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1085
+#: app/ui/app.slint:1088
 msgctxt "App"
 msgid "Rename"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1094
+#: app/ui/app.slint:1097
 msgctxt "App"
 msgid "Set Icon"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1103
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1103
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1103
+#: app/ui/app.slint:1106 app/ui/app.slint:1175 app/ui/app.slint:1189
 msgctxt "App"
 msgid "Delete"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1116
+#: app/ui/app.slint:1119
 msgctxt "App"
 msgid "Vault"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1129
+#: app/ui/app.slint:1132
 msgctxt "App"
 msgid "Vault History"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1137
+#: app/ui/app.slint:1140
 msgctxt "App"
 msgid "Account Settings"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1137
+#: app/ui/app.slint:1140
 msgctxt "App"
 msgid "Connect Account"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1146
+#: app/ui/app.slint:1149
 msgctxt "App"
 msgid "Copy Vault Path"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1157
+#: app/ui/app.slint:1160
 msgctxt "App"
 msgid "Rename note"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1170
+#: app/ui/app.slint:1173
 msgctxt "App"
 msgid "Delete this note?"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1171
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1171
+#: app/ui/app.slint:1174 app/ui/app.slint:1188
 msgctxt "App"
 msgid "This can't be undone from here."
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1184
+#: app/ui/app.slint:1187
 msgctxt "App"
 msgid "Delete selected notes?"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1281
+#: app/ui/app.slint:1284
 msgctxt "App"
 msgid "Remove this vault?"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1282
+#: app/ui/app.slint:1285
 msgctxt "App"
 msgid ""
 "Its notes will stay on disk, but its sync settings and git history will be "
 "forgotten."
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1283
+#: app/ui/app.slint:1286
 msgctxt "App"
 msgid "Remove"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/app.slint:1295
+#: app/ui/app.slint:1298
 msgctxt "App"
 msgid "Add vault"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:308
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:308
-msgctxt "FilesScreen"
-msgid "Directory"
+#: app/ui/components.slint:214
+msgctxt "MiniNoteCard"
+msgid "Untitled"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:309
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:309
-msgctxt "FilesScreen"
-msgid "Daily Notes"
+#: app/ui/components.slint:222
+msgctxt "MiniNoteCard"
+msgid "Conflict detected"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:310
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:310
-msgctxt "FilesScreen"
-msgid "Starred"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:311
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:311
-msgctxt "FilesScreen"
-msgid "Recent"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:312
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:312
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:312
-msgctxt "FilesScreen"
-msgid "Graph View"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:313
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:313
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:313
-msgctxt "FilesScreen"
-msgid "All Notes"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:314
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:314
-msgctxt "FilesScreen"
-msgid "Tasks"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:315
-msgctxt "FilesScreen"
-msgid "Library"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:434
-msgctxt "FilesScreen"
-msgid "List"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:434
-msgctxt "FilesScreen"
-msgid "Grid"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:454
-msgctxt "FilesScreen"
-msgid "This folder is empty"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:454
-msgctxt "FilesScreen"
-msgid "No notes yet"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:462
-msgctxt "FilesScreen"
-msgid "Tap + below to create your first note"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:624
-msgctxt "FilesScreen"
-msgid "Daily Journal"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:631
-msgctxt "FilesScreen"
-msgid "Write today's note"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:704
-msgctxt "FilesScreen"
-msgid "Starred Notes"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:705
-msgctxt "FilesScreen"
-msgid "Recent Notes"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:708
-msgctxt "FilesScreen"
-msgid "Task View"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:716
-msgctxt "FilesScreen"
-msgid "Pinned and frequently referenced master notes."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:717
-msgctxt "FilesScreen"
-msgid "Chronological timeline of your recent note edits."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:718
-msgctxt "FilesScreen"
-msgid "Visual interactive graph of note connections and backlinks."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:719
-msgctxt "FilesScreen"
-msgid "Alphabetical index of all notes across the vault."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:720
-msgctxt "FilesScreen"
-msgid "Aggregated task checklists across all notes."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/files.slint:741
-msgctxt "FilesScreen"
-msgid "Placeholder · Coming Soon"
-msgstr ""
-
-#. Vault info
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:22
-msgctxt "HomeScreen"
-msgid "Default"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:54
-msgctxt "HomeScreen"
+#: app/ui/components.slint:385
+msgctxt "BottomNavBar"
 msgid "Home"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:162
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:162
-msgctxt "HomeScreen"
-msgid "Notes"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:204
-msgctxt "HomeScreen"
-msgid "Info"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:229
-msgctxt "HomeScreen"
-msgid "Conflicts"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:249
-msgctxt "HomeScreen"
-msgid "Sync Status"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:279
-msgctxt "HomeScreen"
-msgid "Sync failed"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:366
-msgctxt "HomeScreen"
-msgid "Copied"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:366
-msgctxt "HomeScreen"
-msgid "Copy Error"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:402
-msgctxt "HomeScreen"
-msgid "Retry"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:437
-msgctxt "HomeScreen"
-msgid "No remote configured"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:444
-msgctxt "HomeScreen"
-msgid "Set a git remote to enable automatic sync"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:466
-msgctxt "HomeScreen"
-msgid "Settings"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:495
-msgctxt "HomeScreen"
-msgid "Syncing..."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:495
-msgctxt "HomeScreen"
-msgid "Up to date"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:503
-msgctxt "HomeScreen"
-msgid "Checking for changes with the remote"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:504
-msgctxt "HomeScreen"
-msgid "Last synced: {}"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:504
-msgctxt "HomeScreen"
-msgid "Local and remote are in sync"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:539
-msgctxt "HomeScreen"
-msgid "Sync"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:555
-msgctxt "HomeScreen"
-msgid "Unresolved Conflicts"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:584
-msgctxt "HomeScreen"
-msgid "{n} note has a conflict"
-msgid_plural "{n} notes have conflicts"
-msgstr[0] ""
-msgstr[1] ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:593
-msgctxt "HomeScreen"
-msgid "Tap to open and resolve conflicted notes →"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:609
-msgctxt "HomeScreen"
-msgid "Quick Actions"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/home.slint:616
-msgctxt "HomeScreen"
-msgid "New Note"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/search.slint:62
-msgctxt "SearchScreen"
-msgid "Search note titles and contents..."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/search.slint:137
-msgctxt "SearchScreen"
-msgid "No notes match \"{}\""
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/search.slint:161
-msgctxt "SearchScreen"
-msgid "Search notes by title or contents"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/conflict.slint:65
-msgctxt "ConflictSheet"
-msgid "⚠️ Resolve Conflict"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/conflict.slint:139
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/conflict.slint:139
-msgctxt "ConflictSheet"
-msgid "(deleted or empty)"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/conflict.slint:243
-msgctxt "ConflictSheet"
-msgid "+ Keep Both (A → B)"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/conflict.slint:270
-msgctxt "ConflictSheet"
-msgid "◀ Previous Conflict"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/conflict.slint:293
-msgctxt "ConflictSheet"
-msgid "Next Conflict ▶"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/history.slint:92
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/history.slint:92
-msgctxt "HistorySheet"
-msgid "Preview"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/history.slint:93
-msgctxt "HistorySheet"
-msgid "History: {}"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/history.slint:93
-msgctxt "HistorySheet"
-msgid "Version History"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/history.slint:135
-msgctxt "HistorySheet"
-msgid "This note has no history yet"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/history.slint:143
-msgctxt "HistorySheet"
-msgid "Saving or syncing this note will record past versions here."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/history.slint:335
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/history.slint:335
-msgctxt "HistorySheet"
-msgid "Restore This Version"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/history.slint:409
-msgctxt "HistorySheet"
-msgid "{} contents"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/icon_picker.slint:76
-msgctxt "IconPickerSheet"
-msgid "Choose an icon"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/icon_picker.slint:111
-msgctxt "IconPickerSheet"
-msgid "Search icons"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/icon_picker.slint:146
-msgctxt "IconPickerSheet"
-msgid "No icons match"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/vault.slint:68
-msgctxt "VaultSheet"
-msgid "Vaults"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/vault.slint:148
-msgctxt "VaultSheet"
-msgid "current"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/vault.slint:157
-msgctxt "VaultSheet"
-msgid "+ Add vault"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/vault.slint:180
-msgctxt "VaultSheet"
-msgid "Delete"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/vault.slint:189
-msgctxt "VaultSheet"
-msgid "Cannot delete the only vault"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/vault_history.slint:63
-msgctxt "VaultHistorySheet"
-msgid "Vault History: {}"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/vault_history.slint:63
-msgctxt "VaultHistorySheet"
-msgid "Vault History"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/vault_history.slint:104
-msgctxt "VaultHistorySheet"
-msgid "No commit history yet"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/vault_history.slint:112
-msgctxt "VaultHistorySheet"
-msgid "Creating or syncing notes will record the vault's history here."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:96
-msgctxt "SettingsSheet"
-msgid "Appearance"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:97
-msgctxt "SettingsSheet"
-msgid "Accounts"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:98
-msgctxt "SettingsSheet"
-msgid "Vaults"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:99
-msgctxt "SettingsSheet"
-msgid "About"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:100
-msgctxt "SettingsSheet"
-msgid "Transfer & Share"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:101
-msgctxt "SettingsSheet"
-msgid "Advanced"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:102
-msgctxt "SettingsSheet"
-msgid "Navigation & Views"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:103
-msgctxt "SettingsSheet"
-msgid "Bottom Navigation Bar"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:104
-msgctxt "SettingsSheet"
-msgid "Directory"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:105
-msgctxt "SettingsSheet"
-msgid "Daily Notes"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:106
-msgctxt "SettingsSheet"
-msgid "Starred"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:107
-msgctxt "SettingsSheet"
-msgid "Recent"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:108
-msgctxt "SettingsSheet"
-msgid "Graph View"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:109
-msgctxt "SettingsSheet"
-msgid "Settings"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:186
-msgctxt "SettingsSheet"
-msgid "Daily Notes Settings"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:187
-msgctxt "SettingsSheet"
-msgid "Settings for daily notes and calendar view will appear here."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:196
-msgctxt "SettingsSheet"
-msgid "Starred Settings"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:197
-msgctxt "SettingsSheet"
-msgid "Settings for starred and favorite notes will appear here."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:206
-msgctxt "SettingsSheet"
-msgid "Recent Settings"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:207
-msgctxt "SettingsSheet"
-msgid "Settings for edit history and timeline will appear here."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:216
-msgctxt "SettingsSheet"
-msgid "Graph View Settings"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings.slint:217
-msgctxt "SettingsSheet"
-msgid "Settings for interactive note graph will appear here."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/mini_note_bar.slint:112
-msgctxt "MiniNoteBar"
-msgid "Previous Note"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/mini_note_bar.slint:113
-msgctxt "MiniNoteBar"
-msgid "Next Note"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/selection_bar.slint:51
-msgctxt "SelectionBar"
-msgid "{} selected"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:14
-msgctxt "DailyCalendarView"
-msgid "Jan"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:15
-msgctxt "DailyCalendarView"
-msgid "Feb"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:16
-msgctxt "DailyCalendarView"
-msgid "Mar"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:17
-msgctxt "DailyCalendarView"
-msgid "Apr"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:18
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:18
-msgctxt "DailyCalendarView"
-msgid "May"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:19
-msgctxt "DailyCalendarView"
-msgid "Jun"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:20
-msgctxt "DailyCalendarView"
-msgid "Jul"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:21
-msgctxt "DailyCalendarView"
-msgid "Aug"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:22
-msgctxt "DailyCalendarView"
-msgid "Sep"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:23
-msgctxt "DailyCalendarView"
-msgid "Oct"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:24
-msgctxt "DailyCalendarView"
-msgid "Nov"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:25
-msgctxt "DailyCalendarView"
-msgid "Dec"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:62
-msgctxt "DailyCalendarView"
-msgid "January"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:63
-msgctxt "DailyCalendarView"
-msgid "February"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:64
-msgctxt "DailyCalendarView"
-msgid "March"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:65
-msgctxt "DailyCalendarView"
-msgid "April"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:67
-msgctxt "DailyCalendarView"
-msgid "June"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:68
-msgctxt "DailyCalendarView"
-msgid "July"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:69
-msgctxt "DailyCalendarView"
-msgid "August"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:70
-msgctxt "DailyCalendarView"
-msgid "September"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:71
-msgctxt "DailyCalendarView"
-msgid "October"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:72
-msgctxt "DailyCalendarView"
-msgid "November"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:73
-msgctxt "DailyCalendarView"
-msgid "December"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Su"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Mo"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Tu"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "We"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Th"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Fr"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/widgets/daily_calendar.slint:147
-msgctxt "DailyCalendarView"
-msgid "Sa"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/menu.slint:14
-msgctxt "SettingsMenuPage"
-msgid "Vaults & Sync"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/menu.slint:22
-msgctxt "SettingsMenuPage"
-msgid "Vaults"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/menu.slint:30
-msgctxt "SettingsMenuPage"
-msgid "Accounts"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/menu.slint:38
-msgctxt "SettingsMenuPage"
-msgid "Transfer & Share"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/menu.slint:48
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/menu.slint:48
-msgctxt "SettingsMenuPage"
-msgid "Appearance"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/menu.slint:63
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/menu.slint:63
-msgctxt "SettingsMenuPage"
-msgid "Navigation & Views"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/menu.slint:78
-msgctxt "SettingsMenuPage"
-msgid "Other & Info"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/menu.slint:86
-msgctxt "SettingsMenuPage"
-msgid "Advanced"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/menu.slint:94
-msgctxt "SettingsMenuPage"
-msgid "About"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:86
-msgctxt "AppearancePage"
-msgid "Appearance"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:96
-msgctxt "AppearancePage"
-msgid "Theme"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:100
-msgctxt "AppearancePage"
-msgid "System"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:100
-msgctxt "AppearancePage"
-msgid "Light"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:100
-msgctxt "AppearancePage"
-msgid "Dark"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:116
-msgctxt "AppearancePage"
-msgid "Color Source"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:117
-msgctxt "AppearancePage"
-msgid "Choose wallpaper dynamic color or custom accent color."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:121
-msgctxt "AppearancePage"
-msgid "System Wallpaper"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:121
-msgctxt "AppearancePage"
-msgid "Custom"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:135
-msgctxt "AppearancePage"
-msgid "Accent Seed Color"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:161
-msgctxt "AppearancePage"
-msgid "Palette Style"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:162
-msgctxt "AppearancePage"
-msgid "Material 3 color generation variant for tonal palettes."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:169
-msgctxt "AppearancePage"
-msgid "Tonal Spot"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:169
-msgctxt "AppearancePage"
-msgid "Vivid"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:169
-msgctxt "AppearancePage"
-msgid "Expressive"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:178
-msgctxt "AppearancePage"
-msgid "Fruit Salad"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:178
-msgctxt "AppearancePage"
-msgid "Rainbow"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:178
-msgctxt "AppearancePage"
-msgid "Spritz"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:178
-msgctxt "AppearancePage"
-msgid "Monochrome"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:195
-msgctxt "AppearancePage"
-msgid "Contrast"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:196
-msgctxt "AppearancePage"
-msgid "Increases luminance separation between surfaces and content."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:200
-msgctxt "AppearancePage"
-msgid "Standard"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:200
-msgctxt "AppearancePage"
-msgid "Medium"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:200
-msgctxt "AppearancePage"
-msgid "High"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:216
-msgctxt "AppearancePage"
-msgid "UI Scale"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:231
-msgctxt "AppearancePage"
-msgid "Display"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:241
-msgctxt "AppearancePage"
-msgid "Editor Font Size"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:245
-msgctxt "AppearancePage"
-msgid "Small (14)"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:245
-msgctxt "AppearancePage"
-msgid "Medium (17)"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:245
-msgctxt "AppearancePage"
-msgid "Large (20)"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:261
-msgctxt "AppearancePage"
-msgid "Status Bar"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:262
-msgctxt "AppearancePage"
-msgid ""
-"Hide it while editing a note (for a less distracting full-screen view), or "
-"everywhere in the app."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:266
-msgctxt "AppearancePage"
-msgid "Show"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:266
-msgctxt "AppearancePage"
-msgid "Hide While Editing"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/appearance.slint:266
-msgctxt "AppearancePage"
-msgid "Always Hide"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:70
-msgctxt "TokenAccountForm"
-msgid "Repository Name"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:85
-msgctxt "TokenAccountForm"
-msgid "Connecting..."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:85
-msgctxt "TokenAccountForm"
-msgid "Connect Account"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:123
-msgctxt "AccountsPage"
-msgid "Vault: "
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:156
-msgctxt "AccountsPage"
-msgid "Syncing..."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:156
-msgctxt "AccountsPage"
-msgid "Sync Now"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:171
-msgctxt "AccountsPage"
-msgid "Connected Accounts"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:180
-msgctxt "AccountsPage"
-msgid "No accounts connected yet."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:226
-msgctxt "AccountsPage"
-msgid "Active"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:244
-msgctxt "AccountsPage"
-msgid "+ Vault"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:263
-msgctxt "AccountsPage"
-msgid "+ Add Account"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:276
-msgctxt "AccountsPage"
-msgid "Add Account"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:290
-msgctxt "AccountsPage"
-msgid "GitHub"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:290
-msgctxt "AccountsPage"
-msgid "Forgejo / Gitea"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:290
-msgctxt "AccountsPage"
-msgid "GitLab"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:290
-msgctxt "AccountsPage"
-msgid "Custom Git"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:302
-msgctxt "AccountsPage"
-msgid "Sign in to automatically create and sync a private notes repository."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:311
-msgctxt "AccountsPage"
-msgid "Connect with GitHub"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:321
-msgctxt "AccountsPage"
-msgid "Confirm this one-time code on GitHub:"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:343
-msgctxt "AccountsPage"
-msgid "Waiting for browser authorization..."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:353
-msgctxt "AccountsPage"
-msgid "Cancel"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:358
-msgctxt "AccountsPage"
-msgid "Open in Browser"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:368
-msgctxt "AccountsPage"
-msgid ""
-"Connect Codeberg or your self-hosted Forgejo/Gitea instance using a Personal "
-"Access Token."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:369
-msgctxt "AccountsPage"
-msgid "Instance URL"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:371
-msgctxt "AccountsPage"
-msgid "Personal Access Token"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:372
-msgctxt "AccountsPage"
-msgid "Token with repo and user permissions"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:390
-msgctxt "AccountsPage"
-msgid ""
-"Connect to GitLab.com or a self-hosted instance using a Personal Access "
-"Token with api scope."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:391
-msgctxt "AccountsPage"
-msgid "GitLab Instance URL"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:393
-msgctxt "AccountsPage"
-msgid "Personal Access Token (api scope)"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:394
-msgctxt "AccountsPage"
-msgid "Token with api permission"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:415
-msgctxt "AccountsPage"
-msgid "Connect an arbitrary Git repository over HTTPS or SSH."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:424
-msgctxt "AccountsPage"
-msgid "Remote repository URL"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:431
-msgctxt "AccountsPage"
-msgid "https://git.example.com/notes.git or git@..."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:439
-msgctxt "AccountsPage"
-msgid "Access token (if using HTTPS)"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:446
-msgctxt "AccountsPage"
-msgid "Leave blank to keep the saved token"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:446
-msgctxt "AccountsPage"
-msgid "Personal access token"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:457
-msgctxt "AccountsPage"
-msgid "Using SSH? Ensure your public key is registered on the server."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:464
-msgctxt "AccountsPage"
-msgid "SSH Key"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/accounts.slint:481
-msgctxt "AccountsPage"
-msgid "Save Remote"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/vaults.slint:28
-msgctxt "VaultsPage"
-msgid "Vaults"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/vaults.slint:36
-msgctxt "VaultsPage"
-msgid "{} vaults"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/vaults.slint:111
-msgctxt "VaultsPage"
-msgid "In Use"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/vaults.slint:148
-msgctxt "VaultsPage"
-msgid "Switch"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/vaults.slint:167
-msgctxt "VaultsPage"
-msgid "+ Add Vault"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/about.slint:12
-msgctxt "AboutPage"
-msgid "Immermemo v{}"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/about.slint:19
-msgctxt "AboutPage"
-msgid ""
-"A mobile note app for writing Tomet (.tmt) notes, synced over git without "
-"git touching user files."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/about.slint:30
-msgctxt "AboutPage"
-msgid "AST-level three-way merge with conflict tracking (@conflict)."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:93
-msgctxt "TransferPage"
-msgid "Export (Show QR)"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:93
-msgctxt "TransferPage"
-msgid "Import"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:110
-msgctxt "TransferPage"
-msgid "Select items to include:"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:117
-msgctxt "TransferPage"
-msgid "Appearance & UI"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:118
-msgctxt "TransferPage"
-msgid "Theme, font size, and UI scale"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:130
-msgctxt "TransferPage"
-msgid "Remote Sync URL"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:131
-msgctxt "TransferPage"
-msgid "Active vault remote git repository URL"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:143
-msgctxt "TransferPage"
-msgid "Include Access Token"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:144
-msgctxt "TransferPage"
-msgid "⚠️ Contains sensitive personal credentials"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:158
-msgctxt "TransferPage"
-msgid "Scan with another device:"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:184
-msgctxt "TransferPage"
-msgid "Copied to Clipboard!"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:184
-msgctxt "TransferPage"
-msgid "Copy Transfer Link"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:198
-msgctxt "TransferPage"
-msgid "Import Settings"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:204
-msgctxt "TransferPage"
-msgid "Paste an immermemo:// transfer link or payload below:"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:212
-msgctxt "TransferPage"
-msgid "immermemo://import#... or JSON"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:221
-msgctxt "TransferPage"
-msgid "Paste Clipboard"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:226
-msgctxt "TransferPage"
-msgid "Review & Apply"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:245
-msgctxt "TransferPage"
-msgid "Settings Ready to Import"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:254
-msgctxt "TransferPage"
-msgid "✓ Appearance & UI settings"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:258
-msgctxt "TransferPage"
-msgid "✓ Remote URL: "
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:262
-msgctxt "TransferPage"
-msgid "⚠️ Access Token (will update saved token)"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:273
-msgctxt "TransferPage"
-msgid "Cancel"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/transfer.slint:278
-msgctxt "TransferPage"
-msgid "Apply Settings"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/advanced.slint:29
-msgctxt "AdvancedPage"
-msgid "In-App SSH Key"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/advanced.slint:36
-msgctxt "AdvancedPage"
-msgid ""
-"Enables Git over SSH synchronization on mobile and desktop without external "
-"agents."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/advanced.slint:50
-msgctxt "AdvancedPage"
-msgid ""
-"Copy this public key and add it to your GitHub, GitLab, or Forgejo SSH Keys:"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/advanced.slint:84
-msgctxt "AdvancedPage"
-msgid "Regenerate Key"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/advanced.slint:89
-msgctxt "AdvancedPage"
-msgid "Copied!"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/advanced.slint:89
-msgctxt "AdvancedPage"
-msgid "Copy Public Key"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/advanced.slint:100
-msgctxt "AdvancedPage"
-msgid ""
-"Generate a secure Ed25519 SSH keypair directly inside the app to sync with "
-"SSH remotes (git@...)."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/advanced.slint:109
-msgctxt "AdvancedPage"
-msgid "Generate SSH Key"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/navigation.slint:14
-msgctxt "NavigationPage"
-msgid "Navigation"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/navigation.slint:22
-msgctxt "NavigationPage"
-msgid "Bottom Navigation Bar"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/navigation.slint:32
-msgctxt "NavigationPage"
-msgid "Page Settings"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/navigation.slint:40
-msgctxt "NavigationPage"
-msgid "Directory"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/navigation.slint:51
-msgctxt "NavigationPage"
-msgid "Daily Notes"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/navigation.slint:62
-msgctxt "NavigationPage"
-msgid "Starred"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/navigation.slint:73
-msgctxt "NavigationPage"
-msgid "Recent"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/navigation.slint:84
-msgctxt "NavigationPage"
-msgid "Graph View"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:191
-msgctxt "BottomNavConfigItem"
-msgid "Home"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:200
-msgctxt "BottomNavConfigItem"
+#: app/ui/components.slint:394
+msgctxt "BottomNavBar"
 msgid "Search"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:210
-msgctxt "BottomNavConfigItem"
+#: app/ui/components.slint:403
+msgctxt "BottomNavBar"
 msgid "Library"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:220
-msgctxt "BottomNavConfigItem"
+#: app/ui/components.slint:413
+msgctxt "BottomNavBar"
 msgid "Directory"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:231
-msgctxt "BottomNavConfigItem"
-msgid "Daily Notes"
+#: app/ui/components.slint:422
+msgctxt "BottomNavBar"
+msgid "Daily"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:242
-msgctxt "BottomNavConfigItem"
+#: app/ui/components.slint:431
+msgctxt "BottomNavBar"
 msgid "Starred"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:253
-msgctxt "BottomNavConfigItem"
+#: app/ui/components.slint:440
+msgctxt "BottomNavBar"
 msgid "Recent"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:264
-msgctxt "BottomNavConfigItem"
-msgid "Graph View"
+#: app/ui/components.slint:449
+msgctxt "BottomNavBar"
+msgid "Graph"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:275
-msgctxt "BottomNavConfigItem"
-msgid "New Note"
+#: app/ui/components.slint:458
+msgctxt "BottomNavBar"
+msgid "New"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:285
-msgctxt "BottomNavConfigItem"
+#: app/ui/components.slint:467
+msgctxt "BottomNavBar"
 msgid "Sync"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:295
-msgctxt "BottomNavConfigItem"
-msgid "Switch Vault"
+#: app/ui/components.slint:476
+msgctxt "BottomNavBar"
+msgid "Vault"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:305
-msgctxt "BottomNavConfigItem"
+#: app/ui/components.slint:485
+msgctxt "BottomNavBar"
 msgid "Settings"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:348
-msgctxt "BottomNavPage"
-msgid "Bottom Navigation Bar"
+#: app/ui/components.slint:495
+msgctxt "BottomNavBar"
+msgid "More"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/bottom_nav.slint:349
-msgctxt "BottomNavPage"
-msgid "Choose which items appear on the bottom navigation bar."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/directory.slint:17
-msgctxt "DirectoryPage"
-msgid "Default View"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/directory.slint:18
-msgctxt "DirectoryPage"
-msgid "Choose how folder contents are displayed by default."
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/directory.slint:22
-msgctxt "DirectoryPage"
-msgid "List"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/sheets/settings/directory.slint:22
-msgctxt "DirectoryPage"
-msgid "Grid"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:140
+#: app/ui/pages/editor/editor.slint:140
 msgctxt "HistoryPreviewPanel"
 msgid "Untitled"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:559
+#: app/ui/pages/editor/editor.slint:559
 msgctxt "EditorScreen"
 msgid "Conflict"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:571
+#: app/ui/pages/editor/editor.slint:571
 msgctxt "EditorScreen"
 msgid "Open Resolution"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:580
+#: app/ui/pages/editor/editor.slint:580
 msgctxt "EditorScreen"
 msgid "Next"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:585
+#: app/ui/pages/editor/editor.slint:585
 msgctxt "EditorScreen"
 msgid "Keep Mine"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:593
+#: app/ui/pages/editor/editor.slint:593
 msgctxt "EditorScreen"
 msgid "Keep Theirs"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:614
+#: app/ui/pages/editor/editor.slint:614
 msgctxt "EditorScreen"
 msgid "No notes yet"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:614
+#: app/ui/pages/editor/editor.slint:614
 msgctxt "EditorScreen"
 msgid "No note selected"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:623
+#: app/ui/pages/editor/editor.slint:623
 msgctxt "EditorScreen"
 msgid "Create your first note to start writing."
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:624
+#: app/ui/pages/editor/editor.slint:624
 msgctxt "EditorScreen"
 msgid "Choose a note from the list, or create a new one."
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:648
+#: app/ui/pages/editor/editor.slint:648
 msgctxt "EditorScreen"
 msgid "+ New Note"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:787
+#: app/ui/pages/editor/editor.slint:787
 msgctxt "EditorScreen"
 msgid "Untitled"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/editor.slint:836
+#: app/ui/pages/editor/editor.slint:836
 msgctxt "EditorScreen"
 msgid "Tap Edit or double-tap here to write."
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/properties.slint:51
+#: app/ui/pages/editor/properties.slint:51
 msgctxt "PropertiesView"
 msgid "No note is currently open."
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/properties.slint:83
+#: app/ui/pages/editor/properties.slint:83
 msgctxt "PropertiesView"
 msgid "Note Info"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/properties.slint:141
+#: app/ui/pages/editor/properties.slint:141
 msgctxt "PropertiesView"
 msgid "Characters"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/properties.slint:158
+#: app/ui/pages/editor/properties.slint:158
 msgctxt "PropertiesView"
 msgid "Words"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/properties.slint:175
+#: app/ui/pages/editor/properties.slint:175
 msgctxt "PropertiesView"
 msgid "Lines"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/properties.slint:205
+#: app/ui/pages/editor/properties.slint:205
 msgctxt "PropertiesView"
 msgid "Properties"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/properties.slint:275
+#: app/ui/pages/editor/properties.slint:275
 msgctxt "PropertiesView"
 msgid "{n} conflict found"
 msgid_plural "{n} conflicts found"
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/properties.slint:276
+#: app/ui/pages/editor/properties.slint:276
 msgctxt "PropertiesView"
 msgid "Conflict detected"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/.agents/workspaces/refactor-sweep/app/ui/pages/editor/properties.slint:349
+#: app/ui/pages/editor/properties.slint:349
 msgctxt "PropertiesView"
 msgid "🔍 Open resolution sheet"
+msgstr ""
+
+#: app/ui/pages/files.slint:308 app/ui/pages/files.slint:352
+msgctxt "FilesScreen"
+msgid "Directory"
+msgstr ""
+
+#: app/ui/pages/files.slint:309 app/ui/pages/files.slint:359
+msgctxt "FilesScreen"
+msgid "Daily Notes"
+msgstr ""
+
+#: app/ui/pages/files.slint:310 app/ui/pages/files.slint:370
+msgctxt "FilesScreen"
+msgid "Starred"
+msgstr ""
+
+#: app/ui/pages/files.slint:311 app/ui/pages/files.slint:377
+msgctxt "FilesScreen"
+msgid "Recent"
+msgstr ""
+
+#: app/ui/pages/files.slint:312 app/ui/pages/files.slint:388
+#: app/ui/pages/files.slint:312 app/ui/pages/files.slint:388
+msgctxt "FilesScreen"
+msgid "Graph View"
+msgstr ""
+
+#: app/ui/pages/files.slint:313 app/ui/pages/files.slint:395
+#: app/ui/pages/files.slint:313 app/ui/pages/files.slint:395
+msgctxt "FilesScreen"
+msgid "All Notes"
+msgstr ""
+
+#: app/ui/pages/files.slint:314 app/ui/pages/files.slint:406
+msgctxt "FilesScreen"
+msgid "Tasks"
+msgstr ""
+
+#: app/ui/pages/files.slint:315
+msgctxt "FilesScreen"
+msgid "Library"
+msgstr ""
+
+#: app/ui/pages/files.slint:434
+msgctxt "FilesScreen"
+msgid "List"
+msgstr ""
+
+#: app/ui/pages/files.slint:434
+msgctxt "FilesScreen"
+msgid "Grid"
+msgstr ""
+
+#: app/ui/pages/files.slint:454
+msgctxt "FilesScreen"
+msgid "This folder is empty"
+msgstr ""
+
+#: app/ui/pages/files.slint:454
+msgctxt "FilesScreen"
+msgid "No notes yet"
+msgstr ""
+
+#: app/ui/pages/files.slint:462
+msgctxt "FilesScreen"
+msgid "Tap + below to create your first note"
+msgstr ""
+
+#: app/ui/pages/files.slint:624
+msgctxt "FilesScreen"
+msgid "Daily Journal"
+msgstr ""
+
+#: app/ui/pages/files.slint:631
+msgctxt "FilesScreen"
+msgid "Write today's note"
+msgstr ""
+
+#: app/ui/pages/files.slint:704
+msgctxt "FilesScreen"
+msgid "Starred Notes"
+msgstr ""
+
+#: app/ui/pages/files.slint:705
+msgctxt "FilesScreen"
+msgid "Recent Notes"
+msgstr ""
+
+#: app/ui/pages/files.slint:708
+msgctxt "FilesScreen"
+msgid "Task View"
+msgstr ""
+
+#: app/ui/pages/files.slint:716
+msgctxt "FilesScreen"
+msgid "Pinned and frequently referenced master notes."
+msgstr ""
+
+#: app/ui/pages/files.slint:717
+msgctxt "FilesScreen"
+msgid "Chronological timeline of your recent note edits."
+msgstr ""
+
+#: app/ui/pages/files.slint:718
+msgctxt "FilesScreen"
+msgid "Visual interactive graph of note connections and backlinks."
+msgstr ""
+
+#: app/ui/pages/files.slint:719
+msgctxt "FilesScreen"
+msgid "Alphabetical index of all notes across the vault."
+msgstr ""
+
+#: app/ui/pages/files.slint:720
+msgctxt "FilesScreen"
+msgid "Aggregated task checklists across all notes."
+msgstr ""
+
+#: app/ui/pages/files.slint:741
+msgctxt "FilesScreen"
+msgid "Placeholder · Coming Soon"
+msgstr ""
+
+#: app/ui/pages/home.slint:37
+msgctxt "HomeQuickActionTile"
+msgid "Search"
+msgstr ""
+
+#: app/ui/pages/home.slint:38
+msgctxt "HomeQuickActionTile"
+msgid "Library"
+msgstr ""
+
+#: app/ui/pages/home.slint:39
+msgctxt "HomeQuickActionTile"
+msgid "Directory"
+msgstr ""
+
+#: app/ui/pages/home.slint:40
+msgctxt "HomeQuickActionTile"
+msgid "Daily Notes"
+msgstr ""
+
+#: app/ui/pages/home.slint:41
+msgctxt "HomeQuickActionTile"
+msgid "Starred"
+msgstr ""
+
+#: app/ui/pages/home.slint:42
+msgctxt "HomeQuickActionTile"
+msgid "Recent"
+msgstr ""
+
+#: app/ui/pages/home.slint:43
+msgctxt "HomeQuickActionTile"
+msgid "Graph View"
+msgstr ""
+
+#: app/ui/pages/home.slint:44
+msgctxt "HomeQuickActionTile"
+msgid "New Note"
+msgstr ""
+
+#: app/ui/pages/home.slint:45
+msgctxt "HomeQuickActionTile"
+msgid "Sync"
+msgstr ""
+
+#: app/ui/pages/home.slint:46
+msgctxt "HomeQuickActionTile"
+msgid "Switch Vault"
+msgstr ""
+
+#: app/ui/pages/home.slint:47
+msgctxt "HomeQuickActionTile"
+msgid "Settings"
+msgstr ""
+
+#. Vault info
+#: app/ui/pages/home.slint:64
+msgctxt "HomeScreen"
+msgid "Default"
+msgstr ""
+
+#: app/ui/pages/home.slint:98
+msgctxt "HomeScreen"
+msgid "Home"
+msgstr ""
+
+#: app/ui/pages/home.slint:206 app/ui/pages/home.slint:257
+msgctxt "HomeScreen"
+msgid "Notes"
+msgstr ""
+
+#: app/ui/pages/home.slint:248
+msgctxt "HomeScreen"
+msgid "Info"
+msgstr ""
+
+#: app/ui/pages/home.slint:273
+msgctxt "HomeScreen"
+msgid "Size"
+msgstr ""
+
+#: app/ui/pages/home.slint:289
+msgctxt "HomeScreen"
+msgid "Conflicts"
+msgstr ""
+
+#: app/ui/pages/home.slint:309
+msgctxt "HomeScreen"
+msgid "Sync Status"
+msgstr ""
+
+#: app/ui/pages/home.slint:339
+msgctxt "HomeScreen"
+msgid "Sync failed"
+msgstr ""
+
+#: app/ui/pages/home.slint:426
+msgctxt "HomeScreen"
+msgid "Copied"
+msgstr ""
+
+#: app/ui/pages/home.slint:426
+msgctxt "HomeScreen"
+msgid "Copy Error"
+msgstr ""
+
+#: app/ui/pages/home.slint:462
+msgctxt "HomeScreen"
+msgid "Retry"
+msgstr ""
+
+#: app/ui/pages/home.slint:497
+msgctxt "HomeScreen"
+msgid "No remote configured"
+msgstr ""
+
+#: app/ui/pages/home.slint:504
+msgctxt "HomeScreen"
+msgid "Set a git remote to enable automatic sync"
+msgstr ""
+
+#: app/ui/pages/home.slint:526
+msgctxt "HomeScreen"
+msgid "Settings"
+msgstr ""
+
+#: app/ui/pages/home.slint:555
+msgctxt "HomeScreen"
+msgid "Syncing..."
+msgstr ""
+
+#: app/ui/pages/home.slint:555
+msgctxt "HomeScreen"
+msgid "Up to date"
+msgstr ""
+
+#: app/ui/pages/home.slint:563
+msgctxt "HomeScreen"
+msgid "Checking for changes with the remote"
+msgstr ""
+
+#: app/ui/pages/home.slint:564
+msgctxt "HomeScreen"
+msgid "Last synced: {}"
+msgstr ""
+
+#: app/ui/pages/home.slint:564
+msgctxt "HomeScreen"
+msgid "Local and remote are in sync"
+msgstr ""
+
+#: app/ui/pages/home.slint:599
+msgctxt "HomeScreen"
+msgid "Sync"
+msgstr ""
+
+#: app/ui/pages/home.slint:615
+msgctxt "HomeScreen"
+msgid "Unresolved Conflicts"
+msgstr ""
+
+#: app/ui/pages/home.slint:644
+msgctxt "HomeScreen"
+msgid "{n} note has a conflict"
+msgid_plural "{n} notes have conflicts"
+msgstr[0] ""
+msgstr[1] ""
+
+#: app/ui/pages/home.slint:653
+msgctxt "HomeScreen"
+msgid "Tap to open and resolve conflicted notes →"
+msgstr ""
+
+#: app/ui/pages/home.slint:666
+msgctxt "HomeScreen"
+msgid "Quick Actions"
+msgstr ""
+
+#: app/ui/pages/search.slint:62
+msgctxt "SearchScreen"
+msgid "Search note titles and contents..."
+msgstr ""
+
+#: app/ui/pages/search.slint:137
+msgctxt "SearchScreen"
+msgid "No notes match \"{}\""
+msgstr ""
+
+#: app/ui/pages/search.slint:161
+msgctxt "SearchScreen"
+msgid "Search notes by title or contents"
+msgstr ""
+
+#: app/ui/sheets/conflict.slint:65
+msgctxt "ConflictSheet"
+msgid "⚠️ Resolve Conflict"
+msgstr ""
+
+#: app/ui/sheets/conflict.slint:139 app/ui/sheets/conflict.slint:201
+msgctxt "ConflictSheet"
+msgid "(deleted or empty)"
+msgstr ""
+
+#: app/ui/sheets/conflict.slint:243
+msgctxt "ConflictSheet"
+msgid "+ Keep Both (A → B)"
+msgstr ""
+
+#: app/ui/sheets/conflict.slint:270
+msgctxt "ConflictSheet"
+msgid "◀ Previous Conflict"
+msgstr ""
+
+#: app/ui/sheets/conflict.slint:293
+msgctxt "ConflictSheet"
+msgid "Next Conflict ▶"
+msgstr ""
+
+#: app/ui/sheets/history.slint:92 app/ui/sheets/history.slint:409
+msgctxt "HistorySheet"
+msgid "Preview"
+msgstr ""
+
+#: app/ui/sheets/history.slint:93
+msgctxt "HistorySheet"
+msgid "History: {}"
+msgstr ""
+
+#: app/ui/sheets/history.slint:93
+msgctxt "HistorySheet"
+msgid "Version History"
+msgstr ""
+
+#: app/ui/sheets/history.slint:135
+msgctxt "HistorySheet"
+msgid "This note has no history yet"
+msgstr ""
+
+#: app/ui/sheets/history.slint:143
+msgctxt "HistorySheet"
+msgid "Saving or syncing this note will record past versions here."
+msgstr ""
+
+#: app/ui/sheets/history.slint:335 app/ui/sheets/history.slint:443
+msgctxt "HistorySheet"
+msgid "Restore This Version"
+msgstr ""
+
+#: app/ui/sheets/history.slint:409
+msgctxt "HistorySheet"
+msgid "{} contents"
+msgstr ""
+
+#: app/ui/sheets/icon_picker.slint:76
+msgctxt "IconPickerSheet"
+msgid "Choose an icon"
+msgstr ""
+
+#: app/ui/sheets/icon_picker.slint:111
+msgctxt "IconPickerSheet"
+msgid "Search icons"
+msgstr ""
+
+#: app/ui/sheets/icon_picker.slint:146
+msgctxt "IconPickerSheet"
+msgid "No icons match"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:97
+msgctxt "SettingsSheet"
+msgid "Appearance"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:98
+msgctxt "SettingsSheet"
+msgid "Accounts"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:99
+msgctxt "SettingsSheet"
+msgid "Vaults"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:100
+msgctxt "SettingsSheet"
+msgid "About"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:101
+msgctxt "SettingsSheet"
+msgid "Transfer & Share"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:102
+msgctxt "SettingsSheet"
+msgid "Advanced"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:103
+msgctxt "SettingsSheet"
+msgid "Navigation & Views"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:104
+msgctxt "SettingsSheet"
+msgid "Bottom Navigation Bar"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:105
+msgctxt "SettingsSheet"
+msgid "Directory"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:106
+msgctxt "SettingsSheet"
+msgid "Daily Notes"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:107
+msgctxt "SettingsSheet"
+msgid "Starred"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:108
+msgctxt "SettingsSheet"
+msgid "Recent"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:109
+msgctxt "SettingsSheet"
+msgid "Graph View"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:110
+msgctxt "SettingsSheet"
+msgid "Home"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:111
+msgctxt "SettingsSheet"
+msgid "Settings"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:188
+msgctxt "SettingsSheet"
+msgid "Daily Notes Settings"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:189
+msgctxt "SettingsSheet"
+msgid "Settings for daily notes and calendar view will appear here."
+msgstr ""
+
+#: app/ui/sheets/settings.slint:198
+msgctxt "SettingsSheet"
+msgid "Starred Settings"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:199
+msgctxt "SettingsSheet"
+msgid "Settings for starred and favorite notes will appear here."
+msgstr ""
+
+#: app/ui/sheets/settings.slint:208
+msgctxt "SettingsSheet"
+msgid "Recent Settings"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:209
+msgctxt "SettingsSheet"
+msgid "Settings for edit history and timeline will appear here."
+msgstr ""
+
+#: app/ui/sheets/settings.slint:218
+msgctxt "SettingsSheet"
+msgid "Graph View Settings"
+msgstr ""
+
+#: app/ui/sheets/settings.slint:219
+msgctxt "SettingsSheet"
+msgid "Settings for interactive note graph will appear here."
+msgstr ""
+
+#: app/ui/sheets/settings/about.slint:13
+msgctxt "AboutPage"
+msgid "Immermemo v{}"
+msgstr ""
+
+#: app/ui/sheets/settings/about.slint:20
+msgctxt "AboutPage"
+msgid ""
+"A mobile note app for writing Tomet (.tmt) notes, synced over git without "
+"git touching user files."
+msgstr ""
+
+#: app/ui/sheets/settings/about.slint:30
+msgctxt "AboutPage"
+msgid "AST-level three-way merge with conflict tracking (@conflict)."
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:68
+msgctxt "TokenAccountForm"
+msgid "Repository Name"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:82
+msgctxt "TokenAccountForm"
+msgid "Connecting..."
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:82
+msgctxt "TokenAccountForm"
+msgid "Connect Account"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:120
+msgctxt "AccountsPage"
+msgid "Vault: "
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:152
+msgctxt "AccountsPage"
+msgid "Syncing..."
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:152
+msgctxt "AccountsPage"
+msgid "Sync Now"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:167
+msgctxt "AccountsPage"
+msgid "Connected Accounts"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:176
+msgctxt "AccountsPage"
+msgid "No accounts connected yet."
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:221
+msgctxt "AccountsPage"
+msgid "Active"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:239
+msgctxt "AccountsPage"
+msgid "+ Vault"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:258
+msgctxt "AccountsPage"
+msgid "+ Add Account"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:271
+msgctxt "AccountsPage"
+msgid "Add Account"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:285
+msgctxt "AccountsPage"
+msgid "GitHub"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:285
+msgctxt "AccountsPage"
+msgid "Forgejo / Gitea"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:285
+msgctxt "AccountsPage"
+msgid "GitLab"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:285
+msgctxt "AccountsPage"
+msgid "Custom Git"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:297
+msgctxt "AccountsPage"
+msgid "Sign in to automatically create and sync a private notes repository."
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:305
+msgctxt "AccountsPage"
+msgid "Connect with GitHub"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:315
+msgctxt "AccountsPage"
+msgid "Confirm this one-time code on GitHub:"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:336
+msgctxt "AccountsPage"
+msgid "Waiting for browser authorization..."
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:345
+msgctxt "AccountsPage"
+msgid "Cancel"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:350
+msgctxt "AccountsPage"
+msgid "Open in Browser"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:360
+msgctxt "AccountsPage"
+msgid ""
+"Connect Codeberg or your self-hosted Forgejo/Gitea instance using a Personal "
+"Access Token."
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:361
+msgctxt "AccountsPage"
+msgid "Instance URL"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:363
+msgctxt "AccountsPage"
+msgid "Personal Access Token"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:364
+msgctxt "AccountsPage"
+msgid "Token with repo and user permissions"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:382
+msgctxt "AccountsPage"
+msgid ""
+"Connect to GitLab.com or a self-hosted instance using a Personal Access "
+"Token with api scope."
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:383
+msgctxt "AccountsPage"
+msgid "GitLab Instance URL"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:385
+msgctxt "AccountsPage"
+msgid "Personal Access Token (api scope)"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:386
+msgctxt "AccountsPage"
+msgid "Token with api permission"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:407
+msgctxt "AccountsPage"
+msgid "Connect an arbitrary Git repository over HTTPS or SSH."
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:415
+msgctxt "AccountsPage"
+msgid "Remote repository URL"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:422
+msgctxt "AccountsPage"
+msgid "https://git.example.com/notes.git or git@..."
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:430
+msgctxt "AccountsPage"
+msgid "Access token (if using HTTPS)"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:437
+msgctxt "AccountsPage"
+msgid "Leave blank to keep the saved token"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:437
+msgctxt "AccountsPage"
+msgid "Personal access token"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:448
+msgctxt "AccountsPage"
+msgid "Using SSH? Ensure your public key is registered on the server."
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:455
+msgctxt "AccountsPage"
+msgid "SSH Key"
+msgstr ""
+
+#: app/ui/sheets/settings/accounts.slint:471
+msgctxt "AccountsPage"
+msgid "Save Remote"
+msgstr ""
+
+#: app/ui/sheets/settings/advanced.slint:30
+msgctxt "AdvancedPage"
+msgid "In-App SSH Key"
+msgstr ""
+
+#: app/ui/sheets/settings/advanced.slint:37
+msgctxt "AdvancedPage"
+msgid ""
+"Enables Git over SSH synchronization on mobile and desktop without external "
+"agents."
+msgstr ""
+
+#: app/ui/sheets/settings/advanced.slint:50
+msgctxt "AdvancedPage"
+msgid ""
+"Copy this public key and add it to your GitHub, GitLab, or Forgejo SSH Keys:"
+msgstr ""
+
+#: app/ui/sheets/settings/advanced.slint:83
+msgctxt "AdvancedPage"
+msgid "Regenerate Key"
+msgstr ""
+
+#: app/ui/sheets/settings/advanced.slint:88
+msgctxt "AdvancedPage"
+msgid "Copied!"
+msgstr ""
+
+#: app/ui/sheets/settings/advanced.slint:88
+msgctxt "AdvancedPage"
+msgid "Copy Public Key"
+msgstr ""
+
+#: app/ui/sheets/settings/advanced.slint:99
+msgctxt "AdvancedPage"
+msgid ""
+"Generate a secure Ed25519 SSH keypair directly inside the app to sync with "
+"SSH remotes (git@...)."
+msgstr ""
+
+#: app/ui/sheets/settings/advanced.slint:107
+msgctxt "AdvancedPage"
+msgid "Generate SSH Key"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:86
+msgctxt "AppearancePage"
+msgid "Appearance"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:96
+msgctxt "AppearancePage"
+msgid "Theme"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:100
+msgctxt "AppearancePage"
+msgid "System"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:100
+msgctxt "AppearancePage"
+msgid "Light"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:100
+msgctxt "AppearancePage"
+msgid "Dark"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:116
+msgctxt "AppearancePage"
+msgid "Color Source"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:117
+msgctxt "AppearancePage"
+msgid "Choose wallpaper dynamic color or custom accent color."
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:121
+msgctxt "AppearancePage"
+msgid "System Wallpaper"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:121
+msgctxt "AppearancePage"
+msgid "Custom"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:135
+msgctxt "AppearancePage"
+msgid "Accent Seed Color"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:161
+msgctxt "AppearancePage"
+msgid "Palette Style"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:162
+msgctxt "AppearancePage"
+msgid "Material 3 color generation variant for tonal palettes."
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:169
+msgctxt "AppearancePage"
+msgid "Tonal Spot"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:169
+msgctxt "AppearancePage"
+msgid "Vivid"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:169
+msgctxt "AppearancePage"
+msgid "Expressive"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:178
+msgctxt "AppearancePage"
+msgid "Fruit Salad"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:178
+msgctxt "AppearancePage"
+msgid "Rainbow"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:178
+msgctxt "AppearancePage"
+msgid "Spritz"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:178
+msgctxt "AppearancePage"
+msgid "Monochrome"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:195
+msgctxt "AppearancePage"
+msgid "Contrast"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:196
+msgctxt "AppearancePage"
+msgid "Increases luminance separation between surfaces and content."
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:200
+msgctxt "AppearancePage"
+msgid "Standard"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:200
+msgctxt "AppearancePage"
+msgid "Medium"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:200
+msgctxt "AppearancePage"
+msgid "High"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:216
+msgctxt "AppearancePage"
+msgid "UI Scale"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:231
+msgctxt "AppearancePage"
+msgid "Display"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:241
+msgctxt "AppearancePage"
+msgid "Editor Font Size"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:245
+msgctxt "AppearancePage"
+msgid "Small (14)"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:245
+msgctxt "AppearancePage"
+msgid "Medium (17)"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:245
+msgctxt "AppearancePage"
+msgid "Large (20)"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:261
+msgctxt "AppearancePage"
+msgid "Status Bar"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:262
+msgctxt "AppearancePage"
+msgid ""
+"Hide it while editing a note (for a less distracting full-screen view), or "
+"everywhere in the app."
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:266
+msgctxt "AppearancePage"
+msgid "Show"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:266
+msgctxt "AppearancePage"
+msgid "Hide While Editing"
+msgstr ""
+
+#: app/ui/sheets/settings/appearance.slint:266
+msgctxt "AppearancePage"
+msgid "Always Hide"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:192
+msgctxt "BottomNavConfigItem"
+msgid "Home"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:202
+msgctxt "BottomNavConfigItem"
+msgid "Search"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:212
+msgctxt "BottomNavConfigItem"
+msgid "Library"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:222
+msgctxt "BottomNavConfigItem"
+msgid "Directory"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:233
+msgctxt "BottomNavConfigItem"
+msgid "Daily Notes"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:244
+msgctxt "BottomNavConfigItem"
+msgid "Starred"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:255
+msgctxt "BottomNavConfigItem"
+msgid "Recent"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:266
+msgctxt "BottomNavConfigItem"
+msgid "Graph View"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:277
+msgctxt "BottomNavConfigItem"
+msgid "New Note"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:287
+msgctxt "BottomNavConfigItem"
+msgid "Sync"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:297
+msgctxt "BottomNavConfigItem"
+msgid "Switch Vault"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:307
+msgctxt "BottomNavConfigItem"
+msgid "Settings"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:350
+msgctxt "BottomNavPage"
+msgid "Bottom Navigation Bar"
+msgstr ""
+
+#: app/ui/sheets/settings/bottom_nav.slint:351
+msgctxt "BottomNavPage"
+msgid "Choose which items appear on the bottom navigation bar."
+msgstr ""
+
+#: app/ui/sheets/settings/directory.slint:17
+msgctxt "DirectoryPage"
+msgid "Default View"
+msgstr ""
+
+#: app/ui/sheets/settings/directory.slint:18
+msgctxt "DirectoryPage"
+msgid "Choose how folder contents are displayed by default."
+msgstr ""
+
+#: app/ui/sheets/settings/directory.slint:22
+msgctxt "DirectoryPage"
+msgid "List"
+msgstr ""
+
+#: app/ui/sheets/settings/directory.slint:22
+msgctxt "DirectoryPage"
+msgid "Grid"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:49
+msgctxt "HomeActionConfigItem"
+msgid "Search"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:59
+msgctxt "HomeActionConfigItem"
+msgid "Library"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:69
+msgctxt "HomeActionConfigItem"
+msgid "Directory"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:79
+msgctxt "HomeActionConfigItem"
+msgid "Daily Notes"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:89
+msgctxt "HomeActionConfigItem"
+msgid "Starred"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:99
+msgctxt "HomeActionConfigItem"
+msgid "Recent"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:109
+msgctxt "HomeActionConfigItem"
+msgid "Graph View"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:119
+msgctxt "HomeActionConfigItem"
+msgid "New Note"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:129
+msgctxt "HomeActionConfigItem"
+msgid "Sync"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:139
+msgctxt "HomeActionConfigItem"
+msgid "Switch Vault"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:149
+msgctxt "HomeActionConfigItem"
+msgid "Settings"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:190
+msgctxt "HomePage"
+msgid "Quick Actions"
+msgstr ""
+
+#: app/ui/sheets/settings/home.slint:191
+msgctxt "HomePage"
+msgid ""
+"Choose which actions appear in the quick actions section on the home page."
+msgstr ""
+
+#: app/ui/sheets/settings/menu.slint:14
+msgctxt "SettingsMenuPage"
+msgid "Vaults & Sync"
+msgstr ""
+
+#: app/ui/sheets/settings/menu.slint:22
+msgctxt "SettingsMenuPage"
+msgid "Vaults"
+msgstr ""
+
+#: app/ui/sheets/settings/menu.slint:30
+msgctxt "SettingsMenuPage"
+msgid "Accounts"
+msgstr ""
+
+#: app/ui/sheets/settings/menu.slint:38
+msgctxt "SettingsMenuPage"
+msgid "Transfer & Share"
+msgstr ""
+
+#: app/ui/sheets/settings/menu.slint:48 app/ui/sheets/settings/menu.slint:56
+msgctxt "SettingsMenuPage"
+msgid "Appearance"
+msgstr ""
+
+#: app/ui/sheets/settings/menu.slint:63 app/ui/sheets/settings/menu.slint:71
+msgctxt "SettingsMenuPage"
+msgid "Navigation & Views"
+msgstr ""
+
+#: app/ui/sheets/settings/menu.slint:78
+msgctxt "SettingsMenuPage"
+msgid "Other & Info"
+msgstr ""
+
+#: app/ui/sheets/settings/menu.slint:86
+msgctxt "SettingsMenuPage"
+msgid "Advanced"
+msgstr ""
+
+#: app/ui/sheets/settings/menu.slint:94
+msgctxt "SettingsMenuPage"
+msgid "About"
+msgstr ""
+
+#: app/ui/sheets/settings/navigation.slint:14
+msgctxt "NavigationPage"
+msgid "Navigation"
+msgstr ""
+
+#: app/ui/sheets/settings/navigation.slint:22
+msgctxt "NavigationPage"
+msgid "Bottom Navigation Bar"
+msgstr ""
+
+#: app/ui/sheets/settings/navigation.slint:32
+msgctxt "NavigationPage"
+msgid "Page Settings"
+msgstr ""
+
+#: app/ui/sheets/settings/navigation.slint:40
+msgctxt "NavigationPage"
+msgid "Home"
+msgstr ""
+
+#: app/ui/sheets/settings/navigation.slint:51
+msgctxt "NavigationPage"
+msgid "Directory"
+msgstr ""
+
+#: app/ui/sheets/settings/navigation.slint:62
+msgctxt "NavigationPage"
+msgid "Daily Notes"
+msgstr ""
+
+#: app/ui/sheets/settings/navigation.slint:73
+msgctxt "NavigationPage"
+msgid "Starred"
+msgstr ""
+
+#: app/ui/sheets/settings/navigation.slint:84
+msgctxt "NavigationPage"
+msgid "Recent"
+msgstr ""
+
+#: app/ui/sheets/settings/navigation.slint:95
+msgctxt "NavigationPage"
+msgid "Graph View"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:93
+msgctxt "TransferPage"
+msgid "Export (Show QR)"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:93
+msgctxt "TransferPage"
+msgid "Import"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:110
+msgctxt "TransferPage"
+msgid "Select items to include:"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:117
+msgctxt "TransferPage"
+msgid "Appearance & UI"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:118
+msgctxt "TransferPage"
+msgid "Theme, font size, and UI scale"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:130
+msgctxt "TransferPage"
+msgid "Remote Sync URL"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:131
+msgctxt "TransferPage"
+msgid "Active vault remote git repository URL"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:143
+msgctxt "TransferPage"
+msgid "Include Access Token"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:144
+msgctxt "TransferPage"
+msgid "⚠️ Contains sensitive personal credentials"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:158
+msgctxt "TransferPage"
+msgid "Scan with another device:"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:184
+msgctxt "TransferPage"
+msgid "Copied to Clipboard!"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:184
+msgctxt "TransferPage"
+msgid "Copy Transfer Link"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:198
+msgctxt "TransferPage"
+msgid "Import Settings"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:204
+msgctxt "TransferPage"
+msgid "Paste an immermemo:// transfer link or payload below:"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:211
+msgctxt "TransferPage"
+msgid "immermemo://import#... or JSON"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:220
+msgctxt "TransferPage"
+msgid "Paste Clipboard"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:225
+msgctxt "TransferPage"
+msgid "Review & Apply"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:243
+msgctxt "TransferPage"
+msgid "Settings Ready to Import"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:252
+msgctxt "TransferPage"
+msgid "✓ Appearance & UI settings"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:256
+msgctxt "TransferPage"
+msgid "✓ Remote URL: "
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:260
+msgctxt "TransferPage"
+msgid "⚠️ Access Token (will update saved token)"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:271
+msgctxt "TransferPage"
+msgid "Cancel"
+msgstr ""
+
+#: app/ui/sheets/settings/transfer.slint:276
+msgctxt "TransferPage"
+msgid "Apply Settings"
+msgstr ""
+
+#: app/ui/sheets/settings/vaults.slint:28
+msgctxt "VaultsPage"
+msgid "Vaults"
+msgstr ""
+
+#: app/ui/sheets/settings/vaults.slint:36
+msgctxt "VaultsPage"
+msgid "{} vaults"
+msgstr ""
+
+#: app/ui/sheets/settings/vaults.slint:111
+msgctxt "VaultsPage"
+msgid "In Use"
+msgstr ""
+
+#: app/ui/sheets/settings/vaults.slint:148
+msgctxt "VaultsPage"
+msgid "Switch"
+msgstr ""
+
+#: app/ui/sheets/settings/vaults.slint:167
+msgctxt "VaultsPage"
+msgid "+ Add Vault"
+msgstr ""
+
+#: app/ui/sheets/vault.slint:68
+msgctxt "VaultSheet"
+msgid "Vaults"
+msgstr ""
+
+#: app/ui/sheets/vault.slint:148
+msgctxt "VaultSheet"
+msgid "current"
+msgstr ""
+
+#: app/ui/sheets/vault.slint:157
+msgctxt "VaultSheet"
+msgid "+ Add vault"
+msgstr ""
+
+#: app/ui/sheets/vault.slint:180
+msgctxt "VaultSheet"
+msgid "Delete"
+msgstr ""
+
+#: app/ui/sheets/vault.slint:189
+msgctxt "VaultSheet"
+msgid "Cannot delete the only vault"
+msgstr ""
+
+#: app/ui/sheets/vault_history.slint:63
+msgctxt "VaultHistorySheet"
+msgid "Vault History: {}"
+msgstr ""
+
+#: app/ui/sheets/vault_history.slint:63
+msgctxt "VaultHistorySheet"
+msgid "Vault History"
+msgstr ""
+
+#: app/ui/sheets/vault_history.slint:104
+msgctxt "VaultHistorySheet"
+msgid "No commit history yet"
+msgstr ""
+
+#: app/ui/sheets/vault_history.slint:112
+msgctxt "VaultHistorySheet"
+msgid "Creating or syncing notes will record the vault's history here."
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:14
+msgctxt "DailyCalendarView"
+msgid "Jan"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:15
+msgctxt "DailyCalendarView"
+msgid "Feb"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:16
+msgctxt "DailyCalendarView"
+msgid "Mar"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:17
+msgctxt "DailyCalendarView"
+msgid "Apr"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:18
+#: app/ui/widgets/daily_calendar.slint:18
+msgctxt "DailyCalendarView"
+msgid "May"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:19
+msgctxt "DailyCalendarView"
+msgid "Jun"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:20
+msgctxt "DailyCalendarView"
+msgid "Jul"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:21
+msgctxt "DailyCalendarView"
+msgid "Aug"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:22
+msgctxt "DailyCalendarView"
+msgid "Sep"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:23
+msgctxt "DailyCalendarView"
+msgid "Oct"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:24
+msgctxt "DailyCalendarView"
+msgid "Nov"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:25
+msgctxt "DailyCalendarView"
+msgid "Dec"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:62
+msgctxt "DailyCalendarView"
+msgid "January"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:63
+msgctxt "DailyCalendarView"
+msgid "February"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:64
+msgctxt "DailyCalendarView"
+msgid "March"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:65
+msgctxt "DailyCalendarView"
+msgid "April"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:67
+msgctxt "DailyCalendarView"
+msgid "June"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:68
+msgctxt "DailyCalendarView"
+msgid "July"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:69
+msgctxt "DailyCalendarView"
+msgid "August"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:70
+msgctxt "DailyCalendarView"
+msgid "September"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:71
+msgctxt "DailyCalendarView"
+msgid "October"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:72
+msgctxt "DailyCalendarView"
+msgid "November"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:73
+msgctxt "DailyCalendarView"
+msgid "December"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Su"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Mo"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Tu"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "We"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Th"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Fr"
+msgstr ""
+
+#: app/ui/widgets/daily_calendar.slint:147
+msgctxt "DailyCalendarView"
+msgid "Sa"
+msgstr ""
+
+#: app/ui/widgets/mini_note_bar.slint:112
+msgctxt "MiniNoteBar"
+msgid "Previous Note"
+msgstr ""
+
+#: app/ui/widgets/mini_note_bar.slint:113
+msgctxt "MiniNoteBar"
+msgid "Next Note"
+msgstr ""
+
+#: app/ui/widgets/selection_bar.slint:51
+msgctxt "SelectionBar"
+msgid "{} selected"
 msgstr ""

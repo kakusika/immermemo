@@ -36,6 +36,17 @@ export component NavigationPage inherits SettingsPage {
             content-spacing: 0px;
 
             CategoryRow {
+                icon: TablerIcons.home;
+                label-text: @tr("Home");
+                clicked => {
+                    root.previous-page = 7;
+                    root.page = 17;
+                }
+            }
+
+            Divider { }
+
+            CategoryRow {
                 icon: TablerIcons.folder;
                 label-text: @tr("Directory");
                 clicked => {
