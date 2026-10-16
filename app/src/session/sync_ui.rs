@@ -10,10 +10,10 @@ use crate::cert;
 use crate::{App, SettingsAdapter};
 use immermemo_core::{TokenCredentials, format_time_only, sync};
 
-use super::util::set_status;
+use super::util::{set_error, set_status};
 use super::{
     SESSION, Session, close_current_note_and_show_list_or_reopen, open_note, refresh_list,
-    show_list_or_reopen, vault_display_name,
+    show_list_or_reopen, show_vault_identity,
 };
 
 thread_local! {
@@ -34,8 +34,7 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
             settings.set_url_draft(SharedString::new());
             settings.set_token_draft(SharedString::new());
             settings.set_has_token(false);
-            settings.set_current_vault_name(vault_display_name(&s.vault_dir).into());
-            settings.set_current_vault_path(s.vault_dir.display().to_string().into());
+            show_vault_identity(app, &s.vault_dir);
             app.set_settings_open(true);
             return;
         };
@@ -43,21 +42,13 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
             Ok(g) => g,
             Err(e) => {
                 drop(s);
-                set_status(app, format!("Could not prepare the vault: {e}"));
+                set_error(app, format!("Could not prepare the vault: {e}"));
                 return;
             }
         };
         let identity =
             immermemo_core::DeviceIdentity::load_or_init(&s.app_data.identity_path()).ok();
-        let token_store = if let Some(acc_id) = s.app_data.load_vault_account(&s.vault_dir) {
-            if let Ok(token_path) = s.app_data.account_token_path(&acc_id) {
-                (s.token_store_for)(&token_path).unwrap_or_else(|_| s.token_store.clone())
-            } else {
-                s.token_store.clone()
-            }
-        } else {
-            s.token_store.clone()
-        };
+        let token_store = s.sync_token_store();
         (
             s.vault_dir.clone(),
             gitdir,
@@ -160,7 +151,7 @@ pub fn finish_sync(
             let error_msg = format!("Sync failed: {e}");
             app.set_last_sync_error(SharedString::from(&error_msg));
             app.set_sync_error_copied(false);
-            set_status(app, error_msg);
+            set_error(app, error_msg);
         }
     }
     if should_sync_again {

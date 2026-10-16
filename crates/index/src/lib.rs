@@ -130,21 +130,9 @@ impl NoteIndex {
         let mut stmt = self
             .conn
             .prepare("SELECT path, title, has_conflict FROM notes ORDER BY path ASC")?;
-        let rows = stmt.query_map([], |row| {
-            let path_str: String = row.get(0)?;
-            let title: String = row.get(1)?;
-            let conflict_int: i32 = row.get(2)?;
-            Ok(IndexedNote {
-                path: PathBuf::from(path_str),
-                title,
-                has_conflict: conflict_int != 0,
-            })
-        })?;
-
-        let mut notes = Vec::new();
-        for r in rows {
-            notes.push(r?);
-        }
+        let notes = stmt
+            .query_map([], indexed_note_from_row)?
+            .collect::<Result<_, _>>()?;
         Ok(notes)
     }
 
@@ -154,17 +142,12 @@ impl NoteIndex {
     /// without paying for a full `reconcile_filesystem` walk.
     pub fn bodies(&self) -> anyhow::Result<Vec<(PathBuf, String)>> {
         let mut stmt = self.conn.prepare("SELECT path, body FROM notes")?;
-        let rows = stmt.query_map([], |row| {
-            let path_str: String = row.get(0)?;
-            let body: String = row.get(1)?;
-            Ok((PathBuf::from(path_str), body))
-        })?;
-
-        let mut out = Vec::new();
-        for r in rows {
-            out.push(r?);
-        }
-        Ok(out)
+        let bodies = stmt
+            .query_map([], |row| {
+                Ok((PathBuf::from(row.get::<_, String>(0)?), row.get(1)?))
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(bodies)
     }
 
     /// Returns the cached body of the note at `rel_path`, if indexed.
@@ -208,21 +191,9 @@ impl NoteIndex {
              ORDER BY mtime_secs DESC, mtime_nanos DESC
              LIMIT ?1",
         )?;
-        let rows = stmt.query_map(params![limit as i64], |row| {
-            let path_str: String = row.get(0)?;
-            let title: String = row.get(1)?;
-            let conflict_int: i32 = row.get(2)?;
-            Ok(IndexedNote {
-                path: PathBuf::from(path_str),
-                title,
-                has_conflict: conflict_int != 0,
-            })
-        })?;
-
-        let mut notes = Vec::new();
-        for r in rows {
-            notes.push(r?);
-        }
+        let notes = stmt
+            .query_map(params![limit as i64], indexed_note_from_row)?
+            .collect::<Result<_, _>>()?;
         Ok(notes)
     }
 
@@ -235,6 +206,14 @@ impl NoteIndex {
         )?;
         Ok(count as usize)
     }
+}
+
+fn indexed_note_from_row(row: &rusqlite::Row) -> rusqlite::Result<IndexedNote> {
+    Ok(IndexedNote {
+        path: PathBuf::from(row.get::<_, String>(0)?),
+        title: row.get(1)?,
+        has_conflict: row.get::<_, i32>(2)? != 0,
+    })
 }
 
 pub(crate) fn display_name_from_rel(rel_path: &Path) -> String {

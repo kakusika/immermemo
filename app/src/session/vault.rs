@@ -7,10 +7,11 @@ use std::rc::Rc;
 use immermemo_core::{AppData, EditorState, NoteIndex};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
-use super::util::set_status;
+use super::util::set_error;
 use super::{
     Session, clear_note_stats, open_initial_or_last_note, refresh_list, schedule_auto_sync,
-    show_history_state, sync_nav_state, update_rendered_body, vault_display_name,
+    show_history_state, show_vault_identity, sync_nav_state, update_rendered_body,
+    vault_display_name,
 };
 use crate::{App, SettingsAdapter, VaultData};
 
@@ -33,7 +34,7 @@ fn vault_account_info(
 }
 
 pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
-    crate::callbacks::migrate_legacy_remotes(&session.borrow());
+    crate::provider::migrate_legacy_remotes(&session.borrow());
     let s = session.borrow();
     let names: Vec<SharedString> = s
         .known_vaults
@@ -117,25 +118,17 @@ pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
 /// token store, the remote URL, the note list, and the open editor.
 pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBuf) {
     if let Err(e) = std::fs::create_dir_all(&vault_dir) {
-        set_status(app, format!("Could not open this vault: {e}"));
+        set_error(app, format!("Could not open this vault: {e}"));
         return;
     }
     let token_store = {
         let s = session.borrow();
-        let store_res = if let Some(acc_id) = s.app_data.load_vault_account(&vault_dir) {
-            if let Ok(token_path) = s.app_data.account_token_path(&acc_id) {
-                (s.token_store_for)(&token_path)
-            } else {
-                (s.token_store_for)(&vault_dir)
-            }
-        } else {
-            (s.token_store_for)(&vault_dir)
-        };
+        let store_res = s.open_token_store(&vault_dir);
         match store_res {
             Ok(t) => t,
             Err(e) => {
                 drop(s);
-                set_status(app, format!("Could not open this vault: {e}"));
+                set_error(app, format!("Could not open this vault: {e}"));
                 return;
             }
         }
@@ -143,8 +136,7 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
 
     let mut s = session.borrow_mut();
     let remote = s.app_data.load_remote(&vault_dir);
-    app.set_current_vault_name(vault_display_name(&vault_dir).into());
-    app.set_current_vault_path(vault_dir.display().to_string().into());
+    show_vault_identity(app, &vault_dir);
     let _ = s.app_data.save_current_vault(&vault_dir);
     let index = s
         .app_data
@@ -211,6 +203,6 @@ pub fn vault_path_from_input(base: &std::path::Path, input: &str) -> anyhow::Res
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn vault_path_from_input(_base: &std::path::Path, input: &str) -> anyhow::Result<PathBuf> {
-    anyhow::ensure!(!input.is_empty(), "the path can't be empty");
-    Ok(PathBuf::from(input))
+    anyhow::ensure!(!input.trim().is_empty(), "the path can't be empty");
+    Ok(immermemo_core::vault_path_from_input(input))
 }

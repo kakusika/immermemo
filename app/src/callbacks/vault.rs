@@ -11,47 +11,15 @@ use crate::haptic;
 use crate::provider;
 use crate::render;
 use crate::session::{
-    Session, on_ui_thread, refresh_vault_list, set_status, start_sync, switch_vault,
-    vault_display_name, vault_path_from_input,
+    Session, on_ui_thread, refresh_vault_list, set_error, set_status, show_vault_identity,
+    start_sync, switch_vault, vault_path_from_input,
 };
 use crate::update_provider_ui_state;
 use crate::{AccountData, App, SettingsAdapter};
 
-/// Migrates any legacy remote URL on known vaults into registered accounts if not yet present.
-pub fn migrate_legacy_remotes(session: &Session) {
-    for vault in &session.known_vaults {
-        if session.app_data.load_vault_account(vault).is_some() {
-            continue;
-        }
-        let Some(remote_url) = session.app_data.load_remote(vault) else {
-            continue;
-        };
-        let trimmed = remote_url.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-
-        let Some(remote) = immermemo_provider::identify_remote(trimmed) else {
-            continue;
-        };
-        let instance_url = provider::instance_url_for_host(remote.provider, &remote.host);
-        let acc = provider::new_account(remote.provider, &instance_url, &remote.owner, None);
-        let acc_id = acc.id.clone();
-        let _ = session.app_data.add_account(acc);
-        let _ = session.app_data.save_vault_account(vault, &acc_id);
-        if let Ok(token) = session.token_store.load()
-            && let Some(t) = token
-            && let Ok(token_path) = session.app_data.account_token_path(&acc_id)
-            && let Ok(acc_store) = (session.token_store_for)(&token_path)
-        {
-            let _ = acc_store.save(&t);
-        }
-    }
-}
-
 /// Refreshes the list of provider accounts and vault account link in the Settings sheet.
 pub fn refresh_accounts_ui(app: &App, session: &Session) {
-    migrate_legacy_remotes(session);
+    provider::migrate_legacy_remotes(session);
     let settings = app.global::<SettingsAdapter>();
     let accounts = session.app_data.load_accounts();
     let ui_accounts: Vec<AccountData> = accounts
@@ -138,8 +106,7 @@ pub fn bind_vault_callbacks(
             settings.set_url_draft(s.remote.clone().unwrap_or_default().into());
             settings.set_token_draft(SharedString::new());
             settings.set_has_token(s.token_store.load().unwrap_or_default().is_some());
-            settings.set_current_vault_name(vault_display_name(&s.vault_dir).into());
-            settings.set_current_vault_path(s.vault_dir.display().to_string().into());
+            show_vault_identity(&app, &s.vault_dir);
             update_provider_ui_state(&app, s.remote.as_deref());
             refresh_accounts_ui(&app, &s);
             drop(s);
@@ -172,7 +139,7 @@ pub fn bind_vault_callbacks(
                     set_status(&app, "Generated new Ed25519 SSH key");
                 }
                 Err(e) => {
-                    set_status(&app, format!("Failed to generate SSH key: {e}"));
+                    set_error(&app, format!("Failed to generate SSH key: {e}"));
                 }
             }
         }
@@ -196,12 +163,7 @@ pub fn bind_vault_callbacks(
         let (weak, session) = (app.as_weak(), session.clone());
         move |choice| {
             let app = weak.unwrap();
-            let px = match choice {
-                0 => 14.0,
-                2 => 20.0,
-                _ => 17.0,
-            };
-            app.set_editor_font_size(px);
+            app.set_editor_font_size(crate::theme::editor_font_px(choice));
             let body = app.get_body();
             let max_width = app.get_body_content_width();
             app.set_note_body_items(render::note_body_items(body.as_str(), &app, max_width));
@@ -366,8 +328,7 @@ pub fn bind_vault_callbacks(
             settings.set_url_draft(s.remote.clone().unwrap_or_default().into());
             settings.set_token_draft(SharedString::new());
             settings.set_has_token(s.token_store.load().unwrap_or_default().is_some());
-            settings.set_current_vault_name(vault_display_name(&s.vault_dir).into());
-            settings.set_current_vault_path(s.vault_dir.display().to_string().into());
+            show_vault_identity(&app, &s.vault_dir);
             update_provider_ui_state(&app, s.remote.as_deref());
             app.set_settings_page(2);
             app.set_settings_open(true);
@@ -416,18 +377,18 @@ pub fn bind_vault_callbacks(
             let new_vault = match vault_path_from_input(&base, &input) {
                 Ok(p) => p,
                 Err(e) => {
-                    set_status(&app, format!("Could not add the vault: {e}"));
+                    set_error(&app, format!("Could not add the vault: {e}"));
                     return;
                 }
             };
             if let Err(e) = std::fs::create_dir_all(&new_vault) {
-                set_status(&app, format!("Could not add the vault: {e}"));
+                set_error(&app, format!("Could not add the vault: {e}"));
                 return;
             }
             let mut s = session.borrow_mut();
             if let Err(e) = s.app_data.add_vault(&new_vault) {
                 drop(s);
-                set_status(&app, format!("Could not add the vault: {e}"));
+                set_error(&app, format!("Could not add the vault: {e}"));
                 return;
             }
             s.known_vaults = s.app_data.known_vaults();
@@ -466,7 +427,7 @@ pub fn bind_vault_callbacks(
             let is_current = s.vault_dir == vault_dir;
             if let Err(e) = s.app_data.remove_vault(&vault_dir) {
                 drop(s);
-                set_status(&app, format!("Could not remove the vault: {e}"));
+                set_error(&app, format!("Could not remove the vault: {e}"));
                 return;
             }
             s.known_vaults = s.app_data.known_vaults();
@@ -490,20 +451,20 @@ pub fn bind_vault_callbacks(
             let app = weak.unwrap();
             let url = url.trim();
             if url.is_empty() {
-                set_status(&app, "Enter a remote URL first");
+                set_error(&app, "Enter a remote URL first");
                 return;
             }
             let mut s = session.borrow_mut();
             if let Err(e) = s.app_data.save_remote(&s.vault_dir, url) {
                 drop(s);
-                set_status(&app, format!("Could not save the remote: {e}"));
+                set_error(&app, format!("Could not save the remote: {e}"));
                 return;
             }
             if !token.is_empty()
                 && let Err(e) = s.token_store.save(&token)
             {
                 drop(s);
-                set_status(&app, format!("Could not save the access token: {e}"));
+                set_error(&app, format!("Could not save the access token: {e}"));
                 return;
             }
             s.remote = Some(url.to_owned());
@@ -537,27 +498,27 @@ pub fn bind_vault_callbacks(
             let app = weak.unwrap();
             let s = session.borrow();
             let Some(account) = s.app_data.get_account(&account_id) else {
-                set_status(&app, "Account not found");
+                set_error(&app, "Account not found");
                 return;
             };
             let token_path = match s.app_data.account_token_path(&account_id) {
                 Ok(p) => p,
                 Err(e) => {
-                    set_status(&app, format!("Could not get token path: {e}"));
+                    set_error(&app, format!("Could not get token path: {e}"));
                     return;
                 }
             };
             let token_store = match (s.token_store_for)(&token_path) {
                 Ok(t) => t,
                 Err(e) => {
-                    set_status(&app, format!("Could not load token store: {e}"));
+                    set_error(&app, format!("Could not load token store: {e}"));
                     return;
                 }
             };
             let token = match token_store.load() {
                 Ok(Some(t)) => t,
                 _ => {
-                    set_status(&app, "No token found for this account");
+                    set_error(&app, "No token found for this account");
                     return;
                 }
             };
@@ -574,7 +535,7 @@ pub fn bind_vault_callbacks(
                 let Some(provider_kind) = immermemo_provider::ProviderId::from_id(&provider_id)
                 else {
                     on_ui_thread(&weak_thread, move |app| {
-                        set_status(app, format!("Unsupported provider: {provider_id}"));
+                        set_error(app, format!("Unsupported provider: {provider_id}"));
                     });
                     return;
                 };
@@ -585,7 +546,7 @@ pub fn bind_vault_callbacks(
                     Ok(info) => info,
                     Err(e) => {
                         on_ui_thread(&weak_thread, move |app| {
-                            set_status(app, format!("Failed to create repository: {e}"));
+                            set_error(app, format!("Failed to create repository: {e}"));
                         });
                         return;
                     }

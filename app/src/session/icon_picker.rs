@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use slint::{ModelRc, SharedString, VecModel};
 
-use super::util::set_status;
+use super::util::set_error;
 use super::{Session, refresh_list, schedule_auto_sync};
 use crate::{App, PickerIconEntry};
 
@@ -49,11 +49,11 @@ pub fn apply_icon_selection(app: &App, session: &Rc<RefCell<Session>>, name: &st
         return;
     };
     let Ok(body) = std::fs::read_to_string(&path) else {
-        set_status(app, "Could not read this note");
+        set_error(app, "Could not read this note");
         return;
     };
     let Some(new_body) = immermemo_core::set_note_icon(&body, name, ICON_PICKER_DEFAULT_PKG) else {
-        set_status(app, "Could not update this note's icon");
+        set_error(app, "Could not update this note's icon");
         return;
     };
     match std::fs::write(&path, &new_body) {
@@ -74,6 +74,6 @@ pub fn apply_icon_selection(app: &App, session: &Rc<RefCell<Session>>, name: &st
             }
             schedule_auto_sync(app, std::time::Duration::from_secs(5));
         }
-        Err(e) => set_status(app, format!("Could not save this note's icon: {e}")),
+        Err(e) => set_error(app, format!("Could not save this note's icon: {e}")),
     }
 }

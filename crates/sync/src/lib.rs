@@ -87,6 +87,8 @@ mod gc;
 mod history;
 mod reconcile;
 mod remote;
+#[cfg(any(test, feature = "test-support"))]
+pub mod testing;
 pub mod tls;
 
 use std::path::{Path, PathBuf};
@@ -462,16 +464,8 @@ pub struct ConflictAuthorship {
 mod tests {
     use super::*;
     use crate::gc::{AUTO_GC_SAMPLE_SHARD, AUTO_GC_SHARD_THRESHOLD};
+    use crate::testing::{NoCredentials, shared_remote};
     use tempfile::TempDir;
-
-    /// Local transport (a plain filesystem path) never invokes the
-    /// credentials callback, so these tests never need real credentials.
-    struct NoCredentials;
-    impl CredentialProvider for NoCredentials {
-        fn credentials(&self, _remote_url: &str) -> anyhow::Result<git2::Cred> {
-            anyhow::bail!("not expected to be called for a local transport")
-        }
-    }
 
     /// A vault plus its own temp directories, kept alive for the test's
     /// duration (the `Vault` only borrows their paths).
@@ -540,15 +534,6 @@ mod tests {
 
     fn read_note(vault: &TestVault, name: &str) -> String {
         std::fs::read_to_string(vault.working_tree.path().join(name)).unwrap()
-    }
-
-    /// A bare repo standing in for a hosted git remote (GitHub, Gitea,
-    /// self-hosted) -- real fetch/push over git's own local transport,
-    /// no network or hosting account needed.
-    fn shared_remote() -> TempDir {
-        let dir = TempDir::new().unwrap();
-        Repository::init_bare(dir.path()).unwrap();
-        dir
     }
 
     #[test]

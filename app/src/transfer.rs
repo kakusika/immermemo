@@ -214,23 +214,7 @@ pub fn bind_transfer_callbacks(
                     settings.set_import_status_is_error(false);
                     settings.set_import_status_message("Settings applied successfully!".into());
                     if result.interface_updated {
-                        if let Some(theme) = s.app_data.load_theme() {
-                            settings.set_theme_choice(theme);
-                            app.set_theme_choice(theme);
-                        }
-                        if let Some(font_choice) = s.app_data.load_font_size() {
-                            settings.set_font_size_choice(font_choice);
-                            app.set_font_size_choice(font_choice);
-                            app.set_editor_font_size(match font_choice {
-                                0 => 14.0,
-                                2 => 20.0,
-                                _ => 17.0,
-                            });
-                        }
-                        if let Some(status_bar) = s.app_data.load_status_bar_choice() {
-                            settings.set_status_bar_choice(status_bar);
-                            app.set_status_bar_choice(status_bar);
-                        }
+                        crate::theme::Appearance::load(&s.app_data).show(&app);
                         if let Some(interface) = &payload.interface
                             && let Some(scale) = interface.ui_scale
                         {

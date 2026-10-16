@@ -1,18 +1,18 @@
-use crate::App;
+use std::path::Path;
+
+use crate::{App, SettingsAdapter};
 use slint::{ComponentHandle, SharedString};
 
+/// Shows `msg` in the status line as plain information.
 pub fn set_status(app: &App, msg: impl Into<SharedString>) {
-    let s: SharedString = msg.into();
-    let text = s.as_str();
-    let is_error = text.starts_with("Save failed")
-        || text.starts_with("Sync failed")
-        || text.starts_with("Could not")
-        || text.starts_with("Enter a remote")
-        || text.contains("failed")
-        || text.contains("error")
-        || text.contains("Error");
-    app.set_status(s);
-    app.set_status_is_error(is_error);
+    app.set_status(msg.into());
+    app.set_status_is_error(false);
+}
+
+/// Shows `msg` in the status line as an error.
+pub fn set_error(app: &App, msg: impl Into<SharedString>) {
+    app.set_status(msg.into());
+    app.set_status_is_error(true);
 }
 
 /// Copies the given text to the system clipboard using Slint's platform abstraction.
@@ -40,4 +40,16 @@ pub fn on_ui_thread(weak: &slint::Weak<App>, f: impl FnOnce(&App) + Send + 'stat
             f(&app);
         }
     });
+}
+
+/// Shows `vault_dir`'s name and path wherever the UI displays the current
+/// vault (the main window and the Settings sheet keep separate copies).
+pub fn show_vault_identity(app: &App, vault_dir: &Path) {
+    let name: SharedString = super::vault_display_name(vault_dir).into();
+    let path: SharedString = vault_dir.display().to_string().into();
+    let settings = app.global::<SettingsAdapter>();
+    settings.set_current_vault_name(name.clone());
+    settings.set_current_vault_path(path.clone());
+    app.set_current_vault_name(name);
+    app.set_current_vault_path(path);
 }

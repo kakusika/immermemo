@@ -89,6 +89,45 @@ pub(crate) fn new_account(
     }
 }
 
+/// Registers an account for every known vault that has a remote URL but no
+/// account yet -- vaults linked before accounts existed, or whose remote was
+/// typed in by hand or came from an in-tree git repository. Each vault's own
+/// token becomes its account's token.
+///
+/// Idempotent and cheap (a vault already linked to an account is skipped), so
+/// it runs whenever the account or vault lists are rebuilt.
+pub(crate) fn migrate_legacy_remotes(session: &Session) {
+    for vault in &session.known_vaults {
+        if session.app_data.load_vault_account(vault).is_some() {
+            continue;
+        }
+        let Some(remote) = session
+            .app_data
+            .load_remote(vault)
+            .and_then(|url| identify_remote(url.trim()))
+        else {
+            continue;
+        };
+        let instance_url = instance_url_for_host(remote.provider, &remote.host);
+        let account = new_account(remote.provider, &instance_url, &remote.owner, None);
+        let account_id = account.id.clone();
+        // Read before linking: once the vault has an account, its token store
+        // *is* the account's.
+        let token = session
+            .open_token_store(vault)
+            .ok()
+            .and_then(|store| store.load().ok().flatten());
+        let _ = session.app_data.add_account(account);
+        let _ = session.app_data.save_vault_account(vault, &account_id);
+        if let Some(token) = token
+            && let Ok(token_path) = session.app_data.account_token_path(&account_id)
+            && let Ok(account_store) = (session.token_store_for)(&token_path)
+        {
+            let _ = account_store.save(&token);
+        }
+    }
+}
+
 /// What a connect flow has once it holds a repository for the account.
 struct Linked {
     provider: ProviderId,
@@ -166,4 +205,94 @@ fn current_session() -> Rc<RefCell<Session>> {
     crate::session::SESSION
         .with(|s| s.borrow().clone())
         .expect("session set in run")
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::path::{Path, PathBuf};
+    use std::sync::{Arc, Mutex};
+
+    use immermemo_core::{AppData, NoteIndex, TokenStore};
+
+    use super::*;
+
+    #[derive(Default)]
+    struct MemoryTokenStore(Mutex<Option<String>>);
+    impl TokenStore for MemoryTokenStore {
+        fn load(&self) -> anyhow::Result<Option<String>> {
+            Ok(self.0.lock().unwrap().clone())
+        }
+        fn save(&self, token: &str) -> anyhow::Result<()> {
+            *self.0.lock().unwrap() = Some(token.to_owned());
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn legacy_remotes_become_accounts_each_with_its_own_vaults_token() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let app_data = AppData::new(tmp.path().join("data"));
+        let (github_vault, gitlab_vault) = (tmp.path().join("a"), tmp.path().join("b"));
+        for (vault, remote) in [
+            (&github_vault, "https://github.com/octocat/notes.git"),
+            (&gitlab_vault, "git@gitlab.com:team/sub/notes.git"),
+        ] {
+            std::fs::create_dir_all(vault).unwrap();
+            app_data.save_remote(vault, remote).unwrap();
+        }
+
+        // One token store per path, as the real factory hands out.
+        let stores: Arc<Mutex<HashMap<PathBuf, Arc<MemoryTokenStore>>>> = Arc::default();
+        let store_at = {
+            let stores = stores.clone();
+            move |path: &Path| -> Arc<MemoryTokenStore> {
+                stores
+                    .lock()
+                    .unwrap()
+                    .entry(path.to_owned())
+                    .or_default()
+                    .clone()
+            }
+        };
+        store_at(&github_vault).save("github-token").unwrap();
+        store_at(&gitlab_vault).save("gitlab-token").unwrap();
+
+        let session = Session::new(immermemo_core::Session::new(
+            github_vault.clone(),
+            app_data.clone(),
+            store_at(&github_vault),
+            {
+                let store_at = store_at.clone();
+                Box::new(move |path| Ok(store_at(path) as Arc<dyn TokenStore>))
+            },
+            vec![github_vault.clone(), gitlab_vault.clone()],
+            None,
+            NoteIndex::open_in_memory().unwrap(),
+        ));
+
+        migrate_legacy_remotes(&session);
+        migrate_legacy_remotes(&session); // idempotent
+
+        assert_eq!(app_data.load_accounts().len(), 2);
+        for (vault, account_id, token) in [
+            (&github_vault, "github:octocat", "github-token"),
+            (
+                &gitlab_vault,
+                "gitlab:https://gitlab.com:team/sub",
+                "gitlab-token",
+            ),
+        ] {
+            assert_eq!(
+                app_data.load_vault_account(vault).as_deref(),
+                Some(account_id)
+            );
+            let account_token_path = app_data.account_token_path(account_id).unwrap();
+            assert_eq!(
+                store_at(&account_token_path).load().unwrap().as_deref(),
+                Some(token),
+                "{account_id} must carry its own vault's token"
+            );
+        }
+    }
 }

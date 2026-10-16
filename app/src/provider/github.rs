@@ -156,7 +156,7 @@ fn finish(app: &App, linked: &Linked) {
         Ok(username) => username,
         Err(e) => {
             show_auth_status(app, false, e.as_str());
-            crate::session::set_status(app, e);
+            crate::session::set_error(app, e);
             return;
         }
     };

@@ -26,5 +26,6 @@ git2 = { workspace = true }
 serde = { workspace = true }
 
 [dev-dependencies]
+immermemo-sync = { workspace = true, features = ["test-support"] }
 immermemo-render-tomet = { workspace = true }
 tempfile = "3"

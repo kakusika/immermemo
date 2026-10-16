@@ -326,24 +326,16 @@ impl Session {
 
     /// Reconciles filesystem notes with the SQLite index and updates internal note lists.
     pub fn refresh_list_data(&mut self) -> RefreshListOutcome {
-        let previous = self.current_path();
         let vault_dir = self.vault_dir.clone();
         let _ = self.index.reconcile_filesystem(&vault_dir);
-        let all = self.index.list_all().unwrap_or_default();
-        let vault_dir = self.vault_dir.clone();
-        self.notes = all.iter().map(|n| vault_dir.join(&n.path)).collect();
-        self.conflicted = all.iter().map(|n| n.has_conflict).collect();
-        let conflict_count = self.conflicted.iter().filter(|&&c| c).count();
-        self.editor.current = previous.and_then(|p| self.notes.iter().position(|n| *n == p));
-        RefreshListOutcome { conflict_count }
+        self.load_cached_list_data()
     }
 
     /// Loads cached note lists from SQLite index without walking the filesystem.
     pub fn load_cached_list_data(&mut self) -> RefreshListOutcome {
         let previous = self.current_path();
         let all = self.index.list_all().unwrap_or_default();
-        let vault_dir = self.vault_dir.clone();
-        self.notes = all.iter().map(|n| vault_dir.join(&n.path)).collect();
+        self.notes = all.iter().map(|n| self.vault_dir.join(&n.path)).collect();
         self.conflicted = all.iter().map(|n| n.has_conflict).collect();
         let conflict_count = self.conflicted.iter().filter(|&&c| c).count();
         self.editor.current = previous.and_then(|p| self.notes.iter().position(|n| *n == p));
@@ -382,6 +374,29 @@ impl Session {
             let _ = store.save(token);
         }
         Ok(())
+    }
+
+    /// The token file of the account `vault_dir` is linked to, if any.
+    fn account_token_path(&self, vault_dir: &Path) -> Option<PathBuf> {
+        let account_id = self.app_data.load_vault_account(vault_dir)?;
+        self.app_data.account_token_path(&account_id).ok()
+    }
+
+    /// Opens the token store `vault_dir` authenticates through: its linked
+    /// account's, or else one of its own.
+    pub fn open_token_store(&self, vault_dir: &Path) -> anyhow::Result<Arc<dyn TokenStore>> {
+        let path = self
+            .account_token_path(vault_dir)
+            .unwrap_or_else(|| vault_dir.to_owned());
+        (self.token_store_for)(&path)
+    }
+
+    /// The token store a sync of the current vault uses: the linked
+    /// account's if it can be opened, otherwise the vault's own.
+    pub fn sync_token_store(&self) -> Arc<dyn TokenStore> {
+        self.account_token_path(&self.vault_dir)
+            .and_then(|path| (self.token_store_for)(&path).ok())
+            .unwrap_or_else(|| self.token_store.clone())
     }
 
     /// Forgets this vault's remote and token (the registered account, if
@@ -450,7 +465,7 @@ pub fn vault_display_name(vault_dir: &Path) -> String {
         .unwrap_or_else(|| vault_dir.display().to_string())
 }
 
-/// Resolves a user-typed vault path input (expanding `~`).
+/// Resolves a user-typed vault path (trimming it and expanding a leading `~/`).
 pub fn vault_path_from_input(input: &str) -> PathBuf {
     let trimmed = input.trim();
     if let Some(rest) = trimmed.strip_prefix("~/")
@@ -593,6 +608,11 @@ mod tests {
             avatar_url: None,
         };
 
+        // Before linking, a sync authenticates through the vault's own store.
+        session.sync_token_store().save("vault-only").unwrap();
+        assert_eq!(vault_store.load().unwrap().as_deref(), Some("vault-only"));
+        assert_eq!(account_store.load().unwrap(), None);
+
         session
             .link_remote(
                 account.clone(),
@@ -617,6 +637,14 @@ mod tests {
             Some("github:octocat")
         );
 
+        // Once linked, it switches to the account's store.
+        session.sync_token_store().save("via-account").unwrap();
+        assert_eq!(
+            account_store.load().unwrap().as_deref(),
+            Some("via-account")
+        );
+        assert_eq!(vault_store.load().unwrap().as_deref(), Some("tok"));
+
         session.unlink_remote();
 
         assert_eq!(session.remote, None);
@@ -625,6 +653,18 @@ mod tests {
         assert!(
             app_data.get_account("github:octocat").is_some(),
             "the account itself stays registered for other vaults"
+        );
+    }
+
+    #[test]
+    fn a_typed_vault_path_is_trimmed_and_an_absolute_one_is_kept() {
+        assert_eq!(
+            vault_path_from_input("  /srv/notes \n"),
+            PathBuf::from("/srv/notes")
+        );
+        assert_eq!(
+            vault_path_from_input("rel/notes"),
+            PathBuf::from("rel/notes")
         );
     }
 }

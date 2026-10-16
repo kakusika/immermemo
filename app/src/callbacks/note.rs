@@ -8,7 +8,7 @@ use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::session::{
     self, Session, apply_icon_selection, apply_restored, filter_icon_picker, open_icon_picker,
-    open_note, refresh_list, set_status, show_history_state, update_filtered_list,
+    open_note, refresh_list, set_error, set_status, show_history_state, update_filtered_list,
 };
 use crate::{App, render};
 
@@ -41,7 +41,7 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                         open_note(&app, &session, index);
                     }
                 }
-                Err(e) => set_status(&app, format!("Could not create a note: {e}")),
+                Err(e) => set_error(&app, format!("Could not create a note: {e}")),
             }
         }
     });
@@ -197,7 +197,7 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                         }
                     }
                 }
-                Err(e) => set_status(&app, format!("Could not rename the note: {e}")),
+                Err(e) => set_error(&app, format!("Could not rename the note: {e}")),
             }
         }
     });
@@ -266,7 +266,7 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                         session::show_list_or_reopen(&app, &session, true);
                     }
                 }
-                Err(e) => set_status(&app, format!("Could not delete the note: {e}")),
+                Err(e) => set_error(&app, format!("Could not delete the note: {e}")),
             }
         }
     });
@@ -362,7 +362,7 @@ fn handle_edit(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>>, te
                         set_status(app, "");
                     }
                 }
-                Err(e) => set_status(app, format!("Save failed: {e}")),
+                Err(e) => set_error(app, format!("Save failed: {e}")),
             }
         }
     }
@@ -390,7 +390,7 @@ fn handle_link_clicked(
                 rest
             };
             if let Err(e) = webbrowser::open(url) {
-                set_status(app, format!("Failed to open link: {e}"));
+                set_error(app, format!("Failed to open link: {e}"));
             }
         }
         tomet::semantics::TargetScheme::Ref => {
@@ -409,7 +409,7 @@ fn handle_link_clicked(
                 || target.starts_with("mailto:")
             {
                 if let Err(e) = webbrowser::open(target) {
-                    set_status(app, format!("Failed to open link: {e}"));
+                    set_error(app, format!("Failed to open link: {e}"));
                 }
                 return;
             }
@@ -491,7 +491,7 @@ fn create_and_open_linked_note(
                 set_status(app, format!("Created note \"{clean_name}\""));
             }
         }
-        Err(e) => set_status(app, format!("Could not create note: {e}")),
+        Err(e) => set_error(app, format!("Could not create note: {e}")),
     }
 }
 

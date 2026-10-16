@@ -8,7 +8,7 @@ use slint::SharedString;
 
 use super::conflict::sync_conflict_sheet_state;
 use super::history::{history_preview, show_history_state};
-use super::util::set_status;
+use super::util::{set_error, set_status};
 use super::{Session, clear_note_stats, update_note_stats, update_rendered_body};
 use crate::App;
 
@@ -26,7 +26,7 @@ fn open_note_inner(app: &App, session: &Rc<RefCell<Session>>, index: usize) -> O
     let outcome = session.borrow_mut().open_note(index)?;
     match outcome {
         Err(msg) => {
-            set_status(app, msg);
+            set_error(app, msg);
             None
         }
         Ok(opened) => {

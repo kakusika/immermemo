@@ -365,14 +365,8 @@ fn resolve_all_lossless(
 mod tests {
     use super::*;
     use immermemo_identity::DeviceIdentity;
+    use immermemo_sync::testing::{NoCredentials, shared_remote};
     use tempfile::TempDir;
-
-    struct NoCredentials;
-    impl immermemo_sync::CredentialProvider for NoCredentials {
-        fn credentials(&self, _remote_url: &str) -> anyhow::Result<git2::Cred> {
-            anyhow::bail!("not expected to be called for a local-path transport")
-        }
-    }
 
     /// One "device": a vault working tree plus its own app-data base,
     /// signing every commit it makes with its own `device_id` -- same
@@ -434,12 +428,6 @@ mod tests {
                 vec![path],
             )
         }
-    }
-
-    fn shared_remote() -> TempDir {
-        let dir = TempDir::new().unwrap();
-        git2::Repository::init_bare(dir.path()).unwrap();
-        dir
     }
 
     /// The seam this whole feature exists for: the same conflicted note,

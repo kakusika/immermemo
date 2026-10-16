@@ -34,7 +34,7 @@ pub use action::apply_bottom_bar_config;
 
 use session::{
     SESSION, Session, load_cached_list, open_initial_or_last_note, open_note_by_rel_path,
-    refresh_list, refresh_vault_list, vault_display_name,
+    refresh_list, refresh_vault_list,
 };
 
 slint::include_modules!();
@@ -115,48 +115,22 @@ pub fn run(
     android::splash::notify_on_first_frame(&app);
     select_system_translation();
     let settings = app.global::<SettingsAdapter>();
-    let font_size_choice = app_data.load_font_size().unwrap_or(1);
-    let theme_choice = app_data.load_theme().unwrap_or(0);
-    settings.set_font_size_choice(font_size_choice);
-    app.set_font_size_choice(font_size_choice);
-    app.set_editor_font_size(match font_size_choice {
-        0 => 14.0,
-        2 => 20.0,
-        _ => 17.0,
-    });
-    settings.set_theme_choice(theme_choice);
-    app.set_theme_choice(theme_choice);
-    let color_source = app_data.load_color_source().unwrap_or(0);
-    let color_seed = app_data
-        .load_color_seed()
-        .unwrap_or_else(|| "#6750A4".to_string());
-    let palette_style = app_data.load_palette_style().unwrap_or(0);
-    let contrast_level = app_data.load_contrast_level().unwrap_or(0);
-    settings.set_color_source(color_source);
-    settings.set_color_seed(color_seed.into());
-    settings.set_palette_style(palette_style);
-    settings.set_contrast_level(contrast_level);
-    theme::apply_theme(&app, &app_data);
-    let status_bar_choice = app_data.load_status_bar_choice().unwrap_or(0);
-    settings.set_status_bar_choice(status_bar_choice);
-    app.set_status_bar_choice(status_bar_choice);
+    let appearance = theme::Appearance::load(&app_data);
+    appearance.show(&app);
     let bottom_bar_config = app_data
         .load_bottom_bar_config()
         .unwrap_or_else(|| "home,search,library,quick".to_string());
     apply_bottom_bar_config(&settings, &bottom_bar_config);
     #[cfg(target_os = "android")]
-    let status_bar_choice_cell = Rc::new(Cell::new(status_bar_choice));
+    let status_bar_choice_cell = Rc::new(Cell::new(appearance.status_bar_choice));
     // 2 (always hidden) takes effect immediately; 0/1 don't need an
     // initial call -- the window starts visible either way (AppTheme's
     // own default), and 1 only hides once a note is actually opened.
     #[cfg(target_os = "android")]
-    if status_bar_choice == 2 {
+    if appearance.status_bar_choice == 2 {
         android::system_ui::set_status_bar_visible(false);
     }
-    settings.set_current_vault_name(vault_display_name(&vault_dir).into());
-    settings.set_current_vault_path(vault_dir.display().to_string().into());
-    app.set_current_vault_name(vault_display_name(&vault_dir).into());
-    app.set_current_vault_path(vault_dir.display().to_string().into());
+    session::show_vault_identity(&app, &vault_dir);
     app.set_remote_configured(remote.is_some());
     update_provider_ui_state(&app, remote.as_deref());
     let ssh_pub = app_data.load_ssh_public_key();
@@ -230,7 +204,8 @@ mod tests {
     use crate::session::{
         apply_icon_selection, copy_to_clipboard, filter_icon_picker, finish_sync,
         open_first_conflicted_note, open_icon_picker, resolve_active_conflict,
-        resolve_conflict_step, set_status, sync_conflict_sheet_state, update_filtered_list,
+        resolve_conflict_step, set_error, set_status, sync_conflict_sheet_state,
+        update_filtered_list,
     };
     use immermemo_core::{History, notes};
     use slint::{Model, SharedString};
@@ -282,7 +257,7 @@ mod tests {
     }
 
     fn status_classification_tracks_is_error(app: &App) {
-        set_status(app, "Save failed: permission denied");
+        set_error(app, "Save failed: permission denied");
         assert!(app.get_status_is_error());
         assert_eq!(app.get_status(), "Save failed: permission denied");
 
@@ -290,8 +265,12 @@ mod tests {
         assert!(!app.get_status_is_error());
         assert_eq!(app.get_status(), "Syncing...");
 
-        set_status(app, "Sync failed: network timeout");
+        set_error(app, "Sync failed: network timeout");
         assert!(app.get_status_is_error());
+
+        // What the message says no longer decides how it is shown.
+        set_status(app, "Created note \"error handling\"");
+        assert!(!app.get_status_is_error());
 
         set_status(app, "Synced");
         assert!(!app.get_status_is_error());

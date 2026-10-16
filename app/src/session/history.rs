@@ -7,7 +7,7 @@ use std::rc::Rc;
 use immermemo_core::{History, format_timestamp, notes};
 use slint::{ModelRc, SharedString, VecModel};
 
-use super::util::set_status;
+use super::util::{set_error, set_status};
 use super::{Session, schedule_auto_sync, update_note_stats, update_rendered_body};
 use crate::{App, NoteBodyItemView};
 
@@ -54,7 +54,7 @@ pub fn apply_restored(
     };
     let result = session.borrow_mut().apply_restored(restored);
     match &result.write_error {
-        Some(e) => set_status(app, e.clone()),
+        Some(e) => set_error(app, e.clone()),
         None => {
             if app.get_status_is_error() && app.get_status().starts_with("Save failed") {
                 set_status(app, "");
@@ -104,7 +104,7 @@ pub fn restore_note_version(app: &App, session: &Rc<RefCell<Session>>, rev_idx: 
     let outcome = session.borrow_mut().restore_note_version(rev_idx);
     let Some(outcome) = outcome else { return };
     match outcome {
-        Err(msg) => set_status(app, msg),
+        Err(msg) => set_error(app, msg),
         Ok(restored) => {
             update_rendered_body(app, &restored.body);
             app.set_can_undo(restored.can_undo);

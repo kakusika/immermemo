@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use slint::{ModelRc, SharedString, VecModel};
 
-use super::util::set_status;
+use super::util::{set_error, set_status};
 use super::{
     Session, open_note, refresh_list, show_history_state, update_note_stats, update_rendered_body,
 };
@@ -20,7 +20,7 @@ pub fn resolve_active_conflict(
     let outcome = session.borrow_mut().resolve_active_conflict(resolution);
     let Some(outcome) = outcome else { return };
     match outcome {
-        Err(msg) => set_status(app, msg),
+        Err(msg) => set_error(app, msg),
         Ok(resolved) => {
             show_history_state(app, &session.borrow());
             update_rendered_body(app, &resolved.body);
@@ -103,7 +103,7 @@ pub fn resolve_conflict_step(app: &App, session: &Rc<RefCell<Session>>, choice: 
         .resolve_conflict_step(active_conflict_index, choice);
     let Some(outcome) = outcome else { return };
     match outcome {
-        Err(msg) => set_status(app, msg),
+        Err(msg) => set_error(app, msg),
         Ok(resolved) => {
             show_history_state(app, &session.borrow());
             update_rendered_body(app, &resolved.body);

@@ -14,8 +14,6 @@ apk := dist + "/immermemo.apk"
 apk_universal := dist + "/immermemo-universal.apk"
 apk_arm := dist + "/immermemo-arm64.apk"
 apk_x86 := dist + "/immermemo-x86_64.apk"
-apk_arm_femtovg := dist + "/immermemo-arm64-femtovg.apk"
-apk_x86_femtovg := dist + "/immermemo-x86_64-femtovg.apk"
 
 # List available recipes
 default:
@@ -60,6 +58,20 @@ emulator-stop:
 android_cflags := "-fno-unwind-tables -fno-asynchronous-unwind-tables -ffunction-sections -fdata-sections -DOPENSSL_NO_SM2_PRECOMP -DSQLITE_OMIT_JSON -DSQLITE_OMIT_SHARED_CACHE -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_LIKE_DOESNT_MATCH_BLOBS -DSQLITE_OMIT_UTF16 -DSQLITE_OMIT_AUTOINCREMENT -DSQLITE_OMIT_EXPLAIN -DSQLITE_OMIT_DEPRECATED -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_OMIT_PROGRESS_CALLBACK -DSQLITE_OMIT_TRACE -DSQLITE_OMIT_GET_TABLE"
 android_rustflags := "-C force-unwind-tables=no -C link-arg=-Wl,--icf=all -C link-arg=-Wl,--gc-sections -C link-arg=-Wl,--strip-all"
 
+# Cross-compile for `abis` (cargo-ndk `-t` flags), package with Gradle, and
+# copy the result to `out` and to the default `apk` path.
+# --lib is load-bearing: without it, cargo-ndk also tries to cross-compile
+# the crate's desktop `[[bin]]` target, which doesn't link for Android.
+[private]
+_build-apk abis out:
+    cd app && rm -rf {{jniLibs}}
+    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk {{abis}} -P 34 -o {{jniLibs}} build --release --lib -p immermemo
+    cd app/android && gradle assembleRelease
+    @mkdir -p {{dist}}
+    cp {{apk_raw}} {{out}}
+    cp {{apk_raw}} {{apk}}
+    @echo "Built: {{out}} (and {{apk}})"
+
 # Build one fat APK with both aarch64 (a real phone) and x86_64 (the
 # emulator) native libraries, see app/Cargo.toml. Native libs are
 # stored uncompressed and page-aligned (Gradle's
@@ -69,36 +81,13 @@ android_rustflags := "-C force-unwind-tables=no -C link-arg=-Wl,--icf=all -C lin
 # this the biggest of the three on-device footprints (~51 MB). Only useful
 # for sideloading onto a device whose ABI you don't know ahead of time;
 # `install`/`run` use `apk-auto` instead, which picks a single ABI.
-# --lib is load-bearing: without it, cargo-ndk also tries to cross-compile
-# the crate's desktop `[[bin]]` target, which doesn't link for Android.
-apk:
-    cd app && rm -rf {{jniLibs}}
-    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
-    cd app/android && gradle assembleRelease
-    @mkdir -p {{dist}}
-    cp {{apk_raw}} {{apk_universal}}
-    cp {{apk_raw}} {{apk}}
-    @echo "Built: {{apk_universal}} (and {{apk}})"
+apk: (_build-apk "-t arm64-v8a -t x86_64" apk_universal)
 
 # Build a slim release APK for real devices (aarch64, ~19 MB with FemtoVG GPU renderer)
-apk-arm:
-    cd app && rm -rf {{jniLibs}}
-    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t arm64-v8a -P 34 -o {{jniLibs}} build --release --lib -p immermemo
-    cd app/android && gradle assembleRelease
-    @mkdir -p {{dist}}
-    cp {{apk_raw}} {{apk_arm}}
-    cp {{apk_raw}} {{apk}}
-    @echo "Built: {{apk_arm}} (and {{apk}})"
+apk-arm: (_build-apk "-t arm64-v8a" apk_arm)
 
 # Build a slim release APK for the emulator (x86_64, FemtoVG GPU renderer)
-apk-x86:
-    cd app && rm -rf {{jniLibs}}
-    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk -t x86_64 -P 34 -o {{jniLibs}} build --release --lib -p immermemo
-    cd app/android && gradle assembleRelease
-    @mkdir -p {{dist}}
-    cp {{apk_raw}} {{apk_x86}}
-    cp {{apk_raw}} {{apk}}
-    @echo "Built: {{apk_x86}} (and {{apk}})"
+apk-x86: (_build-apk "-t x86_64" apk_x86)
 
 # Backward-compatible aliases
 apk-arm-femtovg: apk-arm

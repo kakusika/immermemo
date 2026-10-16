@@ -37,26 +37,10 @@ pub fn run(
 mod tests {
     use super::*;
     use crate::CONFLICT_MARKER;
+    use immermemo_sync::testing::{NoCredentials, shared_remote};
     use immermemo_vault::appdata::AppData;
     use std::path::PathBuf;
     use tempfile::TempDir;
-
-    /// Local transport (a plain filesystem path) never invokes the
-    /// credentials callback, so these tests never need real credentials.
-    struct NoCredentials;
-    impl CredentialProvider for NoCredentials {
-        fn credentials(&self, _remote_url: &str) -> anyhow::Result<git2::Cred> {
-            anyhow::bail!("not expected to be called for a local transport")
-        }
-    }
-
-    /// A bare repository standing in for GitHub/Gitea: a plain filesystem
-    /// path never invokes the credentials callback, so no ssh is involved.
-    fn bare_remote() -> TempDir {
-        let dir = TempDir::new().unwrap();
-        git2::Repository::init_bare(dir.path()).unwrap();
-        dir
-    }
 
     /// One "device": a notes folder plus its own app-data base beside it.
     struct Device {
@@ -103,7 +87,7 @@ mod tests {
 
     #[test]
     fn an_edit_on_one_device_reaches_the_other() {
-        let remote = bare_remote();
+        let remote = shared_remote();
         let (a, b) = (Device::new(), Device::new());
 
         a.write("note.tmt", "こんにちは\n");
@@ -115,7 +99,7 @@ mod tests {
 
     #[test]
     fn concurrent_edits_come_back_as_absolute_conflicted_paths() {
-        let remote = bare_remote();
+        let remote = shared_remote();
         let (a, b) = (Device::new(), Device::new());
         a.write("note.tmt", "Bring a laptop.\n");
         a.sync(&remote).unwrap();
@@ -133,7 +117,7 @@ mod tests {
 
     #[test]
     fn the_git_directory_stays_out_of_the_notes_folder() {
-        let remote = bare_remote();
+        let remote = shared_remote();
         let a = Device::new();
         a.write("note.tmt", "x\n");
         a.sync(&remote).unwrap();
@@ -147,7 +131,7 @@ mod tests {
 
     #[test]
     fn in_tree_git_repository_is_used_when_already_present() {
-        let remote = bare_remote();
+        let remote = shared_remote();
         let a = Device::new();
         // User clones or inits repo in the notes directory
         git2::Repository::init(a.notes.path()).unwrap();
