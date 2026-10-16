@@ -77,9 +77,12 @@ export component AccountsPage inherits SettingsPage {
                     }
                 }
 
-                Button {
-                    text: @tr("+ Vault");
-                    clicked => { SettingsAdapter.new-vault-with-account(acc.id); }
+                VerticalLayout {
+                    alignment: center;
+                    Button {
+                        text: @tr("+ Vault");
+                        clicked => { SettingsAdapter.new-vault-with-account(acc.id); }
+                    }
                 }
 
                 IconButton {

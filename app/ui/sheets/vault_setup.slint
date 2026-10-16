@@ -258,14 +258,11 @@ export component VaultSetupSheet inherits Rectangle {
                                         spacing: 10px;
                                         alignment: start;
 
-                                        VerticalLayout {
-                                            alignment: center;
-                                            AccountAvatar {
-                                                avatar: acc.avatar;
-                                                has-avatar: acc.has-avatar;
-                                                provider: acc.provider;
-                                                avatar-size: 32px;
-                                            }
+                                        AccountAvatar {
+                                            avatar: acc.avatar;
+                                            has-avatar: acc.has-avatar;
+                                            provider: acc.provider;
+                                            avatar-size: 32px;
                                         }
 
                                         VerticalLayout {

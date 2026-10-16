@@ -9,7 +9,12 @@ import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 ///
 /// If `has-avatar` is false, gracefully falls back to displaying the provider's icon
 /// inside a circular tinted surface.
-export component AccountAvatar inherits Rectangle {
+///
+/// The widget centres itself on the cross axis: a fixed-size child of a
+/// `HorizontalLayout` would otherwise sit at the top edge, so callers place it
+/// as-is, with no wrapper. It is exactly `avatar-size` wide and stretches
+/// vertically, drawing the circle in the middle of whatever height it is given.
+export component AccountAvatar inherits VerticalLayout {
     in property <image> avatar;
     in property <bool> has-avatar: false;
     in property <string> provider: "";
@@ -31,81 +36,77 @@ export component AccountAvatar inherits Rectangle {
         return TablerIcons.user;
     }
 
-    width: root.avatar-size;
-    height: root.avatar-size;
+    alignment: center;
 
-    // Fallback circular container when user avatar image is not available
-    if !root.has-avatar: Rectangle {
-        width: 100%;
-        height: 100%;
-        border-radius: root.avatar-size / 2;
-        background: Palette.color-scheme == ColorScheme.dark
-            ? Palette.accent-background.with-alpha(0.18)
-            : Palette.accent-background.with-alpha(0.12);
-        border-width: 1px;
-        border-color: Palette.border;
+    circle := Rectangle {
+        width: root.avatar-size;
+        height: root.avatar-size;
 
-        VerticalLayout {
-            alignment: center;
-            HorizontalLayout {
-                alignment: center;
-                Icon {
-                    source: root.provider-icon(root.provider);
-                    width: root.avatar-size * 0.55;
-                    height: root.avatar-size * 0.55;
-                    color: Palette.accent-background;
-                }
+        // Fallback circular container when user avatar image is not available
+        if !root.has-avatar: Rectangle {
+            width: 100%;
+            height: 100%;
+            border-radius: root.avatar-size / 2;
+            background: Palette.color-scheme == ColorScheme.dark
+                ? Palette.accent-background.with-alpha(0.18)
+                : Palette.accent-background.with-alpha(0.12);
+            border-width: 1px;
+            border-color: Palette.border;
+
+            Icon {
+                source: root.provider-icon(root.provider);
+                width: root.avatar-size * 0.55;
+                height: root.avatar-size * 0.55;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                color: Palette.accent-background;
             }
         }
-    }
 
-    // Avatar image display with round clipping when user avatar is present
-    if root.has-avatar: Rectangle {
-        width: 100%;
-        height: 100%;
-        border-radius: root.avatar-size / 2;
-        clip: true;
-        background: Palette.foreground.with-alpha(0.06);
-
-        Image {
-            source: root.avatar;
+        // Avatar image display with round clipping when user avatar is present
+        if root.has-avatar: Rectangle {
             width: 100%;
             height: 100%;
-            image-fit: cover;
+            border-radius: root.avatar-size / 2;
+            clip: true;
+            background: Palette.foreground.with-alpha(0.06);
+
+            Image {
+                source: root.avatar;
+                width: 100%;
+                height: 100%;
+                image-fit: cover;
+            }
         }
-    }
 
-    property <length> badge-size: Math.max(12px, root.avatar-size * 0.44);
+        property <length> badge-size: Math.max(12px, root.avatar-size * 0.44);
 
-    // Small provider badge at bottom-right corner when user avatar is present
-    if root.has-avatar && root.provider != "" && root.provider != "local": Rectangle {
-        x: root.width - root.badge-size + 1px;
-        y: root.height - root.badge-size + 1px;
-        width: root.badge-size;
-        height: root.badge-size;
-        border-radius: root.badge-size / 2;
-        background: Palette.background;
-        border-width: 1.5px;
-        border-color: Palette.background;
+        // Small provider badge at bottom-right corner when user avatar is present
+        if root.has-avatar && root.provider != "" && root.provider != "local": Rectangle {
+            x: circle.width - circle.badge-size + 1px;
+            y: circle.height - circle.badge-size + 1px;
+            width: circle.badge-size;
+            height: circle.badge-size;
+            border-radius: circle.badge-size / 2;
+            background: Palette.background;
+            border-width: 1.5px;
+            border-color: Palette.background;
 
-        Rectangle {
-            width: 100%;
-            height: 100%;
-            border-radius: parent.border-radius;
-            background: Palette.color-scheme == ColorScheme.dark
-                ? Palette.accent-background.with-alpha(0.25)
-                : Palette.accent-background.with-alpha(0.15);
+            Rectangle {
+                width: 100%;
+                height: 100%;
+                border-radius: parent.border-radius;
+                background: Palette.color-scheme == ColorScheme.dark
+                    ? Palette.accent-background.with-alpha(0.25)
+                    : Palette.accent-background.with-alpha(0.15);
 
-            VerticalLayout {
-                alignment: center;
-                HorizontalLayout {
-                    alignment: center;
-                    Icon {
-                        source: root.provider-icon(root.provider);
-                        width: root.badge-size * 0.65;
-                        height: root.badge-size * 0.65;
-                        color: Palette.accent-background;
-                    }
+                Icon {
+                    source: root.provider-icon(root.provider);
+                    width: circle.badge-size * 0.65;
+                    height: circle.badge-size * 0.65;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    color: Palette.accent-background;
                 }
             }
         }

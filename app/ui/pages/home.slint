@@ -144,48 +144,26 @@ export component HomeScreen inherits Rectangle {
                         padding-right: Metrics.spacing-md + 2px * Metrics.ui-scale;
                         spacing: 12px * Metrics.ui-scale;
 
-                        // Left: Account/Vault Avatar (tapping opens account settings)
-                        VerticalLayout {
-                            alignment: center;
+                        // Left: Account/Vault Avatar (tapping opens account settings).
+                        // A vault with no account shows the folder fallback.
+                        Rectangle {
+                            width: 56px * Metrics.ui-scale;
 
-                            Rectangle {
-                                width: 56px * Metrics.ui-scale;
-                                height: 56px * Metrics.ui-scale;
+                            AccountAvatar {
+                                width: parent.width;
+                                height: parent.height;
+                                avatar: SettingsAdapter.current-vault-account-avatar;
+                                has-avatar: SettingsAdapter.current-vault-has-account
+                                    && SettingsAdapter.current-vault-account-has-avatar;
+                                provider: SettingsAdapter.current-vault-has-account
+                                    ? SettingsAdapter.current-vault-account-provider
+                                    : "local";
+                                avatar-size: 56px * Metrics.ui-scale;
+                            }
 
-                                TouchArea {
-                                    mouse-cursor: pointer;
-                                    clicked => { root.open-account-settings(); }
-                                }
-
-                                if SettingsAdapter.current-vault-has-account: AccountAvatar {
-                                    avatar: SettingsAdapter.current-vault-account-avatar;
-                                    has-avatar: SettingsAdapter.current-vault-account-has-avatar;
-                                    provider: SettingsAdapter.current-vault-account-provider;
-                                    avatar-size: 56px * Metrics.ui-scale;
-                                    x: (parent.width - self.width) / 2;
-                                    y: (parent.height - self.height) / 2;
-                                }
-                                if !SettingsAdapter.current-vault-has-account: Rectangle {
-                                    width: 56px * Metrics.ui-scale;
-                                    height: 56px * Metrics.ui-scale;
-                                    x: (parent.width - self.width) / 2;
-                                    y: (parent.height - self.height) / 2;
-                                    border-radius: 28px * Metrics.ui-scale;
-                                    background: Palette.color-scheme == ColorScheme.dark
-                                        ? Palette.accent-background.with-alpha(0.18)
-                                        : Palette.accent-background.with-alpha(0.12);
-                                    border-width: 1px;
-                                    border-color: Palette.border;
-
-                                    Icon {
-                                        source: TablerIcons.folder;
-                                        width: 30px * Metrics.ui-scale;
-                                        height: 30px * Metrics.ui-scale;
-                                        color: Palette.accent-background;
-                                        x: (parent.width - self.width) / 2;
-                                        y: (parent.height - self.height) / 2;
-                                    }
-                                }
+                            TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.open-account-settings(); }
                             }
                         }
 
