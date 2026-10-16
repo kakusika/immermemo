@@ -64,6 +64,8 @@ fn to_richtext_style(style: TextStyle) -> origiri_richtext_flow::TextStyle {
 pub struct NoteBodyItem {
     pub depth: usize,
     pub prefix: String,
+    pub heading_level: usize,
+    pub source_span: Option<tomet::ast::Span>,
     pub content: NoteBodyContent,
 }
 
@@ -89,6 +91,8 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
             .map(|block| NoteBodyItem {
                 depth: 0,
                 prefix: String::new(),
+                heading_level: 0,
+                source_span: None,
                 content: NoteBodyContent::Stacked(block),
             })
             .collect();
@@ -96,7 +100,7 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
     groups
         .into_iter()
         .map(|(kind, items)| {
-            let (depth, prefix) = match kind {
+            let (depth, prefix, heading_level) = match kind {
                 RenderBlockKind::ListItem {
                     depth,
                     ordered,
@@ -111,9 +115,24 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
                     } else {
                         "•".to_string()
                     };
-                    (depth, prefix)
+                    (depth, prefix, 0)
                 }
-                _ => (0, String::new()),
+                RenderBlockKind::Heading(level) => (0, String::new(), level),
+                _ => (0, String::new(), 0),
+            };
+
+            let source_span = if let (Some(first), Some(last)) = (items.first(), items.last()) {
+                let start = match first {
+                    RenderItem::Text(s, _) => s.start,
+                    RenderItem::Element { span, .. } => span.start,
+                };
+                let end = match last {
+                    RenderItem::Text(s, _) => s.end,
+                    RenderItem::Element { span, .. } => span.end,
+                };
+                Some(tomet::ast::Span::new(start, end))
+            } else {
+                None
             };
 
             let content = if items.len() > 1 {
@@ -129,6 +148,8 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
             NoteBodyItem {
                 depth,
                 prefix,
+                heading_level,
+                source_span,
                 content,
             }
         })
@@ -465,5 +486,28 @@ mod tests {
             }
             _ => panic!("expected stacked plain text"),
         }
+    }
+
+    #[test]
+    fn headings_populate_heading_level_and_source_span() {
+        let src = "= Main Title\n\n== Section 1\n\n=== Subsection\n\nPlain text.\n";
+        let items = note_body_items(src);
+        assert_eq!(items.len(), 4);
+
+        assert_eq!(items[0].heading_level, 1);
+        assert_eq!(items[0].depth, 0);
+        assert!(items[0].source_span.is_some());
+
+        assert_eq!(items[1].heading_level, 2);
+        assert_eq!(items[1].depth, 0);
+        assert!(items[1].source_span.is_some());
+
+        assert_eq!(items[2].heading_level, 3);
+        assert_eq!(items[2].depth, 0);
+        assert!(items[2].source_span.is_some());
+
+        assert_eq!(items[3].heading_level, 0);
+        assert_eq!(items[3].depth, 0);
+        assert!(items[3].source_span.is_some());
     }
 }

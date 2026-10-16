@@ -26,10 +26,9 @@
 pub mod classify;
 pub mod flow;
 
+pub use flow::note_body_items as classify_note_body_items;
 use classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
-use flow::{
-    FlowParagraph, NoteBodyContent, NoteBodyItem, note_body_items as classify_note_body_items,
-};
+use flow::{FlowParagraph, NoteBodyContent, NoteBodyItem};
 use origiri_richtext_flow::{Fragment, Measure, layout_block};
 use slint::{ModelRc, VecModel};
 
@@ -54,14 +53,26 @@ pub fn note_body_items(body: &str, app: &App, max_width: f32) -> ModelRc<NoteBod
     ModelRc::new(VecModel::from(items))
 }
 
+pub fn heading_font_size(base_size: f32, level: usize) -> f32 {
+    match level {
+        1 => base_size * 1.5,
+        2 => base_size * 1.3,
+        3 => base_size * 1.15,
+        _ if level > 3 => base_size * 1.05,
+        _ => base_size,
+    }
+}
+
 fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> NoteBodyItemView {
     let indent_px = item.depth as f32 * 16.0;
     let prefix_px = if !item.prefix.is_empty() { 20.0 } else { 0.0 };
     let flow_max_width = (max_width - indent_px - prefix_px).max(40.0);
+    let heading_level = item.heading_level as i32;
 
     match item.content {
         NoteBodyContent::Stacked(block) => NoteBodyItemView {
             is_flow: false,
+            heading_level,
             depth: item.depth as i32,
             prefix: item.prefix.into(),
             block: to_rendered_block(&block),
@@ -69,10 +80,11 @@ fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> Note
         },
         NoteBodyContent::Flowed(paragraph) => NoteBodyItemView {
             is_flow: true,
+            heading_level,
             depth: item.depth as i32,
             prefix: item.prefix.into(),
             block: RenderedBlock::default(),
-            lines: to_rich_text_lines(&paragraph, app, flow_max_width),
+            lines: to_rich_text_lines(&paragraph, app, flow_max_width, item.heading_level),
         },
     }
 }
@@ -89,6 +101,7 @@ fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> Note
 struct RealMeasure<'a> {
     app: &'a App,
     font_size: f32,
+    is_heading: bool,
     elements: &'a [ClassifiedBlock],
 }
 
@@ -98,7 +111,7 @@ impl Measure for RealMeasure<'_> {
         self.app.set_measure_probe_text(content.into());
         self.app.set_measure_probe_font_size(self.font_size);
         self.app
-            .set_measure_probe_font_weight(if style.bold { 700 } else { 400 });
+            .set_measure_probe_font_weight(if self.is_heading || style.bold { 700 } else { 400 });
         self.app.set_measure_probe_font_italic(style.italic);
         self.app.get_measure_probe_text_width()
     }
@@ -114,10 +127,13 @@ fn to_rich_text_lines(
     paragraph: &FlowParagraph,
     app: &App,
     max_width: f32,
+    heading_level: usize,
 ) -> ModelRc<RichTextLine> {
+    let font_size = heading_font_size(app.get_editor_font_size(), heading_level);
     let measure = RealMeasure {
         app,
-        font_size: app.get_editor_font_size(),
+        font_size,
+        is_heading: heading_level > 0,
         elements: &paragraph.elements,
     };
     let lines: Vec<RichTextLine> = layout_block(&paragraph.block, max_width, &measure)
@@ -206,6 +222,8 @@ fn to_rendered_block_shape(shape: BlockShape) -> RenderedBlockShape {
         BlockShape::Link => RenderedBlockShape::Link,
         BlockShape::Icon => RenderedBlockShape::Icon,
         BlockShape::Task => RenderedBlockShape::Task,
+        BlockShape::Code => RenderedBlockShape::Code,
+        BlockShape::Callout => RenderedBlockShape::Callout,
     }
 }
 
@@ -444,5 +462,36 @@ pub(crate) mod seam_tests {
         let item2 = model.row_data(2).unwrap();
         assert_eq!(item2.depth, 0);
         assert_eq!(item2.prefix, "1.");
+    }
+
+    pub(crate) fn heading_items_carry_level_in_generated_model(app: &App) {
+        let src = "= Heading 1\n\n== Heading 2\n\n=== Heading 3\n";
+        let model = note_body_items(src, app, 1000.0);
+        assert_eq!(model.row_count(), 3);
+
+        let item0 = model.row_data(0).unwrap();
+        assert_eq!(item0.heading_level, 1);
+
+        let item1 = model.row_data(1).unwrap();
+        assert_eq!(item1.heading_level, 2);
+
+        let item2 = model.row_data(2).unwrap();
+        assert_eq!(item2.heading_level, 3);
+    }
+
+    pub(crate) fn code_and_callout_items_convert_into_the_generated_model(app: &App) {
+        let src = "```rust\nfn main() {}\n```\n\n@callout(warning)[Watch out!]\n";
+        let model = note_body_items(src, app, 1000.0);
+        assert_eq!(model.row_count(), 2);
+
+        let item0 = model.row_data(0).unwrap();
+        assert_eq!(item0.block.shape, RenderedBlockShape::Code);
+        assert_eq!(item0.block.text, "fn main() {}");
+        assert_eq!(item0.block.reading, "rust");
+
+        let item1 = model.row_data(1).unwrap();
+        assert_eq!(item1.block.shape, RenderedBlockShape::Callout);
+        assert_eq!(item1.block.text, "Watch out!");
+        assert_eq!(item1.block.tone, RenderedBlockTone::Warning);
     }
 }

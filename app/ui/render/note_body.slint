@@ -12,6 +12,7 @@ import { RichTextLine, FlowView } from "flow_view.slint";
 // comment for why a flat `[RenderedBlock]` alone isn't enough.
 export struct NoteBodyItemView {
     is-flow: bool,
+    heading-level: int,
     depth: int,
     prefix: string,
     block: RenderedBlock,
@@ -22,19 +23,30 @@ export component NoteBodyView inherits VerticalLayout {
     in property <[NoteBodyItemView]> items;
     in property <length> text-font-size;
     callback link-clicked(string);
+    callback task-toggled(int);
 
     alignment: start;
     spacing: Metrics.spacing-xs;
 
-    for item in root.items: HorizontalLayout {
+    for item[idx] in root.items: HorizontalLayout {
         padding-left: item.depth * (16px * Metrics.ui-scale);
+        padding-top: item.heading-level == 1 ? Metrics.spacing-md
+            : item.heading-level == 2 ? Metrics.spacing-sm
+            : item.heading-level >= 3 ? Metrics.spacing-xs
+            : 0px;
         spacing: Metrics.spacing-xs;
+
+        property <length> item-font-size: item.heading-level == 1 ? root.text-font-size * 1.5
+            : item.heading-level == 2 ? root.text-font-size * 1.3
+            : item.heading-level >= 3 ? root.text-font-size * 1.15
+            : root.text-font-size;
+        property <int> item-font-weight: item.heading-level > 0 ? 700 : 400;
 
         if item.prefix != "": VerticalLayout {
             alignment: start;
             Text {
                 text: item.prefix;
-                font-size: root.text-font-size;
+                font-size: item-font-size;
                 font-weight: 600;
                 color: Palette.foreground.with-alpha(0.6);
             }
@@ -46,14 +58,17 @@ export component NoteBodyView inherits VerticalLayout {
             if !item.is-flow: RenderedBlockView {
                 width: 100%;
                 block: item.block;
-                text-font-size: root.text-font-size;
+                text-font-size: item-font-size;
+                text-font-weight: item-font-weight;
                 link-clicked(target) => { root.link-clicked(target); }
+                task-toggled => { root.task-toggled(idx); }
             }
 
             if item.is-flow: FlowView {
                 width: 100%;
                 lines: item.lines;
-                font-size: root.text-font-size;
+                font-size: item-font-size;
+                font-weight: item-font-weight;
                 text-color: Palette.foreground;
                 link-clicked(target) => { root.link-clicked(target); }
             }

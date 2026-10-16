@@ -9,7 +9,9 @@ use crate::meta::is_metadata_element_ast;
 use crate::types::{ParseFailed, RenderBlockKind, RenderItem, TextStyle, whole_source_span};
 
 /// Bare built-in names that stand as a thing of their own.
-pub(crate) const ATOMIC_BARE_ELEMENTS: &[&str] = &["ruby", "link", "conflict", "task"];
+pub(crate) const ATOMIC_BARE_ELEMENTS: &[&str] = &[
+    "ruby", "link", "conflict", "task", "raw", "code", "callout", "quote",
+];
 
 /// Whether `el`'s sigil is a bare (non-`@use`'d) name in [`ATOMIC_BARE_ELEMENTS`].
 pub(crate) fn is_atomic_bare(el: &Element) -> bool {

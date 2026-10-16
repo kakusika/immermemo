@@ -77,6 +77,10 @@ pub enum BlockShape {
     /// task label, `secondary_text` is the raw status string, and `checked`
     /// is true if status indicates completion.
     Task,
+    /// A fenced code block (`raw` / `@code`) -- `text` is the code, `secondary_text` is `lang`.
+    Code,
+    /// A callout / quote block (`@callout` / `@quote`) -- `text` is body, `secondary_text` is title.
+    Callout,
 }
 
 /// A small, closed palette selector -- not vocabulary-specific, just
@@ -210,6 +214,10 @@ const REGISTRY: &[(Option<&str>, &str, fn(LookInput) -> Look)] = &[
     (None, "ruby", ruby_look),
     (None, "link", link_look),
     (None, "task", task_look),
+    (None, "raw", raw_look),
+    (None, "code", raw_look),
+    (None, "callout", callout_look),
+    (None, "quote", callout_look),
     (Some("doc"), "icon", icon_look),
 ];
 
@@ -357,6 +365,83 @@ fn task_look(input: LookInput) -> Look {
         target: String::new(),
         secondary_text: status,
         checked: done,
+        side_a: Vec::new(),
+        side_b: Vec::new(),
+    }
+}
+
+fn raw_look(input: LookInput) -> Look {
+    let lang = match input.args {
+        ElementArgs::Named(pairs) => pairs
+            .iter()
+            .find(|(k, _)| k == "lang")
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default(),
+        ElementArgs::Positional(lang) => lang.clone(),
+        ElementArgs::None => String::new(),
+    };
+    let text = input
+        .content
+        .unwrap_or_default()
+        .trim_end_matches(['\r', '\n'])
+        .to_owned();
+    Look {
+        shape: BlockShape::Code,
+        tone: Tone::Neutral,
+        text,
+        target: String::new(),
+        secondary_text: lang,
+        checked: false,
+        side_a: Vec::new(),
+        side_b: Vec::new(),
+    }
+}
+
+fn callout_look(input: LookInput) -> Look {
+    let (variant, title) = match input.args {
+        ElementArgs::Named(pairs) => {
+            let variant = pairs
+                .iter()
+                .find(|(k, _)| k.is_empty() || k == "type" || k == "variant")
+                .map(|(_, v)| v.as_str())
+                .unwrap_or("info");
+            let title = pairs
+                .iter()
+                .find(|(k, _)| k == "title")
+                .map(|(_, v)| v.clone())
+                .unwrap_or_else(|| {
+                    let mut c = variant.chars();
+                    match c.next() {
+                        None => String::new(),
+                        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+                    }
+                });
+            (variant.to_string(), title)
+        }
+        ElementArgs::Positional(v) => {
+            let mut c = v.chars();
+            let title = match c.next() {
+                None => String::new(),
+                Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+            };
+            (v.clone(), title)
+        }
+        ElementArgs::None => ("info".to_string(), "Note".to_string()),
+    };
+
+    let tone = match variant.to_lowercase().as_str() {
+        "warning" | "caution" | "alert" | "danger" => Tone::Warning,
+        "note" | "info" | "tip" | "hint" => Tone::Accent,
+        _ => Tone::Neutral,
+    };
+
+    Look {
+        shape: BlockShape::Callout,
+        tone,
+        text: input.content.unwrap_or_default().to_owned(),
+        target: String::new(),
+        secondary_text: title,
+        checked: false,
         side_a: Vec::new(),
         side_b: Vec::new(),
     }
@@ -764,5 +849,26 @@ mod tests {
         assert_eq!(blocks[1].shape, BlockShape::Task);
         assert_eq!(blocks[1].text, "Open item");
         assert!(!blocks[1].checked);
+    }
+
+    #[test]
+    fn raw_code_blocks_and_callouts_classify_with_proper_shapes_and_tones() {
+        let src = "```rust\nfn main() {}\n```\n\n@callout(warning)[Watch out!]\n\n@callout(info, title: \"Note Title\")[Informational note]\n";
+        let blocks = classify_body(src);
+        assert_eq!(blocks.len(), 3);
+
+        assert_eq!(blocks[0].shape, BlockShape::Code);
+        assert_eq!(blocks[0].text, "fn main() {}");
+        assert_eq!(blocks[0].reading, "rust");
+
+        assert_eq!(blocks[1].shape, BlockShape::Callout);
+        assert_eq!(blocks[1].text, "Watch out!");
+        assert_eq!(blocks[1].reading, "Warning");
+        assert_eq!(blocks[1].tone, Tone::Warning);
+
+        assert_eq!(blocks[2].shape, BlockShape::Callout);
+        assert_eq!(blocks[2].text, "Informational note");
+        assert_eq!(blocks[2].reading, "Note Title");
+        assert_eq!(blocks[2].tone, Tone::Accent);
     }
 }

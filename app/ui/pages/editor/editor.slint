@@ -372,6 +372,7 @@ export component EditorScreen inherits Rectangle {
     callback note-menu-requested();
     callback insert-symbol(string, int, int);
     callback link-clicked(string);
+    callback task-toggled(int);
 
     // Moves the caret after Rust restores text from the undo history.
     public function set-cursor(offset: int) {
@@ -843,6 +844,7 @@ export component EditorScreen inherits Rectangle {
                                             items: root.note-body-items;
                                             text-font-size: root.font-size;
                                             link-clicked(target) => { root.link-clicked(target); }
+                                            task-toggled(idx) => { root.task-toggled(idx); }
                                         }
                                     }
                                 }

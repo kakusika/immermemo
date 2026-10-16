@@ -595,5 +595,33 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn raw_code_blocks_and_callouts_classify_as_atomic_elements() {
+        let src = "```rust\nfn main() {}\n```\n\n@callout(warning)[Watch out!]\n";
+        let items = classify(src);
+        assert_eq!(items.len(), 2);
+
+        match &items[0] {
+            RenderItem::Element { identity, args, .. } => {
+                assert_eq!(identity.name, "raw");
+                assert_eq!(identity.namespace, None);
+                assert_eq!(
+                    *args,
+                    ElementArgs::Named(vec![("lang".to_string(), "rust".to_string())])
+                );
+            }
+            other => panic!("expected raw element, got {other:?}"),
+        }
+
+        match &items[1] {
+            RenderItem::Element { identity, args, .. } => {
+                assert_eq!(identity.name, "callout");
+                assert_eq!(identity.namespace, None);
+                assert_eq!(*args, ElementArgs::Positional("warning".to_string()));
+            }
+            other => panic!("expected callout element, got {other:?}"),
+        }
+    }
 }
 

@@ -153,6 +153,24 @@ impl Session {
         Ok(path)
     }
 
+    /// Creates a new note with the specified name and initial content, and updates index.
+    pub fn create_named_note(&mut self, name: &str, content: &str) -> anyhow::Result<PathBuf> {
+        let dir = self.vault_dir.clone();
+        let sanitized = name.trim().trim_end_matches(".tmt").replace(['/', '\\'], "_");
+        anyhow::ensure!(!sanitized.is_empty(), "note name cannot be empty");
+        let path = dir.join(format!("{sanitized}.tmt"));
+        if !path.exists() {
+            std::fs::write(&path, content)?;
+        }
+        if let Ok(rel) = path.strip_prefix(&dir) {
+            let _ = self.index.record_write(&dir, rel, content);
+        }
+        self.search_query.clear();
+        let _ = self.refresh_list_data();
+        let _ = self.update_filtered_list_data();
+        Ok(path)
+    }
+
     /// Renames the note at `target_idx` to `new_name` and updates the index.
     pub fn rename_note(&mut self, target_idx: usize, new_name: &str) -> anyhow::Result<PathBuf> {
         let old_path = self
@@ -452,6 +470,24 @@ mod tests {
 
         // 3. Delete note
         session.delete_note(1).unwrap();
+        assert_eq!(session.notes.len(), 1);
+    }
+
+    #[test]
+    fn test_create_named_note() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vault_dir = tmp.path().join("vault");
+        std::fs::create_dir_all(&vault_dir).unwrap();
+        let app_data = AppData::new(tmp.path().join("data"));
+
+        let mut session = test_session(vault_dir, app_data);
+        let path = session
+            .create_named_note("My Custom Note", "= My Custom Note\n\nContent\n")
+            .unwrap();
+        assert!(path.exists());
+        assert_eq!(path.file_name().unwrap(), "My Custom Note.tmt");
+        let read = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(read, "= My Custom Note\n\nContent\n");
         assert_eq!(session.notes.len(), 1);
     }
 

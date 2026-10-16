@@ -21,6 +21,7 @@ export component FlowView {
     in property <length> font-size;
     in property <brush> mark-background: #fff59d80;
     in property <brush> text-color: #000000;
+    in property <int> font-weight: 400;
     callback link-clicked(string);
 
     VerticalLayout {
@@ -38,7 +39,7 @@ export component FlowView {
                         text-item := Text {
                             text: frag.text;
                             font-size: root.font-size;
-                            font-weight: frag.bold ? 700 : 400;
+                            font-weight: (frag.bold || root.font-weight >= 600) ? 700 : 400;
                             font-italic: frag.italic;
                             color: root.text-color;
                         }

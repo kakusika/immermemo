@@ -278,6 +278,14 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
             handle_link_clicked(&app, &session, target.as_str());
         }
     });
+
+    app.on_task_toggled({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |item_idx| {
+            let app = weak.unwrap();
+            handle_task_toggled(&app, &session, item_idx as usize);
+        }
+    });
 }
 
 fn clamp_to_char_boundary(s: &str, mut idx: usize) -> usize {
@@ -384,7 +392,7 @@ fn handle_link_clicked(app: &App, session: &std::rc::Rc<std::cell::RefCell<Sessi
         tomet::semantics::TargetScheme::Ref => {
             let note_query = rest.split('#').next().unwrap_or(rest).trim();
             if !navigate_to_note(app, session, note_query) {
-                set_status(app, format!("Note not found: {note_query}"));
+                create_and_open_linked_note(app, session, note_query);
             }
         }
         tomet::semantics::TargetScheme::Document
@@ -403,7 +411,7 @@ fn handle_link_clicked(app: &App, session: &std::rc::Rc<std::cell::RefCell<Sessi
             }
             let note_query = rest.split('#').next().unwrap_or(rest).trim();
             if !navigate_to_note(app, session, note_query) {
-                set_status(app, format!("Note not found: {note_query}"));
+                create_and_open_linked_note(app, session, note_query);
             }
         }
     }
@@ -449,6 +457,81 @@ fn navigate_to_note(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>
     false
 }
 
+fn create_and_open_linked_note(
+    app: &App,
+    session: &std::rc::Rc<std::cell::RefCell<Session>>,
+    note_name: &str,
+) {
+    let clean_name = note_name.trim().trim_start_matches('@').trim_end_matches(".tmt");
+    if clean_name.is_empty() {
+        return;
+    }
+    let initial_content = format!("= {clean_name}\n\n");
+    match session.borrow_mut().create_named_note(clean_name, &initial_content) {
+        Ok(path) => {
+            app.set_search_query(slint::SharedString::new());
+            refresh_list(app, session);
+            let index = session.borrow().notes.iter().position(|p| *p == path);
+            if let Some(index) = index {
+                open_note(app, session, index);
+                set_status(app, format!("Created note \"{clean_name}\""));
+            }
+        }
+        Err(e) => set_status(app, format!("Could not create note: {e}")),
+    }
+}
+
+fn handle_task_toggled(
+    app: &App,
+    session: &std::rc::Rc<std::cell::RefCell<Session>>,
+    item_idx: usize,
+) {
+    let body = app.get_body();
+    let items = render::classify_note_body_items(body.as_str());
+    let Some(item) = items.get(item_idx) else {
+        return;
+    };
+    let Some(span) = item.source_span else {
+        return;
+    };
+
+    if let Some(new_body) = toggle_task_in_text(body.as_str(), span.start.offset) {
+        app.set_body(new_body.clone().into());
+        handle_edit(app, session, &new_body);
+    }
+}
+
+pub fn toggle_task_in_text(body: &str, span_offset: usize) -> Option<String> {
+    let offset = clamp_to_char_boundary(body, span_offset);
+    let line_start = body[..offset].rfind('\n').map_or(0, |i| i + 1);
+    let line_end = body[offset..].find('\n').map_or(body.len(), |i| offset + i);
+    let line = &body[line_start..line_end];
+
+    let toggled_line = if line.contains("@task(x)") {
+        line.replacen("@task(x)", "@task()", 1)
+    } else if line.contains("@task(done)") {
+        line.replacen("@task(done)", "@task()", 1)
+    } else if line.contains("@task()") {
+        line.replacen("@task()", "@task(x)", 1)
+    } else if line.contains("- (x)") {
+        line.replacen("- (x)", "- ()", 1)
+    } else if line.contains("- ()") {
+        line.replacen("- ()", "- (x)", 1)
+    } else if line.contains("- [x]") {
+        line.replacen("- [x]", "- [ ]", 1)
+    } else if line.contains("- [ ]") {
+        line.replacen("- [ ]", "- [x]", 1)
+    } else {
+        return None;
+    };
+
+    let mut result = String::with_capacity(body.len() + 2);
+    result.push_str(&body[..line_start]);
+    result.push_str(&toggled_line);
+    result.push_str(&body[line_end..]);
+    Some(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -475,5 +558,37 @@ mod tests {
         let (new_body, cursor) = apply_symbol_insertion(body, "@", 5, 5);
         assert_eq!(new_body, "Hello@ world");
         assert_eq!(cursor, 6);
+    }
+
+    #[test]
+    fn toggle_task_in_text_flips_states() {
+        // Bare element
+        let src = "@task()[Open task]\n";
+        let toggled = toggle_task_in_text(src, 3).unwrap();
+        assert_eq!(toggled, "@task(x)[Open task]\n");
+        let back = toggle_task_in_text(&toggled, 3).unwrap();
+        assert_eq!(back, "@task()[Open task]\n");
+
+        // Combine list notation
+        let src = "-@task(x) Completed item\n-@task() Pending item\n";
+        let offset_item2 = src.find("-@task()").unwrap();
+        let toggled = toggle_task_in_text(src, offset_item2).unwrap();
+        assert_eq!(
+            toggled,
+            "-@task(x) Completed item\n-@task(x) Pending item\n"
+        );
+
+        // First item toggled
+        let toggled_first = toggle_task_in_text(&toggled, 0).unwrap();
+        assert_eq!(
+            toggled_first,
+            "-@task() Completed item\n-@task(x) Pending item\n"
+        );
+
+        // Value notation
+        let src_val = "- (x) Done\n- () Todo\n";
+        let offset_todo = src_val.find("- ()").unwrap();
+        let toggled_val = toggle_task_in_text(src_val, offset_todo).unwrap();
+        assert_eq!(toggled_val, "- (x) Done\n- (x) Todo\n");
     }
 }

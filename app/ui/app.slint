@@ -338,6 +338,7 @@ export component App inherits Window {
     callback redo();
     callback insert-symbol(string, int, int);
     callback link-clicked(string);
+    callback task-toggled(int);
     callback sync();
     callback new-note();
     callback link();
@@ -772,6 +773,7 @@ export component App inherits Window {
                 redo => { root.redo(); }
                 insert-symbol(sym, cpos, apos) => { root.insert-symbol(sym, cpos, apos); }
                 link-clicked(target) => { root.link-clicked(target); }
+                task-toggled(idx) => { root.task-toggled(idx); }
                 dismiss-status => {
                     root.status = "";
                     root.status-is-error = false;

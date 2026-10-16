@@ -363,12 +363,26 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor-note-body.ppm"));
 
-    // Verify list items (unordered, ordered, nested) and clickable links
-    let list_links_body = "= リストとリンクのテスト\n\n\
+    // Verify headings, code blocks, callouts, list items, and clickable links
+    let list_links_body = "= 見出しレベル 1 (大見出し)\n\n\
+                           == 見出しレベル 2 (中見出し)\n\n\
+                           === 見出しレベル 3 (小見出し)\n\n\
                            リンクの確認:\n\
                            - 外部URL: @link(\"https://example.com\")[Example]\n\
                            - ノートリンク: @link(target:\"ref:@ReGLOSS\")\n\
                            - 別の記法: @link(\"ref:Shopping\")\n\n\
+                           タスクリスト (チェック可能):\n\
+                           -@task(x) 完了したタスク\n\
+                           -@task() 未完了のタスク\n\n\
+                           コードブロック:\n\
+                           ```rust\n\
+                           fn main() {\n\
+                               println!(\"Hello, Tomet!\");\n\
+                           }\n\
+                           ```\n\n\
+                           コールアウト表示:\n\
+                           @callout(info, title: \"お知らせ\")[インフォメーションのコールアウトです。]\n\n\
+                           @callout(warning)[注意: この操作は取り消せません。]\n\n\
                            箇条書きリスト:\n\
                            - 項目 1: 通常のテキスト\n\
                              - ネストされた項目 A (@strong[太字]含む)\n\
@@ -377,10 +391,7 @@ fn main() {
                            番号付きリスト:\n\
                            -. 最初のステップ\n\
                            -. 次のステップ\n\
-                           -. 最後のステップ\n\n\
-                           タスクリスト:\n\
-                           -@task(x) 完了したタスク\n\
-                           -@task() 未完了のタスク\n";
+                           -. 最後のステップ\n";
     app.set_body(list_links_body.into());
     let max_width = app.get_body_content_width();
     app.set_note_body_items(ModelRc::new(VecModel::from(
@@ -608,14 +619,26 @@ fn main() {
 // `include_modules!()`-generated types instead of the library crate's (see
 // the call site above for why it can't just call that module directly).
 
+fn heading_font_size(base_size: f32, level: usize) -> f32 {
+    match level {
+        1 => base_size * 1.5,
+        2 => base_size * 1.3,
+        3 => base_size * 1.15,
+        _ if level > 3 => base_size * 1.05,
+        _ => base_size,
+    }
+}
+
 fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> NoteBodyItemView {
     let indent_px = item.depth as f32 * 16.0;
     let prefix_px = if !item.prefix.is_empty() { 20.0 } else { 0.0 };
     let flow_max_width = (max_width - indent_px - prefix_px).max(40.0);
+    let heading_level = item.heading_level as i32;
 
     match item.content {
         NoteBodyContent::Stacked(block) => NoteBodyItemView {
             is_flow: false,
+            heading_level,
             depth: item.depth as i32,
             prefix: item.prefix.into(),
             block: to_rendered_block(&block),
@@ -623,10 +646,11 @@ fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> Note
         },
         NoteBodyContent::Flowed(paragraph) => NoteBodyItemView {
             is_flow: true,
+            heading_level,
             depth: item.depth as i32,
             prefix: item.prefix.into(),
             block: RenderedBlock::default(),
-            lines: to_rich_text_lines(&paragraph, app, flow_max_width),
+            lines: to_rich_text_lines(&paragraph, app, flow_max_width, item.heading_level),
         },
     }
 }
@@ -637,6 +661,7 @@ fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> Note
 struct RealMeasure<'a> {
     app: &'a App,
     font_size: f32,
+    is_heading: bool,
     elements: &'a [ClassifiedBlock],
 }
 
@@ -646,7 +671,7 @@ impl Measure for RealMeasure<'_> {
         self.app.set_measure_probe_text(content.into());
         self.app.set_measure_probe_font_size(self.font_size);
         self.app
-            .set_measure_probe_font_weight(if style.bold { 700 } else { 400 });
+            .set_measure_probe_font_weight(if self.is_heading || style.bold { 700 } else { 400 });
         self.app.set_measure_probe_font_italic(style.italic);
         self.app.get_measure_probe_text_width()
     }
@@ -662,10 +687,13 @@ fn to_rich_text_lines(
     paragraph: &FlowParagraph,
     app: &App,
     max_width: f32,
+    heading_level: usize,
 ) -> ModelRc<RichTextLine> {
+    let font_size = heading_font_size(app.get_editor_font_size(), heading_level);
     let measure = RealMeasure {
         app,
-        font_size: app.get_editor_font_size(),
+        font_size,
+        is_heading: heading_level > 0,
         elements: &paragraph.elements,
     };
     let lines: Vec<RichTextLine> = layout_block(&paragraph.block, max_width, &measure)
@@ -754,6 +782,8 @@ fn to_rendered_block_shape(shape: BlockShape) -> RenderedBlockShape {
         BlockShape::Link => RenderedBlockShape::Link,
         BlockShape::Icon => RenderedBlockShape::Icon,
         BlockShape::Task => RenderedBlockShape::Task,
+        BlockShape::Code => RenderedBlockShape::Code,
+        BlockShape::Callout => RenderedBlockShape::Callout,
     }
 }
 
