@@ -84,21 +84,21 @@ impl NoteIndex {
                  ORDER BY notes_fts.rank",
             );
 
-            if let Ok(mut stmt) = fts_result {
-                if let Ok(rows) = stmt.query_map(params![&fts_query], row_to_note_fields) {
-                    for r in rows.flatten() {
-                        let (path, title, has_conflict, body) = r;
-                        if !seen_paths.contains(&path) {
-                            if let Some(snippet) = extract_snippet(&body, query) {
-                                seen_paths.insert(path.clone());
-                                body_hits.push(SearchHit {
-                                    path,
-                                    title,
-                                    has_conflict,
-                                    snippet: Some(snippet),
-                                });
-                            }
-                        }
+            if let Ok(mut stmt) = fts_result
+                && let Ok(rows) = stmt.query_map(params![&fts_query], row_to_note_fields)
+            {
+                for r in rows.flatten() {
+                    let (path, title, has_conflict, body) = r;
+                    if !seen_paths.contains(&path)
+                        && let Some(snippet) = extract_snippet(&body, query)
+                    {
+                        seen_paths.insert(path.clone());
+                        body_hits.push(SearchHit {
+                            path,
+                            title,
+                            has_conflict,
+                            snippet: Some(snippet),
+                        });
                     }
                 }
             }
@@ -118,16 +118,16 @@ impl NoteIndex {
 
             for r in rows.flatten() {
                 let (path, title, has_conflict, body) = r;
-                if !seen_paths.contains(&path) {
-                    if let Some(snippet) = extract_snippet(&body, query) {
-                        seen_paths.insert(path.clone());
-                        body_hits.push(SearchHit {
-                            path,
-                            title,
-                            has_conflict,
-                            snippet: Some(snippet),
-                        });
-                    }
+                if !seen_paths.contains(&path)
+                    && let Some(snippet) = extract_snippet(&body, query)
+                {
+                    seen_paths.insert(path.clone());
+                    body_hits.push(SearchHit {
+                        path,
+                        title,
+                        has_conflict,
+                        snippet: Some(snippet),
+                    });
                 }
             }
         }

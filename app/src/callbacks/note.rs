@@ -369,7 +369,11 @@ fn handle_edit(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>>, te
     session::schedule_auto_sync(app, std::time::Duration::from_secs(5));
 }
 
-fn handle_link_clicked(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>>, target: &str) {
+fn handle_link_clicked(
+    app: &App,
+    session: &std::rc::Rc<std::cell::RefCell<Session>>,
+    target: &str,
+) {
     let target = target.trim();
     if target.is_empty() {
         return;
@@ -417,7 +421,11 @@ fn handle_link_clicked(app: &App, session: &std::rc::Rc<std::cell::RefCell<Sessi
     }
 }
 
-fn navigate_to_note(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>>, query: &str) -> bool {
+fn navigate_to_note(
+    app: &App,
+    session: &std::rc::Rc<std::cell::RefCell<Session>>,
+    query: &str,
+) -> bool {
     let s = session.borrow();
     let vault_dir = s.vault_dir.clone();
     let query_trimmed = query.trim_start_matches('@');
@@ -425,32 +433,32 @@ fn navigate_to_note(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>
 
     // 1. Exact path match or relative path match
     for (i, note_path) in s.notes.iter().enumerate() {
-        if let Ok(rel) = note_path.strip_prefix(&vault_dir) {
-            if rel == query_path
+        if let Ok(rel) = note_path.strip_prefix(&vault_dir)
+            && (rel == query_path
                 || rel.with_extension("") == query_path
                 || rel.to_string_lossy() == query
                 || rel.to_string_lossy() == query_trimmed
                 || rel.with_extension("").to_string_lossy() == query
-                || rel.with_extension("").to_string_lossy() == query_trimmed
-            {
-                drop(s);
-                open_note(app, session, i);
-                return true;
-            }
+                || rel.with_extension("").to_string_lossy() == query_trimmed)
+        {
+            drop(s);
+            open_note(app, session, i);
+            return true;
         }
     }
 
     // 2. File stem match (case-insensitive)
     for (i, note_path) in s.notes.iter().enumerate() {
-        if let Some(stem) = note_path.file_stem().and_then(|st| st.to_str()) {
-            if stem.eq_ignore_ascii_case(query)
+        if let Some(stem) = note_path.file_stem().and_then(|st| st.to_str())
+            && (stem.eq_ignore_ascii_case(query)
                 || stem.eq_ignore_ascii_case(query_trimmed)
-                || stem.trim_start_matches('@').eq_ignore_ascii_case(query_trimmed)
-            {
-                drop(s);
-                open_note(app, session, i);
-                return true;
-            }
+                || stem
+                    .trim_start_matches('@')
+                    .eq_ignore_ascii_case(query_trimmed))
+        {
+            drop(s);
+            open_note(app, session, i);
+            return true;
         }
     }
 
@@ -462,12 +470,18 @@ fn create_and_open_linked_note(
     session: &std::rc::Rc<std::cell::RefCell<Session>>,
     note_name: &str,
 ) {
-    let clean_name = note_name.trim().trim_start_matches('@').trim_end_matches(".tmt");
+    let clean_name = note_name
+        .trim()
+        .trim_start_matches('@')
+        .trim_end_matches(".tmt");
     if clean_name.is_empty() {
         return;
     }
     let initial_content = format!("= {clean_name}\n\n");
-    match session.borrow_mut().create_named_note(clean_name, &initial_content) {
+    match session
+        .borrow_mut()
+        .create_named_note(clean_name, &initial_content)
+    {
         Ok(path) => {
             app.set_search_query(slint::SharedString::new());
             refresh_list(app, session);

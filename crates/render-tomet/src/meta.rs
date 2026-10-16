@@ -69,10 +69,10 @@ pub fn extract_note_icon(src: &str) -> Option<(String, String)> {
 /// or directives (`@meta`, `@kind`, `@config`, `@use`) that belong in note
 /// properties rather than the rendered reading view.
 pub fn is_metadata_element(identity: &ElementIdentity) -> bool {
-    let is_ns = match identity.namespace.as_deref() {
-        None | Some("std") | Some("doc") => true,
-        _ => false,
-    };
+    let is_ns = matches!(
+        identity.namespace.as_deref(),
+        None | Some("std") | Some("doc")
+    );
     is_ns && matches!(identity.name.as_str(), "meta" | "kind" | "config" | "use")
 }
 
@@ -89,10 +89,7 @@ pub(crate) fn is_metadata_element_ast(el: &Element) -> bool {
     let Sigil::Named(name) = &el.sigil else {
         return false;
     };
-    let is_ns = match name.namespace.as_deref() {
-        None | Some("std") | Some("doc") => true,
-        _ => false,
-    };
+    let is_ns = matches!(name.namespace.as_deref(), None | Some("std") | Some("doc"));
     is_ns && matches!(name.name.as_str(), "meta" | "kind" | "config" | "use")
 }
 

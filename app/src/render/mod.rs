@@ -26,8 +26,8 @@
 pub mod classify;
 pub mod flow;
 
-pub use flow::note_body_items as classify_note_body_items;
 use classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
+pub use flow::note_body_items as classify_note_body_items;
 use flow::{FlowParagraph, NoteBodyContent, NoteBodyItem};
 use origiri_richtext_flow::{Fragment, Measure, layout_block};
 use slint::{ModelRc, VecModel};
@@ -111,7 +111,11 @@ impl Measure for RealMeasure<'_> {
         self.app.set_measure_probe_text(content.into());
         self.app.set_measure_probe_font_size(self.font_size);
         self.app
-            .set_measure_probe_font_weight(if self.is_heading || style.bold { 700 } else { 400 });
+            .set_measure_probe_font_weight(if self.is_heading || style.bold {
+                700
+            } else {
+                400
+            });
         self.app.set_measure_probe_font_italic(style.italic);
         self.app.get_measure_probe_text_width()
     }

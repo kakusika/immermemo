@@ -2718,9 +2718,7 @@ name = "immermemo"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.23.1",
  "directories",
- "git2",
  "i-slint-backend-android-activity",
  "image",
  "immermemo-core",
@@ -2735,8 +2733,6 @@ dependencies = [
  "origiri-selection",
  "origiri-theme",
  "qrcode",
- "serde",
- "serde_json",
  "slint",
  "slint-build",
  "sys-locale",

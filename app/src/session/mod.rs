@@ -135,17 +135,13 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
     let mut icon_by_path: std::collections::HashMap<PathBuf, slint::Image> =
         std::collections::HashMap::new();
     for entry in &folder_entries_raw {
-        if !entry.is_folder {
-            if let Ok(idx) = usize::try_from(entry.note_index) {
-                if let Some(abs_path) = s.notes.get(idx) {
-                    if let Ok(rel_path) = abs_path.strip_prefix(&s.vault_dir) {
-                        if let Ok(Some((name, pkg))) = s.index.icon_for(rel_path) {
-                            icon_by_path
-                                .insert(abs_path.clone(), crate::render::icon_image(&name, &pkg));
-                        }
-                    }
-                }
-            }
+        if !entry.is_folder
+            && let Ok(idx) = usize::try_from(entry.note_index)
+            && let Some(abs_path) = s.notes.get(idx)
+            && let Ok(rel_path) = abs_path.strip_prefix(&s.vault_dir)
+            && let Ok(Some((name, pkg))) = s.index.icon_for(rel_path)
+        {
+            icon_by_path.insert(abs_path.clone(), crate::render::icon_image(&name, &pkg));
         }
     }
 

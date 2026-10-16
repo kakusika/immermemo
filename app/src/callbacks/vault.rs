@@ -64,14 +64,12 @@ pub fn migrate_legacy_remotes(session: &Session) {
             let acc_id = acc.id.clone();
             let _ = session.app_data.add_account(acc);
             let _ = session.app_data.save_vault_account(vault, &acc_id);
-            if let Ok(token) = session.token_store.load() {
-                if let Some(t) = token {
-                    if let Ok(token_path) = session.app_data.account_token_path(&acc_id) {
-                        if let Ok(acc_store) = (session.token_store_for)(&token_path) {
-                            let _ = acc_store.save(&t);
-                        }
-                    }
-                }
+            if let Ok(token) = session.token_store.load()
+                && let Some(t) = token
+                && let Ok(token_path) = session.app_data.account_token_path(&acc_id)
+                && let Ok(acc_store) = (session.token_store_for)(&token_path)
+            {
+                let _ = acc_store.save(&t);
             }
         }
     }

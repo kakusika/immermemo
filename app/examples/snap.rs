@@ -671,7 +671,11 @@ impl Measure for RealMeasure<'_> {
         self.app.set_measure_probe_text(content.into());
         self.app.set_measure_probe_font_size(self.font_size);
         self.app
-            .set_measure_probe_font_weight(if self.is_heading || style.bold { 700 } else { 400 });
+            .set_measure_probe_font_weight(if self.is_heading || style.bold {
+                700
+            } else {
+                400
+            });
         self.app.set_measure_probe_font_italic(style.italic);
         self.app.get_measure_probe_text_width()
     }

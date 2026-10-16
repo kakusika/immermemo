@@ -33,10 +33,10 @@ pub fn walk_tmt_files(dir: &Path, visit: &mut impl FnMut(&Path, &std::fs::Metada
         }
         if path.is_dir() {
             walk_tmt_files(&path, visit);
-        } else if path.extension().is_some_and(|e| e == EXTENSION) {
-            if let Ok(meta) = entry.metadata() {
-                visit(&path, &meta);
-            }
+        } else if path.extension().is_some_and(|e| e == EXTENSION)
+            && let Ok(meta) = entry.metadata()
+        {
+            visit(&path, &meta);
         }
     }
 }

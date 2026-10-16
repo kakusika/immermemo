@@ -552,7 +552,9 @@ mod tests {
             }
         );
         // "First item with ", @link, "\n" or span text
-        assert!(groups[0].1.iter().any(|item| matches!(item, RenderItem::Element { identity, .. } if identity.name == "link")));
+        assert!(groups[0].1.iter().any(
+            |item| matches!(item, RenderItem::Element { identity, .. } if identity.name == "link")
+        ));
 
         assert_eq!(
             groups[1].0,
@@ -624,4 +626,3 @@ mod tests {
         }
     }
 }
-

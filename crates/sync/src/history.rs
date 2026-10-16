@@ -88,27 +88,25 @@ impl Vault {
                 !parent_matches && entry_id.is_some()
             };
 
-            if changed {
-                if let Some(entry) = entry {
-                    let obj = entry.to_object(&self.repo)?;
-                    if let Some(blob) = obj.as_blob() {
-                        let content = String::from_utf8_lossy(blob.content()).into_owned();
-                        let commit_id = oid.to_string();
-                        let short_id = commit_id[..7.min(commit_id.len())].to_string();
-                        let timestamp_secs = commit.time().seconds();
-                        let summary = commit.summary().unwrap_or("").to_string();
+            if changed && let Some(entry) = entry {
+                let obj = entry.to_object(&self.repo)?;
+                if let Some(blob) = obj.as_blob() {
+                    let content = String::from_utf8_lossy(blob.content()).into_owned();
+                    let commit_id = oid.to_string();
+                    let short_id = commit_id[..7.min(commit_id.len())].to_string();
+                    let timestamp_secs = commit.time().seconds();
+                    let summary = commit.summary().unwrap_or("").to_string();
 
-                        revisions.push(FileRevision {
-                            commit_id,
-                            short_id,
-                            timestamp_secs,
-                            summary,
-                            content,
-                        });
+                    revisions.push(FileRevision {
+                        commit_id,
+                        short_id,
+                        timestamp_secs,
+                        summary,
+                        content,
+                    });
 
-                        if revisions.len() >= max_count {
-                            break;
-                        }
+                    if revisions.len() >= max_count {
+                        break;
                     }
                 }
             }

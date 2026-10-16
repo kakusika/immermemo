@@ -92,10 +92,8 @@ fn prune_loose_objects(objects_dir: &Path) -> anyhow::Result<usize> {
             if let Ok(shard_entries) = std::fs::read_dir(&shard_dir) {
                 for file_entry in shard_entries.flatten() {
                     let file_path = file_entry.path();
-                    if file_path.is_file() {
-                        if std::fs::remove_file(&file_path).is_ok() {
-                            pruned += 1;
-                        }
+                    if file_path.is_file() && std::fs::remove_file(&file_path).is_ok() {
+                        pruned += 1;
                     }
                 }
             }

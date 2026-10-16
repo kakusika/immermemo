@@ -107,13 +107,12 @@ pub(crate) fn classify_list(
         };
 
         let items = match &el.sigil {
-            Sigil::Named(_) => {
-                classify_bare_character_element(el).unwrap_or_else(|| {
-                    vec![element_item(el).unwrap_or_else(|| {
-                        RenderItem::Text(el.span, TextStyle::default())
-                    })]
-                })
-            }
+            Sigil::Named(_) => classify_bare_character_element(el).unwrap_or_else(|| {
+                vec![
+                    element_item(el)
+                        .unwrap_or_else(|| RenderItem::Text(el.span, TextStyle::default())),
+                ]
+            }),
             _ => {
                 if let Some(blocks) = &el.content {
                     let mut item_inlines = Vec::new();
@@ -123,7 +122,9 @@ pub(crate) fn classify_list(
                                 item_inlines.extend(classify_inline_seq(&p.content));
                             }
                             _ => {
-                                for (_sub_kind, sub_items) in classify_block_groups(b, skip_metadata) {
+                                for (_sub_kind, sub_items) in
+                                    classify_block_groups(b, skip_metadata)
+                                {
                                     item_inlines.extend(sub_items);
                                 }
                             }

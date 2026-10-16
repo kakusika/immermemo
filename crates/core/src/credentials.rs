@@ -49,16 +49,16 @@ impl<S: TokenStore> CredentialProvider for TokenCredentials<S> {
 
         if is_ssh {
             // 1. Prefer in-app SSH key from AppData if available
-            if let Some(ssh_store) = &self.ssh_store {
-                if let Some(priv_key) = ssh_store.load_private_key() {
-                    let pub_key = ssh_store.load_public_key();
-                    return Ok(git2::Cred::ssh_key_from_memory(
-                        "git",
-                        pub_key.as_deref(),
-                        &priv_key,
-                        None,
-                    )?);
-                }
+            if let Some(ssh_store) = &self.ssh_store
+                && let Some(priv_key) = ssh_store.load_private_key()
+            {
+                let pub_key = ssh_store.load_public_key();
+                return Ok(git2::Cred::ssh_key_from_memory(
+                    "git",
+                    pub_key.as_deref(),
+                    &priv_key,
+                    None,
+                )?);
             }
 
             // 2. Fall back to desktop ssh-agent if available

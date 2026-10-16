@@ -249,7 +249,7 @@ impl Vault {
         )?;
 
         let parent = self.head_commit();
-        if parent.is_none() && index.len() == 0 {
+        if parent.is_none() && index.is_empty() {
             // A freshly linked vault, working tree still empty because
             // nothing has been fetched into it yet: there is no history
             // to compare against and nothing to commit. Committing here
@@ -262,31 +262,30 @@ impl Vault {
         // Safety Guard: Empty Vault Wipeout Protection
         // Protect against accidental wipeout of the remote vault when syncing
         // from an empty or unhydrated local directory.
-        if let Some(parent) = &parent {
-            if let Ok(parent_tree) = parent.tree() {
-                if parent_tree.len() > 0 {
-                    // 1. If index had 0 entries before staging, the working tree was
-                    //    never hydrated/checked out on this device. Do not commit an empty tree!
-                    if initial_index_len == 0 && index.len() == 0 {
-                        return Ok(());
-                    }
+        if let Some(parent) = &parent
+            && let Ok(parent_tree) = parent.tree()
+            && !parent_tree.is_empty()
+        {
+            // 1. If index had 0 entries before staging, the working tree was
+            //    never hydrated/checked out on this device. Do not commit an empty tree!
+            if initial_index_len == 0 && index.is_empty() {
+                return Ok(());
+            }
 
-                    // 2. Total Wipeout Protection: If HEAD has multiple notes (>= 2),
-                    //    but the working tree now has 0 files, refuse to commit a total wipeout.
-                    //    Wiping out an entire multi-file vault in a single sync is almost
-                    //    always an unhydrated folder, unmounted drive, or accidental clear.
-                    if parent_tree.len() >= 2 && index.len() == 0 {
-                        return Ok(());
-                    }
-                }
+            // 2. Total Wipeout Protection: If HEAD has multiple notes (>= 2),
+            //    but the working tree now has 0 files, refuse to commit a total wipeout.
+            //    Wiping out an entire multi-file vault in a single sync is almost
+            //    always an unhydrated folder, unmounted drive, or accidental clear.
+            if parent_tree.len() >= 2 && index.is_empty() {
+                return Ok(());
             }
         }
 
         let tree_oid = index.write_tree_to(&self.repo)?;
-        if let Some(parent) = &parent {
-            if parent.tree_id() == tree_oid {
-                return Ok(());
-            }
+        if let Some(parent) = &parent
+            && parent.tree_id() == tree_oid
+        {
+            return Ok(());
         }
 
         let tree = self.repo.find_tree(tree_oid)?;
@@ -918,10 +917,11 @@ mod tests {
         let mut loose_count_before = 0;
         for entry in std::fs::read_dir(&objects_dir).unwrap().flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
-            if name.len() == 2 && name.chars().all(|c| c.is_ascii_hexdigit()) {
-                if let Ok(shard_entries) = std::fs::read_dir(entry.path()) {
-                    loose_count_before += shard_entries.flatten().count();
-                }
+            if name.len() == 2
+                && name.chars().all(|c| c.is_ascii_hexdigit())
+                && let Ok(shard_entries) = std::fs::read_dir(entry.path())
+            {
+                loose_count_before += shard_entries.flatten().count();
             }
         }
         assert!(
@@ -949,10 +949,11 @@ mod tests {
         let mut loose_count_after = 0;
         for entry in std::fs::read_dir(&objects_dir).unwrap().flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
-            if name.len() == 2 && name.chars().all(|c| c.is_ascii_hexdigit()) {
-                if let Ok(shard_entries) = std::fs::read_dir(entry.path()) {
-                    loose_count_after += shard_entries.flatten().count();
-                }
+            if name.len() == 2
+                && name.chars().all(|c| c.is_ascii_hexdigit())
+                && let Ok(shard_entries) = std::fs::read_dir(entry.path())
+            {
+                loose_count_after += shard_entries.flatten().count();
             }
         }
         assert_eq!(loose_count_after, 0, "All loose objects should be pruned");

@@ -201,6 +201,9 @@ pub(super) struct LookInput<'a> {
     pub(super) body: &'a str,
 }
 
+/// One [`REGISTRY`] row: `(namespace, name, how it looks)`.
+type RegistryRow = (Option<&'static str>, &'static str, fn(LookInput) -> Look);
+
 /// Which `(namespace, name)` pairs this app recognizes, and how each
 /// should look. `namespace: None` registers a look for one of Tomet's own
 /// bare built-in elements -- `conflict`/`ruby`/`link` are all three bare,
@@ -209,7 +212,7 @@ pub(super) struct LookInput<'a> {
 /// and neither does this table. A future vocabulary -- `@use`'d or bare
 /// built-in -- gets its own presentation by adding a row here, not by
 /// touching [`look_up`] or anything downstream of it.
-const REGISTRY: &[(Option<&str>, &str, fn(LookInput) -> Look)] = &[
+const REGISTRY: &[RegistryRow] = &[
     (None, "conflict", conflict_look),
     (None, "ruby", ruby_look),
     (None, "link", link_look),

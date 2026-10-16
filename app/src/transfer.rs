@@ -65,10 +65,10 @@ pub(crate) fn open_import_preview(
 pub fn handle_incoming_import_uri(uri: &str) {
     let weak = APP_WEAK.with(|a| a.borrow().clone());
     let pending = PENDING_IMPORT_PAYLOAD.with(|p| p.borrow().clone());
-    if let (Some(weak), Some(pending)) = (weak, pending) {
-        if let Some(app) = weak.upgrade() {
-            open_import_preview(&app, &pending, uri);
-        }
+    if let (Some(weak), Some(pending)) = (weak, pending)
+        && let Some(app) = weak.upgrade()
+    {
+        open_import_preview(&app, &pending, uri);
     }
 }
 

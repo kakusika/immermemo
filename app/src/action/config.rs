@@ -79,10 +79,10 @@ pub fn serialize_bottom_bar_config(settings: &SettingsAdapter) -> String {
     let mut items = Vec::new();
 
     for id_val in order {
-        if let Some(action) = ActionId::from_i32(id_val) {
-            if is_action_enabled(settings, action) {
-                items.push(action.as_str());
-            }
+        if let Some(action) = ActionId::from_i32(id_val)
+            && is_action_enabled(settings, action)
+        {
+            items.push(action.as_str());
         }
     }
 

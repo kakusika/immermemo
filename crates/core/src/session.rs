@@ -156,7 +156,10 @@ impl Session {
     /// Creates a new note with the specified name and initial content, and updates index.
     pub fn create_named_note(&mut self, name: &str, content: &str) -> anyhow::Result<PathBuf> {
         let dir = self.vault_dir.clone();
-        let sanitized = name.trim().trim_end_matches(".tmt").replace(['/', '\\'], "_");
+        let sanitized = name
+            .trim()
+            .trim_end_matches(".tmt")
+            .replace(['/', '\\'], "_");
         anyhow::ensure!(!sanitized.is_empty(), "note name cannot be empty");
         let path = dir.join(format!("{sanitized}.tmt"));
         if !path.exists() {
@@ -406,10 +409,10 @@ pub fn vault_display_name(vault_dir: &Path) -> String {
 /// Resolves a user-typed vault path input (expanding `~`).
 pub fn vault_path_from_input(input: &str) -> PathBuf {
     let trimmed = input.trim();
-    if let Some(rest) = trimmed.strip_prefix("~/") {
-        if let Some(home) = directories::UserDirs::new().map(|u| u.home_dir().to_path_buf()) {
-            return home.join(rest);
-        }
+    if let Some(rest) = trimmed.strip_prefix("~/")
+        && let Some(home) = directories::UserDirs::new().map(|u| u.home_dir().to_path_buf())
+    {
+        return home.join(rest);
     }
     PathBuf::from(trimmed)
 }

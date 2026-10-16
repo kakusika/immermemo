@@ -1,9 +1,9 @@
 //! Provider account avatar loading, local caching, and background retrieval.
 
+use immermemo_core::{Account, AppData};
 use std::collections::HashSet;
 use std::io::Read;
 use std::sync::{LazyLock, Mutex};
-use immermemo_core::{Account, AppData};
 
 static IN_FLIGHT: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(|| Mutex::new(HashSet::new()));
 
@@ -26,10 +26,10 @@ pub fn decode_avatar(bytes: &[u8]) -> Option<slint::Image> {
 
     // Fallback: check if the bytes represent an SVG document
     let trimmed = bytes.trim_ascii_start();
-    if trimmed.starts_with(b"<svg") || trimmed.starts_with(b"<?xml") {
-        if let Ok(img) = slint::Image::load_from_svg_data(bytes) {
-            return Some(img);
-        }
+    if (trimmed.starts_with(b"<svg") || trimmed.starts_with(b"<?xml"))
+        && let Ok(img) = slint::Image::load_from_svg_data(bytes)
+    {
+        return Some(img);
     }
 
     None
@@ -48,12 +48,11 @@ pub fn load_or_fetch_avatar(
         return (slint::Image::default(), false);
     };
 
-    if avatar_path.is_file() {
-        if let Ok(bytes) = std::fs::read(&avatar_path) {
-            if let Some(img) = decode_avatar(&bytes) {
-                return (img, true);
-            }
-        }
+    if avatar_path.is_file()
+        && let Ok(bytes) = std::fs::read(&avatar_path)
+        && let Some(img) = decode_avatar(&bytes)
+    {
+        return (img, true);
     }
 
     // If no cached avatar exists or reading failed, check for an avatar URL.
@@ -65,14 +64,16 @@ pub fn load_or_fetch_avatar(
             let dest_path = avatar_path.clone();
 
             std::thread::spawn(move || {
-                let download_res = ureq::get(&url)
-                    .header("User-Agent", "immermemo")
-                    .call();
+                let download_res = ureq::get(&url).header("User-Agent", "immermemo").call();
 
                 match download_res {
                     Ok(resp) => {
                         let mut bytes = Vec::new();
-                        if resp.into_body().into_reader().read_to_end(&mut bytes).is_ok()
+                        if resp
+                            .into_body()
+                            .into_reader()
+                            .read_to_end(&mut bytes)
+                            .is_ok()
                             && decode_avatar(&bytes).is_some()
                         {
                             if let Some(parent) = dest_path.parent() {

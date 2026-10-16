@@ -98,10 +98,10 @@ impl SshKeyStore {
 
     /// Returns the existing public key, or generates a new keypair if not present.
     pub fn ensure_key(&self) -> anyhow::Result<String> {
-        if let Some(pubkey) = self.load_public_key() {
-            if self.private_key_path().exists() {
-                return Ok(pubkey);
-            }
+        if let Some(pubkey) = self.load_public_key()
+            && self.private_key_path().exists()
+        {
+            return Ok(pubkey);
         }
         self.generate_key(None)
     }

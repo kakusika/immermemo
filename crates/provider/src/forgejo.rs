@@ -71,11 +71,8 @@ impl ForgejoProvider {
 
             if let Some(rest) = trimmed_url.strip_prefix(&format!("git@{host_only}:")) {
                 rest
-            } else if let Some(rest) = trimmed_url.strip_prefix(&format!("ssh://git@{host_only}/"))
-            {
-                rest
             } else {
-                return None;
+                trimmed_url.strip_prefix(&format!("ssh://git@{host_only}/"))?
             }
         };
 
@@ -103,11 +100,10 @@ impl ForgejoProvider {
         } else if let Some(rest) = trimmed.strip_prefix("git@") {
             let mut parts = rest.splitn(2, ':');
             (parts.next()?, parts.next()?)
-        } else if let Some(rest) = trimmed.strip_prefix("ssh://git@") {
+        } else {
+            let rest = trimmed.strip_prefix("ssh://git@")?;
             let mut parts = rest.splitn(2, '/');
             (parts.next()?, parts.next()?)
-        } else {
-            return None;
         };
 
         if host.is_empty() {

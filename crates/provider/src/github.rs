@@ -288,10 +288,8 @@ impl GitHubProvider {
             rest
         } else if let Some(rest) = trimmed.strip_prefix("http://github.com/") {
             rest
-        } else if let Some(rest) = trimmed.strip_prefix("git@github.com:") {
-            rest
         } else {
-            return None;
+            trimmed.strip_prefix("git@github.com:")?
         };
         let path = path.trim_end_matches(".git").trim_matches('/');
         let mut parts = path.split('/');

@@ -65,15 +65,14 @@ pub(crate) fn stage_dir(
             .unwrap_or((0, 0));
 
         // Check if existing index entry matches mtime and size
-        if let Some(entry) = index.get_path(Path::new(rel), 0) {
-            if entry.file_size == file_size
-                && entry.mtime.seconds() == mtime.0
-                && entry.mtime.nanoseconds() == mtime.1
-                && entry.id != Oid::zero()
-            {
-                // Unchanged: stat cache matches, no need to read file contents or re-hash
-                return Ok(());
-            }
+        if let Some(entry) = index.get_path(Path::new(rel), 0)
+            && entry.file_size == file_size
+            && entry.mtime.seconds() == mtime.0
+            && entry.mtime.nanoseconds() == mtime.1
+            && entry.id != Oid::zero()
+        {
+            // Unchanged: stat cache matches, no need to read file contents or re-hash
+            return Ok(());
         }
 
         let data = std::fs::read(path)?;
@@ -83,12 +82,11 @@ pub(crate) fn stage_dir(
     // Remove any entries from index that no longer exist in working tree
     let mut paths_to_remove = Vec::new();
     for i in 0..index.len() {
-        if let Some(entry) = index.get(i) {
-            if let Ok(path_str) = std::str::from_utf8(&entry.path) {
-                if !seen_paths.contains(path_str) {
-                    paths_to_remove.push(PathBuf::from(path_str));
-                }
-            }
+        if let Some(entry) = index.get(i)
+            && let Ok(path_str) = std::str::from_utf8(&entry.path)
+            && !seen_paths.contains(path_str)
+        {
+            paths_to_remove.push(PathBuf::from(path_str));
         }
     }
     for p in paths_to_remove {

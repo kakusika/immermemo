@@ -14,14 +14,15 @@ pub fn update_forgejo_ui_state(app: &App, remote: Option<&str>) {
     let settings = app.global::<SettingsAdapter>();
     if let Some(url) = remote {
         // If it belongs to GitHub or GitLab, it's not a Forgejo connection.
-        if GitHubProvider::parse_remote(url).is_none() && !GitLabProvider::is_gitlab_remote(url) {
-            if let Some((host, user, repo)) = ForgejoProvider::parse_any_remote(url) {
-                settings.set_forgejo_connected(true);
-                settings.set_forgejo_username(user.into());
-                settings.set_forgejo_instance(host.into());
-                settings.set_forgejo_repo_name(repo.into());
-                return;
-            }
+        if GitHubProvider::parse_remote(url).is_none()
+            && !GitLabProvider::is_gitlab_remote(url)
+            && let Some((host, user, repo)) = ForgejoProvider::parse_any_remote(url)
+        {
+            settings.set_forgejo_connected(true);
+            settings.set_forgejo_username(user.into());
+            settings.set_forgejo_instance(host.into());
+            settings.set_forgejo_repo_name(repo.into());
+            return;
         }
     }
     settings.set_forgejo_connected(false);
@@ -155,10 +156,10 @@ pub fn bind_forgejo_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                         };
                         let _ = s.app_data.add_account(account);
                         let _ = s.app_data.save_vault_account(&vault_dir, &account_id);
-                        if let Ok(path) = s.app_data.account_token_path(&account_id) {
-                            if let Ok(store) = (s.token_store_for)(&path) {
-                                let _ = store.save(&token_str);
-                            }
+                        if let Ok(path) = s.app_data.account_token_path(&account_id)
+                            && let Ok(store) = (s.token_store_for)(&path)
+                        {
+                            let _ = store.save(&token_str);
                         }
 
                         settings.set_forgejo_connecting(false);

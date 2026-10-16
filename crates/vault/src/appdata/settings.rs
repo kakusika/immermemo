@@ -26,14 +26,12 @@ impl AppData {
             return Some(url);
         }
         let in_tree = vault_dir.join(".git");
-        if in_tree.exists() {
-            if let Ok(repo) = git2::Repository::open(vault_dir) {
-                if let Ok(remote) = repo.find_remote("origin") {
-                    if let Some(url) = remote.url().map(str::trim).filter(|s| !s.is_empty()) {
-                        return Some(url.to_string());
-                    }
-                }
-            }
+        if in_tree.exists()
+            && let Ok(repo) = git2::Repository::open(vault_dir)
+            && let Ok(remote) = repo.find_remote("origin")
+            && let Some(url) = remote.url().map(str::trim).filter(|s| !s.is_empty())
+        {
+            return Some(url.to_string());
         }
         None
     }
@@ -41,30 +39,16 @@ impl AppData {
     pub fn save_remote(&self, vault_dir: &Path, url: &str) -> anyhow::Result<()> {
         write(&self.remote_file(vault_dir)?, url)?;
         let in_tree = vault_dir.join(".git");
-        if in_tree.exists() {
-            if let Ok(repo) = git2::Repository::open(vault_dir) {
-                if repo.find_remote("origin").is_ok() {
-                    let _ = repo.remote_set_url("origin", url);
-                } else {
-                    let _ = repo.remote("origin", url);
-                }
+        if in_tree.exists()
+            && let Ok(repo) = git2::Repository::open(vault_dir)
+        {
+            if repo.find_remote("origin").is_ok() {
+                let _ = repo.remote_set_url("origin", url);
+            } else {
+                let _ = repo.remote("origin", url);
             }
         }
         Ok(())
-    }
-
-    fn provider_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
-        Ok(self.vault_data_dir(vault_dir)?.join("provider.txt"))
-    }
-
-    pub fn load_provider(&self, vault_dir: &Path) -> Option<String> {
-        self.provider_file(vault_dir)
-            .ok()
-            .and_then(|p| read_trimmed(&p))
-    }
-
-    pub fn save_provider(&self, vault_dir: &Path, provider: &str) -> anyhow::Result<()> {
-        write(&self.provider_file(vault_dir)?, provider)
     }
 
     fn last_note_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {

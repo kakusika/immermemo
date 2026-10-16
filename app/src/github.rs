@@ -14,13 +14,13 @@ use crate::{App, SettingsAdapter};
 /// Updates GitHub connected/account state in the UI based on the current remote URL.
 pub fn update_github_ui_state(app: &App, remote: Option<&str>) {
     let settings = app.global::<SettingsAdapter>();
-    if let Some(url) = remote {
-        if let Some((user, repo)) = GitHubProvider::parse_remote(url) {
-            settings.set_github_connected(true);
-            settings.set_github_username(user.into());
-            settings.set_github_repo_name(repo.into());
-            return;
-        }
+    if let Some(url) = remote
+        && let Some((user, repo)) = GitHubProvider::parse_remote(url)
+    {
+        settings.set_github_connected(true);
+        settings.set_github_username(user.into());
+        settings.set_github_repo_name(repo.into());
+        return;
     }
     settings.set_github_connected(false);
     settings.set_github_username(SharedString::new());
@@ -254,10 +254,10 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                         };
                         let _ = s.app_data.add_account(account);
                         let _ = s.app_data.save_vault_account(&vault_dir, &account_id);
-                        if let Ok(path) = s.app_data.account_token_path(&account_id) {
-                            if let Ok(store) = (s.token_store_for)(&path) {
-                                let _ = store.save(&token);
-                            }
+                        if let Ok(path) = s.app_data.account_token_path(&account_id)
+                            && let Ok(store) = (s.token_store_for)(&path)
+                        {
+                            let _ = store.save(&token);
                         }
 
                         let settings = app.global::<SettingsAdapter>();

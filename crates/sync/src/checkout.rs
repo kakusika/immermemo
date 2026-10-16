@@ -63,15 +63,15 @@ impl Vault {
                     }
                 }
                 Delta::Added | Delta::Modified | Delta::Copied | Delta::Typechange => {
-                    if let Some(new_file) = delta.new_file().path() {
-                        if let Ok(blob) = self.repo.find_blob(delta.new_file().id()) {
-                            let path = self.working_tree.join(new_file);
-                            if let Some(parent) = path.parent() {
-                                let _ = std::fs::create_dir_all(parent);
-                            }
-                            std::fs::write(&path, blob.content())?;
-                            updated.push(new_file.to_owned());
+                    if let Some(new_file) = delta.new_file().path()
+                        && let Ok(blob) = self.repo.find_blob(delta.new_file().id())
+                    {
+                        let path = self.working_tree.join(new_file);
+                        if let Some(parent) = path.parent() {
+                            let _ = std::fs::create_dir_all(parent);
                         }
+                        std::fs::write(&path, blob.content())?;
+                        updated.push(new_file.to_owned());
                     }
                 }
                 Delta::Renamed => {
@@ -83,15 +83,15 @@ impl Vault {
                         }
                         deleted.push(old_file.to_owned());
                     }
-                    if let Some(new_file) = delta.new_file().path() {
-                        if let Ok(blob) = self.repo.find_blob(delta.new_file().id()) {
-                            let path = self.working_tree.join(new_file);
-                            if let Some(parent) = path.parent() {
-                                let _ = std::fs::create_dir_all(parent);
-                            }
-                            std::fs::write(&path, blob.content())?;
-                            updated.push(new_file.to_owned());
+                    if let Some(new_file) = delta.new_file().path()
+                        && let Ok(blob) = self.repo.find_blob(delta.new_file().id())
+                    {
+                        let path = self.working_tree.join(new_file);
+                        if let Some(parent) = path.parent() {
+                            let _ = std::fs::create_dir_all(parent);
                         }
+                        std::fs::write(&path, blob.content())?;
+                        updated.push(new_file.to_owned());
                     }
                 }
                 _ => {}
