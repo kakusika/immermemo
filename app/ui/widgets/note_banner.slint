@@ -17,12 +17,23 @@ export struct NoteBannerView {
     focus-y: float,
 }
 
-// The wide image across the top of a note. It keeps its place (a quiet
+// How tall the part of the banner below the header is. `EditorScreen` needs it
+// to leave that much room above the note's text, which slides over the banner.
+export global NoteBannerMetrics {
+    out property <length> height: 160px * Metrics.ui-scale;
+}
+
+// The wide image behind the top of a note. It does not scroll: the note's text
+// sits on a sheet that slides up over it. It keeps its place (a quiet
 // placeholder) while the picture is not there, so the note does not jump
 // when it arrives -- and stays that way for a reference that never loads,
 // which is also how the author sees that it is broken.
 export component NoteBanner inherits Rectangle {
     in property <NoteBannerView> banner;
+    // Extra height above the banner's own, for a banner that reaches up behind
+    // the header: the picture covers all of it, but the placeholder and the
+    // crop's focus count only the part below.
+    in property <length> top-extra: 0px;
 
     property <bool> loaded: root.banner.picture.width > 0;
     // The picture scaled to just cover this box, then shifted so `focus-y`
@@ -30,8 +41,7 @@ export component NoteBanner inherits Rectangle {
     property <length> cover-width: max(root.width, root.height * root.banner.picture.width / max(1, root.banner.picture.height));
     property <length> cover-height: max(root.height, root.width * root.banner.picture.height / max(1, root.banner.picture.width));
 
-    height: 160px * Metrics.ui-scale;
-    border-radius: Metrics.radius-lg;
+    height: root.top-extra + NoteBannerMetrics.height;
     clip: true;
     background: Palette.foreground.with-alpha(0.06);
 
@@ -41,7 +51,7 @@ export component NoteBanner inherits Rectangle {
         height: Metrics.icon-lg;
         color: Colors.muted;
         x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2;
+        y: root.top-extra + (parent.height - root.top-extra - self.height) / 2;
     }
 
     if root.loaded: Image {

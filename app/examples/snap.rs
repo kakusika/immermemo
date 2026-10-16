@@ -464,6 +464,21 @@ fn main() {
         focus_y: 0.25,
     });
     render(&window, size, &format!("{prefix}-editor-banner.ppm"));
+    // The banner stays put behind the header while the note's text slides up over
+    // it: near rest (30px), and well past it (120px).
+    let scroll = |delta_y: f32| {
+        window.dispatch_event(WindowEvent::PointerScrolled {
+            position: slint::LogicalPosition::new(200.0, 500.0),
+            delta_x: 0.0,
+            delta_y,
+        });
+        std::thread::sleep(std::time::Duration::from_millis(300));
+    };
+    scroll(-30.0);
+    render(&window, size, &format!("{prefix}-editor-banner-scrolled-30.ppm"));
+    scroll(-90.0);
+    render(&window, size, &format!("{prefix}-editor-banner-scrolled-120.ppm"));
+    scroll(1000.0);
     app.set_current_banner(NoteBannerView {
         declared: true,
         picture: slint::Image::default(),
@@ -614,7 +629,21 @@ fn main() {
     // refactor of the sheet can be diffed screen by screen.
     let settings = app.global::<SettingsAdapter>();
     settings.set_app_version("0.1.0".into());
-    settings.set_build_id("0b9bc064+ · 2026-10-16 14:05 UTC".into());
+    settings.set_build_id("0b9bc064+386bcd88 · 2026-10-16 14:05 UTC".into());
+    let row = |label: &str, value: &str| immermemo::SystemInfoRow {
+        label: label.into(),
+        value: value.into(),
+    };
+    settings.set_system_info(ModelRc::new(VecModel::from(vec![
+        row("OS", "Android 14 (API 34)"),
+        row("Device", "Google Pixel 8"),
+        row("Architecture", "aarch64"),
+        row("Renderer", "FemtoVG"),
+        row(
+            "Emoji font",
+            "none the renderer can draw (NotoColorEmoji.ttf (COLRv1)); the system lists NotoColorEmojiLegacy.ttf, NotoColorEmoji.ttf, NotoColorEmojiFlags.ttf; searched /system/fonts (208 files), /product/fonts (29 files)",
+        ),
+    ])));
     let snap_settings = |name: &str| {
         std::thread::sleep(std::time::Duration::from_millis(300));
         render(&window, size, &format!("{prefix}-settings-{name}.ppm"));
@@ -873,6 +902,23 @@ fn main() {
     app.set_note_sheet_open(true);
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor-dark.ppm"));
+    // The banner behind the header in the dark theme: at the top, and scrolled
+    // to where the header's paint is partly back.
+    app.set_current_banner(NoteBannerView {
+        declared: true,
+        picture: slint::Image::default(),
+        focus_y: 0.5,
+    });
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-editor-banner-dark.ppm"));
+    window.dispatch_event(WindowEvent::PointerScrolled {
+        position: slint::LogicalPosition::new(200.0, 500.0),
+        delta_x: 0.0,
+        delta_y: -130.0,
+    });
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-editor-banner-dark-scrolled.ppm"));
+    app.set_current_banner(NoteBannerView::default());
     app.set_note_sheet_open(false);
     app.set_active_tab(0);
     app.set_theme_choice(0);

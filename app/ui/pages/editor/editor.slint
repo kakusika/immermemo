@@ -12,29 +12,31 @@ import { NoteBodyItemView, NoteBodyView } from "../../render/note_body.slint";
 import { ViewSwitcher, NavPill } from "../../components.slint";
 import { PropertiesView, NotePropertyEntry } from "properties.slint";
 import { EditorToolbar } from "toolbar.slint";
-import { NoteBanner, NoteBannerView } from "../../widgets/note_banner.slint";
+import { NoteBanner, NoteBannerMetrics, NoteBannerView } from "../../widgets/note_banner.slint";
 
 export { NotePropertyEntry } from "properties.slint";
 
-// Elevation + the open/close corner-radius morph, shared by the header and
-// body halves of the note sheet so they read as one continuous card. No
-// shadow on the body half -- its own edges sit against the screen edge
-// where a shadow wouldn't be visible anyway, and the header's shadow
-// already covers the visually relevant (top) edge.
+// The open/close corner-radius morph, shared by the header and body halves of
+// the note sheet so they read as one continuous card. The header paints nothing
+// but the scrim -- what is under it (the page, the banner, the text sliding by)
+// shows through, so it casts no shadow either; the body, which spans the whole sheet, carries the rounded
+// top corners the card shrinks with.
 component SheetSurface inherits Rectangle {
     in property <bool> is-header: false;
     in property <float> sheet-progress: 1.0;
+    // The header's darkening toward the top edge: the page's own color, darker,
+    // fading to nothing at the header's lower edge. The note's text and banner
+    // pass under the header, and this keeps the status bar's clock and the
+    // buttons legible over them.
+    property <color> shade: Colors.page-background.darker(1.0);
 
-    background: Colors.page-background;
+    background: root.is-header
+        ? @linear-gradient(180deg, root.shade.with-alpha(0.6) 0%, root.shade.with-alpha(0.0) 100%)
+        : Colors.page-background;
     opacity: clamp(root.sheet-progress * 10.0, 0.0, 1.0);
-    clip: root.is-header;
-    border-top-left-radius: root.is-header ? Metrics.radius-lg * (1.0 - root.sheet-progress) : 0px;
-    border-top-right-radius: root.is-header ? Metrics.radius-lg * (1.0 - root.sheet-progress) : 0px;
-    drop-shadow-blur: root.is-header ? 10px * Metrics.ui-scale : 0px;
-    drop-shadow-offset-y: root.is-header ? 2px * Metrics.ui-scale : 0px;
-    drop-shadow-color: root.is-header
-        ? (Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024)
-        : transparent;
+    clip: true;
+    border-top-left-radius: Metrics.radius-lg * (1.0 - root.sheet-progress);
+    border-top-right-radius: Metrics.radius-lg * (1.0 - root.sheet-progress);
 }
 
 // header-gesture/body-gesture both need two independent swipe behaviors at
@@ -339,6 +341,17 @@ export component EditorScreen inherits Rectangle {
     in-out property <bool> edit-mode: false;
     out property <bool> editor-has-focus: root.edit-mode && editor.has-focus;
     out property <bool> scroll-at-top: editor-scroll.content-y >= -1px;
+    // The header's height: the status bar's inset and the bar of buttons.
+    property <length> header-height: root.inset-top + Metrics.bar-height;
+    // Whether the note reaches up to the top of the screen, under the header: its
+    // banner is drawn there and its text slides past the header's buttons. Not
+    // while the body shows a bar of its own (an error, a conflict) above the
+    // scrolling area, nor when editing or on the Properties view: those start
+    // below the header.
+    property <bool> behind-header: root.has-note && root.note-view == 0 && !root.edit-mode
+        && !(root.status != "" && root.status-is-error) && !root.has-conflict;
+    // How far the note's top reaches up under the header.
+    property <length> top-extra: root.behind-header ? root.header-height : 0px;
     in property <bool> header-swipe-enabled: true;
     // How far the sheet has animated open (1.0 = fully open, matches
     // app.slint's `sheet-progress`) and the pixel offset that follows from
@@ -410,11 +423,14 @@ export component EditorScreen inherits Rectangle {
     // part of this area during the drag, that gap is meant to show
     // whatever's behind the sheet, not get papered over by an opaque root.
 
+    // Above the body: the body spans the whole screen now, and the header's
+    // buttons lie over its top (over the banner's picture, when there is one).
     header-gesture := NoteSheetGestureArea {
+        z: 1;
         x: 0px;
         y: 0px;
         width: 100%;
-        height: root.inset-top + Metrics.bar-height;
+        height: root.header-height;
         inset-top: root.inset-top;
         enabled: root.header-swipe-enabled;
         handle-swipe-right: root.nav-swipe-enabled && root.can-navigate-back;
@@ -491,9 +507,9 @@ export component EditorScreen inherits Rectangle {
     // header/body split.
     body-gesture := NoteSheetGestureArea {
         x: 0px;
-        y: root.inset-top + Metrics.bar-height;
+        y: 0px;
         width: 100%;
-        height: root.height - (root.inset-top + Metrics.bar-height) - root.inset-bottom;
+        height: root.height - root.inset-bottom;
         // A note with nothing to scroll (or no note at all) has no scroll
         // position to gate on.
         enabled: root.header-swipe-enabled && (!root.has-note || root.scroll-at-top) && (!root.edit-mode || !root.editor-has-focus);
@@ -522,6 +538,9 @@ export component EditorScreen inherits Rectangle {
             VerticalLayout {
                 width: 100%;
                 height: 100%;
+                // The body spans the whole screen; the header lies over its top.
+                // Below it unless the banner is to reach up behind it.
+                padding-top: root.behind-header ? 0px : root.header-height;
 
                 if root.status != "" && root.status-is-error: Rectangle {
                     height: 38px;
@@ -771,114 +790,140 @@ export component EditorScreen inherits Rectangle {
                             return reject;
                         }
 
+                        // The banner stays put behind the note: it is not part
+                        // of what scrolls. The note's text sits on a sheet
+                        // (`content-card`) that slides up over it, and on up
+                        // under the header.
+                        if !root.edit-mode && root.banner.declared: NoteBanner {
+                            x: 0px;
+                            y: 0px;
+                            width: 100%;
+                            banner: root.banner;
+                            top-extra: root.top-extra;
+                        }
+
                         editor-scroll := AppScrollView {
                             width: 100%;
                             height: 100%;
-                            content-height: max(content-layout.preferred-height, editor-scroll.visible-height + 1px);
+                            content-height: max(content-column.preferred-height, editor-scroll.visible-height + 1px);
 
-                            content-layout := VerticalLayout {
+                            content-column := VerticalLayout {
                                 width: 100%;
                                 alignment: start;
-                                padding-left: Metrics.gutter;
-                                padding-right: Metrics.gutter;
-                                padding-top: Metrics.spacing-lg;
-                                padding-bottom: Metrics.spacing-3xl + (root.edit-mode ? 48px : 0px);
-                                spacing: Metrics.spacing-md;
 
-                                if !root.edit-mode && root.banner.declared: NoteBanner {
-                                    banner: root.banner;
+                                // Room for the banner to show, less the sheet's
+                                // rounded top corners, which overlap it.
+                                if !root.edit-mode && root.banner.declared: Rectangle {
+                                    height: root.top-extra + NoteBannerMetrics.height - Metrics.radius-lg;
                                 }
 
-                                // In-body note title (Notion / Apple Notes style)
-                                Text {
-                                    text: root.title != "" ? root.title : @tr("Untitled");
-                                    font-size: Metrics.font-headline;
-                                    font-weight: 700;
-                                    color: Palette.foreground;
-                                    wrap: word-wrap;
-                                }
+                                content-card := Rectangle {
+                                    height: content-layout.preferred-height;
+                                    background: Colors.page-background;
+                                    border-top-left-radius: !root.edit-mode && root.banner.declared ? Metrics.radius-lg : 0px;
+                                    border-top-right-radius: !root.edit-mode && root.banner.declared ? Metrics.radius-lg : 0px;
 
-                                // View mode display: hides `@element(...)` marker
-                                // syntax behind a `NoteBodyView` (see
-                                // `src/render/mod.rs`), with a double-tap
-                                // detector over the whole area same as before.
-                                view-box := Rectangle {
-                                    visible: !root.edit-mode;
-                                    width: 100%;
-                                    height: !root.edit-mode ? max(160px, max(view-layout.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
-
-                                    TouchArea {
-                                        width: 100%;
-                                        height: 100%;
-                                        property <duration> last-tap-time: 0ms;
-                                        property <length> last-tap-x: 0px;
-                                        property <length> last-tap-y: 0px;
-
-                                        clicked => {
-                                            let now = animation-tick();
-                                            let dt = now - self.last-tap-time;
-                                            let dx = abs(self.pressed-x - self.last-tap-x);
-                                            let dy = abs(self.pressed-y - self.last-tap-y);
-                                            if (self.last-tap-time > 0ms && dt >= 0ms && dt < 600ms && dx < 80px * Metrics.ui-scale && dy < 80px * Metrics.ui-scale) {
-                                                root.focus-editor();
-                                                self.last-tap-time = 0ms;
-                                            } else {
-                                                self.last-tap-time = now;
-                                                self.last-tap-x = self.pressed-x;
-                                                self.last-tap-y = self.pressed-y;
-                                            }
-                                        }
-                                        double-clicked => {
-                                            root.focus-editor();
-                                        }
-                                    }
-
-                                    view-layout := VerticalLayout {
+                                    content-layout := VerticalLayout {
                                         width: 100%;
                                         alignment: start;
-                                        spacing: Metrics.spacing-sm;
+                                        padding-left: Metrics.gutter;
+                                        padding-right: Metrics.gutter;
+                                        padding-top: Metrics.spacing-lg + (root.banner.declared && !root.edit-mode ? 0px : root.top-extra);
+                                        padding-bottom: Metrics.spacing-3xl + (root.edit-mode ? 48px : 0px);
+                                        spacing: Metrics.spacing-md;
 
-                                        if root.body == "" || root.note-body-items.length == 0: Text {
-                                            width: 100%;
-                                            text: @tr("Tap Edit or double-tap here to write.");
-                                            font-size: root.font-size;
-                                            color: Colors.muted;
+                                        // In-body note title (Notion / Apple Notes style)
+                                        Text {
+                                            text: root.title != "" ? root.title : @tr("Untitled");
+                                            font-size: Metrics.font-headline;
+                                            font-weight: 700;
+                                            color: Palette.foreground;
                                             wrap: word-wrap;
                                         }
 
-                                        NoteBodyView {
+                                        // View mode display: hides `@element(...)` marker
+                                        // syntax behind a `NoteBodyView` (see
+                                        // `src/render/mod.rs`), with a double-tap
+                                        // detector over the whole area same as before.
+                                        view-box := Rectangle {
+                                            visible: !root.edit-mode;
                                             width: 100%;
-                                            items: root.note-body-items;
-                                            text-font-size: root.font-size;
-                                            link-clicked(target) => { root.link-clicked(target); }
-                                            task-toggled(idx) => { root.task-toggled(idx); }
-                                        }
-                                    }
-                                }
+                                            height: !root.edit-mode ? max(160px, max(view-layout.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
 
-                                editor := TextInput {
-                                    visible: root.edit-mode;
-                                    enabled: root.has-note && root.edit-mode;
-                                    width: 100%;
-                                    font-size: root.font-size;
-                                    text <=> root.body;
-                                    color: Palette.foreground;
-                                    selection-background-color: Palette.accent-background.with-alpha(0.3);
-                                    selection-foreground-color: Palette.foreground;
-                                    single-line: false;
-                                    wrap: word-wrap;
-                                    height: root.edit-mode ? max(160px, max(self.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
-                                    edited => { root.edited(self.text); }
-                                    cursor-position-changed(cpos) => {
-                                        let cpos-screen-y = editor.y + cpos.y;
-                                        if (cpos-screen-y + editor-scroll.content-y < 0px) {
-                                            editor-scroll.content-y = min(
-                                                0px,
-                                                editor-scroll.visible-height - cpos-screen-y - 32px,
-                                                max(editor-scroll.visible-height - self.height, -cpos-screen-y),
-                                            );
-                                        } else if (cpos-screen-y + editor-scroll.content-y > editor-scroll.visible-height - 32px) {
-                                            editor-scroll.content-y = min(0px, max(editor-scroll.visible-height - self.height, editor-scroll.visible-height - cpos-screen-y - 32px));
+                                            TouchArea {
+                                                width: 100%;
+                                                height: 100%;
+                                                property <duration> last-tap-time: 0ms;
+                                                property <length> last-tap-x: 0px;
+                                                property <length> last-tap-y: 0px;
+
+                                                clicked => {
+                                                    let now = animation-tick();
+                                                    let dt = now - self.last-tap-time;
+                                                    let dx = abs(self.pressed-x - self.last-tap-x);
+                                                    let dy = abs(self.pressed-y - self.last-tap-y);
+                                                    if (self.last-tap-time > 0ms && dt >= 0ms && dt < 600ms && dx < 80px * Metrics.ui-scale && dy < 80px * Metrics.ui-scale) {
+                                                        root.focus-editor();
+                                                        self.last-tap-time = 0ms;
+                                                    } else {
+                                                        self.last-tap-time = now;
+                                                        self.last-tap-x = self.pressed-x;
+                                                        self.last-tap-y = self.pressed-y;
+                                                    }
+                                                }
+                                                double-clicked => {
+                                                    root.focus-editor();
+                                                }
+                                            }
+
+                                            view-layout := VerticalLayout {
+                                                width: 100%;
+                                                alignment: start;
+                                                spacing: Metrics.spacing-sm;
+
+                                                if root.body == "" || root.note-body-items.length == 0: Text {
+                                                    width: 100%;
+                                                    text: @tr("Tap Edit or double-tap here to write.");
+                                                    font-size: root.font-size;
+                                                    color: Colors.muted;
+                                                    wrap: word-wrap;
+                                                }
+
+                                                NoteBodyView {
+                                                    width: 100%;
+                                                    items: root.note-body-items;
+                                                    text-font-size: root.font-size;
+                                                    link-clicked(target) => { root.link-clicked(target); }
+                                                    task-toggled(idx) => { root.task-toggled(idx); }
+                                                }
+                                            }
+                                        }
+
+                                        editor := TextInput {
+                                            visible: root.edit-mode;
+                                            enabled: root.has-note && root.edit-mode;
+                                            width: 100%;
+                                            font-size: root.font-size;
+                                            text <=> root.body;
+                                            color: Palette.foreground;
+                                            selection-background-color: Palette.accent-background.with-alpha(0.3);
+                                            selection-foreground-color: Palette.foreground;
+                                            single-line: false;
+                                            wrap: word-wrap;
+                                            height: root.edit-mode ? max(160px, max(self.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
+                                            edited => { root.edited(self.text); }
+                                            cursor-position-changed(cpos) => {
+                                                let cpos-screen-y = editor.y + cpos.y;
+                                                if (cpos-screen-y + editor-scroll.content-y < 0px) {
+                                                    editor-scroll.content-y = min(
+                                                        0px,
+                                                        editor-scroll.visible-height - cpos-screen-y - 32px,
+                                                        max(editor-scroll.visible-height - self.height, -cpos-screen-y),
+                                                    );
+                                                } else if (cpos-screen-y + editor-scroll.content-y > editor-scroll.visible-height - 32px) {
+                                                    editor-scroll.content-y = min(0px, max(editor-scroll.visible-height - self.height, editor-scroll.visible-height - cpos-screen-y - 32px));
+                                                }
+                                            }
                                         }
                                     }
                                 }
