@@ -36,7 +36,7 @@ fn open_note_inner(app: &App, session: &SessionRef, index: usize) -> Option<Stri
             app.set_can_undo(opened.can_undo);
             app.set_can_redo(opened.can_redo);
             update_rendered_body(app, &opened.body);
-            update_note_stats(app, &opened.body);
+            update_note_stats(app, session, &opened.body);
             set_status(app, "");
             app.set_active_conflict_index(0);
             if opened.has_conflict {

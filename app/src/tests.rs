@@ -8,7 +8,7 @@ use crate::session::{SESSION, Session, refresh_list};
 use crate::session::{
     apply_icon_selection, copy_to_clipboard, filter_icon_picker, finish_sync,
     open_first_conflicted_note, open_icon_picker, resolve_active_conflict, resolve_conflict_step,
-    set_error, set_status, sync_conflict_sheet_state, update_filtered_list,
+    set_error, set_status, sync_conflict_sheet_state, update_current_icon, update_filtered_list,
 };
 use immermemo_core::{AppData, History, notes};
 use slint::ComponentHandle;
@@ -32,6 +32,7 @@ fn ui_helpers_and_conflict_resolution() {
     resolving_the_conflict_clears_the_marker_and_status(&app, &session, &note_path);
     search_filtering_updates_the_notes_and_snippets_models(&app, &session, &vault_dir);
     a_note_s_meta_icon_reaches_its_directory_entry(&app, &session, &vault_dir);
+    a_note_s_image_icon_appears_once_its_thumbnail_is_ready(&app, &session, &vault_dir);
     icon_picker_selection_saves_and_is_reflected_in_the_note_list(&app, &session, &vault_dir);
     let multi_note_path =
         conflict_sheet_steps_through_and_resolves_every_conflict(&app, &session, &vault_dir);
@@ -200,13 +201,96 @@ fn a_note_s_meta_icon_reaches_its_directory_entry(
         .map(|i| entries.row_data(i).unwrap())
         .find(|e| e.display == "starred")
         .expect("starred.tmt is in the root folder's entries");
-    assert!(starred.icon_image.size().width > 0);
+    assert_eq!(starred.icon.kind, NoteIconKind::Glyph);
+    assert!(starred.icon.glyph.size().width > 0);
 
     let unstarred = (0..entries.row_count())
         .map(|i| entries.row_data(i).unwrap())
         .find(|e| e.display == "test")
         .expect("test.tmt (no meta icon) is also in the root folder's entries");
-    assert_eq!(unstarred.icon_image.size().width, 0);
+    assert_eq!(unstarred.icon.kind, NoteIconKind::Empty);
+
+    let cake = vault_dir.join("cake.tmt");
+    std::fs::write(&cake, "@meta{ icon: \"🐾🩵🔥\" }\n\nCake.\n").unwrap();
+    refresh_list(app, session);
+    let entries = app.get_directory_folder_entries();
+    let cake = (0..entries.row_count())
+        .map(|i| entries.row_data(i).unwrap())
+        .find(|e| e.display == "cake")
+        .expect("cake.tmt is in the root folder's entries");
+    assert_eq!(cake.icon.kind, NoteIconKind::Text);
+    assert_eq!(cake.icon.cells.row_count(), 3);
+}
+
+/// An image icon takes the same path as every other kind, but its picture
+/// comes from `thumbs`: empty (so the fallback glyph shows) until the worker
+/// has produced the thumbnail, then the real, downscaled image on the next
+/// refresh. A reference that leads nowhere readable stays empty.
+fn a_note_s_image_icon_appears_once_its_thumbnail_is_ready(
+    app: &App,
+    session: &SessionRef,
+    vault_dir: &Path,
+) {
+    let thumbs = crate::thumbs::tests::install_for_tests(vault_dir.join("../thumb-cache"));
+    app.set_active_tab(2);
+    app.set_files_page(1);
+    std::fs::create_dir_all(vault_dir.join("images")).unwrap();
+    std::fs::write(
+        vault_dir.join("images/cover.png"),
+        crate::thumbs::tests::png(800, 400),
+    )
+    .unwrap();
+    std::fs::write(
+        vault_dir.join("covered.tmt"),
+        "@meta{ icon: \"images/cover.png\" }\n\nHas a cover.\n",
+    )
+    .unwrap();
+    std::fs::write(
+        vault_dir.join("lost.tmt"),
+        "@meta{ icon: \"images/missing.png\" }\n\nCover is gone.\n",
+    )
+    .unwrap();
+    session.borrow_mut().search_query = String::new();
+
+    let entry = |name: &str| {
+        let entries = app.get_directory_folder_entries();
+        (0..entries.row_count())
+            .map(|i| entries.row_data(i).unwrap())
+            .find(|e| e.display == name)
+            .unwrap_or_else(|| panic!("{name}.tmt is in the root folder's entries"))
+    };
+
+    refresh_list(app, session);
+    let covered = entry("covered");
+    assert_eq!(covered.icon.kind, NoteIconKind::Picture);
+    assert_eq!(covered.icon.picture.size().width, 0, "not produced yet");
+
+    thumbs.settle();
+    refresh_list(app, session);
+    let covered = entry("covered");
+    assert_eq!(covered.icon.kind, NoteIconKind::Picture);
+    assert_eq!(
+        (
+            covered.icon.picture.size().width,
+            covered.icon.picture.size().height
+        ),
+        (256, 128)
+    );
+
+    let lost = entry("lost");
+    assert_eq!(lost.icon.kind, NoteIconKind::Picture);
+    assert_eq!(lost.icon.picture.size().width, 0);
+
+    // The mini card resolves the same reference against the open note.
+    app.set_current_note_path("covered.tmt".into());
+    update_current_icon(
+        app,
+        session,
+        "@meta{ icon: \"images/cover.png\" }\n\nHas a cover.\n",
+    );
+    assert_eq!(app.get_current_icon().kind, NoteIconKind::Picture);
+    assert_eq!(app.get_current_icon().picture.size().width, 256);
+    app.set_current_note_path("".into());
 }
 
 /// The icon picker's *write* side -- `open_icon_picker` ->
@@ -274,7 +358,8 @@ fn icon_picker_selection_saves_and_is_reflected_in_the_note_list(
         .map(|i| entries.row_data(i).unwrap())
         .find(|e| e.display == "plain")
         .expect("plain.tmt is still in the root folder's entries");
-    assert!(row.icon_image.size().width > 0);
+    assert_eq!(row.icon.kind, NoteIconKind::Glyph);
+    assert!(row.icon.glyph.size().width > 0);
 }
 
 fn conflict_sheet_steps_through_and_resolves_every_conflict(

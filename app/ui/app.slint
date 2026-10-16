@@ -26,6 +26,8 @@ import {
     ActionRow,
 } from "@origiri-mobile/widgets.slint";
 export { PickerIconEntry } from "sheets/icon_picker.slint";
+import { NoteIconKind, NoteIconView } from "widgets/note_icon.slint";
+export { NoteIconKind, NoteIconView }
 import { NotePropertyEntry } from "pages/editor/properties.slint";
 export { NotePropertyEntry }
 import { SettingsAdapter, VaultData } from "adapters/settings.slint";
@@ -193,6 +195,8 @@ export component App inherits Window {
     in property <int> current: -1;
     in-out property <string> search-query: "";
     in property <string> current-title;
+    // The open note's own `@meta{ icon: ... }`, drawn on the mini card.
+    in property <NoteIconView> current-icon;
     in property <string> current-note-path: "";
     in property <string> note-kind: "";
     in property <[NotePropertyEntry]> note-metadata: [];
@@ -847,6 +851,7 @@ export component App inherits Window {
             gesture-enabled: root.current >= 0 && root.keyboard == 0px && !root.note-sheet-open && !root.settings-sheet-open;
 
             title: root.current-title;
+            icon: root.current-icon;
             preview: root.snippets.length > root.current && root.current >= 0 ? root.snippets[root.current] : "";
             has-conflict: root.current-has-conflict;
             syncing: root.syncing;

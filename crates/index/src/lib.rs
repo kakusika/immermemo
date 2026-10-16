@@ -16,9 +16,10 @@ use std::time::SystemTime;
 use rusqlite::{Connection, params};
 use tomet::merge::CONFLICT_MARKER;
 
+pub use immermemo_render_tomet::NoteIcon;
 pub use reconcile::ReconcileReport;
 use reconcile::mtime_parts;
-use schema::UPSERT_NOTE_SQL;
+use schema::{IconColumns, UPSERT_NOTE_SQL};
 pub use search::{SearchHit, extract_snippet};
 
 /// An indexed note in the vault.
@@ -69,9 +70,7 @@ impl NoteIndex {
         let title = display_name_from_rel(rel_path);
         let has_conflict = content.contains(CONFLICT_MARKER);
         let path_str = rel_path.to_string_lossy().to_string();
-        let (icon_name, icon_pkg) = immermemo_render_tomet::extract_note_icon(content)
-            .map(|(n, p)| (Some(n), Some(p)))
-            .unwrap_or((None, None));
+        let icon = IconColumns::of_note(content);
 
         self.conn.execute(
             UPSERT_NOTE_SQL,
@@ -83,8 +82,9 @@ impl NoteIndex {
                 meta.len(),
                 if has_conflict { 1 } else { 0 },
                 content,
-                icon_name,
-                icon_pkg,
+                icon.kind,
+                icon.value,
+                icon.pkg,
             ],
         )?;
         Ok(())
@@ -165,23 +165,22 @@ impl NoteIndex {
         }
     }
 
-    /// Returns the cached `(name, pkg)` icon metadata for the note at `rel_path`, if any.
-    pub fn icon_for(&self, rel_path: &Path) -> anyhow::Result<Option<(String, String)>> {
+    /// Returns the cached icon the note at `rel_path` declares, if any.
+    pub fn icon_for(&self, rel_path: &Path) -> anyhow::Result<Option<NoteIcon>> {
         let mut stmt = self
             .conn
-            .prepare_cached("SELECT icon_name, icon_pkg FROM notes WHERE path = ?1")?;
+            .prepare_cached("SELECT icon_kind, icon_value, icon_pkg FROM notes WHERE path = ?1")?;
         let path_str = rel_path.to_string_lossy();
         let mut rows = stmt.query(params![path_str])?;
-        if let Some(row) = rows.next()? {
-            let name: Option<String> = row.get(0)?;
-            let pkg: Option<String> = row.get(1)?;
-            match (name, pkg) {
-                (Some(n), Some(p)) if !n.is_empty() => Ok(Some((n, p))),
-                _ => Ok(None),
-            }
-        } else {
-            Ok(None)
+        let Some(row) = rows.next()? else {
+            return Ok(None);
+        };
+        Ok(IconColumns {
+            kind: row.get(0)?,
+            value: row.get(1)?,
+            pkg: row.get(2)?,
         }
+        .into_icon())
     }
 
     /// Returns up to `limit` most recently modified notes, newest first.
@@ -544,7 +543,13 @@ mod tests {
         index.reconcile_filesystem(vault.path()).unwrap();
 
         let icon = index.icon_for(Path::new("starred.tmt")).unwrap();
-        assert_eq!(icon, Some(("star".to_string(), "tabler".to_string())));
+        assert_eq!(
+            icon,
+            Some(NoteIcon::Glyph {
+                name: "star".to_owned(),
+                pkg: "tabler".to_owned()
+            })
+        );
 
         let plain = vault.path().join("plain.tmt");
         std::fs::write(&plain, "Plain note without icon.\n").unwrap();
@@ -552,5 +557,105 @@ mod tests {
 
         let plain_icon = index.icon_for(Path::new("plain.tmt")).unwrap();
         assert_eq!(plain_icon, None);
+    }
+
+    #[test]
+    fn icon_for_round_trips_a_text_and_an_image_icon() {
+        let vault = TempDir::new().unwrap();
+        let mut index = NoteIndex::open_in_memory().unwrap();
+        std::fs::write(
+            vault.path().join("cake.tmt"),
+            "@meta{ icon: \"🎂\" }\n\nCake.\n",
+        )
+        .unwrap();
+        std::fs::write(
+            vault.path().join("cover.tmt"),
+            "@meta{ icon: @embed(\"images/cover.png\") }\n\nCover.\n",
+        )
+        .unwrap();
+        index.reconcile_filesystem(vault.path()).unwrap();
+
+        assert_eq!(
+            index.icon_for(Path::new("cake.tmt")).unwrap(),
+            Some(NoteIcon::Text("🎂".to_owned()))
+        );
+        assert_eq!(
+            index.icon_for(Path::new("cover.tmt")).unwrap(),
+            Some(NoteIcon::Image("images/cover.png".to_owned()))
+        );
+    }
+
+    #[test]
+    fn changing_a_notes_icon_kind_replaces_every_icon_column() {
+        let vault = TempDir::new().unwrap();
+        let mut index = NoteIndex::open_in_memory().unwrap();
+        let rel = Path::new("n.tmt");
+        std::fs::write(
+            vault.path().join(rel),
+            "@meta{ icon: @doc.icon(\"star\") }\n\nx\n",
+        )
+        .unwrap();
+        index.reconcile_filesystem(vault.path()).unwrap();
+
+        let rewritten = "@meta{ icon: \"🎂\" }\n\nx\n";
+        std::fs::write(vault.path().join(rel), rewritten).unwrap();
+        index.record_write(vault.path(), rel, rewritten).unwrap();
+
+        assert_eq!(
+            index.icon_for(rel).unwrap(),
+            Some(NoteIcon::Text("🎂".to_owned()))
+        );
+        let pkg: Option<String> = index
+            .conn
+            .query_row("SELECT icon_pkg FROM notes WHERE path = 'n.tmt'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(pkg, None);
+    }
+
+    /// The index only caches the vault, so a database from another schema
+    /// version is rebuilt rather than migrated: it opens at the current
+    /// schema, empty, and the next reconcile fills it from the vault.
+    #[test]
+    fn a_database_from_another_schema_version_is_rebuilt() {
+        let dir = TempDir::new().unwrap();
+        let vault = dir.path().join("vault");
+        std::fs::create_dir_all(&vault).unwrap();
+        std::fs::write(
+            vault.join("a.tmt"),
+            "@meta{ icon: @doc.icon(\"star\") }\n\nx\n",
+        )
+        .unwrap();
+        let db = dir.path().join("index.db");
+        {
+            let conn = Connection::open(&db).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE notes (
+                    path TEXT PRIMARY KEY, title TEXT NOT NULL,
+                    mtime_secs INTEGER NOT NULL, mtime_nanos INTEGER NOT NULL,
+                    size INTEGER NOT NULL, has_conflict INTEGER NOT NULL DEFAULT 0,
+                    body TEXT NOT NULL, icon_name TEXT, icon_pkg TEXT);
+                INSERT INTO notes VALUES ('gone.tmt', 'gone', 0, 0, 1, 0, 'x', 'star', 'tabler');
+                PRAGMA user_version = 2;",
+            )
+            .unwrap();
+        }
+        let mut index = NoteIndex::open(&db).unwrap();
+        assert_eq!(index.icon_for(Path::new("gone.tmt")).unwrap(), None);
+
+        index.reconcile_filesystem(&vault).unwrap();
+        assert_eq!(
+            index.icon_for(Path::new("a.tmt")).unwrap(),
+            Some(NoteIcon::Glyph {
+                name: "star".to_owned(),
+                pkg: "tabler".to_owned()
+            })
+        );
+        let version: u32 = index
+            .conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(version, 3);
     }
 }

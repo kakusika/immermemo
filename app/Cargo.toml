@@ -15,6 +15,7 @@ path = "src/main.rs"
 [dependencies]
 immermemo-core = { workspace = true }
 immermemo-credentials = { workspace = true }
+immermemo-media = { workspace = true }
 immermemo-provider = { workspace = true }
 immermemo-render-tomet = { workspace = true }
 tomet = { workspace = true }
@@ -29,6 +30,7 @@ origiri-theme = { workspace = true }
 
 #= Crates.io
 anyhow = { workspace = true }
+clru = { workspace = true }
 directories = { workspace = true }
 image = { workspace = true }
 qrcode = { workspace = true }

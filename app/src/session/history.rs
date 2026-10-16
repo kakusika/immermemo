@@ -66,7 +66,7 @@ pub fn apply_restored(app: &App, session: &SessionRef, restored: Option<immermem
         }
     }
     update_rendered_body(app, &result.body);
-    update_note_stats(app, &result.body);
+    update_note_stats(app, session, &result.body);
     app.invoke_set_cursor(result.cursor as i32);
     show_history_state(app, &session.borrow());
 }
@@ -104,7 +104,7 @@ pub fn restore_note_version(app: &App, session: &SessionRef, rev_idx: usize) {
             update_rendered_body(app, &restored.body);
             app.set_can_undo(restored.can_undo);
             app.set_can_redo(restored.can_redo);
-            update_note_stats(app, &restored.body);
+            update_note_stats(app, session, &restored.body);
             app.set_history_sheet_open(false);
             set_status(app, "Restored note to selected revision");
             schedule_auto_sync(app, std::time::Duration::from_secs(5));

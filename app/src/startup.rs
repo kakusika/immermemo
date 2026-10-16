@@ -97,6 +97,7 @@ pub fn run(
         crate::platform::android::system_ui::set_status_bar_visible(false);
     }
 
+    crate::thumbs::init(&app, core.app_data.media_cache_dir());
     let session = Rc::new(RefCell::new(Session::new(core)));
     SESSION.with(|s| *s.borrow_mut() = Some(session.clone()));
     show_initial_notes(&app, &session, initial_note_path.as_deref());

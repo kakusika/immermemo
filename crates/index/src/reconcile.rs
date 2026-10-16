@@ -7,7 +7,7 @@ use std::time::SystemTime;
 use rusqlite::params;
 use tomet::merge::CONFLICT_MARKER;
 
-use crate::schema::UPSERT_NOTE_SQL;
+use crate::schema::{IconColumns, UPSERT_NOTE_SQL};
 use crate::{NoteIndex, display_name_from_rel};
 
 /// Summary of changes detected during a filesystem reconciliation.
@@ -95,10 +95,7 @@ impl NoteIndex {
                         let has_conflict = body.contains(CONFLICT_MARKER);
                         let title = display_name_from_rel(&rel_path);
                         let is_new = cached.is_none();
-                        let (icon_name, icon_pkg) =
-                            immermemo_render_tomet::extract_note_icon(&body)
-                                .map(|(n, p)| (Some(n), Some(p)))
-                                .unwrap_or((None, None));
+                        let icon = IconColumns::of_note(&body);
 
                         upsert_stmt.execute(params![
                             &path_str,
@@ -108,8 +105,9 @@ impl NoteIndex {
                             size,
                             if has_conflict { 1 } else { 0 },
                             &body,
-                            icon_name,
-                            icon_pkg,
+                            icon.kind,
+                            icon.value,
+                            icon.pkg,
                         ])?;
 
                         if is_new {
@@ -163,9 +161,7 @@ impl NoteIndex {
                         conflict_set.contains(rel_path.as_path()) || body.contains(CONFLICT_MARKER);
                     let title = display_name_from_rel(rel_path);
                     let path_str = rel_path.to_string_lossy().to_string();
-                    let (icon_name, icon_pkg) = immermemo_render_tomet::extract_note_icon(&body)
-                        .map(|(n, p)| (Some(n), Some(p)))
-                        .unwrap_or((None, None));
+                    let icon = IconColumns::of_note(&body);
 
                     upsert_stmt.execute(params![
                         &path_str,
@@ -175,8 +171,9 @@ impl NoteIndex {
                         size,
                         if has_conflict { 1 } else { 0 },
                         &body,
-                        icon_name,
-                        icon_pkg,
+                        icon.kind,
+                        icon.value,
+                        icon.pkg,
                     ])?;
                 }
             }

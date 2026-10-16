@@ -11,6 +11,8 @@ import {
     IconTile,
 } from "@origiri-mobile/widgets.slint";
 import { LongPressRippleArea } from "../widgets/long_press_ripple.slint";
+import { NoteIconContent, NoteIconView } from "../widgets/note_icon.slint";
+import { DirectoryTile } from "../widgets/directory_tile.slint";
 import { SelectionAdapter } from "../adapters/selection.slint";
 import { DailyCalendarView } from "../widgets/daily_calendar.slint";
 
@@ -25,11 +27,11 @@ export struct DirectoryEntry {
     display: string,
     note-index: int,
     has-conflict: bool,
-    // A note's `@meta{ icon: @doc.icon(...) }`, resolved (see
-    // `immermemo::session::to_entry_view`). Empty for a folder entry, or a
+    // A note's `@meta{ icon: ... }`, resolved (see
+    // `immermemo::session::to_entry_view`). `empty` for a folder entry, or a
     // note with no such meta -- `file`/`folder` (TablerIcons) stand in for
-    // either below, same as before this field existed.
-    icon-image: image,
+    // either below.
+    icon: NoteIconView,
     path: string,
     is-selected: bool,
 }
@@ -106,7 +108,7 @@ component DirectoryBreadcrumb inherits HorizontalLayout {
 // - Right: 3-dot overflow menu icon (dots-vertical) or selection checkbox
 component DirectoryRow inherits Rectangle {
     in property <bool> is-folder: false;
-    in property <image> icon-image;
+    in property <NoteIconView> icon;
     in property <string> display-text: "";
     in property <bool> highlighted: false;
     in property <bool> has-conflict: false;
@@ -154,17 +156,23 @@ component DirectoryRow inherits Rectangle {
                         : Palette.foreground.with-alpha(0.06)));
                     animate background { duration: 150ms; }
 
-                    if !root.is-selected || root.is-folder: Icon {
-                        source: root.is-folder
-                            ? TablerIcons.folder
-                            : (root.icon-image.width > 0 ? root.icon-image : TablerIcons.file-text);
+                    if root.is-folder: Icon {
+                        source: TablerIcons.folder;
                         width: 20px * Metrics.ui-scale;
                         height: 20px * Metrics.ui-scale;
-                        color: root.is-folder
-                            ? Palette.accent-background
-                            : (root.highlighted ? Palette.accent-background : Palette.foreground);
+                        color: Palette.accent-background;
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
+                    }
+
+                    if !root.is-selected && !root.is-folder: NoteIconContent {
+                        width: parent.width;
+                        height: parent.height;
+                        border-radius: parent.border-radius;
+                        icon: root.icon;
+                        fallback: TablerIcons.file-text;
+                        tint: root.highlighted ? Palette.accent-background : Palette.foreground;
+                        glyph-size: 20px * Metrics.ui-scale;
                     }
 
                     if root.is-selected && !root.is-folder: Icon {
@@ -476,7 +484,7 @@ export component FilesScreen inherits Rectangle {
 
                 for entry[i] in root.folder-entries: DirectoryRow {
                     is-folder: entry.is-folder;
-                    icon-image: entry.icon-image;
+                    icon: entry.icon;
                     display-text: entry.display;
                     highlighted: !entry.is-folder && root.highlight-current && entry.note-index == root.current;
                     has-conflict: !entry.is-folder && entry.has-conflict;
@@ -524,13 +532,12 @@ export component FilesScreen inherits Rectangle {
                 GridLayout {
                     spacing: Metrics.spacing-sm;
 
-                    for entry[i] in root.folder-entries: IconTile {
+                    for entry[i] in root.folder-entries: DirectoryTile {
                         row: i / 3;
                         col: Math.mod(i, 3);
                         tile-height: 96px * Metrics.ui-scale;
-                        icon: entry.is-folder
-                            ? TablerIcons.folder
-                            : (entry.icon-image.width > 0 ? entry.icon-image : TablerIcons.file);
+                        is-folder: entry.is-folder;
+                        icon: entry.icon;
                         label-text: entry.display;
                         highlighted: (!entry.is-folder && entry.is-selected)
                             || (!entry.is-folder && root.highlight-current && entry.note-index == root.current);

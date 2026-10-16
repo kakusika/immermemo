@@ -1,0 +1,125 @@
+// Copyright © 2026 Immermemo contributors
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+import { NoteIconContent, NoteIconView } from "note_icon.slint";
+
+// One tile of the Directory page's Grid view: a folder, or a note showing
+// its own icon. Same footprint, press feedback and corner slot as
+// `origiri-mobile`'s `IconTile` (which this stands in for in this grid:
+// `IconTile` tints whatever image it is given, which a note's picture icon
+// must not be). The top-right corner is a free `@children` slot, e.g. for
+// a conflict dot or a selection check.
+export component DirectoryTile inherits Rectangle {
+    in property <bool> is-folder: false;
+    in property <NoteIconView> icon;
+    in property <string> label-text;
+    in property <bool> highlighted: false;
+    in property <length> tile-height: 96px * Metrics.ui-scale;
+    in property <bool> long-press-enabled: false;
+    callback clicked();
+    callback long-pressed();
+
+    property <color> tint: root.highlighted ? Colors.primary : Palette.foreground;
+    property <length> swatch: 44px * Metrics.ui-scale;
+
+    horizontal-stretch: 1;
+    // Zeroing both min/preferred-width makes equal-column grids split
+    // purely by stretch instead of by each tile's own label width.
+    min-width: 0px;
+    preferred-width: 0px;
+    height: root.tile-height;
+    border-radius: Metrics.radius-md;
+    background: touch.pressed
+        ? Palette.foreground.with-alpha(0.12)
+        : (root.highlighted ? Colors.primary-container : Colors.surface-elevated);
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: Metrics.spacing-xs;
+
+        HorizontalLayout {
+            alignment: center;
+
+            // Same box as a note's swatch, so labels line up across a row
+            // mixing folders and notes.
+            if root.is-folder: Rectangle {
+                width: root.swatch;
+                height: root.swatch;
+
+                Icon {
+                    source: TablerIcons.folder;
+                    width: Metrics.icon-lg;
+                    height: Metrics.icon-lg;
+                    color: root.tint;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+
+            if !root.is-folder: NoteIconContent {
+                width: root.swatch;
+                height: root.swatch;
+                border-radius: Metrics.radius-md;
+                icon: root.icon;
+                fallback: TablerIcons.file;
+                tint: root.tint;
+                glyph-size: Metrics.icon-lg;
+            }
+        }
+
+        HorizontalLayout {
+            alignment: center;
+
+            Text {
+                text: root.label-text;
+                font-size: Metrics.font-sm;
+                font-weight: 600;
+                color: root.tint;
+                horizontal-alignment: center;
+                overflow: elide;
+            }
+        }
+    }
+
+    // Corner slot: sized to whatever the caller puts in it, pinned
+    // top-right. The outer `Rectangle` (not a layout) is what is
+    // positioned, sized from the inner layout's preferred size.
+    Rectangle {
+        y: Metrics.spacing-xs;
+        width: corner-layout.preferred-width;
+        height: corner-layout.preferred-height;
+        x: root.width - self.width - Metrics.spacing-xs;
+
+        corner-layout := HorizontalLayout {
+            @children
+        }
+    }
+
+    property <bool> long-press-fired: false;
+
+    touch := TouchArea {
+        clicked => {
+            if (root.long-press-fired) {
+                root.long-press-fired = false;
+            } else {
+                root.clicked();
+            }
+        }
+    }
+
+    Timer {
+        interval: 400ms;
+        running: touch.pressed && root.long-press-enabled && !root.long-press-fired;
+        triggered => {
+            root.long-press-fired = true;
+            root.long-pressed();
+        }
+    }
+}

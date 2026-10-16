@@ -2,6 +2,7 @@ import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 import { MiniNoteCard, CalloutBubble } from "../components.slint";
+import { NoteIconView } from "note_icon.slint";
 
 // Mini note card container (anchored above the bottom nav bar).
 // Fixed at resting position so upward swipe gesture coordinates never shift.
@@ -10,6 +11,7 @@ import { MiniNoteCard, CalloutBubble } from "../components.slint";
 // upward swipe-to-open gesture detection.
 export component MiniNoteBar inherits Rectangle {
     in property <string> title: "";
+    in property <NoteIconView> icon;
     in property <string> preview: "";
     in property <bool> has-conflict: false;
     in property <bool> syncing: false;
@@ -267,6 +269,7 @@ export component MiniNoteBar inherits Rectangle {
             y: 20px * Metrics.ui-scale - root.sheet-progress * root.resting-y;
             opacity: max(0.0, 1.0 - root.sheet-progress * 10.0);
             title: root.title;
+            icon: root.icon;
             preview: root.preview;
             has-conflict: root.has-conflict;
             syncing: root.syncing;

@@ -325,7 +325,7 @@ fn apply_symbol_insertion(body: &str, sym: &str, cursor: usize, anchor: usize) -
 fn handle_edit(app: &App, session: &SessionRef, text: &str) {
     let max_width = app.get_body_content_width();
     app.set_note_body_items(render::note_body_items(text, app, max_width));
-    session::update_note_stats(app, text);
+    session::update_note_stats(app, session, text);
     {
         let mut s = session.borrow_mut();
         let outcome = s.apply_edit(text);

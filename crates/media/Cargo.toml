@@ -1,0 +1,13 @@
+[package]
+name = "immermemo-media"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+#= Crates.io
+anyhow = { workspace = true }
+image = { workspace = true }
+sha2 = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

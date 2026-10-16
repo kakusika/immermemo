@@ -1,0 +1,95 @@
+// Copyright © 2026 Immermemo contributors
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+import { Palette } from "std-widgets.slint";
+import { Metrics } from "@origiri-mobile/tokens.slint";
+import { Icon } from "@origiri-icons/icons.slint";
+
+// Which of the shapes a note's `@meta{ icon: ... }` can take is drawn (see
+// `immermemo_render_tomet::NoteIcon`). `empty` is a note with no icon, or
+// one that doesn't resolve to anything drawable.
+export enum NoteIconKind {
+    empty,
+    glyph,
+    text,
+    picture,
+}
+
+// A note's icon, resolved in Rust into whatever the matching `kind` needs:
+// `glyph` is a vector glyph (tinted by the caller), `picture` is a
+// raster/SVG thumbnail (drawn as-is -- never tinted), `cells` are the 1 to
+// 4 graphemes of a text icon (see `text_icon_cells`). A `picture` whose
+// thumbnail hasn't been produced yet has a zero-width `picture`; it draws
+// the `fallback` until then.
+export struct NoteIconView {
+    kind: NoteIconKind,
+    glyph: image,
+    picture: image,
+    cells: [string],
+}
+
+// Draws a `NoteIconView` filling its parent: a glyph centred at
+// `glyph-size`, text laid out like `tomet-book`'s avatars (1 cell large,
+// 2 side by side, 3 as a 2x2 grid with the third centred below, 4 as 2x2),
+// or a picture covering the whole box. Clips to its own `border-radius`,
+// so the owner just passes its corner radius down.
+export component NoteIconContent inherits Rectangle {
+    in property <NoteIconView> icon;
+    // Stands in when `icon` has nothing drawable (no icon, an unresolved
+    // glyph, a picture still loading or that failed to load).
+    in property <image> fallback;
+    in property <color> tint: Palette.foreground;
+    in property <length> glyph-size: Metrics.icon-md;
+
+    clip: true;
+
+    property <bool> shows-glyph: root.icon.kind == NoteIconKind.glyph && root.icon.glyph.width > 0;
+    property <bool> shows-text: root.icon.kind == NoteIconKind.text && root.icon.cells.length > 0;
+    property <bool> shows-picture: root.icon.kind == NoteIconKind.picture && root.icon.picture.width > 0;
+    property <int> count: root.icon.cells.length;
+    property <length> cell: root.width / 2;
+
+    if !root.shows-glyph && !root.shows-text && !root.shows-picture: Icon {
+        source: root.fallback;
+        width: root.glyph-size;
+        height: root.glyph-size;
+        color: root.tint;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+
+    if root.shows-glyph: Icon {
+        source: root.icon.glyph;
+        width: root.glyph-size;
+        height: root.glyph-size;
+        color: root.tint;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+
+    if root.shows-picture: Image {
+        source: root.icon.picture;
+        width: parent.width;
+        height: parent.height;
+        image-fit: cover;
+    }
+
+    if root.shows-text: Rectangle {
+        for text-cell[i] in root.icon.cells: Text {
+            text: text-cell;
+            color: root.tint;
+            font-weight: 600;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            font-size: root.count == 1 ? root.width * 0.56 : root.cell * 0.72;
+            width: root.count == 1 ? root.width : root.cell;
+            height: root.count == 1 ? root.height : root.cell;
+            // 2 cells share one centred row; 3 and 4 fill a 2x2 grid with
+            // the lone third cell centred on the bottom row.
+            x: root.count == 1 ? 0px
+                : (root.count == 3 && i == 2 ? (root.width - root.cell) / 2 : Math.mod(i, 2) * root.cell);
+            y: root.count == 1 ? 0px
+                : (root.count == 2 ? (root.height - root.cell) / 2 : Math.floor(i / 2) * root.cell);
+        }
+    }
+}

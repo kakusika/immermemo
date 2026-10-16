@@ -12,7 +12,8 @@ use slint::{ComponentHandle, ModelRc, PhysicalSize, VecModel};
 
 use immermemo::render::to_note_body_item_view;
 use immermemo::{
-    AccountData, App, BreadcrumbSegment, DirectoryEntry, PickerIconEntry, SettingsAdapter,
+    AccountData, App, BreadcrumbSegment, DirectoryEntry, NoteIconKind, NoteIconView,
+    PickerIconEntry, SettingsAdapter,
 };
 
 struct Headless {
@@ -128,6 +129,32 @@ fn main() {
     // root: a folder, a second folder, and two root-level notes.
     app.set_active_tab(2);
     app.set_files_page(1);
+    let text_icon = |text: &str| {
+        let cells: Vec<slint::SharedString> = text
+            .chars()
+            .map(|c| slint::SharedString::from(c.to_string()))
+            .collect();
+        NoteIconView {
+            kind: NoteIconKind::Text,
+            cells: ModelRc::new(VecModel::from(cells)),
+            ..NoteIconView::default()
+        }
+    };
+    // A stand-in for a decoded thumbnail: a diagonal gradient, so a
+    // `cover` crop that squashes or tints it is visible.
+    let picture_icon = || {
+        let mut buf = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::new(96, 64);
+        let (w, h) = (buf.width(), buf.height());
+        for (i, px) in buf.make_mut_slice().iter_mut().enumerate() {
+            let (x, y) = ((i as u32) % w, (i as u32) / w);
+            *px = slint::Rgba8Pixel::new((x * 255 / w) as u8, (y * 255 / h) as u8, 160, 255);
+        }
+        NoteIconView {
+            kind: NoteIconKind::Picture,
+            picture: slint::Image::from_rgba8(buf),
+            ..NoteIconView::default()
+        }
+    };
     let root_entries = || {
         ModelRc::new(VecModel::from(vec![
             DirectoryEntry {
@@ -136,7 +163,7 @@ fn main() {
                 display: "meeting".into(),
                 note_index: -1,
                 has_conflict: false,
-                icon_image: slint::Image::default(),
+                icon: NoteIconView::default(),
                 path: "".into(),
                 is_selected: false,
             },
@@ -146,7 +173,7 @@ fn main() {
                 display: "ideas".into(),
                 note_index: -1,
                 has_conflict: false,
-                icon_image: slint::Image::default(),
+                icon: NoteIconView::default(),
                 path: "".into(),
                 is_selected: false,
             },
@@ -156,7 +183,7 @@ fn main() {
                 display: "買い物リスト".into(),
                 note_index: 0,
                 has_conflict: false,
-                icon_image: slint::Image::default(),
+                icon: text_icon("🛒"),
                 path: "".into(),
                 is_selected: false,
             },
@@ -166,7 +193,47 @@ fn main() {
                 display: "untitled-1".into(),
                 note_index: 4,
                 has_conflict: false,
-                icon_image: slint::Image::default(),
+                icon: NoteIconView::default(),
+                path: "".into(),
+                is_selected: false,
+            },
+            DirectoryEntry {
+                is_folder: false,
+                key: "".into(),
+                display: "two cells".into(),
+                note_index: 5,
+                has_conflict: false,
+                icon: text_icon("あい"),
+                path: "".into(),
+                is_selected: false,
+            },
+            DirectoryEntry {
+                is_folder: false,
+                key: "".into(),
+                display: "three cells".into(),
+                note_index: 6,
+                has_conflict: false,
+                icon: text_icon("ABC"),
+                path: "".into(),
+                is_selected: false,
+            },
+            DirectoryEntry {
+                is_folder: false,
+                key: "".into(),
+                display: "four cells".into(),
+                note_index: 7,
+                has_conflict: false,
+                icon: text_icon("ABCD"),
+                path: "".into(),
+                is_selected: false,
+            },
+            DirectoryEntry {
+                is_folder: false,
+                key: "".into(),
+                display: "picture".into(),
+                note_index: 8,
+                has_conflict: false,
+                icon: picture_icon(),
                 path: "".into(),
                 is_selected: false,
             },
@@ -197,7 +264,7 @@ fn main() {
         display: "2026-09-27".into(),
         note_index: 1,
         has_conflict: true,
-        icon_image: slint::Image::default(),
+        icon: NoteIconView::default(),
         path: "".into(),
         is_selected: false,
     }])));
@@ -228,7 +295,7 @@ fn main() {
         display: "09-27".into(),
         note_index: 1,
         has_conflict: true,
-        icon_image: slint::Image::default(),
+        icon: NoteIconView::default(),
         path: "".into(),
         is_selected: false,
     }])));
@@ -246,6 +313,17 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-directory-grid.ppm"));
 
+    // The mini card shows the open note's own icon.
+    app.set_current_icon(text_icon("🐾🩵"));
+    render(&window, size, &format!("{prefix}-mini-card-text-icon.ppm"));
+    app.set_current_icon(picture_icon());
+    render(
+        &window,
+        size,
+        &format!("{prefix}-mini-card-picture-icon.ppm"),
+    );
+    app.set_current_icon(NoteIconView::default());
+
     // Directory -- Grid view, descended into "meeting" too.
     app.set_directory_breadcrumb(ModelRc::new(VecModel::from(vec![
         root_crumb(),
@@ -260,7 +338,7 @@ fn main() {
         display: "2026-09-27".into(),
         note_index: 1,
         has_conflict: true,
-        icon_image: slint::Image::default(),
+        icon: NoteIconView::default(),
         path: "".into(),
         is_selected: false,
     }])));

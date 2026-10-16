@@ -3,6 +3,7 @@ import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 import { BubbleButton } from "@origiri-mobile/widgets.slint";
 import { LongPressRippleArea } from "widgets/long_press_ripple.slint";
+import { NoteIconContent, NoteIconView } from "widgets/note_icon.slint";
 export {
     LongPressRippleArea,
 }
@@ -152,6 +153,7 @@ component NavItem inherits Rectangle {
 // Floating Mini-Player Note Card shown above the bottom nav bar
 export component MiniNoteCard inherits Rectangle {
     in property <string> title: "";
+    in property <NoteIconView> icon;
     in property <string> preview: "";
     in property <bool> has-conflict: false;
     in property <bool> syncing: false;
@@ -193,13 +195,25 @@ export component MiniNoteCard inherits Rectangle {
                     ? Colors.warning.with-alpha(0.18)
                     : Palette.accent-background.with-alpha(0.18);
 
-                Icon {
-                    source: root.has-conflict ? TablerIcons.alert-triangle : TablerIcons.note;
-                    color: root.has-conflict ? Colors.warning : Palette.accent-background;
+                // A conflict outranks the note's own icon: it is the one
+                // thing about the open note that must not go unseen.
+                if root.has-conflict: Icon {
+                    source: TablerIcons.alert-triangle;
+                    color: Colors.warning;
                     width: Metrics.icon-md;
                     height: Metrics.icon-md;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;
+                }
+
+                if !root.has-conflict: NoteIconContent {
+                    width: parent.width;
+                    height: parent.height;
+                    border-radius: parent.border-radius;
+                    icon: root.icon;
+                    fallback: TablerIcons.note;
+                    tint: Palette.accent-background;
+                    glyph-size: Metrics.icon-md;
                 }
             }
         }

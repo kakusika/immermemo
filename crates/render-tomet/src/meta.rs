@@ -5,9 +5,9 @@ use tomet::ast::{Block, Document, Element, ElementValue, Entry, Inline, Sigil, V
 use crate::inline::inline_content;
 use crate::types::{ElementArgs, ElementIdentity, RenderItem};
 
-/// Reads `src`'s top-level `@meta{ ... }` group's `key` entry, if present
-/// *and* its value is itself an element (e.g. `@meta{ icon: @doc.icon(...) }`).
-pub fn meta_element(src: &str, key: &str) -> Option<(ElementIdentity, ElementArgs)> {
+/// Reads `src`'s top-level `@meta{ ... }` group's `key` entry value, whatever
+/// its shape (a string, an element, ...), if present.
+pub(crate) fn meta_value(src: &str, key: &str) -> Option<Value> {
     let doc: Document = tomet::parser::parse_document(src).ok()?;
     let meta = doc.blocks.iter().find_map(|block| match block {
         Block::Element(el) => {
@@ -22,47 +22,32 @@ pub fn meta_element(src: &str, key: &str) -> Option<(ElementIdentity, ElementArg
         return None;
     };
     entries.iter().find_map(|entry| match entry {
-        Entry::Pair(entry_key, Value::Element(el)) if entry_key == key => {
-            let Sigil::Named(name) = &el.sigil else {
-                return None;
-            };
-            Some((
-                ElementIdentity {
-                    namespace: name.namespace.clone(),
-                    name: name.name.clone(),
-                },
-                crate::inline::element_args(el.args.as_ref()),
-            ))
-        }
+        Entry::Pair(entry_key, value) if entry_key == key => Some(value.clone()),
         _ => None,
     })
 }
 
-/// Extracts `(icon_name, icon_pkg)` from a note's `@meta{ icon: @doc.icon(...) }`, if present.
-pub fn extract_note_icon(src: &str) -> Option<(String, String)> {
-    let (identity, args) = meta_element(src, "icon")?;
-    if identity.namespace.as_deref() == Some("doc") && identity.name == "icon" {
-        let (name, pkg) = match &args {
-            ElementArgs::Positional(name) => (name.clone(), "tabler".to_string()),
-            ElementArgs::Named(pairs) => {
-                let name = pairs
-                    .iter()
-                    .find(|(key, _)| key.is_empty())
-                    .map(|(_, value)| value.clone())
-                    .unwrap_or_default();
-                let pkg = pairs
-                    .iter()
-                    .find(|(key, _)| key == "pkg")
-                    .map(|(_, value)| value.clone())
-                    .unwrap_or_else(|| "tabler".to_string());
-                (name, pkg)
-            }
-            ElementArgs::None => (String::new(), "tabler".to_string()),
-        };
-        Some((name, pkg))
-    } else {
-        None
-    }
+/// Reads `src`'s top-level `@meta{ ... }` group's `key` entry, if present
+/// *and* its value is itself an element (e.g. `@meta{ icon: @doc.icon(...) }`).
+pub fn meta_element(src: &str, key: &str) -> Option<(ElementIdentity, ElementArgs)> {
+    let Value::Element(el) = meta_value(src, key)? else {
+        return None;
+    };
+    element_identity_and_args(&el)
+}
+
+/// A named element's identity and string args; `None` for an anonymous one.
+pub(crate) fn element_identity_and_args(el: &Element) -> Option<(ElementIdentity, ElementArgs)> {
+    let Sigil::Named(name) = &el.sigil else {
+        return None;
+    };
+    Some((
+        ElementIdentity {
+            namespace: name.namespace.clone(),
+            name: name.name.clone(),
+        },
+        crate::inline::element_args(el.args.as_ref()),
+    ))
 }
 
 /// Returns true if an element identity represents document-level metadata

@@ -26,7 +26,9 @@ use std::rc::Rc;
 use immermemo_core::directory;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
-use crate::{App, BreadcrumbSegment, DirectoryEntry, NoteBodyItemView, NotePropertyEntry};
+use crate::{
+    App, BreadcrumbSegment, DirectoryEntry, NoteBodyItemView, NoteIconView, NotePropertyEntry,
+};
 
 /// What the window is currently editing. Lives on the UI thread only.
 pub struct Session {
@@ -135,16 +137,19 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
     let folder_entries_raw = directory::build_folder_entries(&source, &current_folder);
 
     // Only resolve note icon metadata for notes actually present in this folder
-    let mut icon_by_path: std::collections::HashMap<PathBuf, slint::Image> =
+    let mut icon_by_path: std::collections::HashMap<PathBuf, NoteIconView> =
         std::collections::HashMap::new();
     for entry in &folder_entries_raw {
         if !entry.is_folder
             && let Ok(idx) = usize::try_from(entry.note_index)
             && let Some(abs_path) = s.notes.get(idx)
             && let Ok(rel_path) = abs_path.strip_prefix(&s.vault_dir)
-            && let Ok(Some((name, pkg))) = s.index.icon_for(rel_path)
+            && let Ok(Some(icon)) = s.index.icon_for(rel_path)
         {
-            icon_by_path.insert(abs_path.clone(), crate::render::icon_image(&name, &pkg));
+            icon_by_path.insert(
+                abs_path.clone(),
+                crate::note_icon::resolve_view(Some(&icon), &s.vault_dir, rel_path),
+            );
         }
     }
 
@@ -167,10 +172,10 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
 fn to_entry_view(
     e: directory::DirectoryEntry,
     notes: &[PathBuf],
-    icon_by_path: &std::collections::HashMap<PathBuf, slint::Image>,
+    icon_by_path: &std::collections::HashMap<PathBuf, NoteIconView>,
     selection: &origiri_selection::Selection,
 ) -> DirectoryEntry {
-    let (icon_image, path_str) = match usize::try_from(e.note_index)
+    let (icon, path_str) = match usize::try_from(e.note_index)
         .ok()
         .and_then(|i| notes.get(i))
     {
@@ -179,7 +184,7 @@ fn to_entry_view(
             let icon = icon_by_path.get(path).cloned().unwrap_or_default();
             (icon, p_str)
         }
-        None => (slint::Image::default(), String::new()),
+        None => (NoteIconView::default(), String::new()),
     };
     let is_selected = !e.is_folder && !path_str.is_empty() && selection.is_selected(&path_str);
     DirectoryEntry {
@@ -188,7 +193,7 @@ fn to_entry_view(
         display: e.display.into(),
         note_index: e.note_index,
         has_conflict: e.has_conflict,
-        icon_image,
+        icon,
         path: path_str.into(),
         is_selected,
     }
@@ -232,13 +237,16 @@ pub fn update_rendered_body(app: &App, text: &str) {
     }
 }
 
-pub fn update_note_stats(app: &App, text: &str) {
+/// Refreshes everything derived from the open note's text: counts, kind,
+/// properties and the icon on the mini card.
+pub fn update_note_stats(app: &App, session: &SessionRef, text: &str) {
     let stats = immermemo_core::note_stats(text);
     app.set_char_count(stats.char_count);
     app.set_word_count(stats.word_count);
     app.set_line_count(stats.line_count);
     let kind = immermemo_render_tomet::extract_note_kind(text).unwrap_or_default();
     app.set_note_kind(kind.into());
+    update_current_icon(app, session, text);
     let metadata_entries: Vec<NotePropertyEntry> =
         immermemo_render_tomet::extract_note_metadata(text)
             .into_iter()
@@ -250,11 +258,25 @@ pub fn update_note_stats(app: &App, text: &str) {
     app.set_note_metadata(Rc::new(VecModel::from(metadata_entries)).into());
 }
 
+/// Sets the mini card's icon from the open note's `text`. The note's path
+/// (`current-note-path`) is what an image reference is resolved against.
+pub fn update_current_icon(app: &App, session: &SessionRef, text: &str) {
+    let icon = immermemo_render_tomet::extract_note_icon(text);
+    let vault_dir = session.borrow().vault_dir.clone();
+    let note_rel = PathBuf::from(app.get_current_note_path().as_str());
+    app.set_current_icon(crate::note_icon::resolve_view(
+        icon.as_ref(),
+        &vault_dir,
+        &note_rel,
+    ));
+}
+
 pub fn clear_note_stats(app: &App) {
     app.set_current_note_path(SharedString::new());
     app.set_char_count(0);
     app.set_word_count(0);
     app.set_line_count(0);
     app.set_note_kind(SharedString::new());
+    app.set_current_icon(NoteIconView::default());
     app.set_note_metadata(Rc::new(VecModel::from(Vec::<NotePropertyEntry>::new())).into());
 }

@@ -44,6 +44,14 @@ impl AppData {
     pub fn base(&self) -> &Path {
         &self.base
     }
+
+    /// Where the thumbnails of the images notes refer to are cached. Shared by
+    /// every vault (one remote image is one entry however many notes use it)
+    /// and disposable: nothing here is the only copy of anything, it is
+    /// rebuilt from the originals on demand.
+    pub fn media_cache_dir(&self) -> PathBuf {
+        self.base.join("cache").join("media")
+    }
 }
 
 fn read_trimmed(path: &Path) -> Option<String> {

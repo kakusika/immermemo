@@ -7,6 +7,7 @@ members = [
   "crates/credentials",
   "crates/identity",
   "crates/index",
+  "crates/media",
   "crates/provider",
   "crates/sync",
   "crates/render-tomet",
@@ -25,6 +26,7 @@ immermemo-core = { path = "crates/core" }
 immermemo-credentials = { path = "crates/credentials" }
 immermemo-identity = { path = "crates/identity" }
 immermemo-index = { path = "crates/index" }
+immermemo-media = { path = "crates/media" }
 immermemo-provider = { path = "crates/provider" }
 immermemo-sync = { path = "crates/sync" }
 immermemo-render-tomet = { path = "crates/render-tomet" }
@@ -44,6 +46,7 @@ tomet = { git = "https://github.com/tomet-lang/tomet.git" }
 #= Crates.io
 anyhow = "1.0"
 base64 = "0.23"
+clru = "0.6"
 directories = "6"
 git2 = { version = "0.19", features = ["vendored-libgit2", "vendored-openssl"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
@@ -54,6 +57,7 @@ openssl = "0.10"
 qrcode = { version = "0.14", default-features = false }
 rusqlite = { version = "0.33", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
+sha2 = "0.10"
 serde_json = "1.0"
 # Target-specific backends and renderers are selected in `app/Cargo.toml`.
 slint = { version = "1.18", default-features = false, features = [
@@ -62,6 +66,7 @@ slint = { version = "1.18", default-features = false, features = [
 slint-build = "1.18"
 ssh-key = { version = "0.6", features = ["ed25519", "crypto", "std"] }
 sys-locale = "0.3"
+unicode-segmentation = "1.12"
 ureq = { version = "3", default-features = false, features = [
   "native-tls",
   "gzip",

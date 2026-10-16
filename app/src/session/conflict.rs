@@ -21,7 +21,7 @@ pub fn resolve_active_conflict(
         Ok(resolved) => {
             show_history_state(app, &session.borrow());
             update_rendered_body(app, &resolved.body);
-            update_note_stats(app, &resolved.body);
+            update_note_stats(app, session, &resolved.body);
             let (conflicted_snapshot, conflict_count) = {
                 let s = session.borrow();
                 (
@@ -104,7 +104,7 @@ pub fn resolve_conflict_step(app: &App, session: &SessionRef, choice: i32) {
         Ok(resolved) => {
             show_history_state(app, &session.borrow());
             update_rendered_body(app, &resolved.body);
-            update_note_stats(app, &resolved.body);
+            update_note_stats(app, session, &resolved.body);
             let (conflicted_snapshot, conflict_count) = {
                 let s = session.borrow();
                 (

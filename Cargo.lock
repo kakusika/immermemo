@@ -2718,11 +2718,13 @@ name = "immermemo"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "clru",
  "directories",
  "i-slint-backend-android-activity",
  "image",
  "immermemo-core",
  "immermemo-credentials",
+ "immermemo-media",
  "immermemo-provider",
  "immermemo-render-tomet",
  "jni 0.21.1",
@@ -2793,6 +2795,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "immermemo-media"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "image",
+ "sha2",
+ "tempfile",
+]
+
+[[package]]
 name = "immermemo-provider"
 version = "0.1.0"
 dependencies = [
@@ -2808,6 +2820,7 @@ name = "immermemo-render-tomet"
 version = "0.1.0"
 dependencies = [
  "tomet",
+ "unicode-segmentation",
 ]
 
 [[package]]
