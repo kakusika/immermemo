@@ -8,10 +8,11 @@ use std::rc::Rc;
 use slint::{ComponentHandle, Model, SharedString};
 
 use crate::haptic;
+use crate::provider;
 use crate::render;
 use crate::session::{
-    Session, refresh_vault_list, set_status, start_sync, switch_vault, vault_display_name,
-    vault_path_from_input,
+    Session, on_ui_thread, refresh_vault_list, set_status, start_sync, switch_vault,
+    vault_display_name, vault_path_from_input,
 };
 use crate::update_provider_ui_state;
 use crate::{AccountData, App, SettingsAdapter};
@@ -30,47 +31,20 @@ pub fn migrate_legacy_remotes(session: &Session) {
             continue;
         }
 
-        let maybe_account =
-            if let Some((user, _)) = immermemo_provider::GitHubProvider::parse_remote(trimmed) {
-                Some(immermemo_core::Account {
-                    id: format!("github:{user}"),
-                    provider: "github".to_string(),
-                    instance_url: "https://github.com".to_string(),
-                    username: user,
-                    display_name: None,
-                    avatar_url: None,
-                })
-            } else if let Some((host, user, _)) =
-                immermemo_provider::ForgejoProvider::parse_any_remote(trimmed)
-            {
-                let instance = if host.starts_with("http://") || host.starts_with("https://") {
-                    host
-                } else {
-                    format!("https://{host}")
-                };
-                Some(immermemo_core::Account {
-                    id: format!("forgejo:{instance}:{user}"),
-                    provider: "forgejo".to_string(),
-                    instance_url: instance,
-                    username: user,
-                    display_name: None,
-                    avatar_url: None,
-                })
-            } else {
-                None
-            };
-
-        if let Some(acc) = maybe_account {
-            let acc_id = acc.id.clone();
-            let _ = session.app_data.add_account(acc);
-            let _ = session.app_data.save_vault_account(vault, &acc_id);
-            if let Ok(token) = session.token_store.load()
-                && let Some(t) = token
-                && let Ok(token_path) = session.app_data.account_token_path(&acc_id)
-                && let Ok(acc_store) = (session.token_store_for)(&token_path)
-            {
-                let _ = acc_store.save(&t);
-            }
+        let Some(remote) = immermemo_provider::identify_remote(trimmed) else {
+            continue;
+        };
+        let instance_url = provider::instance_url_for_host(remote.provider, &remote.host);
+        let acc = provider::new_account(remote.provider, &instance_url, &remote.owner, None);
+        let acc_id = acc.id.clone();
+        let _ = session.app_data.add_account(acc);
+        let _ = session.app_data.save_vault_account(vault, &acc_id);
+        if let Ok(token) = session.token_store.load()
+            && let Some(t) = token
+            && let Ok(token_path) = session.app_data.account_token_path(&acc_id)
+            && let Ok(acc_store) = (session.token_store_for)(&token_path)
+        {
+            let _ = acc_store.save(&t);
         }
     }
 }
@@ -597,32 +571,21 @@ pub fn bind_vault_callbacks(
             set_status(&app, format!("Creating vault for {}...", account.username));
 
             std::thread::spawn(move || {
-                let provider: Box<dyn immermemo_provider::Provider> = match provider_id.as_str() {
-                    "github" => Box::new(immermemo_provider::GitHubProvider::default()),
-                    "forgejo" => Box::new(immermemo_provider::ForgejoProvider::new(Some(
-                        &instance_url,
-                    ))),
-                    "gitlab" => {
-                        Box::new(immermemo_provider::GitLabProvider::new(Some(&instance_url)))
-                    }
-                    _ => {
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(app) = weak_thread.upgrade() {
-                                set_status(&app, format!("Unsupported provider: {provider_id}"));
-                            }
-                        });
-                        return;
-                    }
+                let Some(provider_kind) = immermemo_provider::ProviderId::from_id(&provider_id)
+                else {
+                    on_ui_thread(&weak_thread, move |app| {
+                        set_status(app, format!("Unsupported provider: {provider_id}"));
+                    });
+                    return;
                 };
+                let provider = immermemo_provider::provider_for(provider_kind, Some(&instance_url));
 
                 let repo_name = default_repo_name.as_str();
                 let repo_info = match provider.create_repository(&token, repo_name, true) {
                     Ok(info) => info,
                     Err(e) => {
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(app) = weak_thread.upgrade() {
-                                set_status(&app, format!("Failed to create repository: {e}"));
-                            }
+                        on_ui_thread(&weak_thread, move |app| {
+                            set_status(app, format!("Failed to create repository: {e}"));
                         });
                         return;
                     }
@@ -631,25 +594,23 @@ pub fn bind_vault_callbacks(
                 let vault_dir = base.join("vaults_repos").join(&repo_info.name);
                 let _ = std::fs::create_dir_all(&vault_dir);
 
-                let _ = slint::invoke_from_event_loop(move || {
-                    if let Some(app) = weak_thread.upgrade() {
-                        let session = crate::session::SESSION
-                            .with(|s| s.borrow().clone())
-                            .expect("session set");
-                        let mut s = session.borrow_mut();
-                        let _ = s.app_data.add_vault(&vault_dir);
-                        let _ = s.app_data.save_vault_account(&vault_dir, &account_id_clone);
-                        let _ = s.app_data.save_remote(&vault_dir, &repo_info.clone_url);
-                        s.known_vaults = s.app_data.known_vaults();
-                        drop(s);
+                on_ui_thread(&weak_thread, move |app| {
+                    let session = crate::session::SESSION
+                        .with(|s| s.borrow().clone())
+                        .expect("session set");
+                    let mut s = session.borrow_mut();
+                    let _ = s.app_data.add_vault(&vault_dir);
+                    let _ = s.app_data.save_vault_account(&vault_dir, &account_id_clone);
+                    let _ = s.app_data.save_remote(&vault_dir, &repo_info.clone_url);
+                    s.known_vaults = s.app_data.known_vaults();
+                    drop(s);
 
-                        switch_vault(&app, &session, vault_dir);
-                        app.set_settings_open(false);
-                        set_status(
-                            &app,
-                            format!("Created and switched to vault '{}'", repo_info.name),
-                        );
-                    }
+                    switch_vault(app, &session, vault_dir);
+                    app.set_settings_open(false);
+                    set_status(
+                        app,
+                        format!("Created and switched to vault '{}'", repo_info.name),
+                    );
                 });
             });
         }

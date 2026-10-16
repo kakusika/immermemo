@@ -30,3 +30,14 @@ pub fn read_from_clipboard(app: &App) -> Option<String> {
         .platform()
         .clipboard_text(slint::platform::Clipboard::DefaultClipboard)
 }
+
+/// Runs `f` against the app on the UI thread, from any thread -- a no-op if
+/// the window is already gone by the time the event loop gets to it.
+pub fn on_ui_thread(weak: &slint::Weak<App>, f: impl FnOnce(&App) + Send + 'static) {
+    let weak = weak.clone();
+    let _ = slint::invoke_from_event_loop(move || {
+        if let Some(app) = weak.upgrade() {
+            f(&app);
+        }
+    });
+}

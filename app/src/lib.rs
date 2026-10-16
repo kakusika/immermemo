@@ -2,10 +2,8 @@ pub mod action;
 pub mod avatar;
 mod callbacks;
 pub mod cert;
-pub mod forgejo;
-pub mod github;
-pub mod gitlab;
 mod haptic;
+mod provider;
 pub mod qr;
 pub mod render;
 mod session;
@@ -24,21 +22,13 @@ use std::rc::Rc;
 
 use slint::ComponentHandle;
 
-pub use forgejo::update_forgejo_ui_state;
-pub use github::update_github_ui_state;
-pub use gitlab::update_gitlab_ui_state;
 use immermemo_core::AppData;
 pub use immermemo_core::{TokenStore, TokenStoreFactory};
 pub use transfer::handle_incoming_import_uri;
 #[cfg(test)]
 pub(crate) use transfer::open_import_preview;
 
-/// Updates UI connection state for all supported Git hosting providers (GitHub, Forgejo/Gitea, GitLab).
-pub fn update_provider_ui_state(app: &App, remote: Option<&str>) {
-    github::update_github_ui_state(app, remote);
-    forgejo::update_forgejo_ui_state(app, remote);
-    gitlab::update_gitlab_ui_state(app, remote);
-}
+pub use provider::update_provider_ui_state;
 
 pub use action::apply_bottom_bar_config;
 
@@ -227,9 +217,7 @@ pub fn run(
     );
     callbacks::bind_sync_conflict_callbacks(&app, &session);
     callbacks::bind_selection_callbacks(&app, &session);
-    github::bind_github_callbacks(&app, &session);
-    forgejo::bind_forgejo_callbacks(&app, &session);
-    gitlab::bind_gitlab_callbacks(&app, &session);
+    provider::bind_provider_callbacks(&app, &session);
     transfer::bind_transfer_callbacks(&app, &session, initial_import_uri);
 
     app.run()?;

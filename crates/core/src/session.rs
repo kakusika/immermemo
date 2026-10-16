@@ -4,9 +4,11 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use anyhow::Context;
+
 use crate::editor::EditorState;
 use immermemo_index::NoteIndex;
-use immermemo_vault::appdata::AppData;
+use immermemo_vault::appdata::{Account, AppData};
 use immermemo_vault::credentials::TokenStore;
 use immermemo_vault::notes;
 
@@ -348,6 +350,48 @@ impl Session {
         RefreshListOutcome { conflict_count }
     }
 
+    /// Links this vault to `remote_url`, authenticated by `token` and
+    /// registered under `account` (the remote and the token are the part
+    /// that must succeed; the account bookkeeping is best-effort, since sync
+    /// itself only needs the vault's own remote and token).
+    ///
+    /// Everything a provider's connect flow does after it has a repository,
+    /// whichever way it authenticated -- OAuth device flow or a pasted token.
+    pub fn link_remote(
+        &mut self,
+        account: Account,
+        remote_url: &str,
+        token: &str,
+    ) -> anyhow::Result<()> {
+        self.app_data
+            .save_remote(&self.vault_dir, remote_url)
+            .context("Could not save remote")?;
+        self.token_store
+            .save(token)
+            .context("Could not save access token")?;
+        self.remote = Some(remote_url.to_owned());
+
+        let account_id = account.id.clone();
+        let _ = self.app_data.add_account(account);
+        let _ = self
+            .app_data
+            .save_vault_account(&self.vault_dir, &account_id);
+        if let Ok(path) = self.app_data.account_token_path(&account_id)
+            && let Ok(store) = (self.token_store_for)(&path)
+        {
+            let _ = store.save(token);
+        }
+        Ok(())
+    }
+
+    /// Forgets this vault's remote and token (the registered account, if
+    /// any, stays available to other vaults).
+    pub fn unlink_remote(&mut self) {
+        let _ = self.app_data.save_remote(&self.vault_dir, "");
+        let _ = self.token_store.save("");
+        self.remote = None;
+    }
+
     /// Performs search filtering and prepares directory source cache.
     pub fn update_filtered_list_data(&mut self) -> FilteredListOutcome {
         let hits = self.index.search(&self.search_query).unwrap_or_default();
@@ -503,6 +547,84 @@ mod tests {
         assert_eq!(
             vault_display_name(Path::new("relative-vault")),
             "relative-vault"
+        );
+    }
+
+    /// A token store that remembers what was saved, shared by the vault and
+    /// the per-account factory so a test can see both writes.
+    #[derive(Default)]
+    struct MemoryTokenStore(std::sync::Mutex<Option<String>>);
+    impl TokenStore for MemoryTokenStore {
+        fn load(&self) -> anyhow::Result<Option<String>> {
+            Ok(self.0.lock().unwrap().clone())
+        }
+        fn save(&self, token: &str) -> anyhow::Result<()> {
+            *self.0.lock().unwrap() = Some(token.to_owned());
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn linking_a_remote_persists_remote_token_and_account_and_unlinking_clears_them() {
+        let tmp = TempDir::new().unwrap();
+        let vault_dir = tmp.path().join("vault");
+        std::fs::create_dir_all(&vault_dir).unwrap();
+        let app_data = AppData::new(tmp.path().join("data"));
+        let vault_store = Arc::new(MemoryTokenStore::default());
+        let account_store = Arc::new(MemoryTokenStore::default());
+        let mut session = Session::new(
+            vault_dir.clone(),
+            app_data.clone(),
+            vault_store.clone(),
+            {
+                let account_store = account_store.clone();
+                Box::new(move |_| Ok(account_store.clone() as Arc<dyn TokenStore>))
+            },
+            vec![vault_dir.clone()],
+            None,
+            NoteIndex::open_in_memory().unwrap(),
+        );
+        let account = Account {
+            id: "github:octocat".to_owned(),
+            provider: "github".to_owned(),
+            instance_url: "https://github.com".to_owned(),
+            username: "octocat".to_owned(),
+            display_name: None,
+            avatar_url: None,
+        };
+
+        session
+            .link_remote(
+                account.clone(),
+                "https://github.com/octocat/notes.git",
+                "tok",
+            )
+            .unwrap();
+
+        assert_eq!(
+            session.remote.as_deref(),
+            Some("https://github.com/octocat/notes.git")
+        );
+        assert_eq!(
+            app_data.load_remote(&vault_dir).as_deref(),
+            Some("https://github.com/octocat/notes.git")
+        );
+        assert_eq!(vault_store.load().unwrap().as_deref(), Some("tok"));
+        assert_eq!(account_store.load().unwrap().as_deref(), Some("tok"));
+        assert_eq!(app_data.get_account("github:octocat"), Some(account));
+        assert_eq!(
+            app_data.load_vault_account(&vault_dir).as_deref(),
+            Some("github:octocat")
+        );
+
+        session.unlink_remote();
+
+        assert_eq!(session.remote, None);
+        assert_eq!(app_data.load_remote(&vault_dir), None);
+        assert_eq!(vault_store.load().unwrap().as_deref(), Some(""));
+        assert!(
+            app_data.get_account("github:octocat").is_some(),
+            "the account itself stays registered for other vaults"
         );
     }
 }

@@ -5,18 +5,18 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{AuthPollStatus, AuthSession, Provider, RepositoryInfo, UserInfo};
+use crate::api::{Api, Auth};
+use crate::remote_url::{normalize_instance_url, parse_any_remote, parse_remote_for_instance};
+use crate::{AuthPollStatus, AuthSession, Provider, ProviderId, RepositoryInfo, UserInfo};
 
 /// Default public GitLab instance.
 pub const DEFAULT_GITLAB_INSTANCE: &str = "https://gitlab.com";
-
-const USER_AGENT: &str = "immermemo/0.1.0";
 
 /// GitLab Git hosting provider.
 #[derive(Debug, Clone)]
 pub struct GitLabProvider {
     instance_url: String,
-    api_base_url: String,
+    api: Api,
 }
 
 impl Default for GitLabProvider {
@@ -30,11 +30,18 @@ impl GitLabProvider {
     /// (e.g. `https://gitlab.com` or `https://gitlab.example.com`).
     /// If `None` is provided, defaults to [`DEFAULT_GITLAB_INSTANCE`].
     pub fn new(instance_url: Option<&str>) -> Self {
-        let base = normalize_instance_url(instance_url.unwrap_or(DEFAULT_GITLAB_INSTANCE));
-        let api_base = format!("{base}/api/v4");
+        let base = normalize_instance_url(
+            instance_url.unwrap_or(DEFAULT_GITLAB_INSTANCE),
+            DEFAULT_GITLAB_INSTANCE,
+        );
+        let api = Api::new(
+            format!("{base}/api/v4"),
+            Auth::PrivateToken,
+            "application/json",
+        );
         Self {
             instance_url: base,
-            api_base_url: api_base,
+            api,
         }
     }
 
@@ -42,8 +49,8 @@ impl GitLabProvider {
     #[cfg(test)]
     pub fn with_custom_api_base(api_base_url: String) -> Self {
         Self {
-            instance_url: api_base_url.clone(),
-            api_base_url,
+            api: Api::new(api_base_url.clone(), Auth::PrivateToken, "application/json"),
+            instance_url: api_base_url,
         }
     }
 
@@ -55,12 +62,7 @@ impl GitLabProvider {
     /// Checks if a remote URL looks like it points to a GitLab instance
     /// (either `gitlab.com` or a hostname containing `gitlab`).
     pub fn is_gitlab_remote(url: &str) -> bool {
-        let trimmed = url.trim();
-        if let Some((host, _, _)) = Self::parse_any_remote(trimmed) {
-            host == "gitlab.com" || host.contains("gitlab")
-        } else {
-            false
-        }
+        Self::parse_any_remote(url).is_some_and(|(host, _, _)| is_gitlab_host(&host))
     }
 
     /// Extracts repository namespace (user or group) and repository name from a git remote URL
@@ -68,85 +70,24 @@ impl GitLabProvider {
     /// Handles HTTPS and SSH formats, including subgroups
     /// (e.g. `https://gitlab.com/alice/notes.git` or `git@gitlab.com:team/subgroup/notes.git`).
     pub fn parse_remote(instance_base: &str, url: &str) -> Option<(String, String)> {
-        let trimmed_url = url.trim();
-        let normalized_base = normalize_instance_url(instance_base);
-        let trimmed_base = normalized_base.trim_end_matches('/');
-
-        let path = if let Some(rest) = trimmed_url.strip_prefix(trimmed_base) {
-            rest
-        } else {
-            let host_only = trimmed_base
-                .strip_prefix("https://")
-                .or_else(|| trimmed_base.strip_prefix("http://"))
-                .unwrap_or(trimmed_base)
-                .split(['/', ':'])
-                .next()?;
-
-            if let Some(rest) = trimmed_url.strip_prefix(&format!("git@{host_only}:")) {
-                rest
-            } else {
-                trimmed_url.strip_prefix(&format!("ssh://git@{host_only}/"))?
-            }
-        };
-
-        let path = path.trim_start_matches('/').trim_end_matches(".git");
-        let (namespace, repo) = path.rsplit_once('/')?;
-        if !namespace.is_empty() && !repo.is_empty() {
-            Some((namespace.to_owned(), repo.to_owned()))
-        } else {
-            None
-        }
+        let base = normalize_instance_url(instance_base, DEFAULT_GITLAB_INSTANCE);
+        parse_remote_for_instance(&base, url, true)
     }
 
     /// Extracts instance host, namespace, and repository name from a git remote URL
     /// across HTTPS and SSH formats (e.g. `https://gitlab.com/alice/notes.git` or `git@gitlab.com:team/subgroup/notes.git`).
     pub fn parse_any_remote(url: &str) -> Option<(String, String, String)> {
-        let trimmed = url.trim();
-        let (host, path) = if let Some(rest) = trimmed.strip_prefix("https://") {
-            let mut parts = rest.splitn(2, '/');
-            (parts.next()?, parts.next()?)
-        } else if let Some(rest) = trimmed.strip_prefix("http://") {
-            let mut parts = rest.splitn(2, '/');
-            (parts.next()?, parts.next()?)
-        } else if let Some(rest) = trimmed.strip_prefix("git@") {
-            let mut parts = rest.splitn(2, ':');
-            (parts.next()?, parts.next()?)
-        } else {
-            let rest = trimmed.strip_prefix("ssh://git@")?;
-            let mut parts = rest.splitn(2, '/');
-            (parts.next()?, parts.next()?)
-        };
-
-        if host.is_empty() {
-            return None;
-        }
-
-        let path = path.trim_start_matches('/').trim_end_matches(".git");
-        let (namespace, repo) = path.rsplit_once('/')?;
-        if !namespace.is_empty() && !repo.is_empty() {
-            Some((host.to_owned(), namespace.to_owned(), repo.to_owned()))
-        } else {
-            None
-        }
+        parse_any_remote(url, true)
     }
 }
 
-/// Normalizes user-provided instance URL by trimming whitespace, removing trailing slashes,
-/// and defaulting to `https://` if no scheme was specified.
-fn normalize_instance_url(input: &str) -> String {
-    let trimmed = input.trim().trim_end_matches('/');
-    if trimmed.is_empty() {
-        return DEFAULT_GITLAB_INSTANCE.to_owned();
-    }
-    if !trimmed.starts_with("http://") && !trimmed.starts_with("https://") {
-        format!("https://{trimmed}")
-    } else {
-        trimmed.to_owned()
-    }
+/// Whether `host` (port allowed) is gitlab.com or looks like a self-hosted GitLab.
+pub(crate) fn is_gitlab_host(host: &str) -> bool {
+    host.contains("gitlab")
 }
 
 #[derive(Deserialize)]
-struct GitLabUserResponse {
+struct GitLabUser {
     username: String,
     name: Option<String>,
     email: Option<String>,
@@ -154,14 +95,14 @@ struct GitLabUserResponse {
 }
 
 #[derive(Serialize)]
-struct CreateGitLabProjectRequest<'a> {
+struct CreateProject<'a> {
     name: &'a str,
     visibility: &'a str,
     initialize_with_readme: bool,
 }
 
 #[derive(Deserialize)]
-struct GitLabProjectResponse {
+struct Project {
     name: String,
     path_with_namespace: String,
     http_url_to_repo: String,
@@ -169,13 +110,25 @@ struct GitLabProjectResponse {
     default_branch: Option<String>,
 }
 
+impl From<Project> for RepositoryInfo {
+    fn from(project: Project) -> Self {
+        Self {
+            name: project.name,
+            full_name: project.path_with_namespace,
+            clone_url: project.http_url_to_repo,
+            is_private: project.visibility != "public",
+            default_branch: project.default_branch.unwrap_or_else(|| "main".to_owned()),
+        }
+    }
+}
+
 impl Provider for GitLabProvider {
-    fn id(&self) -> &'static str {
-        "gitlab"
+    fn id(&self) -> ProviderId {
+        ProviderId::GitLab
     }
 
-    fn display_name(&self) -> &str {
-        "GitLab"
+    fn instance_url(&self) -> &str {
+        &self.instance_url
     }
 
     fn start_auth(&self) -> anyhow::Result<AuthSession> {
@@ -189,15 +142,7 @@ impl Provider for GitLabProvider {
     }
 
     fn get_user(&self, token: &str) -> anyhow::Result<UserInfo> {
-        let url = format!("{}/user", self.api_base_url);
-        let response = ureq::get(&url)
-            .header("PRIVATE-TOKEN", token)
-            .header("Accept", "application/json")
-            .header("User-Agent", USER_AGENT)
-            .call()?;
-
-        let user: GitLabUserResponse = response.into_body().read_json()?;
-
+        let user: GitLabUser = self.api.get("/user", token)?;
         Ok(UserInfo {
             login: user.username,
             name: user.name,
@@ -206,59 +151,25 @@ impl Provider for GitLabProvider {
         })
     }
 
-    fn setup_repository(&self, token: &str, repo_name: &str) -> anyhow::Result<RepositoryInfo> {
-        let user = self.get_user(token)?;
-        // In GitLab API v4, projects are retrieved by URL-encoded path `namespace%2Fproject_name`
-        let check_url = format!(
-            "{}/projects/{}%2F{}",
-            self.api_base_url, user.login, repo_name
-        );
-
-        match ureq::get(&check_url)
-            .header("PRIVATE-TOKEN", token)
-            .header("Accept", "application/json")
-            .header("User-Agent", USER_AGENT)
-            .call()
-        {
-            Ok(response) => {
-                let repo: GitLabProjectResponse = response.into_body().read_json()?;
-                return Ok(RepositoryInfo {
-                    name: repo.name,
-                    full_name: repo.path_with_namespace,
-                    clone_url: repo.http_url_to_repo,
-                    is_private: repo.visibility != "public",
-                    default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
-                });
-            }
-            Err(ureq::Error::StatusCode(404)) => {}
-            Err(e) => return Err(e.into()),
-        }
-
-        self.create_repository(token, repo_name, true)
+    fn find_repository(
+        &self,
+        token: &str,
+        owner: &str,
+        repo_name: &str,
+    ) -> anyhow::Result<Option<RepositoryInfo>> {
+        // GitLab addresses a project by its URL-encoded `namespace/name`.
+        let project: Option<Project> = self
+            .api
+            .get_optional(&format!("/projects/{owner}%2F{repo_name}"), token)?;
+        Ok(project.map(Into::into))
     }
 
     fn list_repositories(&self, token: &str) -> anyhow::Result<Vec<RepositoryInfo>> {
-        let url = format!(
-            "{}/projects?membership=true&order_by=updated_at&per_page=100",
-            self.api_base_url
-        );
-        let response = ureq::get(&url)
-            .header("PRIVATE-TOKEN", token)
-            .header("Accept", "application/json")
-            .header("User-Agent", USER_AGENT)
-            .call()?;
-
-        let repos: Vec<GitLabProjectResponse> = response.into_body().read_json()?;
-        Ok(repos
-            .into_iter()
-            .map(|repo| RepositoryInfo {
-                name: repo.name,
-                full_name: repo.path_with_namespace,
-                clone_url: repo.http_url_to_repo,
-                is_private: repo.visibility != "public",
-                default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
-            })
-            .collect())
+        let projects: Vec<Project> = self.api.get(
+            "/projects?membership=true&order_by=updated_at&per_page=100",
+            token,
+        )?;
+        Ok(projects.into_iter().map(Into::into).collect())
     }
 
     fn create_repository(
@@ -267,28 +178,13 @@ impl Provider for GitLabProvider {
         repo_name: &str,
         is_private: bool,
     ) -> anyhow::Result<RepositoryInfo> {
-        let create_url = format!("{}/projects", self.api_base_url);
-        let body = CreateGitLabProjectRequest {
+        let body = CreateProject {
             name: repo_name,
             visibility: if is_private { "private" } else { "public" },
             initialize_with_readme: false,
         };
-
-        let response = ureq::post(&create_url)
-            .header("PRIVATE-TOKEN", token)
-            .header("Accept", "application/json")
-            .header("User-Agent", USER_AGENT)
-            .send_json(&body)?;
-
-        let repo: GitLabProjectResponse = response.into_body().read_json()?;
-
-        Ok(RepositoryInfo {
-            name: repo.name,
-            full_name: repo.path_with_namespace,
-            clone_url: repo.http_url_to_repo,
-            is_private: repo.visibility != "public",
-            default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
-        })
+        let project: Project = self.api.post("/projects", token, &body)?;
+        Ok(project.into())
     }
 
     fn parse_remote_url(&self, url: &str) -> Option<(String, String)> {
@@ -298,47 +194,21 @@ impl Provider for GitLabProvider {
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Read, Write};
-    use std::net::TcpListener;
-    use std::thread::JoinHandle;
-
     use super::*;
+    use crate::test_support::{CREATED, NOT_FOUND, OK, serve, serve_once};
 
-    fn mock_single_request(
-        response_body: &'static str,
-        status_line: &'static str,
-    ) -> (String, JoinHandle<()>) {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        let handle = std::thread::spawn(move || {
-            if let Ok((mut stream, _)) = listener.accept() {
-                let mut buf = [0u8; 2048];
-                let _ = stream.read(&mut buf);
-                let resp = format!(
-                    "{status_line}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response_body}",
-                    response_body.len()
-                );
-                let _ = stream.write_all(resp.as_bytes());
-            }
-        });
-        (format!("http://127.0.0.1:{port}"), handle)
-    }
+    const PROJECT: &str = r#"{"name":"notes","path_with_namespace":"alice/notes","http_url_to_repo":"https://gitlab.com/alice/notes.git","visibility":"private","default_branch":"main"}"#;
 
     #[test]
-    fn test_normalize_instance_url() {
+    fn an_empty_instance_falls_back_to_gitlab_com() {
         assert_eq!(
-            normalize_instance_url("https://gitlab.com/"),
-            "https://gitlab.com"
+            GitLabProvider::new(Some("")).instance_url(),
+            DEFAULT_GITLAB_INSTANCE
         );
         assert_eq!(
-            normalize_instance_url("gitlab.example.com"),
-            "https://gitlab.example.com"
+            GitLabProvider::new(Some("gitlab.local:8080/")).instance_url(),
+            "https://gitlab.local:8080"
         );
-        assert_eq!(
-            normalize_instance_url("http://gitlab.local:8080/"),
-            "http://gitlab.local:8080"
-        );
-        assert_eq!(normalize_instance_url(""), DEFAULT_GITLAB_INSTANCE);
     }
 
     #[test]
@@ -437,13 +307,15 @@ mod tests {
 
     #[test]
     fn test_get_user() {
-        let json = r#"{
-            "username": "gitlab_user",
-            "name": "GitLab User",
-            "email": "user@gitlab.com",
-            "avatar_url": "https://gitlab.com/uploads/user.png"
-        }"#;
-        let (url, server) = mock_single_request(json, "HTTP/1.1 200 OK");
+        let (url, server) = serve_once(
+            OK,
+            r#"{
+                "username": "gitlab_user",
+                "name": "GitLab User",
+                "email": "user@gitlab.com",
+                "avatar_url": "https://gitlab.com/uploads/user.png"
+            }"#,
+        );
         let provider = GitLabProvider::with_custom_api_base(url);
 
         let user = provider.get_user("glpat_secret").unwrap();
@@ -462,36 +334,14 @@ mod tests {
 
     #[test]
     fn test_setup_repository_existing() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        let handle = std::thread::spawn(move || {
-            // First request: /user
-            if let Ok((mut stream, _)) = listener.accept() {
-                let mut buf = [0u8; 2048];
-                let _ = stream.read(&mut buf);
-                let body = r#"{"username":"alice","name":"Alice"}"#;
-                let resp = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-                let _ = stream.write_all(resp.as_bytes());
-            }
-            // Second request: /projects/alice%2Fnotes
-            if let Ok((mut stream, _)) = listener.accept() {
-                let mut buf = [0u8; 2048];
-                let _ = stream.read(&mut buf);
-                let body = r#"{"name":"notes","path_with_namespace":"alice/notes","http_url_to_repo":"https://gitlab.com/alice/notes.git","visibility":"private","default_branch":"main"}"#;
-                let resp = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-                let _ = stream.write_all(resp.as_bytes());
-            }
-        });
+        let (url, server) = serve(&[
+            (OK, r#"{"username":"alice","name":"Alice"}"#),
+            (OK, PROJECT),
+        ]);
+        let provider = GitLabProvider::with_custom_api_base(url);
 
-        let provider = GitLabProvider::with_custom_api_base(format!("http://127.0.0.1:{port}"));
         let repo = provider.setup_repository("glpat123", "notes").unwrap();
-        handle.join().unwrap();
+        server.join().unwrap();
 
         assert_eq!(repo.name, "notes");
         assert_eq!(repo.full_name, "alice/notes");
@@ -501,44 +351,15 @@ mod tests {
 
     #[test]
     fn test_setup_repository_create_new() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        let handle = std::thread::spawn(move || {
-            // First request: /user
-            if let Ok((mut stream, _)) = listener.accept() {
-                let mut buf = [0u8; 2048];
-                let _ = stream.read(&mut buf);
-                let body = r#"{"username":"alice","name":"Alice"}"#;
-                let resp = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-                let _ = stream.write_all(resp.as_bytes());
-            }
-            // Second request: /projects/alice%2Fnotes -> 404
-            if let Ok((mut stream, _)) = listener.accept() {
-                let mut buf = [0u8; 2048];
-                let _ = stream.read(&mut buf);
-                let resp =
-                    "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
-                let _ = stream.write_all(resp.as_bytes());
-            }
-            // Third request: POST /projects -> 201 Created
-            if let Ok((mut stream, _)) = listener.accept() {
-                let mut buf = [0u8; 2048];
-                let _ = stream.read(&mut buf);
-                let body = r#"{"name":"notes","path_with_namespace":"alice/notes","http_url_to_repo":"https://gitlab.com/alice/notes.git","visibility":"private","default_branch":"main"}"#;
-                let resp = format!(
-                    "HTTP/1.1 201 Created\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-                let _ = stream.write_all(resp.as_bytes());
-            }
-        });
+        let (url, server) = serve(&[
+            (OK, r#"{"username":"alice","name":"Alice"}"#),
+            (NOT_FOUND, ""),
+            (CREATED, PROJECT),
+        ]);
+        let provider = GitLabProvider::with_custom_api_base(url);
 
-        let provider = GitLabProvider::with_custom_api_base(format!("http://127.0.0.1:{port}"));
         let repo = provider.setup_repository("glpat123", "notes").unwrap();
-        handle.join().unwrap();
+        server.join().unwrap();
 
         assert_eq!(repo.name, "notes");
         assert_eq!(repo.full_name, "alice/notes");

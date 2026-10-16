@@ -2,7 +2,12 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{AuthPollStatus, AuthSession, Provider, RepositoryInfo, UserInfo};
+use crate::api::{Api, Auth, post_oauth};
+use crate::remote_url::parse_remote_for_instance;
+use crate::{
+    AuthPollStatus, AuthSession, CreateGitStyleRepo, GitStyleRepo, Provider, ProviderId,
+    RepositoryInfo, UserInfo,
+};
 
 /// Default client ID registered for Immermemo desktop and mobile apps.
 /// Device authorization flow public clients do not require a client secret.
@@ -11,7 +16,8 @@ pub const DEFAULT_GITHUB_CLIENT_ID: &str = "Ov23lik7gNqKqL1k1P2R";
 const GITHUB_DEVICE_CODE_URL: &str = "https://github.com/login/device/code";
 const GITHUB_ACCESS_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
 const GITHUB_API_BASE: &str = "https://api.github.com";
-const USER_AGENT: &str = "immermemo/0.1.0";
+const GITHUB_INSTANCE: &str = "https://github.com";
+const GITHUB_ACCEPT: &str = "application/vnd.github+json";
 
 /// GitHub Git hosting provider.
 #[derive(Debug, Clone)]
@@ -19,7 +25,7 @@ pub struct GitHubProvider {
     client_id: String,
     device_code_url: String,
     access_token_url: String,
-    api_base_url: String,
+    api: Api,
 }
 
 impl Default for GitHubProvider {
@@ -35,7 +41,7 @@ impl GitHubProvider {
             client_id: client_id.unwrap_or_else(|| DEFAULT_GITHUB_CLIENT_ID.to_owned()),
             device_code_url: GITHUB_DEVICE_CODE_URL.to_owned(),
             access_token_url: GITHUB_ACCESS_TOKEN_URL.to_owned(),
-            api_base_url: GITHUB_API_BASE.to_owned(),
+            api: Api::new(GITHUB_API_BASE, Auth::Bearer, GITHUB_ACCEPT),
         }
     }
 
@@ -51,8 +57,14 @@ impl GitHubProvider {
             client_id,
             device_code_url,
             access_token_url,
-            api_base_url,
+            api: Api::new(api_base_url, Auth::Bearer, GITHUB_ACCEPT),
         }
+    }
+
+    /// Extracts repository owner and repository name from a git remote URL if it belongs to GitHub.
+    /// Handles HTTPS and SSH formats (e.g. `https://github.com/alice/immermemo-notes.git`).
+    pub fn parse_remote(url: &str) -> Option<(String, String)> {
+        parse_remote_for_instance(GITHUB_INSTANCE, url, false)
     }
 }
 
@@ -87,51 +99,30 @@ struct TokenPollResponse {
 }
 
 #[derive(Deserialize)]
-struct GitHubUserResponse {
+struct GitHubUser {
     login: String,
     name: Option<String>,
     email: Option<String>,
     avatar_url: Option<String>,
 }
 
-#[derive(Serialize)]
-struct CreateRepoRequest<'a> {
-    name: &'a str,
-    description: &'a str,
-    private: bool,
-    auto_init: bool,
-}
-
-#[derive(Deserialize)]
-struct GitHubRepoResponse {
-    name: String,
-    full_name: String,
-    clone_url: String,
-    private: bool,
-    default_branch: Option<String>,
-}
-
 impl Provider for GitHubProvider {
-    fn id(&self) -> &'static str {
-        "github"
+    fn id(&self) -> ProviderId {
+        ProviderId::GitHub
     }
 
-    fn display_name(&self) -> &str {
-        "GitHub"
+    fn instance_url(&self) -> &str {
+        GITHUB_INSTANCE
     }
 
     fn start_auth(&self) -> anyhow::Result<AuthSession> {
-        let req_body = DeviceCodeRequest {
-            client_id: &self.client_id,
-            scope: "repo read:user user:email",
-        };
-
-        let response = ureq::post(&self.device_code_url)
-            .header("Accept", "application/json")
-            .header("User-Agent", USER_AGENT)
-            .send_json(&req_body)?;
-
-        let data: DeviceCodeResponse = response.into_body().read_json()?;
+        let data: DeviceCodeResponse = post_oauth(
+            &self.device_code_url,
+            &DeviceCodeRequest {
+                client_id: &self.client_id,
+                scope: "repo read:user user:email",
+            },
+        )?;
 
         Ok(AuthSession {
             device_code: data.device_code,
@@ -143,18 +134,14 @@ impl Provider for GitHubProvider {
     }
 
     fn poll_auth(&self, session: &AuthSession) -> anyhow::Result<AuthPollStatus> {
-        let req_body = TokenPollRequest {
-            client_id: &self.client_id,
-            device_code: &session.device_code,
-            grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-        };
-
-        let response = ureq::post(&self.access_token_url)
-            .header("Accept", "application/json")
-            .header("User-Agent", USER_AGENT)
-            .send_json(&req_body)?;
-
-        let data: TokenPollResponse = response.into_body().read_json()?;
+        let data: TokenPollResponse = post_oauth(
+            &self.access_token_url,
+            &TokenPollRequest {
+                client_id: &self.client_id,
+                device_code: &session.device_code,
+                grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+            },
+        )?;
 
         if let Some(token) = data.access_token {
             return Ok(AuthPollStatus::Granted {
@@ -175,15 +162,7 @@ impl Provider for GitHubProvider {
     }
 
     fn get_user(&self, token: &str) -> anyhow::Result<UserInfo> {
-        let url = format!("{}/user", self.api_base_url);
-        let response = ureq::get(&url)
-            .header("Authorization", &format!("Bearer {token}"))
-            .header("Accept", "application/vnd.github+json")
-            .header("User-Agent", USER_AGENT)
-            .call()?;
-
-        let user: GitHubUserResponse = response.into_body().read_json()?;
-
+        let user: GitHubUser = self.api.get("/user", token)?;
         Ok(UserInfo {
             login: user.login,
             name: user.name,
@@ -192,55 +171,24 @@ impl Provider for GitHubProvider {
         })
     }
 
-    fn setup_repository(&self, token: &str, repo_name: &str) -> anyhow::Result<RepositoryInfo> {
-        let user = self.get_user(token)?;
-        let check_url = format!("{}/repos/{}/{}", self.api_base_url, user.login, repo_name);
-
-        match ureq::get(&check_url)
-            .header("Authorization", &format!("Bearer {token}"))
-            .header("Accept", "application/vnd.github+json")
-            .header("User-Agent", USER_AGENT)
-            .call()
-        {
-            Ok(response) => {
-                let repo: GitHubRepoResponse = response.into_body().read_json()?;
-                return Ok(RepositoryInfo {
-                    name: repo.name,
-                    full_name: repo.full_name,
-                    clone_url: repo.clone_url,
-                    is_private: repo.private,
-                    default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
-                });
-            }
-            Err(ureq::Error::StatusCode(404)) => {}
-            Err(e) => return Err(e.into()),
-        }
-
-        self.create_repository(token, repo_name, true)
+    fn find_repository(
+        &self,
+        token: &str,
+        owner: &str,
+        repo_name: &str,
+    ) -> anyhow::Result<Option<RepositoryInfo>> {
+        let repo: Option<GitStyleRepo> = self
+            .api
+            .get_optional(&format!("/repos/{owner}/{repo_name}"), token)?;
+        Ok(repo.map(Into::into))
     }
 
     fn list_repositories(&self, token: &str) -> anyhow::Result<Vec<RepositoryInfo>> {
-        let url = format!(
-            "{}/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator",
-            self.api_base_url
-        );
-        let response = ureq::get(&url)
-            .header("Authorization", &format!("Bearer {token}"))
-            .header("Accept", "application/vnd.github+json")
-            .header("User-Agent", USER_AGENT)
-            .call()?;
-
-        let repos: Vec<GitHubRepoResponse> = response.into_body().read_json()?;
-        Ok(repos
-            .into_iter()
-            .map(|repo| RepositoryInfo {
-                name: repo.name,
-                full_name: repo.full_name,
-                clone_url: repo.clone_url,
-                is_private: repo.private,
-                default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
-            })
-            .collect())
+        let repos: Vec<GitStyleRepo> = self.api.get(
+            "/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator",
+            token,
+        )?;
+        Ok(repos.into_iter().map(Into::into).collect())
     }
 
     fn create_repository(
@@ -249,29 +197,12 @@ impl Provider for GitHubProvider {
         repo_name: &str,
         is_private: bool,
     ) -> anyhow::Result<RepositoryInfo> {
-        let create_url = format!("{}/user/repos", self.api_base_url);
-        let body = CreateRepoRequest {
-            name: repo_name,
-            description: "Immermemo notes vault",
-            private: is_private,
-            auto_init: false,
-        };
-
-        let response = ureq::post(&create_url)
-            .header("Authorization", &format!("Bearer {token}"))
-            .header("Accept", "application/vnd.github+json")
-            .header("User-Agent", USER_AGENT)
-            .send_json(&body)?;
-
-        let repo: GitHubRepoResponse = response.into_body().read_json()?;
-
-        Ok(RepositoryInfo {
-            name: repo.name,
-            full_name: repo.full_name,
-            clone_url: repo.clone_url,
-            is_private: repo.private,
-            default_branch: repo.default_branch.unwrap_or_else(|| "main".to_owned()),
-        })
+        let repo: GitStyleRepo = self.api.post(
+            "/user/repos",
+            token,
+            &CreateGitStyleRepo::new(repo_name, is_private),
+        )?;
+        Ok(repo.into())
     }
 
     fn parse_remote_url(&self, url: &str) -> Option<(String, String)> {
@@ -279,55 +210,10 @@ impl Provider for GitHubProvider {
     }
 }
 
-impl GitHubProvider {
-    /// Extracts repository owner and repository name from a git remote URL if it belongs to GitHub.
-    /// Handles HTTPS and SSH formats (e.g. `https://github.com/alice/immermemo-notes.git`).
-    pub fn parse_remote(url: &str) -> Option<(String, String)> {
-        let trimmed = url.trim();
-        let path = if let Some(rest) = trimmed.strip_prefix("https://github.com/") {
-            rest
-        } else if let Some(rest) = trimmed.strip_prefix("http://github.com/") {
-            rest
-        } else {
-            trimmed.strip_prefix("git@github.com:")?
-        };
-        let path = path.trim_end_matches(".git").trim_matches('/');
-        let mut parts = path.split('/');
-        let owner = parts.next()?;
-        let repo = parts.next()?;
-        if parts.next().is_none() && !owner.is_empty() && !repo.is_empty() {
-            Some((owner.to_owned(), repo.to_owned()))
-        } else {
-            None
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Read, Write};
-    use std::net::TcpListener;
-
-    fn mock_single_request(
-        response_body: &'static str,
-        status_line: &'static str,
-    ) -> (String, std::thread::JoinHandle<()>) {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        let handle = std::thread::spawn(move || {
-            if let Ok((mut stream, _)) = listener.accept() {
-                let mut buf = [0u8; 2048];
-                let _ = stream.read(&mut buf);
-                let resp = format!(
-                    "{status_line}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response_body}",
-                    response_body.len()
-                );
-                let _ = stream.write_all(resp.as_bytes());
-            }
-        });
-        (format!("http://127.0.0.1:{port}"), handle)
-    }
+    use crate::test_support::{CREATED, OK, serve_once};
 
     #[test]
     fn test_start_auth() {
@@ -338,7 +224,7 @@ mod tests {
             "expires_in": 900,
             "interval": 5
         }"#;
-        let (url, server) = mock_single_request(json, "HTTP/1.1 200 OK");
+        let (url, server) = serve_once(OK, json);
         let provider = GitHubProvider::with_custom_endpoints(
             "test_client".to_owned(),
             url.clone(),
@@ -359,7 +245,7 @@ mod tests {
     #[test]
     fn test_poll_auth_pending() {
         let json = r#"{"error": "authorization_pending"}"#;
-        let (url, server) = mock_single_request(json, "HTTP/1.1 200 OK");
+        let (url, server) = serve_once(OK, json);
         let provider = GitHubProvider::with_custom_endpoints(
             "test_client".to_owned(),
             url.clone(),
@@ -387,7 +273,7 @@ mod tests {
             "token_type": "bearer",
             "scope": "repo,read:user"
         }"#;
-        let (url, server) = mock_single_request(json, "HTTP/1.1 200 OK");
+        let (url, server) = serve_once(OK, json);
         let provider = GitHubProvider::with_custom_endpoints(
             "test_client".to_owned(),
             url.clone(),
@@ -427,7 +313,7 @@ mod tests {
             "email": "octocat@github.com",
             "avatar_url": "https://avatars.githubusercontent.com/u/583231"
         }"#;
-        let (url, server) = mock_single_request(json, "HTTP/1.1 200 OK");
+        let (url, server) = serve_once(OK, json);
         let provider = GitHubProvider::with_custom_endpoints(
             "test_client".to_owned(),
             url.clone(),
@@ -482,7 +368,7 @@ mod tests {
                 "default_branch": "master"
             }
         ]"#;
-        let (url, server) = mock_single_request(json, "HTTP/1.1 200 OK");
+        let (url, server) = serve_once(OK, json);
         let provider = GitHubProvider::with_custom_endpoints(
             "test_client".to_owned(),
             url.clone(),
@@ -509,7 +395,7 @@ mod tests {
             "private": true,
             "default_branch": "main"
         }"#;
-        let (url, server) = mock_single_request(json, "HTTP/1.1 201 Created");
+        let (url, server) = serve_once(CREATED, json);
         let provider = GitHubProvider::with_custom_endpoints(
             "test_client".to_owned(),
             url.clone(),
