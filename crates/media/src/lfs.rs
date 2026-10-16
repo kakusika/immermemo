@@ -175,13 +175,17 @@ pub fn download(
             headers,
             basic_auth: if own_auth || !same_host { None } else { auth },
             body: Vec::new(),
-            max_bytes: pointer.size as usize,
+            // The cap, not the pointer's size: a server that sends a different
+            // number of bytes (a login page, an error document) is reported
+            // below with what it really sent, instead of a bare "over the
+            // limit" that says nothing about by how much.
+            max_bytes: MAX_LFS_BYTES as usize,
         })
         .context("downloading the LFS object")?;
 
     if bytes.len() as u64 != pointer.size {
         bail!(
-            "the LFS object came back {} bytes, expected {}",
+            "the LFS server sent {} bytes for an object its pointer declares as {} bytes",
             bytes.len(),
             pointer.size
         );
@@ -337,7 +341,7 @@ mod tests {
             get.basic_auth, None,
             "the server's own Authorization is used instead"
         );
-        assert_eq!(get.max_bytes, object.len());
+        assert_eq!(get.max_bytes, MAX_LFS_BYTES as usize);
     }
 
     #[test]
@@ -390,7 +394,28 @@ mod tests {
             offering("https://github.com/lfs/obj", serde_json::json!({})),
         );
         let error = download(&remote(None), &short, &wanted).unwrap_err();
-        assert!(error.to_string().contains("expected"), "{error}");
+        let message = error.to_string();
+        assert!(
+            message.contains("sent 5 bytes") && message.contains("declares as 20 bytes"),
+            "{message}"
+        );
+    }
+
+    #[test]
+    fn a_server_sending_more_than_the_pointer_declares_is_reported_by_size() {
+        // A body larger than the pointer's size used to fail as a bare
+        // "over the limit" -- worded, for an image under 1 MiB, "0 MiB".
+        let wanted = pointer_for(b"tiny");
+        let long = Server::serving(
+            &[b'x'; 5000],
+            offering("https://github.com/lfs/obj", serde_json::json!({})),
+        );
+        let error = download(&remote(None), &long, &wanted).unwrap_err();
+        let message = error.to_string();
+        assert!(
+            message.contains("sent 5000 bytes") && message.contains("declares as 4 bytes"),
+            "{message}"
+        );
     }
 
     #[test]

@@ -10,8 +10,10 @@ use tomet::links::VaultLinkIndex;
 
 use crate::lfs::{self, LfsRemote};
 
-/// The most a remote image may weigh, in bytes.
-pub const MAX_REMOTE_BYTES: usize = 8 * 1024 * 1024;
+/// The most a remote image may weigh, in bytes. The same as a file in the
+/// vault and an LFS object: where an image lives does not change how large a
+/// photo is allowed to be.
+pub const MAX_REMOTE_BYTES: usize = 32 * 1024 * 1024;
 
 /// The most a file inside the vault may weigh to be read as an image, in bytes.
 pub const MAX_LOCAL_BYTES: u64 = 32 * 1024 * 1024;

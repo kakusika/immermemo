@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::time::{Duration, SystemTime};
 
-use anyhow::{Context, bail};
+use anyhow::Context;
 use sha2::{Digest, Sha256};
 
 use crate::lfs::LfsRemote;
@@ -13,7 +13,9 @@ use crate::source::{Fetcher, MediaSource};
 use crate::thumb::{Format, Preset, Thumbnail, make_thumbnail};
 
 /// How long a source that failed to load is left alone before it is tried
-/// again.
+/// again. Kept by the caller, in memory: a failure is not written to disk, so
+/// a new build of the app tries every image afresh instead of repeating a
+/// verdict from the build before it.
 pub const FAILURE_TTL: Duration = Duration::from_secs(15 * 60);
 
 /// A sweep runs after this many stores, so the budget holds without walking
@@ -83,11 +85,6 @@ impl MediaCache {
             .join(format!("{}.{}", key.as_str(), format.extension()))
     }
 
-    fn failure_path(&self, preset: Preset, key: &CacheKey) -> PathBuf {
-        self.entry_dir(preset, key)
-            .join(format!("{}.fail", key.as_str()))
-    }
-
     /// The thumbnail cached under `key`, if any. A hit counts as a use: it
     /// moves the entry to the back of the eviction order. An entry that no
     /// longer decodes is deleted and reported as a miss.
@@ -108,15 +105,6 @@ impl MediaCache {
         })
     }
 
-    /// Whether loading `key`'s source failed within [`FAILURE_TTL`].
-    pub fn recently_failed(&self, preset: Preset, key: &CacheKey) -> bool {
-        fs::metadata(self.failure_path(preset, key))
-            .and_then(|meta| meta.modified())
-            .ok()
-            .and_then(|mtime| SystemTime::now().duration_since(mtime).ok())
-            .is_some_and(|age| age < FAILURE_TTL)
-    }
-
     /// The thumbnail for `source`: the cached one if there is one, otherwise
     /// read (or fetched), shrunk, stored and returned.
     ///
@@ -124,8 +112,8 @@ impl MediaCache {
     /// that turns out to be a pointer to an object kept there.
     ///
     /// Blocking -- reads files and may use the network -- so call it off the
-    /// UI thread. A source that failed within [`FAILURE_TTL`] fails again at
-    /// once without being retried.
+    /// UI thread. Every call that misses the cache tries the source; not
+    /// retrying a broken one is the caller's to arrange (see [`FAILURE_TTL`]).
     pub fn produce(
         &self,
         source: &MediaSource,
@@ -137,40 +125,24 @@ impl MediaCache {
         if let Some(thumb) = self.lookup(preset, &key) {
             return Ok(thumb);
         }
-        if self.recently_failed(preset, &key) {
-            bail!("the image failed to load recently");
-        }
-        match source
+        let thumb = source
             .read(fetcher, lfs)
-            .and_then(|bytes| make_thumbnail(&bytes, preset))
-        {
-            Ok(thumb) => {
-                // Failing to store only costs a redo next time.
-                let _ = self.store(preset, &key, &thumb);
-                Ok(thumb)
-            }
-            Err(error) => {
-                self.record_failure(preset, &key);
-                Err(error)
-            }
-        }
+            .and_then(|bytes| make_thumbnail(&bytes, preset))?;
+        // Failing to store only costs a redo next time.
+        let _ = self.store(preset, &key, &thumb);
+        Ok(thumb)
     }
 
     fn store(&self, preset: Preset, key: &CacheKey, thumb: &Thumbnail) -> anyhow::Result<()> {
         let (format, bytes) = thumb.encode()?;
         let path = self.entry_path(preset, key, format);
         write_atomically(&path, &bytes)?;
-        let _ = fs::remove_file(self.failure_path(preset, key));
         if self.stores.fetch_add(1, Ordering::Relaxed) % SWEEP_EVERY_STORES
             == SWEEP_EVERY_STORES - 1
         {
             self.sweep();
         }
         Ok(())
-    }
-
-    fn record_failure(&self, preset: Preset, key: &CacheKey) {
-        let _ = write_atomically(&self.failure_path(preset, key), b"");
     }
 
     /// Deletes the least recently used entries until the cache is back under
@@ -496,46 +468,27 @@ mod tests {
     }
 
     #[test]
-    fn a_failed_source_is_not_retried_until_the_failure_expires() {
+    fn a_failed_source_leaves_nothing_on_disk_so_a_new_build_retries_it() {
         let dir = TempDir::new().unwrap();
         let cache = cache(&dir, 1 << 20);
         let fetcher = FakeFetcher::failing();
         let source = remote("https://example.com/down.png");
-        let key = CacheKey::new(&source, Preset::Thumb).unwrap();
 
-        assert!(
-            cache
-                .produce(&source, Preset::Thumb, &fetcher, None)
-                .is_err()
-        );
-        assert!(cache.recently_failed(Preset::Thumb, &key));
-        assert!(
-            cache
-                .produce(&source, Preset::Thumb, &fetcher, None)
-                .is_err()
-        );
-        assert_eq!(fetcher.calls(), 1);
-
-        // Age the failure marker past the TTL.
-        let marker = cache.failure_path(Preset::Thumb, &key);
-        let old = SystemTime::now() - FAILURE_TTL - Duration::from_secs(60);
-        File::options()
-            .write(true)
-            .open(&marker)
-            .unwrap()
-            .set_modified(old)
-            .unwrap();
-        assert!(!cache.recently_failed(Preset::Thumb, &key));
-        assert!(
-            cache
-                .produce(&source, Preset::Thumb, &fetcher, None)
-                .is_err()
-        );
-        assert_eq!(fetcher.calls(), 2);
+        for attempt in 1..=2 {
+            assert!(
+                cache
+                    .produce(&source, Preset::Thumb, &fetcher, None)
+                    .is_err()
+            );
+            assert_eq!(fetcher.calls(), attempt, "each call tries the source");
+        }
+        let mut leftovers = Vec::new();
+        collect_files(dir.path(), &mut leftovers);
+        assert!(leftovers.is_empty(), "no failure marker on disk");
     }
 
     #[test]
-    fn a_source_that_is_not_an_image_fails_and_is_remembered() {
+    fn a_source_that_is_not_an_image_fails_and_nothing_is_stored() {
         let dir = TempDir::new().unwrap();
         let cache = cache(&dir, 1 << 20);
         let fetcher = FakeFetcher::serving(b"<html>login required</html>".to_vec());
@@ -545,12 +498,9 @@ mod tests {
                 .produce(&source, Preset::Thumb, &fetcher, None)
                 .is_err()
         );
-        assert!(
-            cache
-                .produce(&source, Preset::Thumb, &fetcher, None)
-                .is_err()
-        );
-        assert_eq!(fetcher.calls(), 1);
+        let mut stored = Vec::new();
+        collect_files(dir.path(), &mut stored);
+        assert!(stored.is_empty(), "a failure leaves nothing behind");
     }
 
     #[test]

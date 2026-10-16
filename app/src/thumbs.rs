@@ -336,22 +336,46 @@ impl Fetcher for UreqFetcher {
             Method::Get => with_headers!(self.agent.get(&request.url)).call()?,
             Method::Post => with_headers!(self.agent.post(&request.url)).send(&request.body[..])?,
         };
-        let bytes = response
-            .into_body()
-            .with_config()
-            .limit(request.max_bytes as u64)
-            .read_to_vec()?;
-        Ok(bytes)
+        read_limited(response, request.max_bytes)
     }
 
     fn fetch(&self, url: &str, max_bytes: usize) -> anyhow::Result<Vec<u8>> {
-        let response = self.agent.get(url).call()?;
-        let bytes = response
-            .into_body()
-            .with_config()
-            .limit(max_bytes as u64)
-            .read_to_vec()?;
-        Ok(bytes)
+        read_limited(self.agent.get(url).call()?, max_bytes)
+    }
+}
+
+/// Reads a response body, refusing one over `max_bytes`. The refusal is worded
+/// short and plain: it ends up in a one-line status where ureq's own message
+/// ("the response body is larger than request limit ...") is cut off before it
+/// says anything useful.
+fn read_limited(
+    response: ureq::http::Response<ureq::Body>,
+    max_bytes: usize,
+) -> anyhow::Result<Vec<u8>> {
+    response
+        .into_body()
+        .with_config()
+        .limit(max_bytes as u64)
+        .read_to_vec()
+        .map_err(|error| match error {
+            ureq::Error::BodyExceedsLimit(_) => {
+                anyhow::anyhow!("over the {} size limit", size_label(max_bytes))
+            }
+            other => other.into(),
+        })
+}
+
+/// A byte count in the largest unit that keeps it above 1, for a message a
+/// person reads ("1 MiB", "340 KiB", "900 bytes"), never rounded down to zero.
+fn size_label(bytes: usize) -> String {
+    const KIB: usize = 1024;
+    const MIB: usize = 1024 * KIB;
+    if bytes >= MIB {
+        format!("{} MiB", bytes / MIB)
+    } else if bytes >= KIB {
+        format!("{} KiB", bytes / KIB)
+    } else {
+        format!("{bytes} bytes")
     }
 }
 
@@ -438,6 +462,14 @@ fn refresh_screens() {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+
+    #[test]
+    fn a_size_is_worded_in_a_unit_that_never_rounds_to_zero() {
+        assert_eq!(size_label(32 * 1024 * 1024), "32 MiB");
+        assert_eq!(size_label(1024 * 1024), "1 MiB");
+        assert_eq!(size_label(340 * 1024 + 7), "340 KiB");
+        assert_eq!(size_label(900), "900 bytes");
+    }
     use std::path::Path;
     use std::sync::atomic::{AtomicUsize, Ordering};
 

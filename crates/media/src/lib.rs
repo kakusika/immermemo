@@ -29,7 +29,9 @@
 //! The cache stays under a byte budget by evicting the least recently used
 //! files (a hit refreshes the file's mtime). A source that failed to load is
 //! remembered for [`FAILURE_TTL`] so a broken URL is not refetched on every
-//! refresh.
+//! refresh -- by the caller, in memory, never on disk: a failure written to
+//! the cache outlived the build that caused it, and an app fixed to load the
+//! image went on showing the old verdict for a quarter of an hour.
 //!
 //! # Git LFS
 //!
