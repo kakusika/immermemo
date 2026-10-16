@@ -19,7 +19,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use clru::CLruCache;
-use immermemo_media::{CacheKey, FAILURE_TTL, Fetcher, MediaCache, MediaSource, Preset, Thumbnail};
+use immermemo_media::{
+    CacheKey, FAILURE_TTL, Fetcher, HttpRequest, LfsRemote, MediaCache, MediaSource, Method,
+    Preset, Thumbnail,
+};
 use slint::{ComponentHandle, Rgba8Pixel, SharedPixelBuffer, Timer, TimerMode};
 
 use crate::App;
@@ -48,6 +51,7 @@ type Wake = Arc<dyn Fn() + Send + Sync>;
 type Finished = (Preset, CacheKey, Result<Thumbnail, String>);
 
 struct Job {
+    lfs: Option<LfsRemote>,
     preset: Preset,
     key: CacheKey,
     source: MediaSource,
@@ -91,7 +95,7 @@ impl Thumbs {
                     {
                         let result = job
                             .cache
-                            .produce(&job.source, job.preset, &*job.fetcher)
+                            .produce(&job.source, job.preset, &*job.fetcher, job.lfs.as_ref())
                             .map_err(|error| format!("{error:#}"));
                         let _ = job.finished.send((job.preset, job.key, result));
                         (job.wake)();
@@ -132,7 +136,15 @@ impl Thumbs {
     /// `source` as an image of `preset`'s size if it is decoded and ready;
     /// otherwise an empty image, with it queued unless it is already on its
     /// way or failed recently.
-    pub fn picture(&self, source: &MediaSource, preset: Preset) -> slint::Image {
+    ///
+    /// `lfs` is the vault's Git LFS server, for a source that is a pointer to
+    /// an object kept there.
+    pub fn picture(
+        &self,
+        source: &MediaSource,
+        preset: Preset,
+        lfs: Option<&LfsRemote>,
+    ) -> slint::Image {
         let Some(key) = CacheKey::new(source, preset) else {
             return slint::Image::default();
         };
@@ -146,6 +158,7 @@ impl Thumbs {
             .is_some_and(|at| at.elapsed() < FAILURE_TTL);
         if !failed_recently && self.pending.borrow_mut().insert(key.clone()) {
             let job = Job {
+                lfs: lfs.cloned(),
                 preset,
                 key: key.clone(),
                 source: source.clone(),
@@ -212,6 +225,8 @@ fn lru(capacity: usize) -> CLruCache<CacheKey, slint::Image> {
 pub struct MediaBase {
     pub vault_dir: PathBuf,
     pub note_rel: PathBuf,
+    /// The vault's Git LFS server, if it has a remote one can be found for.
+    pub lfs: Option<LfsRemote>,
 }
 
 impl MediaBase {
@@ -219,7 +234,14 @@ impl MediaBase {
         Self {
             vault_dir: vault_dir.to_owned(),
             note_rel: note_rel.to_owned(),
+            lfs: None,
         }
+    }
+
+    /// This base, with `lfs` as the vault's Git LFS server.
+    pub fn with_lfs(mut self, lfs: Option<LfsRemote>) -> Self {
+        self.lfs = lfs;
+        self
     }
 
     /// No note: nothing resolves, every picture stays empty.
@@ -231,7 +253,7 @@ impl MediaBase {
     /// not ready or if the reference leads nowhere readable.
     pub fn picture(&self, reference: &str, preset: Preset) -> slint::Image {
         MediaSource::resolve(reference, &self.vault_dir, &self.note_rel)
-            .map(|source| picture(&source, preset))
+            .map(|source| picture(&source, preset, self.lfs.as_ref()))
             .unwrap_or_default()
     }
 }
@@ -268,6 +290,35 @@ impl UreqFetcher {
 }
 
 impl Fetcher for UreqFetcher {
+    fn request(&self, request: &HttpRequest) -> anyhow::Result<Vec<u8>> {
+        use base64::Engine;
+
+        macro_rules! with_headers {
+            ($builder:expr) => {{
+                let mut builder = $builder;
+                for (name, value) in &request.headers {
+                    builder = builder.header(name, value);
+                }
+                if let Some((user, password)) = &request.basic_auth {
+                    let credentials = base64::engine::general_purpose::STANDARD
+                        .encode(format!("{user}:{password}"));
+                    builder = builder.header("Authorization", format!("Basic {credentials}"));
+                }
+                builder
+            }};
+        }
+        let response = match request.method {
+            Method::Get => with_headers!(self.agent.get(&request.url)).call()?,
+            Method::Post => with_headers!(self.agent.post(&request.url)).send(&request.body[..])?,
+        };
+        let bytes = response
+            .into_body()
+            .with_config()
+            .limit(request.max_bytes as u64)
+            .read_to_vec()?;
+        Ok(bytes)
+    }
+
     fn fetch(&self, url: &str, max_bytes: usize) -> anyhow::Result<Vec<u8>> {
         let response = self.agent.get(url).call()?;
         let bytes = response
@@ -307,10 +358,10 @@ fn install(thumbs: Thumbs) {
 
 /// `source` as an image of `preset`'s size, or an empty one while it is not
 /// ready (or if the pipeline has not been started).
-pub fn picture(source: &MediaSource, preset: Preset) -> slint::Image {
+pub fn picture(source: &MediaSource, preset: Preset, lfs: Option<&LfsRemote>) -> slint::Image {
     let thumbs = THUMBS.with(|slot| slot.borrow().clone());
     thumbs
-        .map(|t| t.picture(source, preset))
+        .map(|t| t.picture(source, preset, lfs))
         .unwrap_or_default()
 }
 
@@ -391,12 +442,12 @@ pub(crate) mod tests {
         let (thumbs, _) = pipeline(dir.path(), None);
 
         assert_eq!(
-            thumbs.picture(&source, Preset::Thumb).size().width,
+            thumbs.picture(&source, Preset::Thumb, None).size().width,
             0,
             "not ready yet"
         );
         thumbs.settle();
-        let ready = thumbs.picture(&source, Preset::Thumb);
+        let ready = thumbs.picture(&source, Preset::Thumb, None);
         assert_eq!((ready.size().width, ready.size().height), (256, 128));
     }
 
@@ -406,11 +457,11 @@ pub(crate) mod tests {
         let (thumbs, fetcher) = pipeline(dir.path(), Some(png(64, 64)));
         let source = MediaSource::Remote("https://example.com/a.png".to_owned());
         for _ in 0..5 {
-            thumbs.picture(&source, Preset::Thumb);
+            thumbs.picture(&source, Preset::Thumb, None);
         }
         thumbs.settle();
         assert_eq!(fetcher.calls.load(Ordering::SeqCst), 1);
-        assert!(thumbs.picture(&source, Preset::Thumb).size().width > 0);
+        assert!(thumbs.picture(&source, Preset::Thumb, None).size().width > 0);
     }
 
     #[test]
@@ -418,13 +469,104 @@ pub(crate) mod tests {
         let dir = tempfile::tempdir().unwrap();
         let (thumbs, fetcher) = pipeline(dir.path(), None);
         let source = MediaSource::Remote("https://example.com/down.png".to_owned());
-        assert_eq!(thumbs.picture(&source, Preset::Thumb).size().width, 0);
+        assert_eq!(thumbs.picture(&source, Preset::Thumb, None).size().width, 0);
         thumbs.settle();
         for _ in 0..3 {
-            assert_eq!(thumbs.picture(&source, Preset::Thumb).size().width, 0);
+            assert_eq!(thumbs.picture(&source, Preset::Thumb, None).size().width, 0);
         }
         thumbs.settle();
         assert_eq!(fetcher.calls.load(Ordering::SeqCst), 1);
+    }
+
+    /// An LFS server holding one object, counting every request it gets.
+    struct LfsServer {
+        object: Vec<u8>,
+        requests: AtomicUsize,
+    }
+
+    impl Fetcher for LfsServer {
+        fn fetch(&self, _url: &str, _max_bytes: usize) -> anyhow::Result<Vec<u8>> {
+            unreachable!("an LFS object is not a plain GET")
+        }
+
+        fn request(&self, request: &HttpRequest) -> anyhow::Result<Vec<u8>> {
+            self.requests.fetch_add(1, Ordering::SeqCst);
+            Ok(match request.method {
+                Method::Post => serde_json_batch_response(),
+                Method::Get => self.object.clone(),
+            })
+        }
+    }
+
+    fn serde_json_batch_response() -> Vec<u8> {
+        br#"{"objects":[{"actions":{"download":{"href":"https://github.com/lfs/object"}}}]}"#
+            .to_vec()
+    }
+
+    struct NoAuth;
+
+    impl immermemo_media::LfsAuth for NoAuth {
+        fn basic_auth(&self) -> Option<(String, String)> {
+            None
+        }
+    }
+
+    #[test]
+    fn an_image_kept_in_lfs_appears_once_downloaded_and_is_never_fetched_twice() {
+        use sha2::{Digest, Sha256};
+        let dir = tempfile::tempdir().unwrap();
+        let vault = dir.path().join("vault");
+        std::fs::create_dir_all(&vault).unwrap();
+        let object = png(800, 400);
+        let oid: String = Sha256::digest(&object)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        std::fs::write(
+            vault.join("cover.png"),
+            format!(
+                "version https://git-lfs.github.com/spec/v1\noid sha256:{oid}\nsize {}\n",
+                object.len()
+            ),
+        )
+        .unwrap();
+        let server = Arc::new(LfsServer {
+            object,
+            requests: AtomicUsize::new(0),
+        });
+        let thumbs = Thumbs::new(
+            MediaCache::new(dir.path().join("cache"), 1 << 20),
+            server.clone(),
+            Arc::new(|| {}),
+        );
+        let lfs = LfsRemote::new("git@github.com:owner/notes.git", Arc::new(NoAuth));
+        let base = MediaBase::new(&vault, Path::new("n.tmt")).with_lfs(lfs);
+        let source = MediaSource::resolve("cover.png", &base.vault_dir, &base.note_rel).unwrap();
+
+        assert_eq!(
+            thumbs
+                .picture(&source, Preset::Thumb, base.lfs.as_ref())
+                .size()
+                .width,
+            0,
+            "not downloaded yet"
+        );
+        thumbs.settle();
+        let ready = thumbs.picture(&source, Preset::Thumb, base.lfs.as_ref());
+        assert_eq!((ready.size().width, ready.size().height), (256, 128));
+        assert_eq!(server.requests.load(Ordering::SeqCst), 2);
+
+        // A fresh pipeline over the same cache: no network at all.
+        drop(thumbs);
+        let again = Thumbs::new(
+            MediaCache::new(dir.path().join("cache"), 1 << 20),
+            server.clone(),
+            Arc::new(|| {}),
+        );
+        again.picture(&source, Preset::Thumb, None);
+        again.settle();
+        assert!(again.picture(&source, Preset::Thumb, None).size().width > 0);
+        assert_eq!(server.requests.load(Ordering::SeqCst), 2);
     }
 
     #[test]
@@ -432,14 +574,14 @@ pub(crate) mod tests {
         let dir = tempfile::tempdir().unwrap();
         let source = MediaSource::Remote("https://example.com/a.png".to_owned());
         let (first, fetcher) = pipeline(dir.path(), Some(png(64, 64)));
-        first.picture(&source, Preset::Thumb);
+        first.picture(&source, Preset::Thumb, None);
         first.settle();
         drop(first);
 
         let (second, again) = pipeline(dir.path(), None);
-        second.picture(&source, Preset::Thumb);
+        second.picture(&source, Preset::Thumb, None);
         second.settle();
-        assert!(second.picture(&source, Preset::Thumb).size().width > 0);
+        assert!(second.picture(&source, Preset::Thumb, None).size().width > 0);
         assert_eq!(fetcher.calls.load(Ordering::SeqCst), 1);
         assert_eq!(again.calls.load(Ordering::SeqCst), 0);
     }

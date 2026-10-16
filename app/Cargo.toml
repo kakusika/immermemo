@@ -30,6 +30,7 @@ origiri-theme = { workspace = true }
 
 #= Crates.io
 anyhow = { workspace = true }
+base64 = { workspace = true }
 clru = { workspace = true }
 directories = { workspace = true }
 image = { workspace = true }
@@ -72,6 +73,7 @@ slint-build = { workspace = true }
 tomet = { workspace = true, features = ["merge", "parser", "printer"] }
 
 #= Crates.io
+sha2 = { workspace = true }
 tempfile = "3"
 
 # Only for `examples/snap.rs` (Linux development only -- it renders the window

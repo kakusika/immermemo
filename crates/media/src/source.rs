@@ -8,6 +8,8 @@ use std::time::{Duration, Instant, UNIX_EPOCH};
 use anyhow::{Context, bail};
 use tomet::links::VaultLinkIndex;
 
+use crate::lfs::{self, LfsRemote};
+
 /// The most a remote image may weigh, in bytes.
 pub const MAX_REMOTE_BYTES: usize = 8 * 1024 * 1024;
 
@@ -20,6 +22,9 @@ const NAME_INDEX_MAX_AGE: Duration = Duration::from_secs(5);
 
 /// The most files the file-name index of one vault holds.
 const NAME_INDEX_MAX_FILES: usize = 200_000;
+
+/// The longest a Git LFS pointer file can be, in bytes.
+const LFS_POINTER_MAX_BYTES: u64 = 1024;
 
 /// What a Git LFS pointer file says: the object that stands in for the real
 /// file, which is kept on the LFS server rather than in the repository.
@@ -42,7 +47,7 @@ impl LfsPointer {
     pub fn parse(bytes: &[u8]) -> Option<Self> {
         const SPEC: &str = "version https://git-lfs.github.com/spec/v1";
         // A pointer is ~130 bytes; the spec caps it at 1024.
-        if bytes.len() > 1024 {
+        if bytes.len() as u64 > LFS_POINTER_MAX_BYTES {
             return None;
         }
         let text = std::str::from_utf8(bytes).ok()?;
@@ -65,11 +70,39 @@ impl LfsPointer {
     }
 }
 
+/// An HTTP method [`Fetcher::request`] is asked to make.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Method {
+    Get,
+    Post,
+}
+
+/// One HTTP request, for the Git LFS protocol (a JSON POST, then a GET with
+/// the headers the server hands back).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HttpRequest {
+    pub method: Method,
+    pub url: String,
+    pub headers: Vec<(String, String)>,
+    /// `(username, password)` for HTTP basic auth.
+    pub basic_auth: Option<(String, String)>,
+    /// The request body (empty for a GET).
+    pub body: Vec<u8>,
+    /// The most response bytes to accept; a longer body is an error.
+    pub max_bytes: usize,
+}
+
 /// An HTTP client, supplied by the app.
 pub trait Fetcher: Send + Sync {
     /// GETs `url` and returns its body, failing if the body is larger than
     /// `max_bytes` (so a hostile server cannot make the app buffer more).
     fn fetch(&self, url: &str, max_bytes: usize) -> anyhow::Result<Vec<u8>>;
+
+    /// Makes `request` and returns the response body. Only Git LFS needs
+    /// this; a client that cannot make such requests can leave it.
+    fn request(&self, _request: &HttpRequest) -> anyhow::Result<Vec<u8>> {
+        bail!("this HTTP client cannot make Git LFS requests")
+    }
 }
 
 /// What a note's image reference points at.
@@ -136,13 +169,22 @@ impl MediaSource {
     }
 
     /// What distinguishes this source's *current* content, for the cache key:
-    /// the URL, or a vault file's path with its size and modification time.
-    /// `None` if the file cannot be stat'ed.
+    /// the URL; a Git LFS pointer file's object id (the same object is the
+    /// same image whichever file points at it, and needs no stat); or, for any
+    /// other vault file, its path with its size and modification time. `None`
+    /// if the file cannot be read.
     pub fn identity(&self) -> Option<String> {
         match self {
             Self::Remote(url) => Some(format!("remote:{url}")),
             Self::Vault(path) => {
                 let meta = path.metadata().ok()?;
+                // Only a file small enough to be a pointer is worth a look.
+                if meta.len() <= LFS_POINTER_MAX_BYTES
+                    && let Ok(bytes) = std::fs::read(path)
+                    && let Some(pointer) = LfsPointer::parse(&bytes)
+                {
+                    return Some(format!("lfs:{}", pointer.oid));
+                }
                 let mtime = meta
                     .modified()
                     .ok()
@@ -153,8 +195,15 @@ impl MediaSource {
         }
     }
 
-    /// Reads the original bytes, within the size limits.
-    pub(crate) fn read(&self, fetcher: &dyn Fetcher) -> anyhow::Result<Vec<u8>> {
+    /// Reads the original bytes, within the size limits. A vault file that is
+    /// a Git LFS pointer is replaced by the object it names, downloaded from
+    /// `lfs` (verified against the pointer); without an LFS remote that is an
+    /// error saying so.
+    pub(crate) fn read(
+        &self,
+        fetcher: &dyn Fetcher,
+        lfs: Option<&LfsRemote>,
+    ) -> anyhow::Result<Vec<u8>> {
         match self {
             Self::Remote(url) => fetcher
                 .fetch(url, MAX_REMOTE_BYTES)
@@ -169,15 +218,20 @@ impl MediaSource {
                 }
                 let bytes =
                     std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
-                if let Some(pointer) = LfsPointer::parse(&bytes) {
-                    bail!(
-                        "{} is a Git LFS pointer ({} bytes, sha256:{}), not the image itself",
+                let Some(pointer) = LfsPointer::parse(&bytes) else {
+                    return Ok(bytes);
+                };
+                let remote = lfs.with_context(|| {
+                    format!(
+                        "{} is a Git LFS pointer ({} bytes, sha256:{}), and this vault has no \
+                         LFS server to fetch it from",
                         path.display(),
                         pointer.size,
                         pointer.oid
-                    );
-                }
-                Ok(bytes)
+                    )
+                })?;
+                lfs::download(remote, fetcher, &pointer)
+                    .with_context(|| format!("fetching the LFS object for {}", path.display()))
             }
         }
     }
@@ -466,7 +520,7 @@ mod tests {
     }
 
     #[test]
-    fn a_vault_file_that_is_an_lfs_pointer_fails_with_a_clear_reason() {
+    fn a_vault_file_that_is_an_lfs_pointer_with_no_lfs_server_fails_with_a_clear_reason() {
         let (_root, vault) = vault();
         std::fs::write(vault.join("far.png"), POINTER).unwrap();
         let source = MediaSource::resolve("far.png", &vault, Path::new("n.tmt")).unwrap();
@@ -476,9 +530,25 @@ mod tests {
                 unreachable!("a vault file is not fetched")
             }
         }
-        let error = source.read(&NoNet).unwrap_err().to_string();
+        let error = source.read(&NoNet, None).unwrap_err().to_string();
         assert!(error.contains("Git LFS pointer"), "{error}");
+        assert!(error.contains("no LFS server"), "{error}");
         assert!(error.contains("563672"), "{error}");
+    }
+
+    #[test]
+    fn a_pointer_file_is_identified_by_its_object_not_its_path() {
+        let (_root, vault) = vault();
+        std::fs::write(vault.join("far.png"), POINTER).unwrap();
+        std::fs::write(vault.join("a/near.png"), POINTER).unwrap();
+        let far = MediaSource::resolve("far.png", &vault, Path::new("n.tmt")).unwrap();
+        let near = MediaSource::resolve("a/near.png", &vault, Path::new("n.tmt")).unwrap();
+        let expected = "lfs:00d9507e56ba0a5ad49053dead913ee2a377c74c1571293fe1eeb76b53a2886f";
+        assert_eq!(far.identity().as_deref(), Some(expected));
+        assert_eq!(near.identity().as_deref(), Some(expected));
+        // Once the real file is there, it is a plain vault file again.
+        std::fs::write(vault.join("far.png"), b"not a pointer, a short real file").unwrap();
+        assert!(far.identity().unwrap().starts_with("vault:"));
     }
 
     #[test]

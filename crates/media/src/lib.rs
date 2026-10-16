@@ -17,7 +17,9 @@
 //! SHA-256 of the source's *identity*:
 //!
 //! - a remote image: its URL;
-//! - a vault file: its path, size and modification time (a bare file name that
+//! - a Git LFS pointer file: the object id it carries, so one object is one
+//!   entry however many files point at it (and a hit needs no network);
+//! - any other vault file: its path, size and modification time (a bare file name that
 //!   no path finds -- `ref:+a.png` -- is looked up by Tomet's `VaultLinkIndex`,
 //!   the one closest to the note winning); A content hash would
 //!   mean reading every original on every list refresh; instead a checkout
@@ -35,9 +37,12 @@
 //! `.gitattributes`). The app syncs with libgit2, which never runs the LFS
 //! filter, so such an image sits in the vault as a ~130-byte *pointer* file
 //! and the real bytes stay on the LFS server. [`LfsPointer`] recognizes one,
-//! and reading it fails with that reason rather than "unknown image format".
-//! Fetching the object (the LFS batch API, addressed by the pointer's
-//! SHA-256, which would also make a perfect cache key) is not implemented.
+//! and [`download_lfs_object`] fetches the object it names from the vault's
+//! LFS server ([`LfsRemote`], derived from the Git remote the way git-lfs
+//! does, authenticated with the same token sync uses): a batch request, then
+//! a GET of the address the server gives, with the body checked against the
+//! pointer's SHA-256 and size. The object is never stored: the cache keeps
+//! only the thumbnail made from it, and the vault is not written to.
 //!
 //! # Formats
 //!
@@ -61,11 +66,15 @@
 //! lets every test here run offline.
 
 mod cache;
+mod lfs;
 mod source;
 mod thumb;
 
 pub use cache::{CacheKey, FAILURE_TTL, MediaCache};
-pub use source::{Fetcher, LfsPointer, MAX_LOCAL_BYTES, MAX_REMOTE_BYTES, MediaSource};
+pub use lfs::{LfsAuth, LfsRemote, MAX_LFS_BYTES, download as download_lfs_object};
+pub use source::{
+    Fetcher, HttpRequest, LfsPointer, MAX_LOCAL_BYTES, MAX_REMOTE_BYTES, MediaSource, Method,
+};
 pub use thumb::{
     DECODE_MAX_ALLOC, DECODE_MAX_DIMENSION, MAX_SVG_BYTES, Preset, Thumbnail, make_thumbnail,
 };

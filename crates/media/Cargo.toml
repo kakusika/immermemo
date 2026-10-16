@@ -12,6 +12,7 @@ tomet = { workspace = true, features = ["links"] }
 #= Crates.io
 anyhow = { workspace = true }
 image = { workspace = true }
+serde_json = { workspace = true }
 sha2 = { workspace = true }
 
 [dev-dependencies]

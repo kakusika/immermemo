@@ -8,6 +8,7 @@ use std::time::{Duration, SystemTime};
 use anyhow::{Context, bail};
 use sha2::{Digest, Sha256};
 
+use crate::lfs::LfsRemote;
 use crate::source::{Fetcher, MediaSource};
 use crate::thumb::{Format, Preset, Thumbnail, make_thumbnail};
 
@@ -119,6 +120,9 @@ impl MediaCache {
     /// The thumbnail for `source`: the cached one if there is one, otherwise
     /// read (or fetched), shrunk, stored and returned.
     ///
+    /// `lfs` is the vault's Git LFS server, used when `source` is a vault file
+    /// that turns out to be a pointer to an object kept there.
+    ///
     /// Blocking -- reads files and may use the network -- so call it off the
     /// UI thread. A source that failed within [`FAILURE_TTL`] fails again at
     /// once without being retried.
@@ -127,6 +131,7 @@ impl MediaCache {
         source: &MediaSource,
         preset: Preset,
         fetcher: &dyn Fetcher,
+        lfs: Option<&LfsRemote>,
     ) -> anyhow::Result<Thumbnail> {
         let key = CacheKey::new(source, preset).context("the image is not readable")?;
         if let Some(thumb) = self.lookup(preset, &key) {
@@ -136,7 +141,7 @@ impl MediaCache {
             bail!("the image failed to load recently");
         }
         match source
-            .read(fetcher)
+            .read(fetcher, lfs)
             .and_then(|bytes| make_thumbnail(&bytes, preset))
         {
             Ok(thumb) => {
@@ -245,6 +250,7 @@ fn write_atomically(path: &Path, bytes: &[u8]) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sha2::{Digest, Sha256};
     use std::sync::Mutex;
     use tempfile::TempDir;
 
@@ -290,6 +296,134 @@ mod tests {
         out
     }
 
+    /// An LFS server holding `object`, counting the requests made to it.
+    struct LfsServer {
+        object: Vec<u8>,
+        requests: Mutex<usize>,
+    }
+
+    impl Fetcher for LfsServer {
+        fn fetch(&self, _: &str, _: usize) -> anyhow::Result<Vec<u8>> {
+            unreachable!("LFS uses request()")
+        }
+
+        fn request(&self, request: &crate::source::HttpRequest) -> anyhow::Result<Vec<u8>> {
+            *self.requests.lock().unwrap() += 1;
+            Ok(match request.method {
+                crate::source::Method::Post => serde_json::json!({
+                    "objects": [{ "actions": { "download": { "href": "https://github.com/lfs/obj" } } }]
+                })
+                .to_string()
+                .into_bytes(),
+                crate::source::Method::Get => self.object.clone(),
+            })
+        }
+    }
+
+    struct NoAuth;
+
+    impl crate::lfs::LfsAuth for NoAuth {
+        fn basic_auth(&self) -> Option<(String, String)> {
+            None
+        }
+    }
+
+    fn lfs_remote() -> LfsRemote {
+        LfsRemote::new(
+            "https://github.com/owner/notes.git",
+            std::sync::Arc::new(NoAuth),
+        )
+        .unwrap()
+    }
+
+    /// The pointer file text for `object`.
+    fn pointer_text(object: &[u8]) -> String {
+        let oid: String = Sha256::digest(object)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        format!(
+            "version https://git-lfs.github.com/spec/v1\noid sha256:{oid}\nsize {}\n",
+            object.len()
+        )
+    }
+
+    #[test]
+    fn a_pointer_file_is_downloaded_once_and_then_served_from_the_cache_by_object() {
+        let dir = TempDir::new().unwrap();
+        let vault = dir.path().join("vault");
+        std::fs::create_dir_all(&vault).unwrap();
+        let image = png(600, 300, 90);
+        std::fs::write(vault.join("one.png"), pointer_text(&image)).unwrap();
+        // A second file pointing at the very same object.
+        std::fs::write(vault.join("two.png"), pointer_text(&image)).unwrap();
+        let cache = cache(&dir, 1 << 20);
+        let server = LfsServer {
+            object: image,
+            requests: Mutex::new(0),
+        };
+        let resolve = |name| MediaSource::resolve(name, &vault, Path::new("n.tmt")).unwrap();
+        let remote = lfs_remote();
+
+        let first = cache
+            .produce(&resolve("one.png"), Preset::Thumb, &server, Some(&remote))
+            .unwrap();
+        assert!(matches!(
+            first,
+            Thumbnail::Raster {
+                width: 256,
+                height: 128,
+                ..
+            }
+        ));
+        assert_eq!(
+            *server.requests.lock().unwrap(),
+            2,
+            "a batch request and a GET"
+        );
+
+        // The same object under another name, and the same file again, cost nothing --
+        // not even a remote.
+        cache
+            .produce(&resolve("two.png"), Preset::Thumb, &server, None)
+            .unwrap();
+        cache
+            .produce(&resolve("one.png"), Preset::Thumb, &server, None)
+            .unwrap();
+        assert_eq!(*server.requests.lock().unwrap(), 2);
+    }
+
+    #[test]
+    fn a_pointer_without_an_lfs_server_fails_and_a_bad_object_is_never_used() {
+        let dir = TempDir::new().unwrap();
+        let vault = dir.path().join("vault");
+        std::fs::create_dir_all(&vault).unwrap();
+        let wanted = png(64, 64, 1);
+        std::fs::write(vault.join("p.png"), pointer_text(&wanted)).unwrap();
+        let source = MediaSource::resolve("p.png", &vault, Path::new("n.tmt")).unwrap();
+
+        let no_remote = cache(&dir, 1 << 20);
+        let server = LfsServer {
+            object: wanted.clone(),
+            requests: Mutex::new(0),
+        };
+        let error = no_remote
+            .produce(&source, Preset::Thumb, &server, None)
+            .unwrap_err();
+        assert!(error.to_string().contains("no LFS server"), "{error:#}");
+
+        // A server that answers with other bytes of the same length.
+        let other_dir = TempDir::new().unwrap();
+        let liar = LfsServer {
+            object: png(64, 64, 2),
+            requests: Mutex::new(0),
+        };
+        let error = cache(&other_dir, 1 << 20)
+            .produce(&source, Preset::Thumb, &liar, Some(&lfs_remote()))
+            .unwrap_err();
+        assert!(format!("{error:#}").contains("does not match"), "{error:#}");
+    }
+
     fn remote(url: &str) -> MediaSource {
         MediaSource::Remote(url.to_owned())
     }
@@ -305,8 +439,12 @@ mod tests {
         let fetcher = FakeFetcher::serving(png(600, 300, 200));
         let source = remote("https://example.com/a.png");
 
-        let first = cache.produce(&source, Preset::Thumb, &fetcher).unwrap();
-        let second = cache.produce(&source, Preset::Thumb, &fetcher).unwrap();
+        let first = cache
+            .produce(&source, Preset::Thumb, &fetcher, None)
+            .unwrap();
+        let second = cache
+            .produce(&source, Preset::Thumb, &fetcher, None)
+            .unwrap();
         assert_eq!(fetcher.calls(), 1);
         for thumb in [&first, &second] {
             assert!(matches!(
@@ -332,14 +470,18 @@ mod tests {
 
         let key = CacheKey::new(&source, Preset::Thumb).unwrap();
         assert!(cache.lookup(Preset::Thumb, &key).is_none());
-        cache.produce(&source, Preset::Thumb, &fetcher).unwrap();
+        cache
+            .produce(&source, Preset::Thumb, &fetcher, None)
+            .unwrap();
         assert!(cache.lookup(Preset::Thumb, &key).is_some());
         assert_eq!(fetcher.calls(), 0, "a vault file never touches the network");
 
         std::fs::write(vault.join("p.png"), png(128, 64, 10)).unwrap();
         let changed = CacheKey::new(&source, Preset::Thumb).unwrap();
         assert_ne!(changed, key);
-        let thumb = cache.produce(&source, Preset::Thumb, &fetcher).unwrap();
+        let thumb = cache
+            .produce(&source, Preset::Thumb, &fetcher, None)
+            .unwrap();
         assert!(matches!(
             thumb,
             Thumbnail::Raster {
@@ -358,9 +500,17 @@ mod tests {
         let source = remote("https://example.com/down.png");
         let key = CacheKey::new(&source, Preset::Thumb).unwrap();
 
-        assert!(cache.produce(&source, Preset::Thumb, &fetcher).is_err());
+        assert!(
+            cache
+                .produce(&source, Preset::Thumb, &fetcher, None)
+                .is_err()
+        );
         assert!(cache.recently_failed(Preset::Thumb, &key));
-        assert!(cache.produce(&source, Preset::Thumb, &fetcher).is_err());
+        assert!(
+            cache
+                .produce(&source, Preset::Thumb, &fetcher, None)
+                .is_err()
+        );
         assert_eq!(fetcher.calls(), 1);
 
         // Age the failure marker past the TTL.
@@ -373,7 +523,11 @@ mod tests {
             .set_modified(old)
             .unwrap();
         assert!(!cache.recently_failed(Preset::Thumb, &key));
-        assert!(cache.produce(&source, Preset::Thumb, &fetcher).is_err());
+        assert!(
+            cache
+                .produce(&source, Preset::Thumb, &fetcher, None)
+                .is_err()
+        );
         assert_eq!(fetcher.calls(), 2);
     }
 
@@ -383,8 +537,16 @@ mod tests {
         let cache = cache(&dir, 1 << 20);
         let fetcher = FakeFetcher::serving(b"<html>login required</html>".to_vec());
         let source = remote("https://example.com/page");
-        assert!(cache.produce(&source, Preset::Thumb, &fetcher).is_err());
-        assert!(cache.produce(&source, Preset::Thumb, &fetcher).is_err());
+        assert!(
+            cache
+                .produce(&source, Preset::Thumb, &fetcher, None)
+                .is_err()
+        );
+        assert!(
+            cache
+                .produce(&source, Preset::Thumb, &fetcher, None)
+                .is_err()
+        );
         assert_eq!(fetcher.calls(), 1);
     }
 
@@ -395,7 +557,9 @@ mod tests {
         let svg = br#"<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"/>"#.to_vec();
         let fetcher = FakeFetcher::serving(svg.clone());
         let source = remote("https://example.com/a.svg");
-        cache.produce(&source, Preset::Thumb, &fetcher).unwrap();
+        cache
+            .produce(&source, Preset::Thumb, &fetcher, None)
+            .unwrap();
         let key = CacheKey::new(&source, Preset::Thumb).unwrap();
         assert_eq!(cache.lookup(Preset::Thumb, &key), Some(Thumbnail::Svg(svg)));
     }
@@ -406,14 +570,18 @@ mod tests {
         let cache = cache(&dir, 1 << 20);
         let fetcher = FakeFetcher::serving(png(64, 64, 1));
         let source = remote("https://example.com/a.png");
-        cache.produce(&source, Preset::Thumb, &fetcher).unwrap();
+        cache
+            .produce(&source, Preset::Thumb, &fetcher, None)
+            .unwrap();
         let key = CacheKey::new(&source, Preset::Thumb).unwrap();
         let path = cache.entry_path(Preset::Thumb, &key, Format::Jpeg);
         std::fs::write(&path, b"garbage").unwrap();
         assert!(cache.lookup(Preset::Thumb, &key).is_none());
         assert!(!path.exists());
         // And it is simply produced again.
-        cache.produce(&source, Preset::Thumb, &fetcher).unwrap();
+        cache
+            .produce(&source, Preset::Thumb, &fetcher, None)
+            .unwrap();
         assert_eq!(fetcher.calls(), 2);
     }
 
@@ -431,7 +599,9 @@ mod tests {
             .iter()
             .map(|url| {
                 let source = remote(url);
-                filler.produce(&source, Preset::Thumb, &fetcher).unwrap();
+                filler
+                    .produce(&source, Preset::Thumb, &fetcher, None)
+                    .unwrap();
                 CacheKey::new(&source, Preset::Thumb).unwrap()
             })
             .collect();
@@ -480,7 +650,9 @@ mod tests {
         let cache = cache(&dir, 1 << 20);
         let fetcher = FakeFetcher::serving(png(64, 64, 1));
         let source = remote("https://example.com/a.png");
-        cache.produce(&source, Preset::Thumb, &fetcher).unwrap();
+        cache
+            .produce(&source, Preset::Thumb, &fetcher, None)
+            .unwrap();
         cache.sweep();
         let key = CacheKey::new(&source, Preset::Thumb).unwrap();
         assert!(cache.lookup(Preset::Thumb, &key).is_some());

@@ -141,6 +141,7 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
     let folder_entries_raw = directory::build_folder_entries(&source, &current_folder);
 
     // Only resolve note icon metadata for notes actually present in this folder
+    let lfs = lfs_remote(&s);
     let mut icon_by_path: std::collections::HashMap<PathBuf, NoteIconView> =
         std::collections::HashMap::new();
     for entry in &folder_entries_raw {
@@ -150,9 +151,10 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
             && let Ok(rel_path) = abs_path.strip_prefix(&s.vault_dir)
             && let Ok(Some(icon)) = s.index.icon_for(rel_path)
         {
+            let base = crate::thumbs::MediaBase::new(&s.vault_dir, rel_path).with_lfs(lfs.clone());
             icon_by_path.insert(
                 abs_path.clone(),
-                crate::note_icon::resolve_view(Some(&icon), &s.vault_dir, rel_path),
+                crate::note_icon::resolve_view(Some(&icon), &base),
             );
         }
     }
@@ -230,14 +232,45 @@ pub fn navigate_directory_folder(app: &App, session: &Rc<RefCell<Session>>, key:
     refresh_directory_views(app, session);
 }
 
+/// The Git LFS credentials of a vault's linked account: the token sync uses,
+/// in the user name convention of the remote's host. Read when a download is
+/// actually made, on the worker thread that makes it.
+struct TokenAuth {
+    remote: String,
+    store: std::sync::Arc<dyn immermemo_core::TokenStore>,
+}
+
+impl immermemo_media::LfsAuth for TokenAuth {
+    fn basic_auth(&self) -> Option<(String, String)> {
+        let token = self.store.load().ok().flatten()?;
+        Some(immermemo_provider::https_basic_auth_for_remote(
+            &self.remote,
+            &token,
+        ))
+    }
+}
+
+/// The Git LFS server of the vault `session` has open, if it has a remote
+/// one can be found for (see `immermemo_media::LfsRemote`).
+fn lfs_remote(session: &Session) -> Option<immermemo_media::LfsRemote> {
+    let remote = session.remote.clone()?;
+    let auth = TokenAuth {
+        remote: remote.clone(),
+        store: session.sync_token_store(),
+    };
+    immermemo_media::LfsRemote::new(&remote, std::sync::Arc::new(auth))
+}
+
 /// Where the open note's relative image references resolve: the vault, and
-/// the note (`current-note-path`) they were written in.
+/// the note (`current-note-path`) they were written in -- and the vault's Git
+/// LFS server, for images that are pointers to it.
 pub fn media_base(app: &App, session: &SessionRef) -> crate::thumbs::MediaBase {
-    let vault_dir = session.borrow().vault_dir.clone();
+    let s = session.borrow();
     crate::thumbs::MediaBase::new(
-        &vault_dir,
+        &s.vault_dir,
         std::path::Path::new(app.get_current_note_path().as_str()),
     )
+    .with_lfs(lfs_remote(&s))
 }
 
 /// Sets `body` and recomputes `note-body-items` in the same step.
@@ -279,18 +312,9 @@ pub fn update_note_stats(app: &App, session: &SessionRef, text: &str) {
 pub fn update_current_header(app: &App, session: &SessionRef, text: &str) {
     let icon = immermemo_render_tomet::extract_note_icon(text);
     let banner = immermemo_render_tomet::extract_note_banner(text);
-    let vault_dir = session.borrow().vault_dir.clone();
-    let note_rel = PathBuf::from(app.get_current_note_path().as_str());
-    app.set_current_icon(crate::note_icon::resolve_view(
-        icon.as_ref(),
-        &vault_dir,
-        &note_rel,
-    ));
-    app.set_current_banner(crate::note_icon::banner_view(
-        banner.as_ref(),
-        &vault_dir,
-        &note_rel,
-    ));
+    let base = media_base(app, session);
+    app.set_current_icon(crate::note_icon::resolve_view(icon.as_ref(), &base));
+    app.set_current_banner(crate::note_icon::banner_view(banner.as_ref(), &base));
 }
 
 pub fn clear_note_stats(app: &App) {
@@ -302,4 +326,40 @@ pub fn clear_note_stats(app: &App) {
     app.set_current_icon(NoteIconView::default());
     app.set_current_banner(crate::NoteBannerView::default());
     app.set_note_metadata(Rc::new(VecModel::from(Vec::<NotePropertyEntry>::new())).into());
+}
+
+#[cfg(test)]
+mod lfs_auth_tests {
+    use super::*;
+    use immermemo_media::LfsAuth;
+
+    fn auth_for(remote: &str, token: Option<&str>) -> Option<(String, String)> {
+        let dir = tempfile::tempdir().unwrap();
+        let store = immermemo_core::PlainFileTokenStore::new(dir.path().join("token"));
+        if let Some(token) = token {
+            immermemo_core::TokenStore::save(&store, token).unwrap();
+        }
+        TokenAuth {
+            remote: remote.to_owned(),
+            store: std::sync::Arc::new(store),
+        }
+        .basic_auth()
+    }
+
+    #[test]
+    fn the_token_is_sent_the_way_each_host_expects_it() {
+        assert_eq!(
+            auth_for("git@github.com:owner/notes.git", Some("ghp_x")),
+            Some(("ghp_x".to_owned(), String::new()))
+        );
+        assert_eq!(
+            auth_for("https://gitlab.com/team/notes.git", Some("glpat_x")),
+            Some(("oauth2".to_owned(), "glpat_x".to_owned()))
+        );
+    }
+
+    #[test]
+    fn with_no_saved_token_there_are_no_credentials() {
+        assert_eq!(auth_for("https://github.com/owner/notes.git", None), None);
+    }
 }
