@@ -7,15 +7,12 @@ use std::sync::Arc;
 use anyhow::Context;
 
 use crate::editor::EditorState;
+use immermemo_credentials::{TokenStore, TokenStoreFactory};
 use immermemo_index::NoteIndex;
 use immermemo_vault::appdata::{Account, AppData};
-use immermemo_vault::credentials::TokenStore;
 use immermemo_vault::notes;
 
 use crate::navigation::BackForwardStack;
-
-/// Factory for creating vault-specific token stores.
-pub type TokenStoreFactory = Box<dyn Fn(&Path) -> anyhow::Result<Arc<dyn TokenStore>> + 'static>;
 
 /// Results of updating the filtered list according to search queries.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,6 +27,28 @@ pub struct FilteredListOutcome {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RefreshListOutcome {
     pub conflict_count: usize,
+}
+
+/// The note list's conflict flags after an edit changed the open note's.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConflictFlags {
+    /// One flag per row of the currently filtered list.
+    pub filtered: Vec<bool>,
+    /// How many notes in the whole vault have one.
+    pub count: usize,
+}
+
+/// What an edit to the open note changed that the UI mirrors.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EditOutcome {
+    /// Whether the edited text still contains an unresolved `@conflict`.
+    pub has_conflict: bool,
+    /// Set only when this edit flipped the note's stored conflict flag.
+    pub conflict_flags: Option<ConflictFlags>,
+    /// The note's vault-relative path, once its new text was written.
+    pub saved: Option<PathBuf>,
+    /// Why the new text could not be written to disk, if it could not.
+    pub write_error: Option<String>,
 }
 
 /// What the application is currently editing and browsing.
@@ -91,6 +110,80 @@ impl Session {
             directory_source: Vec::new(),
             note_nav: BackForwardStack::default(),
         }
+    }
+
+    /// Opens the session the app starts with: the vault that was current last
+    /// time (or the first known one), its token store, remote and note index.
+    ///
+    /// `default_vault_dir` only matters the very first time the app runs
+    /// (no vault known yet): it becomes the first known vault, so a fresh
+    /// install still opens straight onto a vault.
+    pub fn start(
+        app_data: AppData,
+        token_store_for: TokenStoreFactory,
+        default_vault_dir: PathBuf,
+    ) -> anyhow::Result<Self> {
+        let mut known_vaults = app_data.known_vaults();
+        if known_vaults.is_empty() {
+            std::fs::create_dir_all(&default_vault_dir)?;
+            app_data.add_vault(&default_vault_dir)?;
+            known_vaults.push(default_vault_dir);
+        }
+        let vault_dir = app_data
+            .load_current_vault()
+            .filter(|v| known_vaults.contains(v))
+            .unwrap_or_else(|| known_vaults[0].clone());
+        std::fs::create_dir_all(&vault_dir)?;
+
+        let token_store = token_store_for(&vault_dir)?;
+        let remote = app_data.load_remote(&vault_dir);
+        let index = Self::open_index(&app_data, &vault_dir);
+        Ok(Self::new(
+            vault_dir,
+            app_data,
+            token_store,
+            token_store_for,
+            known_vaults,
+            remote,
+            index,
+        ))
+    }
+
+    /// The note index for `vault_dir`, kept on disk -- or, if that database
+    /// cannot be opened, an in-memory one (the notes stay usable; the index
+    /// is rebuilt from the files on the next launch).
+    pub fn open_index(app_data: &AppData, vault_dir: &Path) -> NoteIndex {
+        app_data
+            .index_path(vault_dir)
+            .ok()
+            .and_then(|path| NoteIndex::open(&path).ok())
+            .unwrap_or_else(|| NoteIndex::open_in_memory().expect("an in-memory database opens"))
+    }
+
+    /// Makes `dir` a known vault (creating the folder), without switching to it.
+    pub fn register_vault(&mut self, dir: &Path) -> anyhow::Result<()> {
+        std::fs::create_dir_all(dir)?;
+        self.app_data.add_vault(dir)?;
+        self.known_vaults = self.app_data.known_vaults();
+        Ok(())
+    }
+
+    /// Forgets the known vault `dir` and wipes its private app data (never
+    /// the notes folder). If it was the current vault, returns the one to
+    /// switch to instead. The last remaining vault cannot be forgotten.
+    pub fn forget_vault(&mut self, dir: &Path) -> anyhow::Result<Option<PathBuf>> {
+        anyhow::ensure!(
+            self.known_vaults.len() > 1,
+            "the last vault cannot be removed"
+        );
+        let was_current = self.vault_dir == dir;
+        self.app_data.remove_vault(dir)?;
+        self.known_vaults = self.app_data.known_vaults();
+        Ok(if was_current {
+            self.known_vaults.first().cloned()
+        } else {
+            None
+        })
     }
 
     /// Returns the absolute path of the currently open note, if any.
@@ -340,6 +433,81 @@ impl Session {
         let conflict_count = self.conflicted.iter().filter(|&&c| c).count();
         self.editor.current = previous.and_then(|p| self.notes.iter().position(|n| *n == p));
         RefreshListOutcome { conflict_count }
+    }
+
+    /// Applies the editor's new text for the open note: records it in the
+    /// undo history, keeps the note's conflict flag in step with whether the
+    /// text still holds an `@conflict`, and writes it to disk and the index.
+    pub fn apply_edit(&mut self, text: &str) -> EditOutcome {
+        if let Some(history) = self.editor.history.as_mut() {
+            history.edit(text);
+        }
+
+        let has_conflict = text.contains(crate::CONFLICT_MARKER);
+        let conflict_flags = self
+            .editor
+            .current
+            .filter(|&i| self.conflicted.get(i).is_some_and(|&c| c != has_conflict))
+            .map(|i| {
+                self.conflicted[i] = has_conflict;
+                ConflictFlags {
+                    filtered: self
+                        .filtered_results
+                        .iter()
+                        .map(|r| self.conflicted[r.note_index])
+                        .collect(),
+                    count: self.conflicted.iter().filter(|&&c| c).count(),
+                }
+            });
+
+        let mut saved = None;
+        let mut write_error = None;
+        if let Some(path) = self.current_path() {
+            match std::fs::write(&path, text) {
+                Ok(()) => {
+                    if let Ok(rel) = path.strip_prefix(&self.vault_dir) {
+                        let _ = self.index.record_write(&self.vault_dir, rel, text);
+                        saved = Some(rel.to_owned());
+                    }
+                }
+                Err(e) => write_error = Some(e.to_string()),
+            }
+        }
+        EditOutcome {
+            has_conflict,
+            conflict_flags,
+            saved,
+            write_error,
+        }
+    }
+
+    /// The index in `notes` of the note a link's target names: matched
+    /// first as a vault-relative path (with or without the `.tmt`
+    /// extension, `@` prefix optional), then by file name alone, ignoring
+    /// case.
+    pub fn find_note_for_link(&self, query: &str) -> Option<usize> {
+        let trimmed = query.trim_start_matches('@');
+        let by_path = |rel: &Path| {
+            let without_extension = rel.with_extension("");
+            [rel, without_extension.as_path()].iter().any(|candidate| {
+                *candidate == Path::new(trimmed)
+                    || candidate.to_string_lossy() == query
+                    || candidate.to_string_lossy() == trimmed
+            })
+        };
+        let by_stem = |note: &Path| {
+            note.file_stem()
+                .and_then(|s| s.to_str())
+                .is_some_and(|stem| {
+                    stem.eq_ignore_ascii_case(query)
+                        || stem.eq_ignore_ascii_case(trimmed)
+                        || stem.trim_start_matches('@').eq_ignore_ascii_case(trimmed)
+                })
+        };
+        self.notes
+            .iter()
+            .position(|note| note.strip_prefix(&self.vault_dir).is_ok_and(by_path))
+            .or_else(|| self.notes.iter().position(|note| by_stem(note)))
     }
 
     /// Links this vault to `remote_url`, authenticated by `token` and
@@ -665,6 +833,137 @@ mod tests {
         assert_eq!(
             vault_path_from_input("rel/notes"),
             PathBuf::from("rel/notes")
+        );
+    }
+
+    #[test]
+    fn editing_writes_the_note_and_tracks_its_conflict_flag() {
+        let tmp = TempDir::new().unwrap();
+        let vault_dir = tmp.path().join("vault");
+        std::fs::create_dir_all(&vault_dir).unwrap();
+        let mut session = test_session(vault_dir.clone(), AppData::new(tmp.path().join("data")));
+        let note = session.create_note().unwrap();
+        session.refresh_list_data();
+        session.update_filtered_list_data();
+        session.open_note(0).unwrap().unwrap();
+
+        let plain = session.apply_edit("hello\n");
+        assert!(!plain.has_conflict);
+        assert_eq!(plain.conflict_flags, None, "nothing flipped");
+        assert_eq!(plain.write_error, None);
+        assert_eq!(std::fs::read_to_string(&note).unwrap(), "hello\n");
+        assert_eq!(plain.saved.as_deref(), note.strip_prefix(&vault_dir).ok());
+
+        let conflicted = session.apply_edit(&format!("{}\n", crate::CONFLICT_MARKER));
+        assert!(conflicted.has_conflict);
+        assert_eq!(
+            conflicted.conflict_flags,
+            Some(ConflictFlags {
+                filtered: vec![true],
+                count: 1
+            })
+        );
+        assert_eq!(
+            session
+                .apply_edit(&format!("{} still\n", crate::CONFLICT_MARKER))
+                .conflict_flags,
+            None,
+            "still conflicted, nothing flipped"
+        );
+        assert_eq!(
+            session
+                .apply_edit("fixed\n")
+                .conflict_flags
+                .map(|f| f.count),
+            Some(0)
+        );
+    }
+
+    #[test]
+    fn a_link_target_finds_the_note_by_path_then_by_file_name() {
+        let tmp = TempDir::new().unwrap();
+        let vault_dir = tmp.path().join("vault");
+        std::fs::create_dir_all(vault_dir.join("work")).unwrap();
+        for rel in ["inbox.tmt", "work/Todo.tmt", "Todo.tmt"] {
+            std::fs::write(vault_dir.join(rel), "x\n").unwrap();
+        }
+        let mut session = test_session(vault_dir.clone(), AppData::new(tmp.path().join("data")));
+        session.refresh_list_data();
+        let name_at = |i: Option<usize>| {
+            i.map(|i| {
+                session.notes[i]
+                    .strip_prefix(&vault_dir)
+                    .unwrap()
+                    .to_owned()
+            })
+        };
+
+        let find = |q| name_at(session.find_note_for_link(q));
+        assert_eq!(find("inbox"), Some("inbox.tmt".into()));
+        assert_eq!(find("inbox.tmt"), Some("inbox.tmt".into()));
+        assert_eq!(find("@inbox"), Some("inbox.tmt".into()));
+        assert_eq!(find("work/Todo"), Some("work/Todo.tmt".into()));
+        assert_eq!(
+            find("TODO"),
+            Some("Todo.tmt".into()),
+            "file name, ignoring case"
+        );
+        assert_eq!(find("missing"), None);
+    }
+
+    #[test]
+    fn starting_opens_the_default_vault_first_and_the_saved_current_one_after() {
+        let tmp = TempDir::new().unwrap();
+        let data = || AppData::new(tmp.path().join("data"));
+        let factory = || -> TokenStoreFactory {
+            Box::new(|_| Ok(Arc::new(DummyTokenStore) as Arc<dyn TokenStore>))
+        };
+        let (first, second) = (tmp.path().join("first"), tmp.path().join("second"));
+
+        let session = Session::start(data(), factory(), first.clone()).unwrap();
+        assert_eq!(session.vault_dir, first);
+        assert_eq!(session.known_vaults, vec![first.clone()]);
+        assert!(first.is_dir(), "the vault folder is created");
+
+        // A later launch ignores the default and honors the saved choice.
+        let app_data = data();
+        std::fs::create_dir_all(&second).unwrap();
+        app_data.add_vault(&second).unwrap();
+        app_data.save_current_vault(&second).unwrap();
+        let session = Session::start(data(), factory(), first.clone()).unwrap();
+        assert_eq!(session.vault_dir, second);
+        assert_eq!(session.known_vaults.len(), 2);
+
+        // A saved vault that is no longer known falls back to the first one.
+        app_data
+            .save_current_vault(&tmp.path().join("gone"))
+            .unwrap();
+        let session = Session::start(data(), factory(), first.clone()).unwrap();
+        assert_eq!(session.vault_dir, first);
+    }
+
+    #[test]
+    fn vaults_are_registered_and_forgotten_but_never_the_last_one() {
+        let tmp = TempDir::new().unwrap();
+        let (a, b) = (tmp.path().join("a"), tmp.path().join("b"));
+        std::fs::create_dir_all(&a).unwrap();
+        let mut session = test_session(a.clone(), AppData::new(tmp.path().join("data")));
+        session.register_vault(&a).unwrap();
+
+        assert!(session.forget_vault(&a).is_err(), "the only vault stays");
+
+        session.register_vault(&b).unwrap();
+        assert!(b.is_dir(), "registering creates the folder");
+        assert_eq!(session.known_vaults.len(), 2);
+
+        assert_eq!(session.forget_vault(&b).unwrap(), None, "b was not current");
+        assert_eq!(session.known_vaults, vec![a.clone()]);
+
+        session.register_vault(&b).unwrap();
+        assert_eq!(
+            session.forget_vault(&a).unwrap(),
+            Some(b.clone()),
+            "removing the current vault names its replacement"
         );
     }
 }

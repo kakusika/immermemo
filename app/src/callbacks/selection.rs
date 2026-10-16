@@ -1,19 +1,18 @@
 //! Callback wiring for multi-selection adapter and bulk operations.
 
-use std::cell::RefCell;
+use crate::session::SessionRef;
 use std::path::PathBuf;
-use std::rc::Rc;
 
 use slint::ComponentHandle;
 
 use crate::session::{
-    Session, close_current_note_and_show_list_or_reopen, refresh_list, show_list_or_reopen,
+    close_current_note_and_show_list_or_reopen, refresh_list, show_list_or_reopen,
     sync_selection_to_ui,
 };
 use crate::{App, SelectionAdapter};
 
 /// Binds UI callbacks for [`SelectionAdapter`].
-pub fn bind_selection_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn bind_selection_callbacks(app: &App, session: &SessionRef) {
     let adapter = app.global::<SelectionAdapter>();
 
     // Toggle a note's selection by path

@@ -1,18 +1,18 @@
 //! Background sync runner, completion handler, and debounced auto-sync scheduler.
 
+use crate::session::SessionRef;
 use std::cell::RefCell;
-use std::rc::Rc;
 
 use slint::{ComponentHandle, SharedString};
 
 #[cfg(any(target_os = "android", target_os = "ios"))]
-use crate::cert;
+use crate::platform::cert;
 use crate::{App, SettingsAdapter};
 use immermemo_core::{TokenCredentials, format_time_only, sync};
 
 use super::util::{set_error, set_status};
 use super::{
-    SESSION, Session, close_current_note_and_show_list_or_reopen, open_note, refresh_list,
+    SESSION, close_current_note_and_show_list_or_reopen, open_note, refresh_list,
     show_list_or_reopen, show_vault_identity,
 };
 
@@ -22,7 +22,7 @@ thread_local! {
 
 /// Spawns a sync in the background, unless no remote is linked yet -- then
 /// it just opens the sheet to ask for one instead of failing.
-pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn start_sync(app: &App, session: &SessionRef) {
     if app.get_syncing() {
         return;
     }
@@ -95,7 +95,7 @@ pub fn start_sync(app: &App, session: &Rc<RefCell<Session>>) {
 
 pub fn finish_sync(
     app: &App,
-    session: &Rc<RefCell<Session>>,
+    session: &SessionRef,
     result: Result<immermemo_core::SyncReport, String>,
 ) {
     app.set_syncing(false);
@@ -161,7 +161,7 @@ pub fn finish_sync(
 
 /// Triggers an automatic sync in the background if a remote is configured and no sync is running.
 /// If a sync is already running, sets `pending_auto_sync` so another sync will run after it completes.
-pub fn trigger_auto_sync(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn trigger_auto_sync(app: &App, session: &SessionRef) {
     let has_remote = {
         let Ok(s) = session.try_borrow() else {
             // Contested borrow: retry in 200ms

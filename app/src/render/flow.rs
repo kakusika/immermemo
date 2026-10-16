@@ -239,9 +239,8 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
 /// overrides a plain-text leaf's own (always `Tone::Neutral`) tone with
 /// the same accent/warning colors the retired `@mobile.conflict` scheme
 /// used for its "Mine"/"Theirs" chips, without reintroducing a
-/// mine/theirs *label* (see the decision in
-/// `.agents/tasks/adopt-std-conflict.md` for why `a`/`b` carry no such
-/// meaning). A non-plain-text leaf (rare: a nested element inside a
+/// mine/theirs *label* (`a`/`b` are `@conflict`'s structural names and
+/// carry no such meaning). A non-plain-text leaf (rare: a nested element inside a
 /// conflicting run) keeps its own tone -- overriding, say, a nested
 /// link's accent color to match its side would fight the look that
 /// element already has everywhere else it appears.

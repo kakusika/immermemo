@@ -2756,7 +2756,6 @@ dependencies = [
  "immermemo-render-tomet",
  "immermemo-sync",
  "immermemo-vault",
- "serde",
  "tempfile",
  "tomet",
 ]

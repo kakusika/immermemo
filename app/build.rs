@@ -7,8 +7,7 @@ fn main() {
     // doc comment says -- keeps them), gated behind this env var. The Rust
     // side's `ComponentFactory` is similarly `#[deprecated(note =
     // "Experimental type was made public by mistake")]` and `#[doc(hidden)]`
-    // in the `slint` crate. Known, accepted risk -- see
-    // `.agents/tasks/richtext-flow-inline-conflict.md`.
+    // in the `slint` crate. Known, accepted risk.
     // SAFETY: single-threaded build script, set before any other code reads
     // the environment.
     unsafe {
@@ -30,8 +29,7 @@ fn main() {
     // `rendered_block.slint` used to come from a separate `crates/
     // editor-slint` the same way, but that crate had no other consumer and
     // no Rust code of its own, so its `ui/` moved into this crate's own
-    // `ui/pages/editor/` and `ui/render/` directly (see
-    // `.agents/tasks/fold-editor-slint-into-apps-slint.md`).
+    // `ui/pages/editor/` and `ui/render/` directly.
     let origiri_mobile_ui_dir = std::env::var("DEP_ORIGIRI_MOBILE_UI_DIR").unwrap();
     // `origiri-mobile`'s own `.slint` now unconditionally imports
     // `@origiri-icons` (the icon set it shares with `origiri-frameworks`'s

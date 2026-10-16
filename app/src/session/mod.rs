@@ -64,16 +64,19 @@ impl Session {
     }
 }
 
+/// The UI thread's shared handle to the session, as every callback holds it.
+pub type SessionRef = Rc<RefCell<Session>>;
+
 thread_local! {
     // `invoke_from_event_loop` needs a `Send` closure, so a finished sync
     // finds the session again here rather than carrying an `Rc` across.
-    pub static SESSION: RefCell<Option<Rc<RefCell<Session>>>> = const { RefCell::new(None) };
+    pub static SESSION: RefCell<Option<SessionRef>> = const { RefCell::new(None) };
 }
 
 pub fn refresh_list(app: &App, session: &Rc<RefCell<Session>>) {
     let mut s = session.borrow_mut();
     let outcome = s.refresh_list_data();
-    crate::widget::export_recent_notes(&s.index);
+    crate::platform::widget::export_recent_notes(&s.index);
     drop(s);
     app.set_conflict_count(outcome.conflict_count as i32);
     update_filtered_list(app, session);
@@ -84,7 +87,7 @@ pub fn load_cached_list(app: &App, session: &Rc<RefCell<Session>>) -> bool {
     let mut s = session.borrow_mut();
     let outcome = s.load_cached_list_data();
     let has_notes = !s.notes.is_empty();
-    crate::widget::export_recent_notes(&s.index);
+    crate::platform::widget::export_recent_notes(&s.index);
     drop(s);
     app.set_conflict_count(outcome.conflict_count as i32);
     update_filtered_list(app, session);

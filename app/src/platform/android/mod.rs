@@ -37,9 +37,9 @@ pub fn android_main(app: slint::android::AndroidApp) {
     });
     slint::android::init(app).expect("initialize the Android backend");
     unsafe { activity::init(vm_ptr, activity_ptr) };
-    crate::widget::init_android_widget_bridge(&base);
+    crate::platform::widget::init_android_widget_bridge(&base);
     let (initial_note_path, initial_import_uri) = (
-        crate::widget::read_launch_note_path(),
+        crate::platform::widget::read_launch_note_path(),
         read_launch_import_uri(),
     );
     run(

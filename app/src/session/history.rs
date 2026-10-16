@@ -1,8 +1,7 @@
 //! History sheet views: note revisions, vault commits, and history previews.
 
-use std::cell::RefCell;
+use crate::session::SessionRef;
 use std::path::Path;
-use std::rc::Rc;
 
 use immermemo_core::{History, format_timestamp, notes};
 use slint::{ModelRc, SharedString, VecModel};
@@ -14,7 +13,7 @@ use crate::{App, NoteBodyItemView};
 /// Title + real rendered body items for `rel_path`'s history-neighbor preview.
 pub fn history_preview(
     app: &App,
-    session: &Rc<RefCell<Session>>,
+    session: &SessionRef,
     vault_dir: &Path,
     rel_path: &str,
     max_width: f32,
@@ -44,11 +43,7 @@ pub fn show_history_state(app: &App, session: &Session) {
     app.set_can_redo(history.is_some_and(History::can_redo));
 }
 
-pub fn apply_restored(
-    app: &App,
-    session: &Rc<RefCell<Session>>,
-    restored: Option<immermemo_core::Restored>,
-) {
+pub fn apply_restored(app: &App, session: &SessionRef, restored: Option<immermemo_core::Restored>) {
     let Some(restored) = restored else {
         return;
     };
@@ -76,7 +71,7 @@ pub fn apply_restored(
     show_history_state(app, &session.borrow());
 }
 
-pub fn open_note_history(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn open_note_history(app: &App, session: &SessionRef) {
     let revisions = session.borrow_mut().load_note_history(50);
     let Some(revisions) = revisions else { return };
 
@@ -100,7 +95,7 @@ pub fn open_note_history(app: &App, session: &Rc<RefCell<Session>>) {
     app.set_history_sheet_open(true);
 }
 
-pub fn restore_note_version(app: &App, session: &Rc<RefCell<Session>>, rev_idx: usize) {
+pub fn restore_note_version(app: &App, session: &SessionRef, rev_idx: usize) {
     let outcome = session.borrow_mut().restore_note_version(rev_idx);
     let Some(outcome) = outcome else { return };
     match outcome {
@@ -117,7 +112,7 @@ pub fn restore_note_version(app: &App, session: &Rc<RefCell<Session>>, rev_idx: 
     }
 }
 
-pub fn open_vault_history(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn open_vault_history(app: &App, session: &SessionRef) {
     let commits = session.borrow().vault_history(50);
 
     let mut commit_summaries = Vec::with_capacity(commits.len());

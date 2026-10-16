@@ -21,7 +21,7 @@ pub fn resolve_app_theme(
     let (seed_rgb, contrast_val) = if color_source == 0 {
         // System wallpaper & contrast
         #[cfg(target_os = "android")]
-        let seed = crate::android::system_ui::get_wallpaper_seed_color()
+        let seed = crate::platform::android::system_ui::get_wallpaper_seed_color()
             .map(|argb| {
                 RgbColor::new(
                     ((argb >> 16) & 0xff) as u8,
@@ -32,7 +32,7 @@ pub fn resolve_app_theme(
             .unwrap_or_else(|| RgbColor::new(0x67, 0x50, 0xa4));
 
         #[cfg(target_os = "android")]
-        let contrast = crate::android::system_ui::get_system_contrast();
+        let contrast = crate::platform::android::system_ui::get_system_contrast();
 
         #[cfg(not(target_os = "android"))]
         let seed = RgbColor::new(0x67, 0x50, 0xa4);
@@ -157,7 +157,7 @@ pub fn editor_font_px(choice: i32) -> f32 {
 fn system_is_dark() -> bool {
     #[cfg(target_os = "android")]
     {
-        crate::android::system_ui::is_system_in_dark_theme()
+        crate::platform::android::system_ui::is_system_in_dark_theme()
     }
     #[cfg(not(target_os = "android"))]
     {

@@ -220,7 +220,7 @@ export component App inherits Window {
     in property <int> active-conflict-total: 0;
     // `a`/`b` are `@conflict`'s own structural names -- neither carries
     // mine/theirs meaning by itself (reversible depending on who's
-    // looking, see `.agents/tasks/git-ancestry-conflict-labeling.md`).
+    // looking).
     // `a-label`/`b-label` (and the matching `*-button-label`s) are
     // computed in Rust from `immermemo_sync::ConflictSide` and already
     // say "Mine"/"Theirs"/a neutral "A"/"B" as appropriate -- this file

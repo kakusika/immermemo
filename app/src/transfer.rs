@@ -1,11 +1,12 @@
 //! Device-to-device transfer: QR export, URI import, clipboard payload handling.
 
+use crate::session::SessionRef;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use slint::{ComponentHandle, SharedString};
 
-use crate::session::{self, Session};
+use crate::session::{self};
 use crate::update_provider_ui_state;
 use crate::{App, SettingsAdapter};
 
@@ -75,7 +76,7 @@ pub fn handle_incoming_import_uri(uri: &str) {
 /// Binds transfer QR generation, link copying, import preview, and payload application callbacks.
 pub fn bind_transfer_callbacks(
     app: &App,
-    session: &Rc<RefCell<Session>>,
+    session: &SessionRef,
     initial_import_uri: Option<String>,
 ) {
     let cached_export_uri = Rc::new(RefCell::new(None::<String>));
@@ -87,7 +88,7 @@ pub fn bind_transfer_callbacks(
 
     let update_transfer_qr = {
         let cached_export_uri = cached_export_uri.clone();
-        move |app: &App, session: &Rc<RefCell<Session>>| {
+        move |app: &App, session: &SessionRef| {
             let settings = app.global::<SettingsAdapter>();
             let options = immermemo_core::transfer::ExportOptions {
                 include_interface: settings.get_export_include_interface(),

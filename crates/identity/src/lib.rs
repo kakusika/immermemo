@@ -2,9 +2,7 @@
 //! commits -- so a conflict's two sides can be labeled "Mine"/"Theirs"
 //! honestly instead of guessing, without needing a stored mine/theirs
 //! flag in the note itself (which would be backwards the moment a second
-//! device looks at it -- see `immermemo`'s own
-//! `.agents/tasks/git-ancestry-conflict-labeling.md` for the full
-//! reasoning behind this crate existing at all).
+//! device looks at it).
 //!
 //! Two layers, deliberately kept separate:
 //! - [`DeviceIdentity::device_id`]: a random, non-identifying string,

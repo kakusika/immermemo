@@ -1,19 +1,18 @@
 //! Editor navigation: opening notes, back/forward history navigation, and tab switching.
 
-use std::cell::RefCell;
+use crate::session::SessionRef;
 use std::path::Path;
-use std::rc::Rc;
 
 use slint::SharedString;
 
 use super::conflict::sync_conflict_sheet_state;
 use super::history::{history_preview, show_history_state};
 use super::util::{set_error, set_status};
-use super::{Session, clear_note_stats, update_note_stats, update_rendered_body};
+use super::{clear_note_stats, update_note_stats, update_rendered_body};
 use crate::App;
 
 /// Opens `notes[index]` and records it in the back/forward stack.
-pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
+pub fn open_note(app: &App, session: &SessionRef, index: usize) {
     if let Some(rel_path) = open_note_inner(app, session, index) {
         session.borrow_mut().note_nav.visit(rel_path);
         sync_nav_state(app, session);
@@ -22,7 +21,7 @@ pub fn open_note(app: &App, session: &Rc<RefCell<Session>>, index: usize) {
 
 /// Switches the editor to `notes[index]`. Returns the opened note's
 /// vault-relative path on success.
-fn open_note_inner(app: &App, session: &Rc<RefCell<Session>>, index: usize) -> Option<String> {
+fn open_note_inner(app: &App, session: &SessionRef, index: usize) -> Option<String> {
     let outcome = session.borrow_mut().open_note(index)?;
     match outcome {
         Err(msg) => {
@@ -55,7 +54,7 @@ fn open_note_inner(app: &App, session: &Rc<RefCell<Session>>, index: usize) -> O
 
 /// Steps one note back in the open-note history, skipping over (and
 /// dropping) any entries that no longer resolve to a live note.
-pub fn navigate_back(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn navigate_back(app: &App, session: &SessionRef) {
     let rel_path = {
         let mut s = session.borrow_mut();
         let vault_dir = s.vault_dir.clone();
@@ -67,7 +66,7 @@ pub fn navigate_back(app: &App, session: &Rc<RefCell<Session>>) {
 }
 
 /// Mirrors `navigate_back`, stepping forward instead.
-pub fn navigate_forward(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn navigate_forward(app: &App, session: &SessionRef) {
     let rel_path = {
         let mut s = session.borrow_mut();
         let vault_dir = s.vault_dir.clone();
@@ -78,7 +77,7 @@ pub fn navigate_forward(app: &App, session: &Rc<RefCell<Session>>) {
     navigate_to(app, session, rel_path);
 }
 
-fn navigate_to(app: &App, session: &Rc<RefCell<Session>>, rel_path: Option<String>) {
+fn navigate_to(app: &App, session: &SessionRef, rel_path: Option<String>) {
     let Some(rel_path) = rel_path else { return };
     let index = {
         let s = session.borrow();
@@ -91,7 +90,7 @@ fn navigate_to(app: &App, session: &Rc<RefCell<Session>>, rel_path: Option<Strin
     sync_nav_state(app, session);
 }
 
-pub fn sync_nav_state(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn sync_nav_state(app: &App, session: &SessionRef) {
     let (vault_dir, can_back, can_forward, back_path, forward_path) = {
         let s = session.borrow();
         (
@@ -121,7 +120,7 @@ pub fn sync_nav_state(app: &App, session: &Rc<RefCell<Session>>) {
 
 /// Opens the note that was last open in `vault_dir`, or the first note in the
 /// list if none was recorded (or if the recorded note is gone).
-pub fn open_initial_or_last_note(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn open_initial_or_last_note(app: &App, session: &SessionRef) {
     let index = {
         let s = session.borrow();
         immermemo_core::editor::initial_or_last_note_index(&s.app_data, &s.vault_dir, &s.notes)
@@ -132,7 +131,7 @@ pub fn open_initial_or_last_note(app: &App, session: &Rc<RefCell<Session>>) {
 }
 
 /// Opens the note at `rel_path`, if it still exists in the current vault's note list.
-pub fn open_note_by_rel_path(app: &App, session: &Rc<RefCell<Session>>, rel_path: &Path) -> bool {
+pub fn open_note_by_rel_path(app: &App, session: &SessionRef, rel_path: &Path) -> bool {
     let index = {
         let s = session.borrow();
         let abs_path = s.vault_dir.join(rel_path);
@@ -148,7 +147,7 @@ pub fn open_note_by_rel_path(app: &App, session: &Rc<RefCell<Session>>, rel_path
 }
 
 /// Shows the note list if the vault has no notes left, or reopens the initial/last note.
-pub fn show_list_or_reopen(app: &App, session: &Rc<RefCell<Session>>, switch_to_files_tab: bool) {
+pub fn show_list_or_reopen(app: &App, session: &SessionRef, switch_to_files_tab: bool) {
     if session.borrow().notes.is_empty() {
         let s = session.borrow();
         s.app_data.clear_last_note(&s.vault_dir);
@@ -166,7 +165,7 @@ pub fn show_list_or_reopen(app: &App, session: &Rc<RefCell<Session>>, switch_to_
 /// Clears the currently-open note's UI state and shows the note list or reopens another note.
 pub fn close_current_note_and_show_list_or_reopen(
     app: &App,
-    session: &Rc<RefCell<Session>>,
+    session: &SessionRef,
     switch_to_files_tab: bool,
 ) {
     session.borrow_mut().editor.history = None;

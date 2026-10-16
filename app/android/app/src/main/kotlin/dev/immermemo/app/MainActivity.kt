@@ -20,11 +20,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  * This subclass holds the splash open past that point via
  * [androidx.core.splashscreen.SplashScreen]'s `setKeepOnScreenCondition`,
  * released by [markFirstFrameRendered] -- called over JNI from
- * `src/android/splash.rs` once Slint's renderer reports its first
+ * `app/src/platform/android/splash.rs` once Slint's renderer reports its first
  * frame (see that file for the Rust side).
  *
  * Also exposes [setStatusBarVisible], called over JNI from
- * `src/android/system_ui.rs`, for the Settings toggle that hides the
+ * `app/src/platform/android/system_ui.rs`, for the Settings toggle that hides the
  * status bar while editing a note.
  */
 class MainActivity : NativeActivity() {
@@ -101,7 +101,7 @@ class MainActivity : NativeActivity() {
     }
 
     /**
-     * Called over JNI from `src/android/system_ui.rs` to show/hide the
+     * Called over JNI from `app/src/platform/android/system_ui.rs` to show/hide the
      * status bar -- used to free up screen space while editing a note,
      * when the user opts into that in Settings. View mutations must
      * happen on the UI thread, which this JNI call doesn't originate

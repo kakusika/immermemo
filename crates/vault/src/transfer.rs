@@ -8,7 +8,7 @@ use base64::engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD};
 use serde::{Deserialize, Serialize};
 
 use crate::appdata::AppData;
-use crate::credentials::TokenStore;
+use immermemo_credentials::TokenStore;
 
 pub const SCHEME_PREFIX: &str = "immermemo://import#";
 pub const CURRENT_SCHEMA_VERSION: u32 = 1;
@@ -197,7 +197,7 @@ pub fn apply_payload(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::credentials::PlainFileTokenStore;
+    use immermemo_credentials::PlainFileTokenStore;
 
     #[test]
     fn round_trip_encoding_and_decoding() {

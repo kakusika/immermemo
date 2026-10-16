@@ -7,6 +7,36 @@ use std::path::{Path, PathBuf};
 
 use super::{AppData, read_trimmed, write};
 
+/// Declares per-install integer settings, each a trimmed-text file directly
+/// under the app-data root: `load_*` is `None` until first saved (or if the
+/// file is unreadable), `save_*` overwrites it.
+macro_rules! int_setting {
+    ($($(#[$doc:meta])* $file:literal, $load:ident, $save:ident;)*) => {$(
+        $(#[$doc])*
+        pub fn $load(&self) -> Option<i32> {
+            read_trimmed(&self.base.join($file)).and_then(|s| s.parse().ok())
+        }
+
+        pub fn $save(&self, value: i32) -> anyhow::Result<()> {
+            write(&self.base.join($file), &value.to_string())
+        }
+    )*};
+}
+
+/// [`int_setting!`] for free-form text.
+macro_rules! text_setting {
+    ($($(#[$doc:meta])* $file:literal, $load:ident, $save:ident;)*) => {$(
+        $(#[$doc])*
+        pub fn $load(&self) -> Option<String> {
+            read_trimmed(&self.base.join($file))
+        }
+
+        pub fn $save(&self, value: &str) -> anyhow::Result<()> {
+            write(&self.base.join($file), value)
+        }
+    )*};
+}
+
 impl AppData {
     fn remote_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
         Ok(self.vault_data_dir(vault_dir)?.join("remote.txt"))
@@ -75,103 +105,26 @@ impl AppData {
         }
     }
 
-    fn font_size_file(&self) -> PathBuf {
-        self.base.join("font_size.txt")
+    int_setting! {
+        /// 0: small, 1: medium (default), 2: large.
+        "font_size.txt", load_font_size, save_font_size;
+        /// 0: follow the system, 1: light, 2: dark.
+        "theme.txt", load_theme, save_theme;
+        /// 0: show (default, even while editing), 1: hide while editing a note,
+        /// 2: hide everywhere.
+        "status_bar.txt", load_status_bar_choice, save_status_bar_choice;
+        /// 0: system wallpaper / dynamic color, 1: custom color & style
+        "color_source.txt", load_color_source, save_color_source;
+        /// 0: TonalSpot, 1: Vivid, 2: Expressive, 3: FruitSalad, 4: Rainbow, 5: Spritz, 6: Monochrome
+        "palette_style.txt", load_palette_style, save_palette_style;
+        /// 0: Standard (0.0), 1: Medium (0.5), 2: High (1.0)
+        "contrast_level.txt", load_contrast_level, save_contrast_level;
     }
 
-    pub fn load_font_size(&self) -> Option<i32> {
-        read_trimmed(&self.font_size_file()).and_then(|s| s.parse().ok())
-    }
-
-    pub fn save_font_size(&self, choice: i32) -> anyhow::Result<()> {
-        write(&self.font_size_file(), &choice.to_string())
-    }
-
-    fn theme_file(&self) -> PathBuf {
-        self.base.join("theme.txt")
-    }
-
-    pub fn load_theme(&self) -> Option<i32> {
-        read_trimmed(&self.theme_file()).and_then(|s| s.parse().ok())
-    }
-
-    pub fn save_theme(&self, choice: i32) -> anyhow::Result<()> {
-        write(&self.theme_file(), &choice.to_string())
-    }
-
-    fn status_bar_file(&self) -> PathBuf {
-        self.base.join("status_bar.txt")
-    }
-
-    /// 0: show (default, even while editing), 1: hide while editing a note.
-    pub fn load_status_bar_choice(&self) -> Option<i32> {
-        read_trimmed(&self.status_bar_file()).and_then(|s| s.parse().ok())
-    }
-
-    pub fn save_status_bar_choice(&self, choice: i32) -> anyhow::Result<()> {
-        write(&self.status_bar_file(), &choice.to_string())
-    }
-
-    fn bottom_bar_file(&self) -> PathBuf {
-        self.base.join("bottom_bar.txt")
-    }
-
-    pub fn load_bottom_bar_config(&self) -> Option<String> {
-        read_trimmed(&self.bottom_bar_file())
-    }
-
-    pub fn save_bottom_bar_config(&self, config: &str) -> anyhow::Result<()> {
-        write(&self.bottom_bar_file(), config)
-    }
-
-    fn color_source_file(&self) -> PathBuf {
-        self.base.join("color_source.txt")
-    }
-
-    /// 0: system wallpaper / dynamic color, 1: custom color & style
-    pub fn load_color_source(&self) -> Option<i32> {
-        read_trimmed(&self.color_source_file()).and_then(|s| s.parse().ok())
-    }
-
-    pub fn save_color_source(&self, choice: i32) -> anyhow::Result<()> {
-        write(&self.color_source_file(), &choice.to_string())
-    }
-
-    fn color_seed_file(&self) -> PathBuf {
-        self.base.join("color_seed.txt")
-    }
-
-    pub fn load_color_seed(&self) -> Option<String> {
-        read_trimmed(&self.color_seed_file())
-    }
-
-    pub fn save_color_seed(&self, seed: &str) -> anyhow::Result<()> {
-        write(&self.color_seed_file(), seed)
-    }
-
-    fn palette_style_file(&self) -> PathBuf {
-        self.base.join("palette_style.txt")
-    }
-
-    /// 0: TonalSpot, 1: Vivid, 2: Expressive, 3: FruitSalad, 4: Rainbow, 5: Spritz, 6: Monochrome
-    pub fn load_palette_style(&self) -> Option<i32> {
-        read_trimmed(&self.palette_style_file()).and_then(|s| s.parse().ok())
-    }
-
-    pub fn save_palette_style(&self, style: i32) -> anyhow::Result<()> {
-        write(&self.palette_style_file(), &style.to_string())
-    }
-
-    fn contrast_level_file(&self) -> PathBuf {
-        self.base.join("contrast_level.txt")
-    }
-
-    /// 0: Standard (0.0), 1: Medium (0.5), 2: High (1.0)
-    pub fn load_contrast_level(&self) -> Option<i32> {
-        read_trimmed(&self.contrast_level_file()).and_then(|s| s.parse().ok())
-    }
-
-    pub fn save_contrast_level(&self, level: i32) -> anyhow::Result<()> {
-        write(&self.contrast_level_file(), &level.to_string())
+    text_setting! {
+        /// The comma-separated bottom navigation bar items, in order.
+        "bottom_bar.txt", load_bottom_bar_config, save_bottom_bar_config;
+        /// The accent seed color as `#RRGGBB`.
+        "color_seed.txt", load_color_seed, save_color_seed;
     }
 }

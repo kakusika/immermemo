@@ -1,17 +1,17 @@
 //! Sync triggering, sync error dismissal, conflict resolution, and history callbacks.
 
+use crate::session::SessionRef;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use slint::{ComponentHandle, SharedString};
 
 use crate::session::{
-    self, Session, open_first_conflicted_note, resolve_conflict_step, start_sync,
-    sync_conflict_sheet_state,
+    self, open_first_conflicted_note, resolve_conflict_step, start_sync, sync_conflict_sheet_state,
 };
 use crate::{App, SettingsAdapter};
 
-pub fn bind_sync_conflict_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn bind_sync_conflict_callbacks(app: &App, session: &SessionRef) {
     app.on_sync({
         let (weak, session) = (app.as_weak(), session.clone());
         move || start_sync(&weak.unwrap(), &session)

@@ -11,8 +11,7 @@
 mod github;
 mod token_flow;
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::session::SessionRef;
 
 use immermemo_core::Account;
 use immermemo_provider::{ProviderId, RepositoryInfo, UserInfo, identify_remote};
@@ -26,7 +25,7 @@ use crate::{App, SettingsAdapter};
 pub(crate) const DEFAULT_REPO_NAME: &str = "immermemo-notes";
 
 /// Binds every provider's connect / disconnect callbacks to the Slint app.
-pub fn bind_provider_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn bind_provider_callbacks(app: &App, session: &SessionRef) {
     github::bind(app, session);
     token_flow::bind::<token_flow::ForgejoUi>(app, session);
     token_flow::bind::<token_flow::GitLabUi>(app, session);
@@ -150,7 +149,7 @@ impl Linked {
 
     /// Makes the repository the vault's remote and registers the account.
     /// On success, returns the account's username.
-    fn persist(&self, session: &Rc<RefCell<Session>>) -> Result<String, String> {
+    fn persist(&self, session: &SessionRef) -> Result<String, String> {
         let username = self.username();
         let account = new_account(
             self.provider,
@@ -167,7 +166,7 @@ impl Linked {
 
     /// The part of the Settings sheet every provider shares once linked,
     /// then the first sync.
-    fn show_and_sync(&self, app: &App, session: &Rc<RefCell<Session>>) {
+    fn show_and_sync(&self, app: &App, session: &SessionRef) {
         let settings = app.global::<SettingsAdapter>();
         settings.set_url_draft(self.repo.clone_url.as_str().into());
         settings.set_has_token(true);
@@ -185,7 +184,7 @@ impl Linked {
 }
 
 /// Forgets the vault's remote and token, and clears the sheet.
-fn disconnect(app: &App, session: &Rc<RefCell<Session>>, provider: ProviderId) {
+fn disconnect(app: &App, session: &SessionRef, provider: ProviderId) {
     session.borrow_mut().unlink_remote();
     app.set_remote_configured(false);
     let settings = app.global::<SettingsAdapter>();
@@ -201,7 +200,7 @@ fn disconnect(app: &App, session: &Rc<RefCell<Session>>, provider: ProviderId) {
 
 /// The session, found again from inside an event-loop callback (which cannot
 /// carry the `Rc` across threads).
-fn current_session() -> Rc<RefCell<Session>> {
+fn current_session() -> SessionRef {
     crate::session::SESSION
         .with(|s| s.borrow().clone())
         .expect("session set in run")

@@ -413,8 +413,8 @@ export component RenderedBlockView inherits VerticalLayout {
     // `side-a`, warning for `side-b`) instead of a text label -- the same
     // colors the retired `@mobile.conflict` scheme used for its "Mine"/
     // "Theirs" chips, without reintroducing a mine/theirs label that can
-    // read backwards on another device (see the decision in
-    // `.agents/tasks/adopt-std-conflict.md`). `ConflictSideBlockView`,
+    // read backwards on another device (`a`/`b` are `@conflict`'s structural
+    // names, not mine/theirs). `ConflictSideBlockView`,
     // not a recursive call to `RenderedBlockView` itself -- confirmed
     // unbuildable (see `ConflictSideBlock`'s own doc).
     if root.block.shape == RenderedBlockShape.conflict: VerticalLayout {

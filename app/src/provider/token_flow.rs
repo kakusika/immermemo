@@ -3,14 +3,13 @@
 //! callbacks they read and write (`forgejo-*` / `gitlab-*`) differ, which
 //! [`TokenFlowUi`] abstracts.
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::session::SessionRef;
 
 use immermemo_provider::{ProviderId, RemoteIdentity, provider_for};
 use slint::{ComponentHandle, SharedString};
 
 use super::{DEFAULT_REPO_NAME, Linked, current_session, disconnect};
-use crate::session::{Session, on_ui_thread};
+use crate::session::on_ui_thread;
 use crate::{App, SettingsAdapter};
 
 /// A linked account as the Settings sheet displays it.
@@ -126,7 +125,7 @@ impl TokenFlowUi for GitLabUi {
     }
 }
 
-pub(super) fn bind<P: TokenFlowUi>(app: &App, session: &Rc<RefCell<Session>>) {
+pub(super) fn bind<P: TokenFlowUi>(app: &App, session: &SessionRef) {
     let settings = app.global::<SettingsAdapter>();
 
     P::on_disconnect(&settings, {

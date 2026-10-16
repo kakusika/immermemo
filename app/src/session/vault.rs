@@ -1,15 +1,14 @@
 //! Vault management: switching vaults, listing vaults, and validating vault paths.
 
-use std::cell::RefCell;
+use crate::session::SessionRef;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 
-use immermemo_core::{AppData, EditorState, NoteIndex};
+use immermemo_core::{AppData, EditorState};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::util::set_error;
 use super::{
-    Session, clear_note_stats, open_initial_or_last_note, refresh_list, schedule_auto_sync,
+    clear_note_stats, open_initial_or_last_note, refresh_list, schedule_auto_sync,
     show_history_state, show_vault_identity, sync_nav_state, update_rendered_body,
     vault_display_name,
 };
@@ -33,7 +32,7 @@ fn vault_account_info(
     }
 }
 
-pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn refresh_vault_list(app: &App, session: &SessionRef) {
     crate::provider::migrate_legacy_remotes(&session.borrow());
     let s = session.borrow();
     let names: Vec<SharedString> = s
@@ -116,7 +115,7 @@ pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
 
 /// Switches to `vault_dir`, reloading everything that's per-vault: the
 /// token store, the remote URL, the note list, and the open editor.
-pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBuf) {
+pub fn switch_vault(app: &App, session: &SessionRef, vault_dir: PathBuf) {
     if let Err(e) = std::fs::create_dir_all(&vault_dir) {
         set_error(app, format!("Could not open this vault: {e}"));
         return;
@@ -138,12 +137,7 @@ pub fn switch_vault(app: &App, session: &Rc<RefCell<Session>>, vault_dir: PathBu
     let remote = s.app_data.load_remote(&vault_dir);
     show_vault_identity(app, &vault_dir);
     let _ = s.app_data.save_current_vault(&vault_dir);
-    let index = s
-        .app_data
-        .index_path(&vault_dir)
-        .ok()
-        .and_then(|p| NoteIndex::open(&p).ok())
-        .unwrap_or_else(|| NoteIndex::open_in_memory().unwrap());
+    let index = immermemo_core::Session::open_index(&s.app_data, &vault_dir);
     s.vault_dir = vault_dir;
     s.token_store = token_store;
     s.remote = remote.clone();

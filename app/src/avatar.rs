@@ -94,7 +94,7 @@ pub fn load_or_fetch_avatar(
                 // Notify UI to refresh accounts and vaults on main event loop.
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(app) = app_weak.upgrade() {
-                        let session = crate::SESSION.with(|s| s.borrow().clone());
+                        let session = crate::session::SESSION.with(|s| s.borrow().clone());
                         if let Some(session) = session {
                             crate::callbacks::refresh_accounts_ui(&app, &session.borrow());
                             crate::session::refresh_vault_list(&app, &session);

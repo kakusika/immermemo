@@ -1,20 +1,17 @@
 //! Conflict resolution handling, step navigation, and conflict sheet synchronization.
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::session::SessionRef;
 
 use slint::{ModelRc, SharedString, VecModel};
 
 use super::util::{set_error, set_status};
-use super::{
-    Session, open_note, refresh_list, show_history_state, update_note_stats, update_rendered_body,
-};
+use super::{open_note, refresh_list, show_history_state, update_note_stats, update_rendered_body};
 use crate::App;
 
 #[allow(dead_code)]
 pub fn resolve_active_conflict(
     app: &App,
-    session: &Rc<RefCell<Session>>,
+    session: &SessionRef,
     resolution: immermemo_core::ConflictResolution,
 ) {
     let outcome = session.borrow_mut().resolve_active_conflict(resolution);
@@ -58,7 +55,7 @@ fn conflict_side_labels(side: immermemo_core::ConflictSide, letter: &str) -> (St
     }
 }
 
-pub fn sync_conflict_sheet_state(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn sync_conflict_sheet_state(app: &App, session: &SessionRef) {
     let state = session
         .borrow()
         .conflict_sheet_state(app.get_active_conflict_index());
@@ -96,7 +93,7 @@ pub fn sync_conflict_sheet_state(app: &App, session: &Rc<RefCell<Session>>) {
     }
 }
 
-pub fn resolve_conflict_step(app: &App, session: &Rc<RefCell<Session>>, choice: i32) {
+pub fn resolve_conflict_step(app: &App, session: &SessionRef, choice: i32) {
     let active_conflict_index = app.get_active_conflict_index();
     let outcome = session
         .borrow_mut()
@@ -125,7 +122,7 @@ pub fn resolve_conflict_step(app: &App, session: &Rc<RefCell<Session>>, choice: 
     }
 }
 
-pub fn open_first_conflicted_note(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn open_first_conflicted_note(app: &App, session: &SessionRef) {
     let target_idx = {
         let s = session.borrow();
         immermemo_core::editor::first_conflicted_note_index(&s.editor, &s.conflicted)

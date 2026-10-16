@@ -16,7 +16,7 @@ const val EXTRA_NOTE_PATH = "note_path"
 /**
  * Home-screen widget showing the most recently modified notes (data comes
  * from a JSON snapshot the Rust side writes -- see
- * `app/src/widget.rs`'s `export_recent_notes`). A plain
+ * `app/src/platform/widget.rs`'s `export_recent_notes`). A plain
  * [AppWidgetProvider]; the actual list is backed by [NoteWidgetService]'s
  * [android.widget.RemoteViewsService.RemoteViewsFactory], since a static
  * layout can't show a variable-length list.
@@ -46,11 +46,11 @@ class NoteWidgetProvider : AppWidgetProvider() {
             // Deliberately NOT `FLAG_ACTIVITY_CLEAR_TASK`: that would force
             // `android.app.NativeActivity` to be destroyed and recreated
             // (re-running `android_main` in the same process, re-hitting
-            // every `OnceLock` in `app/src/widget.rs`/`haptic.rs`,
+            // the `OnceLock`s in `app/src/platform/` (the activity handle, the widget's snapshot path),
             // which only accept the first caller) even when the app is
             // already running. With plain `singleTask`, a cold start still
             // opens straight to the tapped note (see
-            // `widget::read_launch_note_path`); a warm start just brings
+            // `platform::widget::read_launch_note_path`); a warm start just brings
             // the running app to the foreground as-is -- the stock
             // `NativeActivity` has no `onNewIntent` override to relay a
             // second tap into, and nothing here attempts to fake one.
@@ -74,7 +74,7 @@ class NoteWidgetProvider : AppWidgetProvider() {
 
     companion object {
         /**
-         * Called from Rust (`app/src/widget.rs`'s `export_recent_notes`,
+         * Called from Rust (`app/src/platform/widget.rs`'s `export_recent_notes`,
          * over JNI) right after it rewrites the snapshot file, so the widget
          * reflects a change immediately instead of waiting for
          * `appwidget_info.xml`'s 30-minute `updatePeriodMillis` floor.

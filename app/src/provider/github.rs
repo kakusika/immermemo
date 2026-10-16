@@ -1,6 +1,7 @@
 //! Connecting GitHub through the OAuth device flow: show the user a code,
 //! open the browser, poll until they approve, then set up the repository.
 
+use crate::session::SessionRef;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -11,7 +12,7 @@ use immermemo_provider::{AuthPollStatus, GitHubProvider, Provider, ProviderId};
 use slint::{ComponentHandle, SharedString};
 
 use super::{DEFAULT_REPO_NAME, Linked, current_session, disconnect};
-use crate::session::{Session, on_ui_thread};
+use crate::session::on_ui_thread;
 use crate::{App, SettingsAdapter};
 
 /// Sets how far along the sign-in is; `pending` false ends the flow's UI.
@@ -26,7 +27,7 @@ fn fail(weak: &slint::Weak<App>, message: String) {
     on_ui_thread(weak, move |app| show_auth_status(app, false, message));
 }
 
-pub(super) fn bind(app: &App, session: &Rc<RefCell<Session>>) {
+pub(super) fn bind(app: &App, session: &SessionRef) {
     let settings = app.global::<SettingsAdapter>();
     // Set while a sign-in is in flight; a new attempt or a cancel raises it.
     let active_auth_cancel = Rc::new(RefCell::new(None::<Arc<AtomicBool>>));

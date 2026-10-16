@@ -1,12 +1,11 @@
 //! Icon picker sheet management: query filtering and `@meta{ icon: ... }` note decoration.
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::session::SessionRef;
 
 use slint::{ModelRc, SharedString, VecModel};
 
 use super::util::set_error;
-use super::{Session, refresh_list, schedule_auto_sync};
+use super::{refresh_list, schedule_auto_sync};
 use crate::{App, PickerIconEntry};
 
 const ICON_PICKER_MAX_RESULTS: usize = 60;
@@ -14,7 +13,7 @@ const ICON_PICKER_DEFAULT_PKG: &str = "tabler";
 
 /// Opens the icon picker for `notes[note_index]`. Resolves an initial (query-less) page of
 /// results so the sheet never opens empty.
-pub fn open_icon_picker(app: &App, session: &Rc<RefCell<Session>>, note_index: usize) {
+pub fn open_icon_picker(app: &App, session: &SessionRef, note_index: usize) {
     session.borrow_mut().icon_picker_target = Some(note_index);
     app.set_icon_picker_query(SharedString::new());
     filter_icon_picker(app, "");
@@ -41,7 +40,7 @@ pub fn filter_icon_picker(app: &App, query: &str) {
 /// Sets `notes[icon_picker_target]`'s `@meta{ icon: @doc.icon(name, pkg) }`
 /// and saves. Refreshes the editor's visible body too, if the target note happens
 /// to be currently open.
-pub fn apply_icon_selection(app: &App, session: &Rc<RefCell<Session>>, name: &str) {
+pub fn apply_icon_selection(app: &App, session: &SessionRef, name: &str) {
     let Some(note_index) = session.borrow_mut().icon_picker_target.take() else {
         return;
     };

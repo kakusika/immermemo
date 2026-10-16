@@ -1,29 +1,27 @@
 //! The editor's state-management logic: what note is open, its undo
-//! history, and conflict resolution -- split out of `immermemo` (the
-//! Slint app crate) so this logic can be unit-tested and read on its
-//! own, independent of the Slint window tree. Note-body classification
-//! for the view-mode display (what `classify`/`flow` used to be here)
-//! moved into `immermemo::render` instead: that's render *policy* tied
-//! to the Slint seam it feeds, not editor state, and the common way it
-//! changes (giving a new `@xxx` a look) always touches that seam anyway,
-//! so a crate boundary between them bought nothing.
+//! history, and conflict resolution -- kept out of `immermemo` (the Slint
+//! app crate) so this logic can be unit-tested and read on its own,
+//! independent of the Slint window tree. Note-body classification for the
+//! view-mode display lives in `immermemo::render` instead: that's render
+//! *policy* tied to the Slint seam it feeds, not editor state, and the
+//! common way it changes (giving a new `@xxx` a look) always touches that
+//! seam anyway.
 //!
-//! This crate never touches `App` (the Slint type `slint::include_modules!()`
-//! generates from `app/ui/app.slint`) or any other Slint-generated
-//! type. Every function here takes and returns plain data; `immermemo`'s
-//! `src/session.rs` is the thin adapter that calls into this crate and
-//! applies the result to `App`'s setters. That split exists because `App`
-//! is one Slint component tree covering every screen (not just the
-//! editor), generated inside `immermemo` itself -- a function here taking
-//! `&App` would make `immermemo` depend on a type defined downstream of
-//! its own dependency on this crate.
+//! Nothing here touches `App` (the Slint type `slint::include_modules!()`
+//! generates from `app/ui/app.slint`) or any other Slint-generated type.
+//! Every function takes and returns plain data; `immermemo`'s
+//! `src/session/` is the thin adapter that calls in here and applies the
+//! result to `App`'s setters. That split exists because `App` is one Slint
+//! component tree covering every screen (not just the editor), generated
+//! inside `immermemo` itself -- a function here taking `&App` would make
+//! this crate depend on a type defined downstream of it.
 //!
 //! `EditorState` ([`state::EditorState`]) holds only what the editor
 //! itself owns (the open note's index, its undo history, its loaded
 //! revision list). Vault-level state that other screens also read --
 //! the note list, each note's conflict flag, the search index -- stays in
-//! `immermemo`'s own `Session` and is passed into this crate's functions
-//! as plain borrowed data.
+//! [`crate::Session`] and is passed into these functions as plain
+//! borrowed data.
 
 mod conflicts;
 mod history;

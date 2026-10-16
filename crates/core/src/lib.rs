@@ -42,5 +42,6 @@ pub use editor::{
 };
 pub use navigation::BackForwardStack;
 pub use session::{
-    FilteredListOutcome, RefreshListOutcome, Session, vault_display_name, vault_path_from_input,
+    ConflictFlags, EditOutcome, FilteredListOutcome, RefreshListOutcome, Session,
+    vault_display_name, vault_path_from_input,
 };

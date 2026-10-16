@@ -1,18 +1,17 @@
 //! Note editing, creation, renaming, deleting, search, and navigation callbacks.
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::session::SessionRef;
 
 use immermemo_core::History;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::session::{
-    self, Session, apply_icon_selection, apply_restored, filter_icon_picker, open_icon_picker,
-    open_note, refresh_list, set_error, set_status, show_history_state, update_filtered_list,
+    self, apply_icon_selection, apply_restored, filter_icon_picker, open_icon_picker, open_note,
+    refresh_list, set_error, set_status, show_history_state, update_filtered_list,
 };
 use crate::{App, render};
 
-pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
+pub fn bind_note_callbacks(app: &App, session: &SessionRef) {
     app.on_select({
         let (weak, session) = (app.as_weak(), session.clone());
         move |ui_index| {
@@ -323,57 +322,35 @@ fn apply_symbol_insertion(body: &str, sym: &str, cursor: usize, anchor: usize) -
     }
 }
 
-fn handle_edit(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>>, text: &str) {
+fn handle_edit(app: &App, session: &SessionRef, text: &str) {
     let max_width = app.get_body_content_width();
     app.set_note_body_items(render::note_body_items(text, app, max_width));
     session::update_note_stats(app, text);
     {
         let mut s = session.borrow_mut();
-        if let Some(history) = s.editor.history.as_mut() {
-            history.edit(text);
-        }
+        let outcome = s.apply_edit(text);
         show_history_state(app, &s);
-        let has_conflict = text.contains(immermemo_core::CONFLICT_MARKER);
-        if app.get_current_has_conflict() != has_conflict {
-            app.set_current_has_conflict(has_conflict);
-            if let Some(idx) = s.editor.current
-                && idx < s.conflicted.len()
-            {
-                s.conflicted[idx] = has_conflict;
-                let conflicted: Vec<bool> = s
-                    .filtered_results
-                    .iter()
-                    .map(|r| s.conflicted[r.note_index])
-                    .collect();
-                app.set_conflicted(ModelRc::new(VecModel::from(conflicted)));
-                let conflict_count = s.conflicted.iter().filter(|&&c| c).count();
-                app.set_conflict_count(conflict_count as i32);
+        if app.get_current_has_conflict() != outcome.has_conflict {
+            app.set_current_has_conflict(outcome.has_conflict);
+        }
+        if let Some(flags) = outcome.conflict_flags {
+            app.set_conflicted(ModelRc::new(VecModel::from(flags.filtered)));
+            app.set_conflict_count(flags.count as i32);
+        }
+        if let Some(rel) = outcome.saved {
+            s.history_preview_cache.remove(&rel.display().to_string());
+            if app.get_status_is_error() && app.get_status().starts_with("Save failed") {
+                set_status(app, "");
             }
         }
-        if let Some(path) = s.current_path() {
-            match std::fs::write(&path, text) {
-                Ok(_) => {
-                    let vault_dir = s.vault_dir.clone();
-                    if let Ok(rel) = path.strip_prefix(&vault_dir) {
-                        let _ = s.index.record_write(&vault_dir, rel, text);
-                        s.history_preview_cache.remove(&rel.display().to_string());
-                    }
-                    if app.get_status_is_error() && app.get_status().starts_with("Save failed") {
-                        set_status(app, "");
-                    }
-                }
-                Err(e) => set_error(app, format!("Save failed: {e}")),
-            }
+        if let Some(e) = outcome.write_error {
+            set_error(app, format!("Save failed: {e}"));
         }
     }
     session::schedule_auto_sync(app, std::time::Duration::from_secs(5));
 }
 
-fn handle_link_clicked(
-    app: &App,
-    session: &std::rc::Rc<std::cell::RefCell<Session>>,
-    target: &str,
-) {
+fn handle_link_clicked(app: &App, session: &SessionRef, target: &str) {
     let target = target.trim();
     if target.is_empty() {
         return;
@@ -421,55 +398,15 @@ fn handle_link_clicked(
     }
 }
 
-fn navigate_to_note(
-    app: &App,
-    session: &std::rc::Rc<std::cell::RefCell<Session>>,
-    query: &str,
-) -> bool {
-    let s = session.borrow();
-    let vault_dir = s.vault_dir.clone();
-    let query_trimmed = query.trim_start_matches('@');
-    let query_path = std::path::Path::new(query_trimmed);
-
-    // 1. Exact path match or relative path match
-    for (i, note_path) in s.notes.iter().enumerate() {
-        if let Ok(rel) = note_path.strip_prefix(&vault_dir)
-            && (rel == query_path
-                || rel.with_extension("") == query_path
-                || rel.to_string_lossy() == query
-                || rel.to_string_lossy() == query_trimmed
-                || rel.with_extension("").to_string_lossy() == query
-                || rel.with_extension("").to_string_lossy() == query_trimmed)
-        {
-            drop(s);
-            open_note(app, session, i);
-            return true;
-        }
+fn navigate_to_note(app: &App, session: &SessionRef, query: &str) -> bool {
+    let found = session.borrow().find_note_for_link(query);
+    if let Some(index) = found {
+        open_note(app, session, index);
     }
-
-    // 2. File stem match (case-insensitive)
-    for (i, note_path) in s.notes.iter().enumerate() {
-        if let Some(stem) = note_path.file_stem().and_then(|st| st.to_str())
-            && (stem.eq_ignore_ascii_case(query)
-                || stem.eq_ignore_ascii_case(query_trimmed)
-                || stem
-                    .trim_start_matches('@')
-                    .eq_ignore_ascii_case(query_trimmed))
-        {
-            drop(s);
-            open_note(app, session, i);
-            return true;
-        }
-    }
-
-    false
+    found.is_some()
 }
 
-fn create_and_open_linked_note(
-    app: &App,
-    session: &std::rc::Rc<std::cell::RefCell<Session>>,
-    note_name: &str,
-) {
+fn create_and_open_linked_note(app: &App, session: &SessionRef, note_name: &str) {
     let clean_name = note_name
         .trim()
         .trim_start_matches('@')
@@ -495,11 +432,7 @@ fn create_and_open_linked_note(
     }
 }
 
-fn handle_task_toggled(
-    app: &App,
-    session: &std::rc::Rc<std::cell::RefCell<Session>>,
-    item_idx: usize,
-) {
+fn handle_task_toggled(app: &App, session: &SessionRef, item_idx: usize) {
     let body = app.get_body();
     let items = render::classify_note_body_items(body.as_str());
     let Some(item) = items.get(item_idx) else {

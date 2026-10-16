@@ -43,8 +43,8 @@ use crate::{
 /// pixels -- `App`'s own `body-content-width`, see `editor.slint`'s doc
 /// comment on it). Callers should set the result alongside `body` every
 /// time `body` *or* `max_width` changes -- see `session::update_rendered_body`,
-/// `lib.rs`'s `on_edited` handler, and `lib.rs`'s `reflow-note-body`
-/// handler, the three places that happens.
+/// `callbacks::note`'s `on_edited` and `on_reflow_note_body` handlers, the
+/// three places that happens.
 pub fn note_body_items(body: &str, app: &App, max_width: f32) -> ModelRc<NoteBodyItemView> {
     let items: Vec<NoteBodyItemView> = classify_note_body_items(body)
         .into_iter()
@@ -304,7 +304,7 @@ pub(crate) fn icon_image(slug: &str, pkg: &str) -> slint::Image {
 // target in one process (by default, concurrently), so a second
 // independent `App::new()` call anywhere in this crate's test binary
 // fails with "EventLoop can't be recreated" the moment it races the
-// first. `lib.rs`'s `tests::ui_helpers_and_conflict_resolution` already
+// first. `tests.rs`'s `tests::ui_helpers_and_conflict_resolution` already
 // owns the one `App::new()` this whole binary gets; it calls these.
 #[cfg(test)]
 pub(crate) mod seam_tests {
