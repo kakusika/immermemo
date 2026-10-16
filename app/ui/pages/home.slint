@@ -10,6 +10,8 @@ import {
     Divider,
     IconTile,
 } from "@origiri-mobile/widgets.slint";
+import { SettingsAdapter } from "../adapters/settings.slint";
+import { AccountAvatar } from "../widgets/account_avatar.slint";
 
 export component HomeScreen inherits Rectangle {
     in property <length> inset-top: 0px;
@@ -103,11 +105,27 @@ export component HomeScreen inherits Rectangle {
                                 letter-spacing: 0.5px;
                             }
 
-                            Text {
-                                text: root.vault-name != "" ? root.vault-name : @tr("Notes");
-                                font-size: Metrics.font-title;
-                                font-weight: 700;
-                                color: Palette.foreground;
+                            HorizontalLayout {
+                                alignment: start;
+                                spacing: 8px;
+
+                                if SettingsAdapter.current-vault-has-account: VerticalLayout {
+                                    alignment: center;
+                                    AccountAvatar {
+                                        avatar: SettingsAdapter.current-vault-account-avatar;
+                                        has-avatar: SettingsAdapter.current-vault-account-has-avatar;
+                                        provider: SettingsAdapter.current-vault-account-provider;
+                                        avatar-size: 24px;
+                                    }
+                                }
+
+                                Text {
+                                    text: root.vault-name != "" ? root.vault-name : @tr("Notes");
+                                    font-size: Metrics.font-title;
+                                    font-weight: 700;
+                                    color: Palette.foreground;
+                                    vertical-alignment: center;
+                                }
                             }
                         }
 

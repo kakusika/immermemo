@@ -17,6 +17,7 @@ import {
     Divider,
 } from "@origiri-mobile/widgets.slint";
 import { SheetDragArea } from "../components.slint";
+import { AccountAvatar } from "../widgets/account_avatar.slint";
 
 // A unified header for settings items or sections:
 // - Title in bold foreground color
@@ -1383,8 +1384,19 @@ export component SettingsSheet inherits Rectangle {
                         content-spacing: Metrics.spacing-sm;
 
                         HorizontalLayout {
-                            spacing: 8px;
+                            spacing: 10px;
                             alignment: center;
+
+                            if SettingsAdapter.current-vault-has-account: VerticalLayout {
+                                alignment: center;
+                                AccountAvatar {
+                                    avatar: SettingsAdapter.current-vault-account-avatar;
+                                    has-avatar: SettingsAdapter.current-vault-account-has-avatar;
+                                    provider: SettingsAdapter.current-vault-account-provider;
+                                    avatar-size: 28px;
+                                }
+                            }
+
                             VerticalLayout {
                                 horizontal-stretch: 1;
                                 alignment: center;
@@ -1467,11 +1479,11 @@ export component SettingsSheet inherits Rectangle {
                                 spacing: 10px;
                                 alignment: center;
 
-                                Icon {
-                                    source: acc.provider == "gitlab" ? TablerIcons.brand-gitlab : (acc.provider == "forgejo" ? TablerIcons.brand-git : (acc.provider == "git" ? TablerIcons.git-fork : TablerIcons.brand-github));
-                                    width: 22px;
-                                    height: 22px;
-                                    color: Palette.accent-background;
+                                AccountAvatar {
+                                    avatar: acc.avatar;
+                                    has-avatar: acc.has-avatar;
+                                    provider: acc.provider;
+                                    avatar-size: 32px;
                                 }
 
                                 VerticalLayout {
@@ -1954,10 +1966,16 @@ export component SettingsSheet inherits Rectangle {
                                     padding-bottom: 8px;
                                     spacing: 8px;
 
-                                    // Left: folder icon
+                                    // Left: vault identity icon
                                     VerticalLayout {
                                         alignment: center;
-                                        Icon {
+                                        if v.has-account: AccountAvatar {
+                                            avatar: v.account-avatar;
+                                            has-avatar: v.account-has-avatar;
+                                            provider: v.account-provider;
+                                            avatar-size: 26px;
+                                        }
+                                        if !v.has-account: Icon {
                                             source: v.is-current ? TablerIcons.folder-check : TablerIcons.folder;
                                             width: 22px;
                                             height: 22px;

@@ -7,6 +7,8 @@ export struct AccountData {
     instance-url: string,
     username: string,
     display-name: string,
+    avatar: image,
+    has-avatar: bool,
 }
 
 export struct VaultData {
@@ -15,6 +17,10 @@ export struct VaultData {
     subtitle: string,
     is-current: bool,
     original-index: int,
+    has-account: bool,
+    account-provider: string,
+    account-avatar: image,
+    account-has-avatar: bool,
 }
 
 export global SettingsAdapter {
@@ -23,6 +29,10 @@ export global SettingsAdapter {
     in-out property <bool> adding-account: false;
     in property <string> current-vault-account-id: "";
     in property <string> current-vault-account-label: "";
+    in property <bool> current-vault-has-account: false;
+    in property <string> current-vault-account-provider: "";
+    in property <image> current-vault-account-avatar;
+    in property <bool> current-vault-account-has-avatar: false;
 
     // Vaults list
     in property <[VaultData]> vaults: [];

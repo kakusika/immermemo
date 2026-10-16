@@ -1,6 +1,6 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
-import { TablerIcons } from "@origiri-icons/icons.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 import {
     IconButton,
     TopBar,
@@ -8,6 +8,8 @@ import {
     ActionSheet,
 } from "@origiri-mobile/widgets.slint";
 import { SheetDragArea, LongPressRippleArea } from "../components.slint";
+import { SettingsAdapter } from "../adapters/settings.slint";
+import { AccountAvatar } from "../widgets/account_avatar.slint";
 
 // Full-screen, same shape as the other sheets: which vault is open, and a
 // way to link another one. Rust owns what "adding" a vault actually means
@@ -92,39 +94,57 @@ export component VaultSheet inherits Rectangle {
                 background: Colors.separator;
             }
 
-            for name[i] in root.vaults: LongPressRippleArea {
-                height: (root.vault-subtitles.length > i && root.vault-subtitles[i] != "") ? 56px : Metrics.touch;
+            for item in SettingsAdapter.vaults: LongPressRippleArea {
+                height: item.subtitle != "" ? 56px : Metrics.touch;
                 long-press-duration: 350ms;
                 clicked => {
-                    root.select(i);
+                    root.select(item.original-index);
                 }
                 long-pressed => {
                     root.trigger-haptic();
-                    root.menu-index = i;
+                    root.menu-index = item.original-index;
                 }
 
                 HorizontalLayout {
                     padding-left: Metrics.gutter;
                     padding-right: Metrics.gutter;
+                    spacing: 12px;
+
+                    VerticalLayout {
+                        alignment: center;
+                        if item.has-account: AccountAvatar {
+                            avatar: item.account-avatar;
+                            has-avatar: item.account-has-avatar;
+                            provider: item.account-provider;
+                            avatar-size: 26px;
+                        }
+                        if !item.has-account: Icon {
+                            source: item.is-current ? TablerIcons.folder-check : TablerIcons.folder;
+                            width: 22px;
+                            height: 22px;
+                            color: item.is-current ? Palette.accent-background : Colors.muted;
+                        }
+                    }
+
                     VerticalLayout {
                         alignment: center;
                         horizontal-stretch: 1;
                         spacing: 2px;
                         Text {
-                            text: name;
-                            color: i == root.current ? Palette.accent-background : Palette.foreground;
+                            text: item.name;
+                            color: item.is-current ? Palette.accent-background : Palette.foreground;
                             font-size: 16px;
                             font-weight: 500;
                         }
 
-                        if root.vault-subtitles.length > i && root.vault-subtitles[i] != "": Text {
-                            text: root.vault-subtitles[i];
+                        if item.subtitle != "": Text {
+                            text: item.subtitle;
                             color: Colors.muted;
                             font-size: 12px;
                         }
                     }
 
-                    if i == root.current: Text {
+                    if item.is-current: Text {
                         text: @tr("current");
                         font-size: 13px;
                         color: Palette.accent-background;

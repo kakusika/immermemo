@@ -1,0 +1,113 @@
+import { Palette } from "std-widgets.slint";
+import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
+import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+
+/// A reusable avatar widget representing a provider account or vault identity.
+///
+/// If `has-avatar` is true, displays the user's avatar image clipped into a circle,
+/// along with a small provider badge (GitHub, Forgejo, GitLab) anchored at the bottom-right.
+///
+/// If `has-avatar` is false, gracefully falls back to displaying the provider's icon
+/// inside a circular tinted surface.
+export component AccountAvatar inherits Rectangle {
+    in property <image> avatar;
+    in property <bool> has-avatar: false;
+    in property <string> provider: "";
+    in property <length> avatar-size: 32px;
+
+    pure function provider-icon(p: string) -> image {
+        if p == "gitlab" {
+            return TablerIcons.brand-gitlab;
+        }
+        if p == "forgejo" {
+            return TablerIcons.brand-git;
+        }
+        if p == "local" {
+            return TablerIcons.folder;
+        }
+        if p == "github" {
+            return TablerIcons.brand-github;
+        }
+        return TablerIcons.user;
+    }
+
+    width: root.avatar-size;
+    height: root.avatar-size;
+
+    // Fallback circular container when user avatar image is not available
+    if !root.has-avatar: Rectangle {
+        width: 100%;
+        height: 100%;
+        border-radius: root.avatar-size / 2;
+        background: Palette.color-scheme == ColorScheme.dark
+            ? Palette.accent-background.with-alpha(0.18)
+            : Palette.accent-background.with-alpha(0.12);
+        border-width: 1px;
+        border-color: Palette.border;
+
+        VerticalLayout {
+            alignment: center;
+            HorizontalLayout {
+                alignment: center;
+                Icon {
+                    source: root.provider-icon(root.provider);
+                    width: root.avatar-size * 0.55;
+                    height: root.avatar-size * 0.55;
+                    color: Palette.accent-background;
+                }
+            }
+        }
+    }
+
+    // Avatar image display with round clipping when user avatar is present
+    if root.has-avatar: Rectangle {
+        width: 100%;
+        height: 100%;
+        border-radius: root.avatar-size / 2;
+        clip: true;
+        background: Palette.foreground.with-alpha(0.06);
+
+        Image {
+            source: root.avatar;
+            width: 100%;
+            height: 100%;
+            image-fit: cover;
+        }
+    }
+
+    property <length> badge-size: Math.max(12px, root.avatar-size * 0.44);
+
+    // Small provider badge at bottom-right corner when user avatar is present
+    if root.has-avatar && root.provider != "" && root.provider != "local": Rectangle {
+        x: root.width - root.badge-size + 1px;
+        y: root.height - root.badge-size + 1px;
+        width: root.badge-size;
+        height: root.badge-size;
+        border-radius: root.badge-size / 2;
+        background: Palette.background;
+        border-width: 1.5px;
+        border-color: Palette.background;
+
+        Rectangle {
+            width: 100%;
+            height: 100%;
+            border-radius: parent.border-radius;
+            background: Palette.color-scheme == ColorScheme.dark
+                ? Palette.accent-background.with-alpha(0.25)
+                : Palette.accent-background.with-alpha(0.15);
+
+            VerticalLayout {
+                alignment: center;
+                HorizontalLayout {
+                    alignment: center;
+                    Icon {
+                        source: root.provider-icon(root.provider);
+                        width: root.badge-size * 0.65;
+                        height: root.badge-size * 0.65;
+                        color: Palette.accent-background;
+                    }
+                }
+            }
+        }
+    }
+}

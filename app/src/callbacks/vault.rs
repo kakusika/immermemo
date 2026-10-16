@@ -84,12 +84,18 @@ pub fn refresh_accounts_ui(app: &App, session: &Session) {
     let accounts = session.app_data.load_accounts();
     let ui_accounts: Vec<AccountData> = accounts
         .into_iter()
-        .map(|a| AccountData {
-            id: a.id.into(),
-            provider: a.provider.into(),
-            instance_url: a.instance_url.into(),
-            username: a.username.into(),
-            display_name: a.display_name.unwrap_or_default().into(),
+        .map(|a| {
+            let (avatar, has_avatar) =
+                crate::avatar::load_or_fetch_avatar(&session.app_data, &a, app.as_weak());
+            AccountData {
+                id: a.id.into(),
+                provider: a.provider.into(),
+                instance_url: a.instance_url.into(),
+                username: a.username.into(),
+                display_name: a.display_name.unwrap_or_default().into(),
+                avatar,
+                has_avatar,
+            }
         })
         .collect();
     settings.set_accounts(slint::ModelRc::new(slint::VecModel::from(ui_accounts)));
@@ -100,12 +106,26 @@ pub fn refresh_accounts_ui(app: &App, session: &Session) {
             settings.set_current_vault_account_label(
                 format!("{} (@{})", acc.provider, acc.username).into(),
             );
+            settings.set_current_vault_has_account(true);
+            settings.set_current_vault_account_provider(acc.provider.clone().into());
+            let (avatar, has_avatar) =
+                crate::avatar::load_or_fetch_avatar(&session.app_data, &acc, app.as_weak());
+            settings.set_current_vault_account_avatar(avatar);
+            settings.set_current_vault_account_has_avatar(has_avatar);
         } else {
             settings.set_current_vault_account_label(acc_id.into());
+            settings.set_current_vault_has_account(false);
+            settings.set_current_vault_account_provider(SharedString::new());
+            settings.set_current_vault_account_avatar(slint::Image::default());
+            settings.set_current_vault_account_has_avatar(false);
         }
     } else {
         settings.set_current_vault_account_id(SharedString::new());
         settings.set_current_vault_account_label(SharedString::new());
+        settings.set_current_vault_has_account(false);
+        settings.set_current_vault_account_provider(SharedString::new());
+        settings.set_current_vault_account_avatar(slint::Image::default());
+        settings.set_current_vault_account_has_avatar(false);
     }
 }
 

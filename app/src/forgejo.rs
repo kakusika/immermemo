@@ -107,7 +107,8 @@ pub fn bind_forgejo_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
 
                 let user_info = provider.get_user(&token_str).ok();
                 let username = user_info
-                    .map(|u| u.login)
+                    .as_ref()
+                    .map(|u| u.login.clone())
                     .or_else(|| {
                         ForgejoProvider::parse_any_remote(&repo_info.clone_url).map(|(_, u, _)| u)
                     })
@@ -149,8 +150,8 @@ pub fn bind_forgejo_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                             provider: "forgejo".to_string(),
                             instance_url: instance_display.clone(),
                             username: username.clone(),
-                            display_name: None,
-                            avatar_url: None,
+                            display_name: user_info.as_ref().and_then(|u| u.name.clone()),
+                            avatar_url: user_info.as_ref().and_then(|u| u.avatar_url.clone()),
                         };
                         let _ = s.app_data.add_account(account);
                         let _ = s.app_data.save_vault_account(&vault_dir, &account_id);

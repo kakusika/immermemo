@@ -249,8 +249,8 @@ pub fn bind_github_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
                             provider: "github".to_string(),
                             instance_url: "https://github.com".to_string(),
                             username: username.clone(),
-                            display_name: user_info.and_then(|u| u.name),
-                            avatar_url: None,
+                            display_name: user_info.as_ref().and_then(|u| u.name.clone()),
+                            avatar_url: user_info.as_ref().and_then(|u| u.avatar_url.clone()),
                         };
                         let _ = s.app_data.add_account(account);
                         let _ = s.app_data.save_vault_account(&vault_dir, &account_id);

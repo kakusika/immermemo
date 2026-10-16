@@ -82,6 +82,11 @@ impl AppData {
         Ok(self.account_dir(account_id)?.join("token"))
     }
 
+    /// Path to the cached avatar image file for this account.
+    pub fn account_avatar_path(&self, account_id: &str) -> anyhow::Result<PathBuf> {
+        Ok(self.account_dir(account_id)?.join("avatar.png"))
+    }
+
     fn vault_account_file(&self, vault_dir: &Path) -> anyhow::Result<PathBuf> {
         Ok(self.vault_data_dir(vault_dir)?.join("account_id.txt"))
     }
@@ -140,6 +145,10 @@ mod tests {
 
         let token_path = data.account_token_path("github:octocat").unwrap();
         assert!(token_path.starts_with(dir.path().join("accounts")));
+
+        let avatar_path = data.account_avatar_path("github:octocat").unwrap();
+        assert!(avatar_path.starts_with(dir.path().join("accounts")));
+        assert_eq!(avatar_path.file_name().unwrap(), "avatar.png");
 
         // Update account
         let updated_acc1 = Account {

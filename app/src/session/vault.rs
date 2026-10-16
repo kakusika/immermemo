@@ -1,10 +1,10 @@
 //! Vault management: switching vaults, listing vaults, and validating vault paths.
 
 use std::cell::RefCell;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use immermemo_core::{EditorState, NoteIndex};
+use immermemo_core::{AppData, EditorState, NoteIndex};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use super::util::set_status;
@@ -13,6 +13,24 @@ use super::{
     show_history_state, sync_nav_state, update_rendered_body, vault_display_name,
 };
 use crate::{App, SettingsAdapter, VaultData};
+
+fn vault_account_info(
+    app_data: &AppData,
+    vault_dir: &Path,
+    app_weak: slint::Weak<App>,
+) -> (bool, SharedString, slint::Image, bool) {
+    if let Some(acc_id) = app_data.load_vault_account(vault_dir) {
+        if let Some(acc) = app_data.get_account(&acc_id) {
+            let (avatar, has_avatar) =
+                crate::avatar::load_or_fetch_avatar(app_data, &acc, app_weak);
+            (true, acc.provider.into(), avatar, has_avatar)
+        } else {
+            (false, SharedString::new(), slint::Image::default(), false)
+        }
+    } else {
+        (false, SharedString::new(), slint::Image::default(), false)
+    }
+}
 
 pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
     crate::callbacks::migrate_legacy_remotes(&session.borrow());
@@ -50,12 +68,18 @@ pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
             .get(curr_idx)
             .cloned()
             .unwrap_or_else(|| "Local".into());
+        let (has_account, account_provider, account_avatar, account_has_avatar) =
+            vault_account_info(&s.app_data, p, app.as_weak());
         ui_vaults.push(VaultData {
             name: names[curr_idx].clone(),
             path: p.display().to_string().into(),
             subtitle,
             is_current: true,
             original_index: curr_idx as i32,
+            has_account,
+            account_provider,
+            account_avatar,
+            account_has_avatar,
         });
     }
 
@@ -67,12 +91,18 @@ pub fn refresh_vault_list(app: &App, session: &Rc<RefCell<Session>>) {
             .get(idx)
             .cloned()
             .unwrap_or_else(|| "Local".into());
+        let (has_account, account_provider, account_avatar, account_has_avatar) =
+            vault_account_info(&s.app_data, p, app.as_weak());
         ui_vaults.push(VaultData {
             name: names[idx].clone(),
             path: p.display().to_string().into(),
             subtitle,
             is_current: false,
             original_index: idx as i32,
+            has_account,
+            account_provider,
+            account_avatar,
+            account_has_avatar,
         });
     }
     drop(s);

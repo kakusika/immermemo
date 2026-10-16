@@ -1,4 +1,5 @@
 pub mod action;
+pub mod avatar;
 mod callbacks;
 pub mod cert;
 pub mod forgejo;
