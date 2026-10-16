@@ -3,6 +3,7 @@ import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 import {
     BubbleButton,
+    IconButton,
     TopBar,
     AppScrollView,
     Card,
@@ -32,11 +33,14 @@ export component HomeScreen inherits Rectangle {
     callback new-note();
     callback sync();
     callback open-vaults();
+    callback open-vault-menu();
     callback open-settings();
+    callback open-account-settings();
     callback open-vault-history();
     callback open-conflict-note();
     callback copy-sync-error();
     callback dismiss-sync-error();
+    callback copy-vault-path();
 
     background: Colors.page-background;
 
@@ -91,91 +95,148 @@ export component HomeScreen inherits Rectangle {
                 // ----------------------------------------------------
                 Card {
                     HorizontalLayout {
-                        spacing: Metrics.spacing-sm + 2px * Metrics.ui-scale;
+                        spacing: 12px;
 
+                        // Left: Account/Vault Avatar (tapping opens account settings)
                         VerticalLayout {
-                            horizontal-stretch: 1;
-                            spacing: 2px * Metrics.ui-scale;
+                            alignment: center;
 
-                            Text {
-                                text: @tr("Current Vault");
-                                font-size: Metrics.font-caption;
-                                font-weight: 700;
-                                color: Colors.muted;
-                                letter-spacing: 0.5px;
+                            Rectangle {
+                                width: 44px;
+                                height: 44px;
+
+                                TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.open-account-settings(); }
+                                }
+
+                                if SettingsAdapter.current-vault-has-account: AccountAvatar {
+                                    avatar: SettingsAdapter.current-vault-account-avatar;
+                                    has-avatar: SettingsAdapter.current-vault-account-has-avatar;
+                                    provider: SettingsAdapter.current-vault-account-provider;
+                                    avatar-size: 42px;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                }
+                                if !SettingsAdapter.current-vault-has-account: Rectangle {
+                                    width: 42px;
+                                    height: 42px;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                    border-radius: 21px;
+                                    background: Palette.color-scheme == ColorScheme.dark
+                                        ? Palette.accent-background.with-alpha(0.18)
+                                        : Palette.accent-background.with-alpha(0.12);
+                                    border-width: 1px;
+                                    border-color: Palette.border;
+
+                                    Icon {
+                                        source: TablerIcons.folder;
+                                        width: 22px;
+                                        height: 22px;
+                                        color: Palette.accent-background;
+                                        x: (parent.width - self.width) / 2;
+                                        y: (parent.height - self.height) / 2;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Middle: Vault Name & Path (tapping opens vault switcher)
+                        Rectangle {
+                            horizontal-stretch: 1;
+
+                            TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.open-vaults(); }
                             }
 
-                            HorizontalLayout {
-                                alignment: start;
-                                spacing: 8px;
+                            VerticalLayout {
+                                alignment: center;
+                                spacing: 2px;
 
-                                if SettingsAdapter.current-vault-has-account: VerticalLayout {
-                                    alignment: center;
-                                    AccountAvatar {
-                                        avatar: SettingsAdapter.current-vault-account-avatar;
-                                        has-avatar: SettingsAdapter.current-vault-account-has-avatar;
-                                        provider: SettingsAdapter.current-vault-account-provider;
-                                        avatar-size: 24px;
+                                HorizontalLayout {
+                                    spacing: 4px;
+                                    alignment: start;
+                                    Text {
+                                        text: root.vault-name != "" ? root.vault-name : @tr("Notes");
+                                        font-size: 17px;
+                                        font-weight: 700;
+                                        color: Palette.foreground;
+                                        vertical-alignment: center;
+                                    }
+
+                                    VerticalLayout {
+                                        alignment: center;
+                                        Icon {
+                                            source: TablerIcons.chevron-down;
+                                            width: 14px;
+                                            height: 14px;
+                                            color: Colors.muted;
+                                        }
                                     }
                                 }
 
-                                Text {
-                                    text: root.vault-name != "" ? root.vault-name : @tr("Notes");
-                                    font-size: Metrics.font-title;
-                                    font-weight: 700;
-                                    color: Palette.foreground;
-                                    vertical-alignment: center;
+                                if root.vault-path != "": Text {
+                                    text: root.vault-path;
+                                    font-size: 11px;
+                                    color: Colors.muted;
+                                    overflow: elide;
                                 }
                             }
                         }
 
-                        BubbleButton {
-                            icon: TablerIcons.files;
-                            clicked => { root.open-vaults(); }
-                        }
-                    }
-
-                    if root.vault-path != "": Text {
-                        text: root.vault-path;
-                        font-size: Metrics.font-sm;
-                        color: Colors.muted;
-                        wrap: word-wrap;
-                    }
-
-                    Divider { }
-
-                    HorizontalLayout {
-                        spacing: Metrics.spacing-lg;
-
+                        // Right: 3-dot vault action menu button
                         VerticalLayout {
-                            spacing: 2px * Metrics.ui-scale;
-                            Text {
-                                text: @tr("Notes");
-                                font-size: Metrics.font-sm;
-                                color: Colors.muted;
-                            }
-
-                            Text {
-                                text: root.note-count;
-                                font-size: Metrics.font-body;
-                                font-weight: 600;
-                                color: Palette.foreground;
+                            alignment: center;
+                            IconButton {
+                                icon: TablerIcons.dots-vertical;
+                                clicked => { root.open-vault-menu(); }
                             }
                         }
+                    }
+                }
 
-                        if root.conflict-count > 0: VerticalLayout {
-                            spacing: 2px * Metrics.ui-scale;
-                            Text {
-                                text: @tr("Conflicts");
-                                font-size: Metrics.font-sm;
-                                color: Colors.warning;
+                // ----------------------------------------------------
+                // Section: Info
+                // ----------------------------------------------------
+                Section {
+                    title: @tr("Info");
+
+                    Card {
+                        HorizontalLayout {
+                            spacing: Metrics.spacing-xl;
+
+                            VerticalLayout {
+                                spacing: 2px * Metrics.ui-scale;
+                                Text {
+                                    text: @tr("Notes");
+                                    font-size: Metrics.font-sm;
+                                    color: Colors.muted;
+                                }
+
+                                Text {
+                                    text: root.note-count;
+                                    font-size: Metrics.font-body;
+                                    font-weight: 600;
+                                    color: Palette.foreground;
+                                }
                             }
 
-                            Text {
-                                text: root.conflict-count;
-                                font-size: Metrics.font-body;
-                                font-weight: 600;
-                                color: Colors.warning;
+                            if root.conflict-count > 0: VerticalLayout {
+                                spacing: 2px * Metrics.ui-scale;
+                                Text {
+                                    text: @tr("Conflicts");
+                                    font-size: Metrics.font-sm;
+                                    color: Colors.warning;
+                                }
+
+                                Text {
+                                    text: root.conflict-count;
+                                    font-size: Metrics.font-body;
+                                    font-weight: 600;
+                                    color: Colors.warning;
+                                }
                             }
                         }
                     }

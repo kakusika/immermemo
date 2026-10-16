@@ -219,6 +219,7 @@ export component App inherits Window {
     in property <[NoteBodyItemView]> history-forward-items: [];
     callback navigate-back();
     callback navigate-forward();
+    callback copy-vault-path();
     in-out property <string> body;
     // Derived from `body` by `src/render/mod.rs`, kept in step with
     // it everywhere Rust sets `body` -- see that module's doc. Read-only
@@ -248,6 +249,7 @@ export component App inherits Window {
     in property <bool> remote-configured;
     in-out property <int> note-menu-index: -1;
     in-out property <bool> more-menu-open: false;
+    in-out property <bool> vault-menu-open: false;
     // Library Directory's List/Grid views -- see `files.slint`'s
     // `DirectoryEntry`/`BreadcrumbSegment` and
     // `app/src/directory.rs`'s module doc.
@@ -406,6 +408,10 @@ export component App inherits Window {
         }
         if (root.more-menu-open) {
             root.more-menu-open = false;
+            return true;
+        }
+        if (root.vault-menu-open) {
+            root.vault-menu-open = false;
             return true;
         }
 
@@ -609,7 +615,12 @@ export component App inherits Window {
                 }
                 sync => { root.sync(); }
                 open-vaults => { root.open-vault-sheet(); }
+                open-vault-menu => { root.vault-menu-open = true; }
                 open-settings => {
+                    root.open-settings-sheet();
+                }
+                open-account-settings => {
+                    root.settings-page = 2;
                     root.open-settings-sheet();
                 }
                 open-vault-history => { root.open-vault-history(); }
@@ -622,6 +633,9 @@ export component App inherits Window {
                 }
                 dismiss-sync-error => {
                     root.dismiss-sync-error();
+                }
+                copy-vault-path => {
+                    root.copy-vault-path();
                 }
             }
 
@@ -1097,6 +1111,47 @@ export component App inherits Window {
                     let idx = root.note-menu-index;
                     root.note-menu-index = -1;
                     root.delete-requested(idx);
+                }
+            }
+        }
+
+        ActionSheet {
+            open: root.vault-menu-open;
+            narrow: root.narrow;
+            title: root.current-vault-name != "" ? root.current-vault-name : @tr("Vault");
+            inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
+            cancel => { root.vault-menu-open = false; }
+
+            ActionRow {
+                text: @tr("Switch Vault");
+                clicked => {
+                    root.vault-menu-open = false;
+                    root.open-vault-sheet();
+                }
+            }
+
+            ActionRow {
+                text: @tr("Vault History");
+                clicked => {
+                    root.vault-menu-open = false;
+                    root.open-vault-history();
+                }
+            }
+
+            ActionRow {
+                text: SettingsAdapter.current-vault-has-account ? @tr("Account Settings") : @tr("Connect Account");
+                clicked => {
+                    root.vault-menu-open = false;
+                    root.settings-page = 2;
+                    root.open-settings-sheet();
+                }
+            }
+
+            if root.current-vault-path != "": ActionRow {
+                text: @tr("Copy Vault Path");
+                clicked => {
+                    root.vault-menu-open = false;
+                    root.copy-vault-path();
                 }
             }
         }

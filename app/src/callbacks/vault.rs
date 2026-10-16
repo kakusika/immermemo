@@ -145,6 +145,18 @@ pub fn bind_vault_callbacks(
 ) {
     let settings = app.global::<SettingsAdapter>();
 
+    app.on_copy_vault_path({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let Some(app) = weak.upgrade() else { return };
+            let s = session.borrow();
+            let path_str = s.vault_dir.display().to_string();
+            drop(s);
+            crate::session::copy_to_clipboard(&app, &path_str);
+            crate::session::set_status(&app, "Vault path copied to clipboard");
+        }
+    });
+
     app.on_open_settings({
         let (weak, session) = (app.as_weak(), session.clone());
         move || {

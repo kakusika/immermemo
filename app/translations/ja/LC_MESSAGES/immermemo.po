@@ -2000,3 +2000,127 @@ msgstr "ナビゲーション"
 msgctxt "SelectionBar"
 msgid "{} selected"
 msgstr "{}件選択中"
+
+msgctxt "SettingsSheet"
+msgid "Color Source"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Choose wallpaper dynamic color or custom accent color."
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "System Wallpaper"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Custom"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Accent Seed Color"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Palette Style"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Material 3 color generation variant for tonal palettes."
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Tonal Spot"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Vivid"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Expressive"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Fruit Salad"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Rainbow"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Spritz"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Monochrome"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Contrast"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Increases luminance separation between surfaces and content."
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Standard"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "Medium"
+msgstr ""
+
+msgctxt "SettingsSheet"
+msgid "High"
+msgstr ""
+
+msgctxt "HomeScreen"
+msgid "Info"
+msgstr "情報"
+
+msgctxt "HomeScreen"
+msgid "Vault"
+msgstr "保管庫"
+
+msgctxt "HomeScreen"
+msgid "Switch Vault"
+msgstr "保管庫の切り替え"
+
+msgctxt "HomeScreen"
+msgid "Vault History"
+msgstr "保管庫の履歴"
+
+msgctxt "HomeScreen"
+msgid "Account Settings"
+msgstr "アカウント設定"
+
+msgctxt "HomeScreen"
+msgid "Connect Account"
+msgstr "アカウントを接続"
+
+msgctxt "HomeScreen"
+msgid "Copy Vault Path"
+msgstr "保管庫のパスをコピー"
+
+msgctxt "App"
+msgid "Vault"
+msgstr "保管庫"
+
+msgctxt "App"
+msgid "Vault History"
+msgstr "保管庫の履歴"
+
+msgctxt "App"
+msgid "Account Settings"
+msgstr "アカウント設定"
+
+msgctxt "App"
+msgid "Connect Account"
+msgstr "アカウントを接続"
+
+msgctxt "App"
+msgid "Copy Vault Path"
+msgstr "保管庫のパスをコピー"
