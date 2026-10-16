@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-10-16 14:55+0000\n"
+"POT-Creation-Date: 2026-10-16 15:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1224,31 +1224,31 @@ msgctxt "EditorScreen"
 msgid "Tap Edit or double-tap here to write."
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/app/ui/sheets/settings/about.slint:13
+#: /home/tefla/projects/develop/project-tomet/immermemo/app/ui/sheets/settings/about.slint:16
 msgctxt "AboutPage"
 msgid "Immermemo v{}"
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/app/ui/sheets/settings/about.slint:22
-msgctxt "AboutPage"
-msgid "Build {}"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/app/ui/sheets/settings/about.slint:28
-msgctxt "AboutPage"
-msgid "Emoji font: {}"
-msgstr ""
-
-#: /home/tefla/projects/develop/project-tomet/immermemo/app/ui/sheets/settings/about.slint:34
+#: /home/tefla/projects/develop/project-tomet/immermemo/app/ui/sheets/settings/about.slint:23
 msgctxt "AboutPage"
 msgid ""
 "A mobile note app for writing Tomet (.tmt) notes, synced over git without "
 "git touching user files."
 msgstr ""
 
-#: /home/tefla/projects/develop/project-tomet/immermemo/app/ui/sheets/settings/about.slint:44
+#: /home/tefla/projects/develop/project-tomet/immermemo/app/ui/sheets/settings/about.slint:33
 msgctxt "AboutPage"
 msgid "AST-level three-way merge with conflict tracking (@conflict)."
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/app/ui/sheets/settings/about.slint:42
+msgctxt "AboutPage"
+msgid "Build"
+msgstr ""
+
+#: /home/tefla/projects/develop/project-tomet/immermemo/app/ui/sheets/settings/about.slint:81
+msgctxt "AboutPage"
+msgid "System"
 msgstr ""
 
 #: /home/tefla/projects/develop/project-tomet/immermemo/app/ui/sheets/settings/advanced.slint:30

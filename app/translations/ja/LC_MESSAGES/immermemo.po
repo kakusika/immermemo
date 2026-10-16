@@ -2991,9 +2991,9 @@ msgid "Token with api permission"
 msgstr "api 権限を持つトークン"
 
 msgctxt "AboutPage"
-msgid "Build {}"
-msgstr "ビルド {}"
+msgid "Build"
+msgstr "ビルド"
 
 msgctxt "AboutPage"
-msgid "Emoji font: {}"
-msgstr "絵文字フォント: {}"
+msgid "System"
+msgstr "システム"

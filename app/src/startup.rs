@@ -109,6 +109,7 @@ pub fn run(
     callbacks::bind_vault_callbacks(&app, &session);
     callbacks::bind_vault_setup_callbacks(&app, &session);
     callbacks::bind_account_callbacks(&app, &session);
+    callbacks::bind_about_callbacks(&app);
     callbacks::bind_sync_conflict_callbacks(&app, &session);
     callbacks::bind_selection_callbacks(&app, &session);
     provider::bind_provider_callbacks(&app, &session);
@@ -139,10 +140,6 @@ fn show_saved_settings(app: &App, core: &immermemo_core::Session, appearance: &t
     settings.set_ssh_key_present(ssh_pub.is_some());
     settings.set_ssh_public_key(ssh_pub.unwrap_or_default().into());
     settings.set_ssh_key_copied(false);
-    settings.set_app_version(env!("CARGO_PKG_VERSION").into());
-    settings.set_build_id(immermemo_buildinfo::label().into());
-    #[cfg(target_os = "android")]
-    settings.set_emoji_font(crate::platform::android::fonts::report().into());
 }
 
 /// Lists the vault's notes (from the index first, so the window is useful

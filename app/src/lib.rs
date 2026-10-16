@@ -9,6 +9,7 @@ pub mod qr;
 pub mod render;
 mod session;
 mod startup;
+mod system_info;
 pub mod theme;
 mod thumbs;
 pub mod transfer;

@@ -1,5 +1,6 @@
 //! Callback wiring modules grouped by feature domain.
 
+pub mod about;
 pub mod account;
 pub mod appearance;
 pub mod note;
@@ -8,6 +9,7 @@ pub mod sync_conflict;
 pub mod vault;
 pub mod vault_setup;
 
+pub use about::bind_about_callbacks;
 pub use account::{bind_account_callbacks, refresh_accounts_ui};
 pub use appearance::bind_appearance_callbacks;
 pub use note::bind_note_callbacks;

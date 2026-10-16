@@ -2,13 +2,16 @@ import { WrappedText } from "widgets.slint";
 import { SettingsAdapter } from "../../adapters/settings.slint";
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
-import { Card } from "@origiri-mobile/widgets.slint";
+import { TablerIcons } from "@origiri-icons/icons.slint";
+import { Card, Divider, IconButton } from "@origiri-mobile/widgets.slint";
 import { SettingsPage } from "page.slint";
 
 export component AboutPage inherits SettingsPage {
+    // One card in three parts: the app, the build, the system.
     Card {
         content-spacing: Metrics.spacing-sm;
 
+        // The app: what it is.
         Text {
             text: @tr("Immermemo v{}", SettingsAdapter.app-version);
             font-size: 16px;
@@ -16,25 +19,11 @@ export component AboutPage inherits SettingsPage {
             color: Palette.foreground;
         }
 
-        // Selectable would be handier to copy, but a plain line is enough to
-        // compare against the build just made.
-        Text {
-            text: @tr("Build {}", SettingsAdapter.build-id);
-            font-size: 12px;
-            color: Colors.muted;
-        }
-
-        if SettingsAdapter.emoji-font != "": WrappedText {
-            text: @tr("Emoji font: {}", SettingsAdapter.emoji-font);
-            font-size: 12px;
-            text-color: Colors.muted;
-        }
-
         WrappedText {
             text: @tr("A mobile note app for writing Tomet (.tmt) notes, synced over git without git touching user files.");
             font-size: 13px;
             text-color: Colors.muted;
-                    }
+        }
 
         Rectangle {
             height: 4px;
@@ -44,6 +33,87 @@ export component AboutPage inherits SettingsPage {
             text: @tr("AST-level three-way merge with conflict tracking (@conflict).");
             font-size: 12px;
             text-color: Colors.muted;
-                    }
+        }
+
+        Divider { }
+
+        // The build: which one is installed, copyable to compare with `just build-id`.
+        Text {
+            text: @tr("Build");
+            font-size: 15px;
+            font-weight: 600;
+            color: Palette.foreground;
+        }
+
+        HorizontalLayout {
+            spacing: Metrics.spacing-sm;
+
+            WrappedText {
+                horizontal-stretch: 1;
+                text: SettingsAdapter.build-id;
+                font-size: 13px;
+                text-color: Palette.foreground;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                IconButton {
+                    icon: SettingsAdapter.build-copied ? TablerIcons.check : TablerIcons.copy;
+                    clicked => { SettingsAdapter.copy-build-id(); }
+                }
+            }
+        }
+
+        Timer {
+            interval: 2s;
+            running: SettingsAdapter.build-copied;
+            triggered => { SettingsAdapter.build-copied = false; }
+        }
+
+        Divider { }
+
+        // The system: what a bug report needs, copied as text in one go.
+        HorizontalLayout {
+            spacing: Metrics.spacing-sm;
+
+            Text {
+                horizontal-stretch: 1;
+                text: @tr("System");
+                font-size: 15px;
+                font-weight: 600;
+                color: Palette.foreground;
+                vertical-alignment: center;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                IconButton {
+                    icon: SettingsAdapter.system-info-copied ? TablerIcons.check : TablerIcons.copy;
+                    clicked => { SettingsAdapter.copy-system-info(); }
+                }
+            }
+        }
+
+        for row in SettingsAdapter.system-info: VerticalLayout {
+            spacing: 1px;
+
+            Text {
+                text: row.label;
+                font-size: 11px;
+                color: Colors.muted;
+            }
+
+            WrappedText {
+                text: row.value;
+                font-size: 13px;
+                text-color: Palette.foreground;
+            }
+        }
+
+        Timer {
+            interval: 2s;
+            running: SettingsAdapter.system-info-copied;
+            triggered => { SettingsAdapter.system-info-copied = false; }
+        }
     }
 }

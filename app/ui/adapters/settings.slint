@@ -27,6 +27,12 @@ export struct VaultData {
     account-has-avatar: bool,
 }
 
+// One line of the About page's System card.
+export struct SystemInfoRow {
+    label: string,
+    value: string,
+}
+
 export struct HomeQuickActionRow {
     items: [int],
     empty-slots: int,
@@ -112,9 +118,14 @@ export global SettingsAdapter {
     // Which build this is (commit and build time), to tell a phone's install
     // from the build just made.
     in property <string> build-id;
-    // Which emoji font the device offered and which was used (Android only;
-    // empty elsewhere, where the system's own emoji font is used as it is).
-    in property <string> emoji-font;
+    // The facts about this device a bug report needs (OS, device, architecture,
+    // renderer, and on Android which emoji font was used), one row each.
+    in property <[SystemInfoRow]> system-info;
+    // The copy buttons turn into a "copied" mark once pressed.
+    in-out property <bool> build-copied: false;
+    in-out property <bool> system-info-copied: false;
+    callback copy-build-id();
+    callback copy-system-info();
 
     // Transfer & Share properties
     in property <image> qr-image;
