@@ -1,7 +1,9 @@
 //! Android entry point, platform keystore, the startup-splash handoff,
-//! shared-storage access, and system UI (status bar) visibility.
+//! shared-storage access, system UI (status bar) visibility, and the font
+//! fallbacks Slint cannot derive from the system on its own.
 
 pub mod activity;
+pub mod fonts;
 pub mod keystore;
 pub mod splash;
 pub mod storage_access;
@@ -40,6 +42,7 @@ pub fn android_main(app: slint::android::AndroidApp) {
         Ok(Arc::new(store) as Arc<dyn TokenStore>)
     });
     slint::android::init(app).expect("initialize the Android backend");
+    fonts::repair_fallbacks();
     unsafe { activity::init(vm_ptr, activity_ptr) };
     crate::platform::widget::init_android_widget_bridge(&base);
     let (initial_note_path, initial_import_uri) = (

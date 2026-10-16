@@ -109,6 +109,9 @@ export global SettingsAdapter {
 
     // App info
     in property <string> app-version: "0.1.0";
+    // Which emoji font the device offered and which was used (Android only;
+    // empty elsewhere, where the system's own emoji font is used as it is).
+    in property <string> emoji-font;
 
     // Transfer & Share properties
     in property <image> qr-image;

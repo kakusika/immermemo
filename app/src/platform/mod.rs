@@ -6,6 +6,8 @@
 #[cfg(target_os = "android")]
 pub mod android;
 pub mod cert;
+#[cfg(any(target_os = "android", test))]
+pub mod emoji_font;
 pub mod haptic;
 pub mod storage;
 pub mod widget;

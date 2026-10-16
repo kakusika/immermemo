@@ -16,6 +16,12 @@ export component AboutPage inherits SettingsPage {
             color: Palette.foreground;
         }
 
+        if SettingsAdapter.emoji-font != "": WrappedText {
+            text: @tr("Emoji font: {}", SettingsAdapter.emoji-font);
+            font-size: 12px;
+            text-color: Colors.muted;
+        }
+
         WrappedText {
             text: @tr("A mobile note app for writing Tomet (.tmt) notes, synced over git without git touching user files.");
             font-size: 13px;

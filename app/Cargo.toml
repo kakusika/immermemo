@@ -61,6 +61,8 @@ jni = "0.21"
 slint = { version = "1.18", default-features = false, features = [
   "backend-android-activity-06",
   "compat-1-2",
+  # `platform/android/fonts.rs` repairs the fallbacks through fontique.
+  "unstable-fontique-011",
 ] }
 i-slint-backend-android-activity = { version = "=1.18.1", default-features = false }
 
