@@ -1,0 +1,54 @@
+@kind(plan)
+@meta{
+  id: plan-colrv1-emoji
+  category: list("slint", "android")
+  status: "upstream"
+}
+
+=[ COLRv1の絵文字フォントが描画できない (swash / femtovg / Slint) ]
+
+==#(symptom)
+
+- Androidの実機で、絵文字(😀 💫 など)が空白になる。ラベルやほかの文字は出る。
+- 「このアプリ」(設定)の `絵文字フォント:` の行が `none the renderer can draw (…COLRv1…)` になる端末で起きる。
+- 絵文字以外の記号(`◕` `✧` `♡` など)は、端末のフォントで描画できるため、この問題の対象ではない。
+
+==#(cause)
+
+確認済みの事実:
+
+- Android 13以降の端末の `NotoColorEmoji.ttf` はCOLRv1形式である。
+- Slintのfemtovgレンダラーは、色グリフをswashで描画する。swash 0.2.10の `src/scale/color.rs` はCOLRのv0の表(基底グリフ記録とレイヤー記録)しか読まず、v1(BaseGlyphListと描画命令)の実装はない。描画できる色グリフは、ビットマップ(CBDT/sbix)とCOLRv0だけである。
+- Android 14のエミュレータで、COLRv1の版を選ぶと空白になり、ビットマップ版(`NotoColorEmojiLegacy.ttf`)を選ぶと色付きで描画される。
+- 実機(2026-10-17の報告)では、端末のフォント一覧に `NotoColorEmojiLegacy.ttf` が載っているのに、`/system/fonts` に実体がない。描けるフォントが端末に1つもない。
+
+未確認:
+
+- swash / femtovg / Slintの側にCOLRv1対応の計画や課題があるか。検索では見つからなかった。
+- 上流の新しい版で解決しているか。
+
+==#(impact)
+
+- 絵文字がすべて空白になる。閲覧画面、編集画面、見出しのいずれでも同じ。
+- 描ける絵文字フォントが端末にある場合(エミュレータのAndroid 14など)は、影響しない。
+
+==#(workaround)
+
+実装済み(`app/src/platform/android/fonts.rs`):
+
+- 端末の絵文字フォントを、名前ではなくファイルの中身で見分ける(`app/src/platform/emoji_font.rs`)。描ける形式(ビットマップ、COLRv0)のうち、最大のものを絵文字用のフォントにする。
+- 端末に描けるフォントがなければ、何も表示されない。
+
+検討中の回避策は `tmtroot/dev/plans/android-emoji.plan.tmt` を参照。
+
+==#(resolved-when)
+
+次のいずれかで、解決とみなす。
+
+- swash(または femtovg)の更新でCOLRv1を描けるようになり、`絵文字フォント:` が `none the renderer can draw (…COLRv1…)` の端末で絵文字が出る。
+- 上の確認ができたら、`emoji_font.rs` の `EmojiFormat::ColorV1` を描画可能として扱い、このメモと `tmtroot/dev/plans/android-emoji.plan.tmt` を閉じる。
+
+==#(report)
+
+- 状態: 起票していない。
+- 起票先の候補: swash (dfrg/swash)。femtovgとSlintは、swashの対応を待つ立場である。

@@ -1,0 +1,17 @@
+@kind(blueprint)
+@blueprint(plan){
+  version: "1.0",
+  description: "plan"
+}
+
+=[ title ]
+
+==#(goal)
+
+==#(constraints)
+
+==#(options)
+
+==#(decision)
+
+==#(steps)
