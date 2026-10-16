@@ -146,6 +146,9 @@ fn storage_hint(form: &Form) -> &'static str {
 
 /// Fills the repository name field from the vault's name, until the user
 /// types a name of their own.
+///
+/// The field is written *after* the sheet's state is released: writing it
+/// runs the sheet's own `edited` handler, which borrows that state again.
 fn offer_repository_name(adapter: &AddVaultAdapter) {
     let vault_name = if adapter.get_mode() == 0 {
         adapter.get_name().to_string()
@@ -154,12 +157,16 @@ fn offer_repository_name(adapter: &AddVaultAdapter) {
     };
     let offer = form::default_repository_name(&vault_name);
     let current = adapter.get_repo_name().to_string();
-    setup(|st| {
-        if current.is_empty() || current == st.offered_repository_name {
-            adapter.set_repo_name(offer.clone().into());
-            st.offered_repository_name = offer;
+    let replace = setup(|st| {
+        let untouched = current.is_empty() || current == st.offered_repository_name;
+        if untouched {
+            st.offered_repository_name = offer.clone();
         }
+        untouched && current != offer
     });
+    if replace {
+        adapter.set_repo_name(offer.into());
+    }
 }
 
 fn reset_adapter(adapter: &AddVaultAdapter) {
@@ -466,8 +473,9 @@ fn finish(
                     Ok(())
                 }
             };
-            app.set_remote_configured(s.remote.is_some());
+            let remote_configured = s.remote.is_some();
             drop(s);
+            app.set_remote_configured(remote_configured);
             applied.map(|()| {
                 if syncs {
                     "Sync is set up".to_owned()
@@ -494,6 +502,24 @@ fn finish(
 
 thread_local! {
     static APP: RefCell<Option<slint::Weak<App>>> = const { RefCell::new(None) };
+}
+
+/// An account was just added (from this sheet's own Add Account page): back
+/// to the form, with that account chosen for sync.
+pub fn account_added(app: &App, account_id: &str) {
+    if !app.get_vault_setup_open() {
+        return;
+    }
+    let adapter = app.global::<AddVaultAdapter>();
+    if adapter.get_page() != 1 {
+        return;
+    }
+    adapter.set_page(0);
+    adapter.set_sync(true);
+    adapter.set_sync_kind(0);
+    adapter.set_account_id(account_id.into());
+    // Choosing it is what loads its repositories and re-checks the form.
+    adapter.invoke_account_chosen(account_id.into());
 }
 
 #[cfg_attr(not(target_os = "android"), allow(dead_code))]

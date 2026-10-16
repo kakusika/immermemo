@@ -33,6 +33,7 @@ fn ui_helpers_and_conflict_resolution() {
     search_filtering_updates_the_notes_and_snippets_models(&app, &session, &vault_dir);
     a_note_s_meta_icon_reaches_its_directory_entry(&app, &session, &vault_dir);
     a_note_s_image_icon_appears_once_its_thumbnail_is_ready(&app, &session, &vault_dir);
+    adding_an_account_registers_it_and_shows_it(&app, &session);
     a_note_s_banner_and_body_image_appear_once_loaded(&app, &session, &vault_dir);
     icon_picker_selection_saves_and_is_reflected_in_the_note_list(&app, &session, &vault_dir);
     let multi_note_path =
@@ -360,6 +361,46 @@ fn a_note_s_banner_and_body_image_appear_once_loaded(
     update_current_header(app, session, "Plain.\n");
     assert!(!app.get_current_banner().declared);
     app.set_current_note_path("".into());
+}
+
+/// Connecting an account (what the sign-in flows end with) registers it and
+/// its token, touches no vault, and the Accounts page shows it.
+fn adding_an_account_registers_it_and_shows_it(app: &App, session: &SessionRef) {
+    use immermemo_provider::{ProviderId, UserInfo};
+    let settings = app.global::<SettingsAdapter>();
+    app.set_settings_page(2);
+    app.set_settings_open(true);
+    settings.set_adding_account(true);
+
+    let connected = crate::provider::Connected {
+        provider: ProviderId::Forgejo,
+        instance_url: "https://codeberg.org".to_owned(),
+        token: "tok".to_owned(),
+        user: UserInfo {
+            login: "alice".to_owned(),
+            name: Some("Alice".to_owned()),
+            email: None,
+            avatar_url: None,
+        },
+    };
+    let remote_before = session.borrow().remote.clone();
+    let account = connected.register(session).expect("registering succeeds");
+    assert_eq!(account.username, "alice");
+
+    settings.set_adding_account(false);
+    crate::callbacks::refresh_accounts_ui(app, &session.borrow());
+    let accounts = settings.get_accounts();
+    assert_eq!(accounts.row_count(), 1);
+    let row = accounts.row_data(0).unwrap();
+    assert_eq!(row.username, "alice");
+    assert_eq!(row.vault_count, 0);
+    assert_eq!(
+        session.borrow().remote,
+        remote_before,
+        "no vault was linked"
+    );
+    app.set_settings_open(false);
+    app.set_settings_page(0);
 }
 
 /// The icon picker's *write* side -- `open_icon_picker` ->
@@ -788,7 +829,8 @@ fn home_actions_config_applies_to_settings(app: &App) {
     assert!(!settings.get_home_show_search());
     let enabled_default: Vec<i32> = settings.get_home_enabled_actions().iter().collect();
     assert_eq!(enabled_default, vec![action::ActionId::NewNote.to_i32()]);
-    let rows_default: Vec<HomeQuickActionRow> = settings.get_home_quick_action_rows().iter().collect();
+    let rows_default: Vec<HomeQuickActionRow> =
+        settings.get_home_quick_action_rows().iter().collect();
     assert_eq!(rows_default.len(), 1);
     assert_eq!(rows_default[0].items.iter().count(), 1);
     assert_eq!(rows_default[0].empty_slots, 2);

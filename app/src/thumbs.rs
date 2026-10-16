@@ -304,6 +304,7 @@ struct UreqFetcher {
 impl UreqFetcher {
     fn new() -> Self {
         let agent = ureq::Agent::config_builder()
+            .tls_config(immermemo_provider::tls_config())
             .https_only(true)
             .timeout_global(Some(FETCH_TIMEOUT))
             .user_agent("immermemo")
@@ -630,6 +631,23 @@ pub(crate) mod tests {
         assert_eq!(
             failure_summary(&["offline".to_owned(), "timed out".to_owned()]).as_deref(),
             Some("Could not load 2 images: offline")
+        );
+    }
+
+    /// The real client, against an `https` peer that never speaks TLS: it must
+    /// fail as an error (it once panicked on the TLS provider).
+    #[test]
+    fn the_real_client_fails_an_https_request_as_an_error() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            let _ = listener.accept();
+        });
+        let fetcher = UreqFetcher::new();
+        assert!(
+            fetcher
+                .fetch(&format!("https://127.0.0.1:{port}/a.png"), 1024)
+                .is_err()
         );
     }
 

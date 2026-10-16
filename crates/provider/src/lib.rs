@@ -5,6 +5,7 @@
 //! isolating external network and HTTP dependencies from local vault storage.
 
 mod api;
+pub use api::{HttpStatus, http_agent, tls_config};
 pub mod forgejo;
 pub mod github;
 pub mod gitlab;

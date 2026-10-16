@@ -64,7 +64,10 @@ pub fn load_or_fetch_avatar(
             let dest_path = avatar_path.clone();
 
             std::thread::spawn(move || {
-                let download_res = ureq::get(&url).header("User-Agent", "immermemo").call();
+                let download_res = immermemo_provider::http_agent()
+                    .get(&url)
+                    .header("User-Agent", "immermemo")
+                    .call();
 
                 match download_res {
                     Ok(resp) => {

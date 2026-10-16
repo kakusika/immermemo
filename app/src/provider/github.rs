@@ -161,5 +161,6 @@ fn finish(app: &App, connected: &Connected) {
     show_auth_status(app, false, "");
     settings.set_adding_account(false);
     crate::callbacks::refresh_accounts_ui(app, &session.borrow());
+    crate::callbacks::vault_setup::account_added(app, &account.id);
     crate::session::set_status(app, format!("GitHub account @{} added", account.username));
 }
