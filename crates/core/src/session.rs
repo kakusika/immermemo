@@ -574,6 +574,25 @@ impl Session {
         Ok(())
     }
 
+    /// Gathers what a sync of this vault needs into a job that can run on
+    /// another thread. `None` when no remote is linked yet.
+    pub fn prepare_sync(&self) -> anyhow::Result<Option<crate::sync::SyncJob>> {
+        let Some(remote) = self.remote.clone() else {
+            return Ok(None);
+        };
+        Ok(Some(crate::sync::SyncJob {
+            gitdir: self.app_data.gitdir(&self.vault_dir)?,
+            vault_dir: self.vault_dir.clone(),
+            remote,
+            token_store: self.sync_token_store(),
+            app_data: self.app_data.clone(),
+            identity: immermemo_identity::DeviceIdentity::load_or_init(
+                &self.app_data.identity_path(),
+            )
+            .ok(),
+        }))
+    }
+
     /// The token file of the account `vault_dir` is linked to, if any.
     fn account_token_path(&self, vault_dir: &Path) -> Option<PathBuf> {
         let account_id = self.app_data.load_vault_account(vault_dir)?;
@@ -1049,5 +1068,29 @@ mod tests {
             Some(b.clone()),
             "removing the current vault names its replacement"
         );
+    }
+
+    #[test]
+    fn a_prepared_sync_job_pushes_the_vault_to_its_remote() {
+        let tmp = TempDir::new().unwrap();
+        let vault_dir = tmp.path().join("vault");
+        std::fs::create_dir_all(&vault_dir).unwrap();
+        std::fs::write(vault_dir.join("note.tmt"), "Hello.\n").unwrap();
+        let remote = immermemo_sync::testing::shared_remote();
+        let mut session = test_session(vault_dir, AppData::new(tmp.path().join("data")));
+
+        assert!(
+            session.prepare_sync().unwrap().is_none(),
+            "nothing to sync before a remote is linked"
+        );
+
+        session.remote = Some(remote.path().to_str().unwrap().to_owned());
+        let job = session.prepare_sync().unwrap().expect("a remote is linked");
+        // The job owns its data: it runs without the session.
+        drop(session);
+        job.run(None).unwrap();
+
+        let pushed = git2::Repository::open_bare(remote.path()).unwrap();
+        assert!(pushed.find_reference("refs/heads/main").is_ok());
     }
 }

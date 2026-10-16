@@ -44,6 +44,17 @@ impl ProviderId {
         Self::ALL.into_iter().find(|p| p.as_str() == id)
     }
 
+    /// The `(username, password)` this host expects for HTTPS basic auth
+    /// carrying the access token `token`: GitLab wants the fixed username
+    /// `oauth2` with the token as the password; GitHub, Gitea and Forgejo
+    /// take the token as the username and an empty password.
+    pub fn https_basic_auth(self, token: &str) -> (String, String) {
+        match self {
+            Self::GitLab => ("oauth2".to_owned(), token.to_owned()),
+            Self::GitHub | Self::Forgejo => (token.to_owned(), String::new()),
+        }
+    }
+
     /// Human-readable name for status messages.
     pub fn display_name(self) -> &'static str {
         match self {
@@ -62,6 +73,16 @@ pub fn provider_for(id: ProviderId, instance_url: Option<&str>) -> Box<dyn Provi
         ProviderId::GitHub => Box::new(GitHubProvider::default()),
         ProviderId::Forgejo => Box::new(ForgejoProvider::new(instance_url)),
         ProviderId::GitLab => Box::new(GitLabProvider::new(instance_url)),
+    }
+}
+
+/// The HTTPS basic-auth pair for `token` against `remote_url`'s host. A
+/// remote that is not recognized as any provider's (a plain self-hosted git
+/// server) gets the common convention: the token as the username.
+pub fn https_basic_auth_for_remote(remote_url: &str, token: &str) -> (String, String) {
+    match identify_remote(remote_url) {
+        Some(remote) => remote.provider.https_basic_auth(token),
+        None => (token.to_owned(), String::new()),
     }
 }
 
@@ -313,6 +334,32 @@ mod tests {
             ))
         );
         assert_eq!(who("not a url"), None);
+    }
+
+    #[test]
+    fn each_host_gets_the_basic_auth_pair_it_expects() {
+        let auth = |url| https_basic_auth_for_remote(url, "tok");
+        assert_eq!(
+            auth("https://gitlab.com/a/b.git"),
+            ("oauth2".into(), "tok".into())
+        );
+        assert_eq!(
+            auth("https://gitlab.corp.net/team/sub/b.git"),
+            ("oauth2".into(), "tok".into())
+        );
+        assert_eq!(
+            auth("https://github.com/a/b.git"),
+            ("tok".into(), String::new())
+        );
+        assert_eq!(
+            auth("https://codeberg.org/a/b.git"),
+            ("tok".into(), String::new())
+        );
+        assert_eq!(
+            auth("https://git.example.com/some/deep/path.git"),
+            ("tok".into(), String::new()),
+            "an unrecognized host takes the common convention"
+        );
     }
 
     #[test]

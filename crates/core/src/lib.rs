@@ -2,6 +2,12 @@
 //!
 //! Independent of Slint or graphical UI frameworks, allowing lightweight,
 //! fast compilation and standalone unit testing of note application workflows.
+//!
+//! This crate is also the one door the app uses into the crates below it
+//! (`vault`, `credentials`, `index`, `sync`): the `pub use`s here are the
+//! complete list of what the app reaches for from them, so the app never
+//! needs to depend on those crates itself. Add a name to the list when the
+//! app needs it, not before.
 
 pub mod credentials;
 pub mod directory;
@@ -11,25 +17,23 @@ pub mod navigation;
 pub mod session;
 pub mod sync;
 
-pub use format::{days_to_ymd, format_time_only, format_timestamp};
+pub use format::{format_time_only, format_timestamp};
 
-// Domain facade re-exports:
-pub use credentials::TokenCredentials;
-pub use immermemo_credentials::{
-    PlainFileTokenStore, SshKeyStore, TokenStore, TokenStoreFactory, token_blob,
-};
-pub use immermemo_identity::DeviceIdentity;
+// The app's view of the crates below this one:
+pub use immermemo_credentials::{PlainFileTokenStore, TokenStore, TokenStoreFactory, token_blob};
 pub use immermemo_index::{IndexedNote, NoteIndex};
-pub use immermemo_sync::{
-    CertificateVerifier, CommitSummary, ConflictSide, CredentialProvider, FileRevision, SyncReport,
-    Vault, tls,
-};
+pub use immermemo_sync::{CertificateVerifier, ConflictSide, FileRevision, SyncReport, tls};
 pub use immermemo_vault::appdata::{Account, AppData};
 pub mod notes {
-    pub use immermemo_vault::notes::*;
+    pub use immermemo_vault::notes::{
+        SearchResult, create, delete, display_name, has_conflict_marker, rename,
+    };
 }
 pub mod transfer {
-    pub use immermemo_vault::transfer::*;
+    pub use immermemo_vault::transfer::{
+        ApplyResult, ExportOptions, InterfaceTransfer, SyncTransfer, TransferPayload,
+        apply_payload, build_payload, decode_payload, encode_payload,
+    };
 }
 pub use tomet::merge::{CONFLICT_MARKER, ConflictResolution};
 

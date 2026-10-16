@@ -8,7 +8,7 @@ use slint::{ComponentHandle, SharedString};
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use crate::platform::cert;
 use crate::{App, SettingsAdapter};
-use immermemo_core::{TokenCredentials, format_time_only, sync};
+use immermemo_core::format_time_only;
 
 use super::util::{set_error, set_status};
 use super::{
@@ -26,37 +26,26 @@ pub fn start_sync(app: &App, session: &SessionRef) {
     if app.get_syncing() {
         return;
     }
-    let (vault_dir, gitdir, remote, token_store, app_data, identity) = {
+    let job = {
         let s = session.borrow();
-        let Some(remote) = s.remote.clone() else {
-            set_status(app, "No remote linked yet");
-            let settings = app.global::<SettingsAdapter>();
-            settings.set_url_draft(SharedString::new());
-            settings.set_token_draft(SharedString::new());
-            settings.set_has_token(false);
-            show_vault_identity(app, &s.vault_dir);
-            app.set_settings_open(true);
-            return;
-        };
-        let gitdir = match s.app_data.gitdir(&s.vault_dir) {
-            Ok(g) => g,
+        match s.prepare_sync() {
+            Ok(Some(job)) => job,
+            Ok(None) => {
+                set_status(app, "No remote linked yet");
+                let settings = app.global::<SettingsAdapter>();
+                settings.set_url_draft(SharedString::new());
+                settings.set_token_draft(SharedString::new());
+                settings.set_has_token(false);
+                show_vault_identity(app, &s.vault_dir);
+                app.set_settings_open(true);
+                return;
+            }
             Err(e) => {
                 drop(s);
                 set_error(app, format!("Could not prepare the vault: {e}"));
                 return;
             }
-        };
-        let identity =
-            immermemo_core::DeviceIdentity::load_or_init(&s.app_data.identity_path()).ok();
-        let token_store = s.sync_token_store();
-        (
-            s.vault_dir.clone(),
-            gitdir,
-            remote,
-            token_store,
-            s.app_data.clone(),
-            identity,
-        )
+        }
     };
 
     app.set_syncing(true);
@@ -65,23 +54,13 @@ pub fn start_sync(app: &App, session: &SessionRef) {
     set_status(app, "Syncing...");
     let weak = app.as_weak();
     std::thread::spawn(move || {
-        let credentials = TokenCredentials::with_app_data(token_store, app_data);
         #[cfg(any(target_os = "android", target_os = "ios"))]
         let verifier = cert::verifier().map(Some);
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
         let verifier: anyhow::Result<Option<Box<dyn immermemo_core::CertificateVerifier>>> =
             Ok(None);
         let result = verifier
-            .and_then(|verifier| {
-                sync::run(
-                    &vault_dir,
-                    &gitdir,
-                    &remote,
-                    &credentials,
-                    verifier,
-                    identity,
-                )
-            })
+            .and_then(|verifier| job.run(verifier))
             .map_err(|e| format!("{e:#}"));
         let _ = slint::invoke_from_event_loop(move || {
             let app = weak.unwrap();

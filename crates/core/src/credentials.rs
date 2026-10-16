@@ -1,14 +1,14 @@
 //! Where a remote's access token comes from, turned into git credentials.
 //!
-//! GitHub, Gitea and Forgejo accept a personal access token presented as
-//! the username of an HTTPS basic auth with an empty password, while GitLab
-//! requires username "oauth2" with the token as password.
+//! Which username/password pair a host wants the token in is
+//! `immermemo_provider`'s knowledge (`https_basic_auth_for_remote`); this
+//! module only fetches the token and hands it over.
 //!
 //! An `ssh://` remote uses the in-app Ed25519 keypair if present, falling
 //! back to desktop ssh-agent when available.
 
 use immermemo_credentials::{SshKeyStore, TokenStore};
-use immermemo_provider::GitLabProvider;
+use immermemo_provider::https_basic_auth_for_remote;
 use immermemo_sync::CredentialProvider;
 use immermemo_vault::appdata::AppData;
 
@@ -79,11 +79,8 @@ impl<S: TokenStore> CredentialProvider for TokenCredentials<S> {
             .load()?
             .ok_or_else(|| anyhow::anyhow!("no access token saved for this vault's remote"))?;
 
-        if GitLabProvider::is_gitlab_remote(remote_url) {
-            Ok(git2::Cred::userpass_plaintext("oauth2", &token)?)
-        } else {
-            Ok(git2::Cred::userpass_plaintext(&token, "")?)
-        }
+        let (username, password) = https_basic_auth_for_remote(remote_url, &token);
+        Ok(git2::Cred::userpass_plaintext(&username, &password)?)
     }
 }
 

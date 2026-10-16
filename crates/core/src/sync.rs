@@ -1,21 +1,58 @@
-//! Runs one `Vault::sync`, off the UI thread.
+//! One sync, prepared on the UI thread and run on another.
 //!
-//! Deliberately knows nothing about where credentials come from -- that is
-//! `crate::credentials`' job -- or where the gitdir lives -- that is
-//! `crate::appdata`'s. This module is just the call into `immermemo_sync`.
+//! [`Session::prepare_sync`](crate::Session::prepare_sync) gathers everything
+//! a sync needs -- where the vault's private gitdir is, which token store and
+//! device identity to use -- into a [`SyncJob`] that owns its data, so it can
+//! move to a background thread without the session. Where the credentials
+//! come from is `crate::credentials`' job and where the gitdir lives is
+//! `crate::appdata`'s; this module is the call into `immermemo_sync`.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
+use immermemo_credentials::TokenStore;
 use immermemo_identity::DeviceIdentity;
 use immermemo_sync::{CertificateVerifier, CredentialProvider, SyncReport, Vault};
+use immermemo_vault::appdata::AppData;
 
-/// Runs a sync against `remote` and returns the resulting `SyncReport`.
-/// `identity` (plain data, loaded by the caller before this runs --
-/// `AppData`/`DeviceIdentity::load_or_init` aren't this module's concern
-/// either, same as `gitdir`/credentials) signs every commit this sync
-/// makes and is what later lets a conflict be labeled "Mine"/"Theirs"
-/// honestly (see `immermemo_sync::Vault::conflict_authorship`).
-pub fn run(
+use crate::credentials::TokenCredentials;
+
+/// Everything one sync of one vault needs, owned.
+pub struct SyncJob {
+    pub(crate) vault_dir: PathBuf,
+    pub(crate) gitdir: PathBuf,
+    pub(crate) remote: String,
+    pub(crate) token_store: Arc<dyn TokenStore>,
+    pub(crate) app_data: AppData,
+    /// Plain data, loaded before the job runs. It signs every commit this
+    /// sync makes and is what later lets a conflict be labeled
+    /// "Mine"/"Theirs" honestly (see
+    /// `immermemo_sync::Vault::conflict_authorship`).
+    pub(crate) identity: Option<DeviceIdentity>,
+}
+
+impl SyncJob {
+    /// Runs the sync and returns what changed. `certificate_verifier` is the
+    /// platform's TLS trust, where libgit2's own is not available.
+    pub fn run(
+        self,
+        certificate_verifier: Option<Box<dyn CertificateVerifier>>,
+    ) -> anyhow::Result<SyncReport> {
+        let credentials = TokenCredentials::with_app_data(self.token_store, self.app_data);
+        sync_vault(
+            &self.vault_dir,
+            &self.gitdir,
+            &self.remote,
+            &credentials,
+            certificate_verifier,
+            self.identity,
+        )
+    }
+}
+
+/// Runs a sync of `vault_dir` against `remote` and returns the resulting
+/// `SyncReport`.
+fn sync_vault(
     vault_dir: &Path,
     gitdir: &Path,
     remote: &str,
@@ -69,7 +106,7 @@ mod tests {
 
         fn sync(&self, remote: &TempDir) -> anyhow::Result<Vec<PathBuf>> {
             let gitdir = self.app_data.gitdir(self.notes.path())?;
-            let report = run(
+            let report = sync_vault(
                 self.notes.path(),
                 &gitdir,
                 remote.path().to_str().unwrap(),
