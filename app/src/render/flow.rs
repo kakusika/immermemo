@@ -100,6 +100,9 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
     };
     groups
         .into_iter()
+        // A group with no items is a heading with no title (`=[ ]`, or a bare
+        // `=` line): there is nothing in it to show.
+        .filter(|(_, items)| !items.is_empty())
         .map(|(kind, items)| {
             let (depth, prefix, heading_level) = match kind {
                 RenderBlockKind::ListItem {
@@ -142,7 +145,7 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
                 let item = items
                     .into_iter()
                     .next()
-                    .expect("classify_block_groups always returns at least one item per group");
+                    .expect("groups without items were filtered out above");
                 NoteBodyContent::Stacked(to_classified_block(body, item))
             };
 
@@ -300,6 +303,22 @@ mod tests {
 
         let paragraphs = flow_paragraphs("See @embed(path: \"img/cat.png\") here.\n");
         assert_eq!(paragraphs[0].elements[0].text, "cat.png");
+    }
+
+    /// A heading with no title -- `====[  ]`, or a bare `=` line -- has no
+    /// items; it used to panic, and a note with one could not be opened.
+    #[test]
+    fn a_heading_with_no_title_is_skipped_instead_of_panicking() {
+        let src = "Before.\n\n====[  ]\n\nAfter.\n\n=\n";
+        let items = note_body_items(src);
+        let texts: Vec<String> = items
+            .iter()
+            .filter_map(|item| match &item.content {
+                NoteBodyContent::Stacked(block) => Some(block.text.clone()),
+                NoteBodyContent::Flowed(_) => None,
+            })
+            .collect();
+        assert_eq!(texts, ["Before.", "After."]);
     }
 
     #[test]
