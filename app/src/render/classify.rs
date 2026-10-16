@@ -97,6 +97,8 @@ pub struct ClassifiedBlock {
     /// for `Badge`. Unused (empty) for `Conflict` -- its look comes
     /// entirely from `side_a`/`side_b`.
     pub text: String,
+    /// The raw reference target, meaningful only for `Link`. Empty elsewhere.
+    pub target: String,
     /// Meaningful only for `PlainText` -- see that variant's doc.
     /// `Default::default()` (no style) everywhere else.
     pub style: TextStyle,
@@ -140,6 +142,7 @@ pub struct ConflictLeafBlock {
     pub shape: BlockShape,
     pub tone: Tone,
     pub text: String,
+    pub target: String,
     pub style: TextStyle,
     pub reading: String,
     pub checked: bool,
@@ -151,6 +154,7 @@ impl From<ClassifiedBlock> for ConflictLeafBlock {
             shape: block.shape,
             tone: block.tone,
             text: block.text,
+            target: block.target,
             style: block.style,
             reading: block.reading,
             checked: block.checked,
@@ -164,6 +168,7 @@ pub(super) struct Look {
     pub(super) shape: BlockShape,
     pub(super) tone: Tone,
     pub(super) text: String,
+    pub(super) target: String,
     /// The reading annotation, meaningful only for [`BlockShape::Ruby`].
     /// Empty for every other shape.
     pub(super) secondary_text: String,
@@ -240,6 +245,7 @@ fn conflict_look(input: LookInput) -> Look {
         shape: BlockShape::Conflict,
         tone: Tone::Neutral,
         text: String::new(),
+        target: String::new(),
         secondary_text: String::new(),
         checked: false,
         side_a: side("a"),
@@ -263,6 +269,7 @@ fn ruby_look(input: LookInput) -> Look {
         shape: BlockShape::Ruby,
         tone: Tone::Neutral,
         text: input.content.unwrap_or_default().to_owned(),
+        target: String::new(),
         secondary_text: reading,
         checked: false,
         side_a: Vec::new(),
@@ -271,13 +278,8 @@ fn ruby_look(input: LookInput) -> Look {
 }
 
 /// `@link`/`@std.link` -- `text` is `input.content` (the display text) if
-/// present, else the target itself. The target only reads two of
-/// `@link`'s several forms correctly: the bare positional string and the
-/// explicit `target:` named arg; the typed shortcuts (`url:`/`file:`/
-/// `tm:`/`id:`/`ref:`) are normalized into a prefixed `target` string by
-/// `tomet-semantics`, which this crate deliberately does not depend on
-/// (same reasoning as `immermemo_render_tomet`'s module doc) -- so those
-/// are read back as whatever raw value sits under the key, unprefixed.
+/// present, else the target itself (with scheme stripped for readability).
+/// `target` preserves the raw target string for navigation.
 fn link_look(input: LookInput) -> Look {
     let target = match input.args {
         ElementArgs::Positional(target) => target.clone(),
@@ -289,14 +291,31 @@ fn link_look(input: LookInput) -> Look {
                     "target" | "url" | "file" | "tm" | "id" | "ref"
                 )
             })
-            .map(|(_, value)| value.clone())
+            .map(|(key, value)| {
+                if key == "target" {
+                    value.clone()
+                } else {
+                    format!("{key}:{value}")
+                }
+            })
             .unwrap_or_default(),
         ElementArgs::None => String::new(),
+    };
+    let text = if let Some(content) = input.content {
+        content.to_owned()
+    } else {
+        let (_kind, rest) = tomet::semantics::target_scheme(&target);
+        if !rest.is_empty() {
+            rest.to_owned()
+        } else {
+            target.clone()
+        }
     };
     Look {
         shape: BlockShape::Link,
         tone: Tone::Accent,
-        text: input.content.map(str::to_owned).unwrap_or(target),
+        text,
+        target,
         secondary_text: String::new(),
         checked: false,
         side_a: Vec::new(),
@@ -335,6 +354,7 @@ fn task_look(input: LookInput) -> Look {
         shape: BlockShape::Task,
         tone: if done { Tone::Neutral } else { Tone::Accent },
         text,
+        target: String::new(),
         secondary_text: status,
         checked: done,
         side_a: Vec::new(),
@@ -379,6 +399,7 @@ fn icon_look(input: LookInput) -> Look {
         shape: BlockShape::Icon,
         tone: Tone::Neutral,
         text: name,
+        target: String::new(),
         secondary_text: pkg,
         checked: false,
         side_a: Vec::new(),
@@ -430,6 +451,7 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
             shape: BlockShape::PlainText,
             tone: Tone::Neutral,
             text: body[span.start.offset..span.end.offset].into(),
+            target: String::new(),
             style,
             reading: String::new(),
             checked: false,
@@ -457,6 +479,7 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                     shape: look.shape,
                     tone: look.tone,
                     text: look.text,
+                    target: look.target,
                     style: TextStyle::default(),
                     reading: look.secondary_text,
                     checked: look.checked,
@@ -471,6 +494,7 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                         shape: BlockShape::Badge,
                         tone: Tone::Neutral,
                         text: fallback_label(namespace, &identity.name, &args_summary),
+                        target: String::new(),
                         style: TextStyle::default(),
                         reading: String::new(),
                         checked: false,
@@ -486,6 +510,7 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                         shape: BlockShape::PlainText,
                         tone: Tone::Neutral,
                         text: body[span.start.offset..span.end.offset].into(),
+                        target: String::new(),
                         style: TextStyle::default(),
                         reading: String::new(),
                         checked: false,
@@ -537,6 +562,7 @@ mod tests {
             shape: BlockShape::PlainText,
             tone: Tone::Neutral,
             text: text.to_owned(),
+            target: String::new(),
             style: TextStyle::default(),
             reading: String::new(),
             checked: false,
@@ -577,13 +603,16 @@ mod tests {
     // as written, not some generic badge -- this is the no-regression
     // guarantee that extension relies on.
     #[test]
-    fn an_unregistered_bare_builtin_element_shows_exactly_as_written() {
+    fn list_items_classify_as_plain_text_per_item() {
         let src = "- one\n- two\n";
         let blocks = classify_body(src);
-        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks.len(), 2);
         assert_eq!(blocks[0].shape, BlockShape::PlainText);
         assert_eq!(blocks[0].tone, Tone::Neutral);
-        assert_eq!(blocks[0].text, src);
+        assert_eq!(blocks[0].text, "one");
+        assert_eq!(blocks[1].shape, BlockShape::PlainText);
+        assert_eq!(blocks[1].tone, Tone::Neutral);
+        assert_eq!(blocks[1].text, "two");
     }
 
     #[test]
@@ -673,6 +702,7 @@ mod tests {
         assert_eq!(blocks[0].shape, BlockShape::Link);
         assert_eq!(blocks[0].tone, Tone::Accent);
         assert_eq!(blocks[0].text, "see here");
+        assert_eq!(blocks[0].target, "https://example.com");
     }
 
     #[test]
@@ -680,7 +710,8 @@ mod tests {
         let blocks = classify_body("@link(target:\"ref:note\")\n");
         assert_eq!(blocks.len(), 1);
         assert_eq!(blocks[0].shape, BlockShape::Link);
-        assert_eq!(blocks[0].text, "ref:note");
+        assert_eq!(blocks[0].text, "note");
+        assert_eq!(blocks[0].target, "ref:note");
     }
 
     #[test]

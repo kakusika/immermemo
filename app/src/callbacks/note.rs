@@ -270,6 +270,14 @@ pub fn bind_note_callbacks(app: &App, session: &Rc<RefCell<Session>>) {
             }
         }
     });
+
+    app.on_link_clicked({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |target| {
+            let app = weak.unwrap();
+            handle_link_clicked(&app, &session, target.as_str());
+        }
+    });
 }
 
 fn clamp_to_char_boundary(s: &str, mut idx: usize) -> usize {
@@ -287,7 +295,7 @@ fn apply_symbol_insertion(body: &str, sym: &str, cursor: usize, anchor: usize) -
     let a = clamp_to_char_boundary(body, anchor);
     let (sel_start, sel_end) = if c <= a { (c, a) } else { (a, c) };
 
-    if sym == "- " || sym == "# " {
+    if sym == "- " || sym == "= " || sym == "# " {
         // Line-based insertion: insert at the beginning of the line containing sel_start
         let line_start = body[..sel_start].rfind('\n').map_or(0, |idx| idx + 1);
         let mut new_body = String::with_capacity(body.len() + sym.len());
@@ -351,4 +359,121 @@ fn handle_edit(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>>, te
         }
     }
     session::schedule_auto_sync(app, std::time::Duration::from_secs(5));
+}
+
+fn handle_link_clicked(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>>, target: &str) {
+    let target = target.trim();
+    if target.is_empty() {
+        return;
+    }
+
+    let (scheme, rest) = tomet::semantics::target_scheme(target);
+    match scheme {
+        tomet::semantics::TargetScheme::Url => {
+            let url = if rest.starts_with("http://") || rest.starts_with("https://") {
+                rest
+            } else if target.starts_with("http://") || target.starts_with("https://") {
+                target
+            } else {
+                rest
+            };
+            if let Err(e) = webbrowser::open(url) {
+                set_status(app, format!("Failed to open link: {e}"));
+            }
+        }
+        tomet::semantics::TargetScheme::Ref => {
+            let note_query = rest.split('#').next().unwrap_or(rest).trim();
+            if !navigate_to_note(app, session, note_query) {
+                set_status(app, format!("Note not found: {note_query}"));
+            }
+        }
+        tomet::semantics::TargetScheme::Document
+        | tomet::semantics::TargetScheme::File
+        | tomet::semantics::TargetScheme::Internal
+        | tomet::semantics::TargetScheme::Unresolved
+        | tomet::semantics::TargetScheme::Dir => {
+            if target.starts_with("http://")
+                || target.starts_with("https://")
+                || target.starts_with("mailto:")
+            {
+                if let Err(e) = webbrowser::open(target) {
+                    set_status(app, format!("Failed to open link: {e}"));
+                }
+                return;
+            }
+            let note_query = rest.split('#').next().unwrap_or(rest).trim();
+            if !navigate_to_note(app, session, note_query) {
+                set_status(app, format!("Note not found: {note_query}"));
+            }
+        }
+    }
+}
+
+fn navigate_to_note(app: &App, session: &std::rc::Rc<std::cell::RefCell<Session>>, query: &str) -> bool {
+    let s = session.borrow();
+    let vault_dir = s.vault_dir.clone();
+    let query_trimmed = query.trim_start_matches('@');
+    let query_path = std::path::Path::new(query_trimmed);
+
+    // 1. Exact path match or relative path match
+    for (i, note_path) in s.notes.iter().enumerate() {
+        if let Ok(rel) = note_path.strip_prefix(&vault_dir) {
+            if rel == query_path
+                || rel.with_extension("") == query_path
+                || rel.to_string_lossy() == query
+                || rel.to_string_lossy() == query_trimmed
+                || rel.with_extension("").to_string_lossy() == query
+                || rel.with_extension("").to_string_lossy() == query_trimmed
+            {
+                drop(s);
+                open_note(app, session, i);
+                return true;
+            }
+        }
+    }
+
+    // 2. File stem match (case-insensitive)
+    for (i, note_path) in s.notes.iter().enumerate() {
+        if let Some(stem) = note_path.file_stem().and_then(|st| st.to_str()) {
+            if stem.eq_ignore_ascii_case(query)
+                || stem.eq_ignore_ascii_case(query_trimmed)
+                || stem.trim_start_matches('@').eq_ignore_ascii_case(query_trimmed)
+            {
+                drop(s);
+                open_note(app, session, i);
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn heading_symbol_inserts_at_line_start() {
+        let body = "Hello world";
+        let (new_body, cursor) = apply_symbol_insertion(body, "= ", 5, 5);
+        assert_eq!(new_body, "= Hello world");
+        assert_eq!(cursor, 7);
+    }
+
+    #[test]
+    fn list_symbol_inserts_at_line_start() {
+        let body = "First line\nSecond line";
+        let (new_body, cursor) = apply_symbol_insertion(body, "- ", 15, 15);
+        assert_eq!(new_body, "First line\n- Second line");
+        assert_eq!(cursor, 17);
+    }
+
+    #[test]
+    fn inline_symbol_inserts_at_cursor() {
+        let body = "Hello world";
+        let (new_body, cursor) = apply_symbol_insertion(body, "@", 5, 5);
+        assert_eq!(new_body, "Hello@ world");
+        assert_eq!(cursor, 6);
+    }
 }

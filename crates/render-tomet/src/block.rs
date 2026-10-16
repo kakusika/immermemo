@@ -82,50 +82,69 @@ pub(crate) fn classify_block_groups(
             );
             groups
         }
-        Block::List(list) => {
-            let has_named = list
-                .items
-                .iter()
-                .any(|item| matches!(item.element.sigil, Sigil::Named(_)));
-            if !has_named {
-                vec![(
-                    RenderBlockKind::Paragraph,
-                    vec![RenderItem::Text(list.span, TextStyle::default())],
-                )]
-            } else {
-                let mut groups = Vec::new();
-                for item in &list.items {
-                    match &item.element.sigil {
-                        Sigil::Named(_) => {
-                            if skip_metadata && is_metadata_element_ast(&item.element) {
-                                continue;
-                            }
-                            let items = classify_bare_character_element(&item.element)
-                                .unwrap_or_else(|| {
-                                    vec![element_item(&item.element).unwrap_or_else(|| {
-                                        RenderItem::Text(item.element.span, TextStyle::default())
-                                    })]
-                                });
-                            groups.push((RenderBlockKind::Element, items));
-                        }
-                        _ => {
-                            groups.push((
-                                RenderBlockKind::Paragraph,
-                                vec![RenderItem::Text(item.element.span, TextStyle::default())],
-                            ));
-                        }
-                    }
-                    if let Some(sublist) = &item.sublist {
-                        groups.extend(classify_block_groups(
-                            &Block::List(sublist.clone()),
-                            skip_metadata,
-                        ));
-                    }
-                }
-                groups
+        Block::List(list) => classify_list(list, 0, skip_metadata),
+    }
+}
+
+pub(crate) fn classify_list(
+    list: &tomet::ast::List,
+    depth: usize,
+    skip_metadata: bool,
+) -> Vec<(RenderBlockKind, Vec<RenderItem>)> {
+    let mut groups = Vec::new();
+    for (idx, list_item) in list.items.iter().enumerate() {
+        let el = &list_item.element;
+        if skip_metadata && is_metadata_element_ast(el) {
+            continue;
+        }
+
+        let kind = RenderBlockKind::ListItem {
+            depth,
+            ordered: list.ordered,
+            index: idx + 1,
+        };
+
+        let items = match &el.sigil {
+            Sigil::Named(_) => {
+                classify_bare_character_element(el).unwrap_or_else(|| {
+                    vec![element_item(el).unwrap_or_else(|| {
+                        RenderItem::Text(el.span, TextStyle::default())
+                    })]
+                })
             }
+            _ => {
+                if let Some(blocks) = &el.content {
+                    let mut item_inlines = Vec::new();
+                    for b in blocks {
+                        match b {
+                            Block::Paragraph(p) => {
+                                item_inlines.extend(classify_inline_seq(&p.content));
+                            }
+                            _ => {
+                                for (_sub_kind, sub_items) in classify_block_groups(b, skip_metadata) {
+                                    item_inlines.extend(sub_items);
+                                }
+                            }
+                        }
+                    }
+                    if item_inlines.is_empty() {
+                        vec![RenderItem::Text(el.span, TextStyle::default())]
+                    } else {
+                        item_inlines
+                    }
+                } else {
+                    vec![RenderItem::Text(el.span, TextStyle::default())]
+                }
+            }
+        };
+
+        groups.push((kind, items));
+
+        if let Some(sublist) = &list_item.sublist {
+            groups.extend(classify_list(sublist, depth + 1, skip_metadata));
         }
     }
+    groups
 }
 
 /// `el`'s items if it's a bare `em`/`strong`/`mark`/`strikeout`, or one of [`ATOMIC_BARE_ELEMENTS`].

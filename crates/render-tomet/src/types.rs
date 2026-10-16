@@ -83,6 +83,11 @@ pub enum RenderBlockKind {
     Paragraph,
     Element,
     Heading(usize),
+    ListItem {
+        depth: usize,
+        ordered: bool,
+        index: usize,
+    },
 }
 
 /// `src` failed to parse.

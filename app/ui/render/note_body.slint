@@ -12,6 +12,8 @@ import { RichTextLine, FlowView } from "flow_view.slint";
 // comment for why a flat `[RenderedBlock]` alone isn't enough.
 export struct NoteBodyItemView {
     is-flow: bool,
+    depth: int,
+    prefix: string,
     block: RenderedBlock,
     lines: [RichTextLine],
 }
@@ -19,21 +21,42 @@ export struct NoteBodyItemView {
 export component NoteBodyView inherits VerticalLayout {
     in property <[NoteBodyItemView]> items;
     in property <length> text-font-size;
+    callback link-clicked(string);
 
     alignment: start;
+    spacing: Metrics.spacing-xs;
 
-    for item in root.items: VerticalLayout {
-        if !item.is-flow: RenderedBlockView {
-            width: 100%;
-            block: item.block;
-            text-font-size: root.text-font-size;
+    for item in root.items: HorizontalLayout {
+        padding-left: item.depth * (16px * Metrics.ui-scale);
+        spacing: Metrics.spacing-xs;
+
+        if item.prefix != "": VerticalLayout {
+            alignment: start;
+            Text {
+                text: item.prefix;
+                font-size: root.text-font-size;
+                font-weight: 600;
+                color: Palette.foreground.with-alpha(0.6);
+            }
         }
 
-        if item.is-flow: FlowView {
-            width: 100%;
-            lines: item.lines;
-            font-size: root.text-font-size;
-            text-color: Palette.foreground;
+        VerticalLayout {
+            horizontal-stretch: 1;
+
+            if !item.is-flow: RenderedBlockView {
+                width: 100%;
+                block: item.block;
+                text-font-size: root.text-font-size;
+                link-clicked(target) => { root.link-clicked(target); }
+            }
+
+            if item.is-flow: FlowView {
+                width: 100%;
+                lines: item.lines;
+                font-size: root.text-font-size;
+                text-color: Palette.foreground;
+                link-clicked(target) => { root.link-clicked(target); }
+            }
         }
     }
 }

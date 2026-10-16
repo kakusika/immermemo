@@ -287,6 +287,7 @@ mod tests {
         render::seam_tests::a_doc_icon_resolves_to_a_real_image_and_an_unknown_one_to_empty(&app);
         render::seam_tests::task_items_convert_into_the_generated_model(&app);
         render::seam_tests::inline_conflict_maintains_identity_and_order_across_resizes(&app);
+        render::seam_tests::list_items_carry_depth_prefix_and_links(&app);
     }
 
     fn status_classification_tracks_is_error(app: &App) {

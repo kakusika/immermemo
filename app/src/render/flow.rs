@@ -34,7 +34,7 @@
 //! `elements` and referenced by `Inline::Element { id }`), not *what it
 //! looks like*.
 
-use immermemo_render_tomet::{RenderItem, TextStyle, classify_blocks};
+use immermemo_render_tomet::{RenderBlockKind, RenderItem, TextStyle, classify_blocks};
 use origiri_richtext_flow::{Block, Inline};
 
 use super::classify::{
@@ -61,14 +61,21 @@ fn to_richtext_style(style: TextStyle) -> origiri_richtext_flow::TextStyle {
 /// flow as one line instead of stacking each split fragment as its own
 /// row (see the module doc).
 #[derive(Debug, Clone, PartialEq)]
-pub enum NoteBodyItem {
+pub struct NoteBodyItem {
+    pub depth: usize,
+    pub prefix: String,
+    pub content: NoteBodyContent,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum NoteBodyContent {
     Stacked(ClassifiedBlock),
     Flowed(FlowParagraph),
 }
 
 /// The single source of truth for the view-mode display: every top-level
-/// block, in order, each already decided as [`NoteBodyItem::Stacked`] or
-/// [`NoteBodyItem::Flowed`]. Supersedes calling [`classify_body`] directly
+/// block, in order, each already decided as [`NoteBodyContent::Stacked`] or
+/// [`NoteBodyContent::Flowed`]. Supersedes calling [`classify_body`] directly
 /// for this purpose -- that function is still correct (and still used by
 /// [`flow_paragraphs`]'s own fallback) for a caller that only wants the
 /// stacked presentation.
@@ -79,24 +86,50 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
         // plain-text span over the whole body rather than an empty list.
         return classify_body(body)
             .into_iter()
-            .map(NoteBodyItem::Stacked)
+            .map(|block| NoteBodyItem {
+                depth: 0,
+                prefix: String::new(),
+                content: NoteBodyContent::Stacked(block),
+            })
             .collect();
     };
     groups
         .into_iter()
-        .map(|(_kind, items)| {
-            if items.len() > 1 {
-                // Only `Paragraph`/`Heading` groups ever hold more than
-                // one item -- an `Element` group always holds exactly one
-                // (see `render-tomet`'s `classify_block_groups`) -- so
-                // this condition alone is enough to tell them apart.
-                NoteBodyItem::Flowed(to_flow_paragraph(body, items))
+        .map(|(kind, items)| {
+            let (depth, prefix) = match kind {
+                RenderBlockKind::ListItem {
+                    depth,
+                    ordered,
+                    index,
+                } => {
+                    let is_task = items.len() == 1
+                        && matches!(&items[0], RenderItem::Element { identity, .. } if identity.name == "task");
+                    let prefix = if is_task {
+                        String::new()
+                    } else if ordered {
+                        format!("{index}.")
+                    } else {
+                        "•".to_string()
+                    };
+                    (depth, prefix)
+                }
+                _ => (0, String::new()),
+            };
+
+            let content = if items.len() > 1 {
+                NoteBodyContent::Flowed(to_flow_paragraph(body, items))
             } else {
                 let item = items
                     .into_iter()
                     .next()
                     .expect("classify_block_groups always returns at least one item per group");
-                NoteBodyItem::Stacked(to_classified_block(body, item))
+                NoteBodyContent::Stacked(to_classified_block(body, item))
+            };
+
+            NoteBodyItem {
+                depth,
+                prefix,
+                content,
             }
         })
         .collect()
@@ -208,6 +241,7 @@ fn push_conflict_side(
             shape: leaf.shape,
             tone,
             text: leaf.text,
+            target: leaf.target,
             style: leaf.style,
             reading: leaf.reading,
             checked: leaf.checked,
@@ -230,16 +264,41 @@ mod tests {
                    The @conflict(a: [slow], b: [lazy]) fox jumps.\n";
         let items = note_body_items(src);
         assert_eq!(items.len(), 3);
-        assert!(matches!(items[0], NoteBodyItem::Stacked(_)));
-        assert!(matches!(items[1], NoteBodyItem::Stacked(_)));
-        match &items[2] {
-            NoteBodyItem::Flowed(paragraph) => {
+        assert!(matches!(items[0].content, NoteBodyContent::Stacked(_)));
+        assert!(matches!(items[1].content, NoteBodyContent::Stacked(_)));
+        match &items[2].content {
+            NoteBodyContent::Flowed(paragraph) => {
                 // "The ", side_a's "slow", " / ", side_b's "lazy",
                 // " fox jumps." -- see `push_conflict_side`'s doc.
                 assert_eq!(paragraph.block.content.len(), 5);
                 assert_eq!(paragraph.elements.len(), 2);
             }
-            NoteBodyItem::Stacked(_) => panic!("expected the inline-split paragraph to flow"),
+            NoteBodyContent::Stacked(_) => panic!("expected the inline-split paragraph to flow"),
+        }
+    }
+
+    #[test]
+    fn note_body_items_populates_list_items_with_depth_and_prefix() {
+        let src = "- Bullet 1\n  - Nested\n-. Ordered\n-@task(x) Done\n";
+        let items = note_body_items(src);
+        assert_eq!(items.len(), 4);
+
+        assert_eq!(items[0].depth, 0);
+        assert_eq!(items[0].prefix, "•");
+
+        assert_eq!(items[1].depth, 1);
+        assert_eq!(items[1].prefix, "•");
+
+        assert_eq!(items[2].depth, 0);
+        assert_eq!(items[2].prefix, "1.");
+
+        assert_eq!(items[3].depth, 0);
+        assert_eq!(items[3].prefix, "");
+        if let NoteBodyContent::Stacked(block) = &items[3].content {
+            assert_eq!(block.shape, BlockShape::Task);
+            assert!(block.checked);
+        } else {
+            panic!("expected task to be stacked");
         }
     }
 
@@ -365,7 +424,7 @@ mod tests {
 
         let items = note_body_items(src);
         assert_eq!(items.len(), 2);
-        assert!(matches!(items[0], NoteBodyItem::Flowed(_)));
+        assert!(matches!(items[0].content, NoteBodyContent::Flowed(_)));
     }
 
     #[test]
@@ -399,8 +458,8 @@ mod tests {
                    Body paragraph.\n";
         let items = note_body_items(src);
         assert_eq!(items.len(), 1);
-        match &items[0] {
-            NoteBodyItem::Stacked(block) => {
+        match &items[0].content {
+            NoteBodyContent::Stacked(block) => {
                 assert_eq!(block.shape, BlockShape::PlainText);
                 assert_eq!(block.text, "Body paragraph.");
             }

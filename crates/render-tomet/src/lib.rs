@@ -536,4 +536,64 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn lists_classify_items_with_depth_and_inlines() {
+        let src = "- First item with @link(\"https://example.com\")[a link]\n  - Nested sub-item\n- Third item\n";
+        let groups = classify_blocks(src).unwrap();
+        assert_eq!(groups.len(), 3);
+
+        assert_eq!(
+            groups[0].0,
+            RenderBlockKind::ListItem {
+                depth: 0,
+                ordered: false,
+                index: 1,
+            }
+        );
+        // "First item with ", @link, "\n" or span text
+        assert!(groups[0].1.iter().any(|item| matches!(item, RenderItem::Element { identity, .. } if identity.name == "link")));
+
+        assert_eq!(
+            groups[1].0,
+            RenderBlockKind::ListItem {
+                depth: 1,
+                ordered: false,
+                index: 1,
+            }
+        );
+
+        assert_eq!(
+            groups[2].0,
+            RenderBlockKind::ListItem {
+                depth: 0,
+                ordered: false,
+                index: 2,
+            }
+        );
+    }
+
+    #[test]
+    fn ordered_lists_have_ordered_flag_and_indices() {
+        let src = "-. First\n-. Second\n";
+        let groups = classify_blocks(src).unwrap();
+        assert_eq!(groups.len(), 2);
+        assert_eq!(
+            groups[0].0,
+            RenderBlockKind::ListItem {
+                depth: 0,
+                ordered: true,
+                index: 1,
+            }
+        );
+        assert_eq!(
+            groups[1].0,
+            RenderBlockKind::ListItem {
+                depth: 0,
+                ordered: true,
+                index: 2,
+            }
+        );
+    }
 }
+

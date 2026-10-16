@@ -371,6 +371,7 @@ export component EditorScreen inherits Rectangle {
     callback open-history();
     callback note-menu-requested();
     callback insert-symbol(string, int, int);
+    callback link-clicked(string);
 
     // Moves the caret after Rust restores text from the undo history.
     public function set-cursor(offset: int) {
@@ -798,26 +799,6 @@ export component EditorScreen inherits Rectangle {
                                     width: 100%;
                                     height: !root.edit-mode ? max(160px, max(view-layout.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
 
-                                    view-layout := VerticalLayout {
-                                        width: 100%;
-                                        alignment: start;
-                                        spacing: Metrics.spacing-sm;
-
-                                        if root.body == "" || root.note-body-items.length == 0: Text {
-                                            width: 100%;
-                                            text: @tr("Tap Edit or double-tap here to write.");
-                                            font-size: root.font-size;
-                                            color: Colors.muted;
-                                            wrap: word-wrap;
-                                        }
-
-                                        NoteBodyView {
-                                            width: 100%;
-                                            items: root.note-body-items;
-                                            text-font-size: root.font-size;
-                                        }
-                                    }
-
                                     TouchArea {
                                         width: 100%;
                                         height: 100%;
@@ -841,6 +822,27 @@ export component EditorScreen inherits Rectangle {
                                         }
                                         double-clicked => {
                                             root.focus-editor();
+                                        }
+                                    }
+
+                                    view-layout := VerticalLayout {
+                                        width: 100%;
+                                        alignment: start;
+                                        spacing: Metrics.spacing-sm;
+
+                                        if root.body == "" || root.note-body-items.length == 0: Text {
+                                            width: 100%;
+                                            text: @tr("Tap Edit or double-tap here to write.");
+                                            font-size: root.font-size;
+                                            color: Colors.muted;
+                                            wrap: word-wrap;
+                                        }
+
+                                        NoteBodyView {
+                                            width: 100%;
+                                            items: root.note-body-items;
+                                            text-font-size: root.font-size;
+                                            link-clicked(target) => { root.link-clicked(target); }
                                         }
                                     }
                                 }
@@ -972,7 +974,7 @@ export component EditorScreen inherits Rectangle {
                 done => { root.view-mode(); }
                 action-at => { root.insert-symbol("@", editor.cursor-position-byte-offset, editor.anchor-position-byte-offset); }
                 action-list => { root.insert-symbol("- ", editor.cursor-position-byte-offset, editor.anchor-position-byte-offset); }
-                action-heading => { root.insert-symbol("# ", editor.cursor-position-byte-offset, editor.anchor-position-byte-offset); }
+                action-heading => { root.insert-symbol("= ", editor.cursor-position-byte-offset, editor.anchor-position-byte-offset); }
             }
 
             // Note history back/forward navigation, left-aligned at the

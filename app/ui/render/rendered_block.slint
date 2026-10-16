@@ -57,6 +57,7 @@ export struct ConflictSideBlock {
     shape: RenderedBlockShape,
     tone: RenderedBlockTone,
     text: string,
+    target: string,
     bold: bool,
     italic: bool,
     mark: bool,
@@ -73,6 +74,8 @@ export struct RenderedBlock {
     // for `badge`. Unused (empty) for `conflict` -- its look comes
     // entirely from `side-a`/`side-b`.
     text: string,
+    // The raw reference target, meaningful only for `link`. Empty elsewhere.
+    target: string,
     // Meaningful only for `plain-text` -- `em`/`strong`/`mark`/`strikeout`
     // tagging a whole block with nothing else sharing its line (see
     // `immermemo_render_tomet`'s `classify_bare_character_element`).
@@ -108,6 +111,7 @@ export struct RenderedBlock {
 export component ConflictSideBlockView inherits VerticalLayout {
     in property <ConflictSideBlock> block;
     in property <length> text-font-size: Metrics.font-body;
+    callback link-clicked(string);
 
     property <color> tone-color: root.block.tone == RenderedBlockTone.accent ? Palette.accent-background
         : root.block.tone == RenderedBlockTone.warning ? Colors.warning
@@ -187,10 +191,22 @@ export component ConflictSideBlockView inherits VerticalLayout {
         }
 
         Rectangle {
+            x: 0;
             y: leaf-link-text-item.height - 1px;
-            width: leaf-link-text-item.preferred-width;
+            width: min(parent.width, leaf-link-text-item.preferred-width);
             height: 1px;
             background: root.tone-color;
+        }
+
+        TouchArea {
+            x: 0;
+            y: 0;
+            width: min(parent.width, leaf-link-text-item.preferred-width);
+            height: leaf-link-text-item.height;
+            mouse-cursor: pointer;
+            clicked => {
+                root.link-clicked(root.block.target);
+            }
         }
     }
 
@@ -264,6 +280,7 @@ export component RenderedBlockView inherits VerticalLayout {
     in property <RenderedBlock> block;
     in property <length> text-font-size: Metrics.font-body;
     in property <bool> is-inline: false;
+    callback link-clicked(string);
 
     property <color> tone-color: root.block.tone == RenderedBlockTone.accent ? Palette.accent-background
         : root.block.tone == RenderedBlockTone.warning ? Colors.warning
@@ -351,6 +368,7 @@ export component RenderedBlockView inherits VerticalLayout {
                 for side-item in root.block.side-a: ConflictSideBlockView {
                     block: side-item;
                     text-font-size: root.text-font-size;
+                    link-clicked(target) => { root.link-clicked(target); }
                 }
             }
         }
@@ -367,6 +385,7 @@ export component RenderedBlockView inherits VerticalLayout {
                 for side-item in root.block.side-b: ConflictSideBlockView {
                     block: side-item;
                     text-font-size: root.text-font-size;
+                    link-clicked(target) => { root.link-clicked(target); }
                 }
             }
         }
@@ -426,10 +445,22 @@ export component RenderedBlockView inherits VerticalLayout {
         }
 
         Rectangle {
+            x: 0;
             y: link-text-item.height - 1px;
-            width: link-text-item.preferred-width;
+            width: min(parent.width, link-text-item.preferred-width);
             height: 1px;
             background: root.tone-color;
+        }
+
+        TouchArea {
+            x: 0;
+            y: 0;
+            width: min(parent.width, link-text-item.preferred-width);
+            height: link-text-item.height;
+            mouse-cursor: pointer;
+            clicked => {
+                root.link-clicked(root.block.target);
+            }
         }
     }
 
@@ -441,10 +472,22 @@ export component RenderedBlockView inherits VerticalLayout {
         }
 
         Rectangle {
+            x: 0;
             y: inline-link-text-item.height - 1px;
             width: inline-link-text-item.preferred-width;
             height: 1px;
             background: root.tone-color;
+        }
+
+        TouchArea {
+            x: 0;
+            y: 0;
+            width: 100%;
+            height: 100%;
+            mouse-cursor: pointer;
+            clicked => {
+                root.link-clicked(root.block.target);
+            }
         }
     }
 

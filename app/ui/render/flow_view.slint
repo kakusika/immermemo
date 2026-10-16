@@ -21,6 +21,7 @@ export component FlowView {
     in property <length> font-size;
     in property <brush> mark-background: #fff59d80;
     in property <brush> text-color: #000000;
+    callback link-clicked(string);
 
     VerticalLayout {
         width: 100%;
@@ -55,6 +56,7 @@ export component FlowView {
                     is-inline: true;
                     block: frag.block;
                     text-font-size: root.font-size;
+                    link-clicked(target) => { root.link-clicked(target); }
                 }
             }
         }

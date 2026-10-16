@@ -12,7 +12,7 @@ use slint::{ComponentHandle, ModelRc, PhysicalSize, VecModel};
 slint::include_modules!();
 
 use immermemo::render::classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
-use immermemo::render::flow::{FlowParagraph, NoteBodyItem};
+use immermemo::render::flow::{FlowParagraph, NoteBodyContent, NoteBodyItem};
 use origiri_richtext_flow::{Fragment, Measure, layout_block};
 
 struct Headless {
@@ -363,6 +363,35 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(&window, size, &format!("{prefix}-editor-note-body.ppm"));
 
+    // Verify list items (unordered, ordered, nested) and clickable links
+    let list_links_body = "= リストとリンクのテスト\n\n\
+                           リンクの確認:\n\
+                           - 外部URL: @link(\"https://example.com\")[Example]\n\
+                           - ノートリンク: @link(target:\"ref:@ReGLOSS\")\n\
+                           - 別の記法: @link(\"ref:Shopping\")\n\n\
+                           箇条書きリスト:\n\
+                           - 項目 1: 通常のテキスト\n\
+                             - ネストされた項目 A (@strong[太字]含む)\n\
+                             - ネストされた項目 B\n\
+                           - 項目 2\n\n\
+                           番号付きリスト:\n\
+                           -. 最初のステップ\n\
+                           -. 次のステップ\n\
+                           -. 最後のステップ\n\n\
+                           タスクリスト:\n\
+                           -@task(x) 完了したタスク\n\
+                           -@task() 未完了のタスク\n";
+    app.set_body(list_links_body.into());
+    let max_width = app.get_body_content_width();
+    app.set_note_body_items(ModelRc::new(VecModel::from(
+        immermemo::render::flow::note_body_items(list_links_body)
+            .into_iter()
+            .map(|item| to_note_body_item_view(item, &app, max_width))
+            .collect::<Vec<_>>(),
+    )));
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    render(&window, size, &format!("{prefix}-editor-lists-links.ppm"));
+
     // User bug scenario verification: inline conflict across multiple window widths
     let user_body = "テスト: @conflict(a: [うんこ], b: [うんち]) です。";
     app.set_body(user_body.into());
@@ -580,16 +609,24 @@ fn main() {
 // the call site above for why it can't just call that module directly).
 
 fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> NoteBodyItemView {
-    match item {
-        NoteBodyItem::Stacked(block) => NoteBodyItemView {
+    let indent_px = item.depth as f32 * 16.0;
+    let prefix_px = if !item.prefix.is_empty() { 20.0 } else { 0.0 };
+    let flow_max_width = (max_width - indent_px - prefix_px).max(40.0);
+
+    match item.content {
+        NoteBodyContent::Stacked(block) => NoteBodyItemView {
             is_flow: false,
+            depth: item.depth as i32,
+            prefix: item.prefix.into(),
             block: to_rendered_block(&block),
             lines: ModelRc::default(),
         },
-        NoteBodyItem::Flowed(paragraph) => NoteBodyItemView {
+        NoteBodyContent::Flowed(paragraph) => NoteBodyItemView {
             is_flow: true,
+            depth: item.depth as i32,
+            prefix: item.prefix.into(),
             block: RenderedBlock::default(),
-            lines: to_rich_text_lines(&paragraph, app, max_width),
+            lines: to_rich_text_lines(&paragraph, app, flow_max_width),
         },
     }
 }
@@ -679,6 +716,7 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
         shape: to_rendered_block_shape(block.shape),
         tone: to_rendered_block_tone(block.tone),
         text: block.text.clone().into(),
+        target: block.target.clone().into(),
         bold: block.style.bold,
         italic: block.style.italic,
         mark: block.style.mark,
@@ -746,6 +784,7 @@ fn to_conflict_side_block(leaf: &ConflictLeafBlock) -> ConflictSideBlock {
         shape: to_rendered_block_shape(shape),
         tone: to_rendered_block_tone(leaf.tone),
         text: text.into(),
+        target: leaf.target.clone().into(),
         bold: leaf.style.bold,
         italic: leaf.style.italic,
         mark: leaf.style.mark,

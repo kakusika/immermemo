@@ -27,7 +27,9 @@ pub mod classify;
 pub mod flow;
 
 use classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
-use flow::{FlowParagraph, NoteBodyItem, note_body_items as classify_note_body_items};
+use flow::{
+    FlowParagraph, NoteBodyContent, NoteBodyItem, note_body_items as classify_note_body_items,
+};
 use origiri_richtext_flow::{Fragment, Measure, layout_block};
 use slint::{ModelRc, VecModel};
 
@@ -38,7 +40,7 @@ use crate::{
 
 /// Classifies/flows `body` and converts the result into the model
 /// `App`/`EditorScreen`'s `note-body-items` property expects, wrapping
-/// each [`NoteBodyItem::Flowed`] paragraph against `max_width` (logical
+/// each [`NoteBodyItem`] paragraph against `max_width` (logical
 /// pixels -- `App`'s own `body-content-width`, see `editor.slint`'s doc
 /// comment on it). Callers should set the result alongside `body` every
 /// time `body` *or* `max_width` changes -- see `session::update_rendered_body`,
@@ -53,16 +55,24 @@ pub fn note_body_items(body: &str, app: &App, max_width: f32) -> ModelRc<NoteBod
 }
 
 fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> NoteBodyItemView {
-    match item {
-        NoteBodyItem::Stacked(block) => NoteBodyItemView {
+    let indent_px = item.depth as f32 * 16.0;
+    let prefix_px = if !item.prefix.is_empty() { 20.0 } else { 0.0 };
+    let flow_max_width = (max_width - indent_px - prefix_px).max(40.0);
+
+    match item.content {
+        NoteBodyContent::Stacked(block) => NoteBodyItemView {
             is_flow: false,
+            depth: item.depth as i32,
+            prefix: item.prefix.into(),
             block: to_rendered_block(&block),
             lines: ModelRc::default(),
         },
-        NoteBodyItem::Flowed(paragraph) => NoteBodyItemView {
+        NoteBodyContent::Flowed(paragraph) => NoteBodyItemView {
             is_flow: true,
+            depth: item.depth as i32,
+            prefix: item.prefix.into(),
             block: RenderedBlock::default(),
-            lines: to_rich_text_lines(&paragraph, app, max_width),
+            lines: to_rich_text_lines(&paragraph, app, flow_max_width),
         },
     }
 }
@@ -158,6 +168,7 @@ fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
         shape: to_rendered_block_shape(block.shape),
         tone: to_rendered_block_tone(block.tone),
         text: block.text.clone().into(),
+        target: block.target.clone().into(),
         bold: block.style.bold,
         italic: block.style.italic,
         mark: block.style.mark,
@@ -229,6 +240,7 @@ fn to_conflict_side_block(leaf: &ConflictLeafBlock) -> ConflictSideBlock {
         shape: to_rendered_block_shape(shape),
         tone: to_rendered_block_tone(leaf.tone),
         text: text.into(),
+        target: leaf.target.clone().into(),
         bold: leaf.style.bold,
         italic: leaf.style.italic,
         mark: leaf.style.mark,
@@ -400,5 +412,37 @@ pub(crate) mod seam_tests {
                 "At width {width}, side B must be 'うんち' with Warning tone"
             );
         }
+    }
+
+    pub(crate) fn list_items_carry_depth_prefix_and_links(app: &App) {
+        let src = "- An item with @link(\"https://example.com\")[a link]\n  - Nested item\n-. Numbered item\n";
+        let model = note_body_items(src, app, 1000.0);
+        assert_eq!(model.row_count(), 3);
+
+        let item0 = model.row_data(0).unwrap();
+        assert_eq!(item0.depth, 0);
+        assert_eq!(item0.prefix, "•");
+        assert!(item0.is_flow);
+        let mut has_link = false;
+        for l in 0..item0.lines.row_count() {
+            let line = item0.lines.row_data(l).unwrap();
+            for f in 0..line.fragments.row_count() {
+                let frag = line.fragments.row_data(f).unwrap();
+                if frag.is_element && frag.block.shape == RenderedBlockShape::Link {
+                    assert_eq!(frag.block.target, "https://example.com");
+                    assert_eq!(frag.block.text, "a link");
+                    has_link = true;
+                }
+            }
+        }
+        assert!(has_link, "expected link fragment in list item");
+
+        let item1 = model.row_data(1).unwrap();
+        assert_eq!(item1.depth, 1);
+        assert_eq!(item1.prefix, "•");
+
+        let item2 = model.row_data(2).unwrap();
+        assert_eq!(item2.depth, 0);
+        assert_eq!(item2.prefix, "1.");
     }
 }
