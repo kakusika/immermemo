@@ -510,13 +510,20 @@ impl Session {
             .or_else(|| self.notes.iter().position(|note| by_stem(note)))
     }
 
+    /// The vault's own token store -- never the shared account's.
+    fn own_token_store(&self) -> anyhow::Result<Arc<dyn TokenStore>> {
+        (self.token_store_for)(&self.vault_dir)
+    }
+
     /// Links this vault to `remote_url`, authenticated by `token` and
-    /// registered under `account` (the remote and the token are the part
-    /// that must succeed; the account bookkeeping is best-effort, since sync
-    /// itself only needs the vault's own remote and token).
+    /// registered under `account`. The remote and the vault's own copy of
+    /// the token must be saved; the account bookkeeping is best-effort,
+    /// since sync can fall back on the vault's own token.
     ///
     /// Everything a provider's connect flow does after it has a repository,
     /// whichever way it authenticated -- OAuth device flow or a pasted token.
+    /// Linking a different account than before only re-points this vault:
+    /// the previous account's token is left alone, other vaults may use it.
     pub fn link_remote(
         &mut self,
         account: Account,
@@ -526,8 +533,8 @@ impl Session {
         self.app_data
             .save_remote(&self.vault_dir, remote_url)
             .context("Could not save remote")?;
-        self.token_store
-            .save(token)
+        self.own_token_store()
+            .and_then(|store| store.save(token))
             .context("Could not save access token")?;
         self.remote = Some(remote_url.to_owned());
 
@@ -541,6 +548,29 @@ impl Session {
         {
             let _ = store.save(token);
         }
+        // From here on the vault authenticates through the account.
+        if let Ok(store) = self.open_token_store(&self.vault_dir) {
+            self.token_store = store;
+        }
+        Ok(())
+    }
+
+    /// Points this vault at a remote the user typed in, with `token` (kept
+    /// if empty). Such a remote is not tied to a hosting account, so any
+    /// account link is dropped -- otherwise sync would keep using the
+    /// account's token and ignore the one typed here.
+    pub fn set_manual_remote(&mut self, remote_url: &str, token: &str) -> anyhow::Result<()> {
+        self.app_data
+            .save_remote(&self.vault_dir, remote_url)
+            .context("Could not save the remote")?;
+        self.app_data.clear_vault_account(&self.vault_dir);
+        self.token_store = self.own_token_store()?;
+        if !token.is_empty() {
+            self.token_store
+                .save(token)
+                .context("Could not save the access token")?;
+        }
+        self.remote = Some(remote_url.to_owned());
         Ok(())
     }
 
@@ -567,11 +597,16 @@ impl Session {
             .unwrap_or_else(|| self.token_store.clone())
     }
 
-    /// Forgets this vault's remote and token (the registered account, if
-    /// any, stays available to other vaults).
+    /// Disconnects this vault: forgets its remote, its own token and its
+    /// account link. The registered account and its token stay, other vaults
+    /// may use them.
     pub fn unlink_remote(&mut self) {
         let _ = self.app_data.save_remote(&self.vault_dir, "");
-        let _ = self.token_store.save("");
+        self.app_data.clear_vault_account(&self.vault_dir);
+        if let Ok(own) = self.own_token_store() {
+            let _ = own.save("");
+            self.token_store = own;
+        }
         self.remote = None;
     }
 
@@ -733,8 +768,7 @@ mod tests {
         );
     }
 
-    /// A token store that remembers what was saved, shared by the vault and
-    /// the per-account factory so a test can see both writes.
+    /// A token store that remembers what was saved.
     #[derive(Default)]
     struct MemoryTokenStore(std::sync::Mutex<Option<String>>);
     impl TokenStore for MemoryTokenStore {
@@ -747,81 +781,131 @@ mod tests {
         }
     }
 
+    /// One store per path, like the real factory: the vault's own and each
+    /// account's can be told apart.
+    #[derive(Clone, Default)]
+    struct Stores(Arc<std::sync::Mutex<std::collections::HashMap<PathBuf, Arc<MemoryTokenStore>>>>);
+    impl Stores {
+        fn at(&self, path: &Path) -> Arc<MemoryTokenStore> {
+            self.0
+                .lock()
+                .unwrap()
+                .entry(path.to_owned())
+                .or_default()
+                .clone()
+        }
+        fn token(&self, path: &Path) -> Option<String> {
+            self.at(path).load().unwrap()
+        }
+    }
+
+    fn account(user: &str) -> Account {
+        Account {
+            id: format!("github:{user}"),
+            provider: "github".to_owned(),
+            instance_url: "https://github.com".to_owned(),
+            username: user.to_owned(),
+            display_name: None,
+            avatar_url: None,
+        }
+    }
+
     #[test]
-    fn linking_a_remote_persists_remote_token_and_account_and_unlinking_clears_them() {
+    fn linking_keeps_each_accounts_token_apart_and_disconnecting_only_clears_this_vault() {
         let tmp = TempDir::new().unwrap();
         let vault_dir = tmp.path().join("vault");
         std::fs::create_dir_all(&vault_dir).unwrap();
         let app_data = AppData::new(tmp.path().join("data"));
-        let vault_store = Arc::new(MemoryTokenStore::default());
-        let account_store = Arc::new(MemoryTokenStore::default());
+        let stores = Stores::default();
         let mut session = Session::new(
             vault_dir.clone(),
             app_data.clone(),
-            vault_store.clone(),
+            stores.at(&vault_dir),
             {
-                let account_store = account_store.clone();
-                Box::new(move |_| Ok(account_store.clone() as Arc<dyn TokenStore>))
+                let stores = stores.clone();
+                Box::new(move |path| Ok(stores.at(path) as Arc<dyn TokenStore>))
             },
             vec![vault_dir.clone()],
             None,
             NoteIndex::open_in_memory().unwrap(),
         );
-        let account = Account {
-            id: "github:octocat".to_owned(),
-            provider: "github".to_owned(),
-            instance_url: "https://github.com".to_owned(),
-            username: "octocat".to_owned(),
-            display_name: None,
-            avatar_url: None,
-        };
+        let token_of = |id: &str| stores.token(&app_data.account_token_path(id).unwrap());
 
         // Before linking, a sync authenticates through the vault's own store.
         session.sync_token_store().save("vault-only").unwrap();
-        assert_eq!(vault_store.load().unwrap().as_deref(), Some("vault-only"));
-        assert_eq!(account_store.load().unwrap(), None);
+        assert_eq!(stores.token(&vault_dir).as_deref(), Some("vault-only"));
 
+        // Linking account A.
         session
-            .link_remote(
-                account.clone(),
-                "https://github.com/octocat/notes.git",
-                "tok",
-            )
+            .link_remote(account("a"), "https://github.com/a/notes.git", "tok-a")
             .unwrap();
-
         assert_eq!(
             session.remote.as_deref(),
-            Some("https://github.com/octocat/notes.git")
+            Some("https://github.com/a/notes.git")
         );
         assert_eq!(
             app_data.load_remote(&vault_dir).as_deref(),
-            Some("https://github.com/octocat/notes.git")
+            Some("https://github.com/a/notes.git")
         );
-        assert_eq!(vault_store.load().unwrap().as_deref(), Some("tok"));
-        assert_eq!(account_store.load().unwrap().as_deref(), Some("tok"));
-        assert_eq!(app_data.get_account("github:octocat"), Some(account));
+        assert_eq!(stores.token(&vault_dir).as_deref(), Some("tok-a"));
+        assert_eq!(token_of("github:a").as_deref(), Some("tok-a"));
+        assert_eq!(app_data.get_account("github:a"), Some(account("a")));
         assert_eq!(
             app_data.load_vault_account(&vault_dir).as_deref(),
-            Some("github:octocat")
+            Some("github:a")
         );
+        // ...and from then on the vault authenticates through that account.
+        session.token_store.save("refreshed-a").unwrap();
+        assert_eq!(token_of("github:a").as_deref(), Some("refreshed-a"));
 
-        // Once linked, it switches to the account's store.
-        session.sync_token_store().save("via-account").unwrap();
+        // Linking account B must not clobber A, which other vaults may use.
+        session
+            .link_remote(account("b"), "https://github.com/b/notes.git", "tok-b")
+            .unwrap();
+        assert_eq!(token_of("github:a").as_deref(), Some("refreshed-a"));
+        assert_eq!(token_of("github:b").as_deref(), Some("tok-b"));
         assert_eq!(
-            account_store.load().unwrap().as_deref(),
-            Some("via-account")
+            app_data.load_vault_account(&vault_dir).as_deref(),
+            Some("github:b")
         );
-        assert_eq!(vault_store.load().unwrap().as_deref(), Some("tok"));
 
+        // A typed-in remote drops the account link and uses its own token.
+        session
+            .set_manual_remote("https://git.example.com/me/notes.git", "typed")
+            .unwrap();
+        assert_eq!(app_data.load_vault_account(&vault_dir), None);
+        assert_eq!(stores.token(&vault_dir).as_deref(), Some("typed"));
+        assert_eq!(
+            token_of("github:b").as_deref(),
+            Some("tok-b"),
+            "B untouched"
+        );
+        session.sync_token_store().save("typed-again").unwrap();
+        assert_eq!(stores.token(&vault_dir).as_deref(), Some("typed-again"));
+        session
+            .set_manual_remote("https://git.example.com/me/other.git", "")
+            .unwrap();
+        assert_eq!(
+            stores.token(&vault_dir).as_deref(),
+            Some("typed-again"),
+            "an empty token keeps the saved one"
+        );
+
+        // Disconnecting clears this vault's link, not the account.
+        session
+            .link_remote(account("a"), "https://github.com/a/notes.git", "tok-a2")
+            .unwrap();
         session.unlink_remote();
-
         assert_eq!(session.remote, None);
         assert_eq!(app_data.load_remote(&vault_dir), None);
-        assert_eq!(vault_store.load().unwrap().as_deref(), Some(""));
-        assert!(
-            app_data.get_account("github:octocat").is_some(),
-            "the account itself stays registered for other vaults"
+        assert_eq!(app_data.load_vault_account(&vault_dir), None);
+        assert_eq!(stores.token(&vault_dir).as_deref(), Some(""));
+        assert_eq!(
+            token_of("github:a").as_deref(),
+            Some("tok-a2"),
+            "the account stays usable"
         );
+        assert!(app_data.get_account("github:a").is_some());
     }
 
     #[test]

@@ -192,6 +192,7 @@ fn disconnect(app: &App, session: &SessionRef, provider: ProviderId) {
     settings.set_token_draft(SharedString::new());
     settings.set_has_token(false);
     update_provider_ui_state(app, None);
+    crate::callbacks::refresh_accounts_ui(app, &session.borrow());
     set_status(
         app,
         format!("Disconnected {} repository", provider.display_name()),

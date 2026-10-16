@@ -63,7 +63,10 @@ pub fn heading_font_size(base_size: f32, level: usize) -> f32 {
     }
 }
 
-fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> NoteBodyItemView {
+/// Converts one classified/flowed item into its Slint model row, wrapping a
+/// flowed paragraph against `max_width`. Public so `examples/snap.rs` can
+/// build the same rows from hand-made items.
+pub fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> NoteBodyItemView {
     let indent_px = item.depth as f32 * 16.0;
     let prefix_px = if !item.prefix.is_empty() { 20.0 } else { 0.0 };
     let flow_max_width = (max_width - indent_px - prefix_px).max(40.0);

@@ -9,11 +9,11 @@ use slint::platform::software_renderer::{
 };
 use slint::platform::{Platform, WindowAdapter, WindowEvent};
 use slint::{ComponentHandle, ModelRc, PhysicalSize, VecModel};
-slint::include_modules!();
 
-use immermemo::render::classify::{BlockShape, ClassifiedBlock, ConflictLeafBlock, Tone};
-use immermemo::render::flow::{FlowParagraph, NoteBodyContent, NoteBodyItem};
-use origiri_richtext_flow::{Fragment, Measure, layout_block};
+use immermemo::render::to_note_body_item_view;
+use immermemo::{
+    AccountData, App, BreadcrumbSegment, DirectoryEntry, PickerIconEntry, SettingsAdapter,
+};
 
 struct Headless {
     main: Rc<MinimalSoftwareWindow>,
@@ -337,14 +337,9 @@ fn main() {
     // whole-block one (see `src/render/classify.rs`'s
     // `an_inline_merge_conflict_is_recognized_through_the_real_pipeline`).
     // That last paragraph now flows as one line instead of stacking each
-    // split fragment as its own row. Goes through
-    // `immermemo_editor::note_body_items` directly rather than
-    // `immermemo::render::note_body_items`: this file's own
-    // `include_modules!()` generates its own `NoteBodyItemView`/
-    // `RenderedBlock`/`RichTextLine` types, distinct from the library
-    // crate's (see `src/render/mod.rs`'s doc comment for why), so
-    // the small seam (`to_note_body_item_view` and friends, below) has to
-    // be repeated here too.
+    // split fragment as its own row. Items come from `render::note_body_items`'s
+    // classify/flow step and go through the library's own
+    // `to_note_body_item_view`, so what is snapped is what the app draws.
     let body = "買い物リストの変更について。\n\n\
                 @conflict(a: [牛乳（低脂肪）], b: [牛乳（特濃）])\n\n\
                 @deck.bookmark(label: しおり)\n\n\
@@ -696,228 +691,4 @@ fn main() {
     app.set_note_sheet_open(false);
     app.set_active_tab(0);
     app.set_theme_choice(0);
-}
-
-// A copy of `src/render/mod.rs`'s seam, targeting this file's own
-// `include_modules!()`-generated types instead of the library crate's (see
-// the call site above for why it can't just call that module directly).
-
-fn heading_font_size(base_size: f32, level: usize) -> f32 {
-    match level {
-        1 => base_size * 1.5,
-        2 => base_size * 1.3,
-        3 => base_size * 1.15,
-        _ if level > 3 => base_size * 1.05,
-        _ => base_size,
-    }
-}
-
-fn to_note_body_item_view(item: NoteBodyItem, app: &App, max_width: f32) -> NoteBodyItemView {
-    let indent_px = item.depth as f32 * 16.0;
-    let prefix_px = if !item.prefix.is_empty() { 20.0 } else { 0.0 };
-    let flow_max_width = (max_width - indent_px - prefix_px).max(40.0);
-    let heading_level = item.heading_level as i32;
-
-    match item.content {
-        NoteBodyContent::Stacked(block) => NoteBodyItemView {
-            is_flow: false,
-            heading_level,
-            depth: item.depth as i32,
-            prefix: item.prefix.into(),
-            block: to_rendered_block(&block),
-            lines: ModelRc::default(),
-        },
-        NoteBodyContent::Flowed(paragraph) => NoteBodyItemView {
-            is_flow: true,
-            heading_level,
-            depth: item.depth as i32,
-            prefix: item.prefix.into(),
-            block: RenderedBlock::default(),
-            lines: to_rich_text_lines(&paragraph, app, flow_max_width, item.heading_level),
-        },
-    }
-}
-
-/// Same technique `src/render/mod.rs`'s `RealMeasure` uses: the
-/// off-screen probe elements live in `app.slint` itself, so they're
-/// available here too (this file's own compiled `App`).
-struct RealMeasure<'a> {
-    app: &'a App,
-    font_size: f32,
-    is_heading: bool,
-    elements: &'a [ClassifiedBlock],
-}
-
-impl Measure for RealMeasure<'_> {
-    fn text_width(&self, content: &str, style: u32) -> f32 {
-        let style = origiri_richtext_flow::TextStyle::from_style_id(style);
-        self.app.set_measure_probe_text(content.into());
-        self.app.set_measure_probe_font_size(self.font_size);
-        self.app
-            .set_measure_probe_font_weight(if self.is_heading || style.bold {
-                700
-            } else {
-                400
-            });
-        self.app.set_measure_probe_font_italic(style.italic);
-        self.app.get_measure_probe_text_width()
-    }
-
-    fn element_width(&self, id: u64) -> f32 {
-        let rendered = to_rendered_block(&self.elements[id as usize]);
-        self.app.set_measure_probe_block(rendered);
-        self.app.get_measure_probe_block_width()
-    }
-}
-
-fn to_rich_text_lines(
-    paragraph: &FlowParagraph,
-    app: &App,
-    max_width: f32,
-    heading_level: usize,
-) -> ModelRc<RichTextLine> {
-    let font_size = heading_font_size(app.get_editor_font_size(), heading_level);
-    let measure = RealMeasure {
-        app,
-        font_size,
-        is_heading: heading_level > 0,
-        elements: &paragraph.elements,
-    };
-    let lines: Vec<RichTextLine> = layout_block(&paragraph.block, max_width, &measure)
-        .into_iter()
-        .map(|line| RichTextLine {
-            fragments: ModelRc::new(VecModel::from(
-                line.fragments
-                    .into_iter()
-                    .map(|fragment| to_rich_text_fragment(fragment, &paragraph.elements))
-                    .collect::<Vec<_>>(),
-            )),
-        })
-        .collect();
-    ModelRc::new(VecModel::from(lines))
-}
-
-fn to_rich_text_fragment(fragment: Fragment, elements: &[ClassifiedBlock]) -> RichTextFragment {
-    match fragment {
-        Fragment::Text { content, style, .. } => {
-            let style = origiri_richtext_flow::TextStyle::from_style_id(style);
-            RichTextFragment {
-                is_element: false,
-                text: content.into(),
-                block: RenderedBlock::default(),
-                bold: style.bold,
-                italic: style.italic,
-                mark: style.mark,
-                strikeout: style.strikeout,
-            }
-        }
-        Fragment::Element { id, .. } => {
-            let rendered = to_rendered_block(&elements[id as usize]);
-            RichTextFragment {
-                is_element: true,
-                text: Default::default(),
-                block: rendered,
-                bold: false,
-                italic: false,
-                mark: false,
-                strikeout: false,
-            }
-        }
-    }
-}
-
-fn to_rendered_block(block: &ClassifiedBlock) -> RenderedBlock {
-    RenderedBlock {
-        shape: to_rendered_block_shape(block.shape),
-        tone: to_rendered_block_tone(block.tone),
-        text: block.text.clone().into(),
-        target: block.target.clone().into(),
-        bold: block.style.bold,
-        italic: block.style.italic,
-        mark: block.style.mark,
-        strikeout: block.style.strikeout,
-        reading: block.reading.clone().into(),
-        icon_image: if block.shape == BlockShape::Icon {
-            icon_image(&block.text, &block.reading)
-        } else {
-            slint::Image::default()
-        },
-        checked: block.checked,
-        side_a: ModelRc::new(VecModel::from(
-            block
-                .side_a
-                .iter()
-                .map(to_conflict_side_block)
-                .collect::<Vec<_>>(),
-        )),
-        side_b: ModelRc::new(VecModel::from(
-            block
-                .side_b
-                .iter()
-                .map(to_conflict_side_block)
-                .collect::<Vec<_>>(),
-        )),
-    }
-}
-
-fn to_rendered_block_shape(shape: BlockShape) -> RenderedBlockShape {
-    match shape {
-        BlockShape::PlainText => RenderedBlockShape::PlainText,
-        BlockShape::Conflict => RenderedBlockShape::Conflict,
-        BlockShape::Badge => RenderedBlockShape::Badge,
-        BlockShape::Ruby => RenderedBlockShape::Ruby,
-        BlockShape::Link => RenderedBlockShape::Link,
-        BlockShape::Icon => RenderedBlockShape::Icon,
-        BlockShape::Task => RenderedBlockShape::Task,
-        BlockShape::Code => RenderedBlockShape::Code,
-        BlockShape::Callout => RenderedBlockShape::Callout,
-    }
-}
-
-fn to_rendered_block_tone(tone: Tone) -> RenderedBlockTone {
-    match tone {
-        Tone::Accent => RenderedBlockTone::Accent,
-        Tone::Warning => RenderedBlockTone::Warning,
-        Tone::Neutral => RenderedBlockTone::Neutral,
-    }
-}
-
-// See `src/render/mod.rs`'s `to_conflict_side_block` doc -- same
-// normalization (a nested, still-unresolved `@conflict` shows as a
-// `Badge` instead of a silently blank leaf), repeated here for the same
-// reason the rest of this seam is (see this file's own module doc).
-fn to_conflict_side_block(leaf: &ConflictLeafBlock) -> ConflictSideBlock {
-    let shape = if leaf.shape == BlockShape::Conflict {
-        BlockShape::Badge
-    } else {
-        leaf.shape
-    };
-    let text = if leaf.shape == BlockShape::Conflict {
-        "conflict".to_owned()
-    } else {
-        leaf.text.clone()
-    };
-    ConflictSideBlock {
-        shape: to_rendered_block_shape(shape),
-        tone: to_rendered_block_tone(leaf.tone),
-        text: text.into(),
-        target: leaf.target.clone().into(),
-        bold: leaf.style.bold,
-        italic: leaf.style.italic,
-        mark: leaf.style.mark,
-        strikeout: leaf.style.strikeout,
-        reading: leaf.reading.clone().into(),
-        icon_image: if leaf.shape == BlockShape::Icon {
-            icon_image(&leaf.text, &leaf.reading)
-        } else {
-            slint::Image::default()
-        },
-        checked: leaf.checked,
-    }
-}
-
-fn icon_image(slug: &str, pkg: &str) -> slint::Image {
-    origiri_icons::icon_svg(pkg, slug)
-        .and_then(|svg| slint::Image::load_from_svg_data(&svg).ok())
-        .unwrap_or_default()
 }

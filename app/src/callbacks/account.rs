@@ -157,21 +157,12 @@ pub fn bind_account_callbacks(app: &App, session: &SessionRef) {
                 set_error(&app, "Enter a remote URL first");
                 return;
             }
-            let mut s = session.borrow_mut();
-            if let Err(e) = s.app_data.save_remote(&s.vault_dir, url) {
-                drop(s);
-                set_error(&app, format!("Could not save the remote: {e}"));
+            let result = session.borrow_mut().set_manual_remote(url, &token);
+            if let Err(e) = result {
+                set_error(&app, format!("{e:#}"));
                 return;
             }
-            if !token.is_empty()
-                && let Err(e) = s.token_store.save(&token)
-            {
-                drop(s);
-                set_error(&app, format!("Could not save the access token: {e}"));
-                return;
-            }
-            s.remote = Some(url.to_owned());
-            drop(s);
+            crate::callbacks::refresh_accounts_ui(&app, &session.borrow());
             app.set_remote_configured(true);
             update_provider_ui_state(&app, Some(url));
             app.set_settings_open(false);
