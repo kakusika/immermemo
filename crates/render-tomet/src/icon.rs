@@ -1,6 +1,6 @@
 //! A note's icon: what `@meta{ icon: ... }` says, and how a text icon is laid out.
 //!
-//! The same three shapes `tomet-book` accepts for a document icon:
+//! The same three shapes `tomet-shelf` accepts for a document icon:
 //!
 //! - `icon: @doc.icon("star")` -- a named glyph from a vendored icon package;
 //! - `icon: "🎂"` -- a short text or emoji, laid out per [`text_icon_cells`];
@@ -118,7 +118,7 @@ pub(crate) fn is_image_reference(s: &str) -> bool {
 }
 
 /// The cells a text icon is drawn from, one grapheme each (so an emoji with
-/// a skin tone or a ZWJ sequence stays whole). Mirrors `tomet-book`'s
+/// a skin tone or a ZWJ sequence stays whole). Mirrors `tomet-shelf`'s
 /// avatar rule: 1 grapheme is one large glyph, 2 sit side by side, 3 fill a
 /// 2x2 grid with the third centred on the bottom row, 4 fill the grid, and
 /// 5 or more are abbreviated to their first two. The caller picks the

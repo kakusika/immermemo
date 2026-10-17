@@ -1,6 +1,6 @@
 //! A note's banner: the wide image across the top of the note.
 //!
-//! `@meta{ banner: "images/hero.jpg", banner-y: 30 }`, the keys `tomet-book`
+//! `@meta{ banner: "images/hero.jpg", banner-y: 30 }`, the keys `tomet-shelf`
 //! uses. The value is an image reference in any of the forms an icon takes
 //! (a path, a URL, `@embed(...)`); `banner-y` (or `banner_y`) is which
 //! vertical position of the image stays in view when it is cropped to the

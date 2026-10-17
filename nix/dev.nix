@@ -3,7 +3,7 @@
   pkgs,
   mkShell,
   fenix,
-  tmtbook,
+  tomet-shelf,
   tomet,
   tomet-lsp,
   twrit,
@@ -53,7 +53,7 @@ mkShell {
     #= Develop
     tomet
     tomet-lsp
-    tmtbook
+    tomet-shelf
     twrit
     slint-lsp
     slint-viewer
