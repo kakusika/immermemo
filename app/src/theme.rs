@@ -4,7 +4,9 @@
 
 use origiri_mobile::push_mobile_color_tokens;
 use origiri_theme::palette::RgbColor;
-use origiri_theme::{MaterialSettings, MaterialVariant, ResolvedTheme, ThemeSettings, resolve};
+use origiri_theme::{
+    MaterialSettings, MaterialSpecVersion, MaterialVariant, ResolvedTheme, ThemeSettings, resolve,
+};
 use slint::ComponentHandle;
 
 use crate::{App, SettingsAdapter, Theme, ThemeColors};
@@ -66,6 +68,7 @@ pub fn resolve_app_theme(
         variant,
         is_dark,
         contrast: contrast_val,
+        spec_version: MaterialSpecVersion::Spec2025,
     });
 
     resolve(&settings)

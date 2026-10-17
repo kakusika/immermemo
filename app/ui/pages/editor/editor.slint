@@ -1139,15 +1139,16 @@ export component EditorScreen inherits Rectangle {
         }
     }
 
-    // Pushes content above the keyboard or system bar when present. Fixed
-    // at the true bottom of the screen -- not part of either gesture
-    // surface, since dragging is disabled whenever the keyboard is up
-    // anyway (app.slint gates header-swipe-enabled on keyboard == 0px).
+    // Pushes content above the keyboard or system bar when present, painted
+    // in the same `page-background` and tracking the same sheet offset/fade
+    // as `body-surface` so the bottom system bar region blends seamlessly
+    // into the note sheet.
     if root.inset-bottom > 0px: Rectangle {
         x: 0px;
-        y: root.height - root.inset-bottom;
+        y: root.height - root.inset-bottom + root.sheet-y-offset;
         width: 100%;
         height: root.inset-bottom;
-        background: Colors.surface;
+        background: Colors.page-background;
+        opacity: clamp(root.sheet-progress * 10.0, 0.0, 1.0);
     }
 }
