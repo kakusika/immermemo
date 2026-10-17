@@ -12,12 +12,10 @@ export component SelectionBar inherits Rectangle {
     width: content-layout.preferred-width;
     height: 48px * Metrics.ui-scale;
     border-radius: 24px * Metrics.ui-scale;
-    background: Colors.surface;
-    border-width: 1px;
-    border-color: Colors.card-border;
-    drop-shadow-blur: 16px;
-    drop-shadow-offset-y: 4px;
-    drop-shadow-color: Palette.foreground.with-alpha(Palette.color-scheme == ColorScheme.dark ? 0.35 : 0.15);
+    background: Palette.accent-background;
+    drop-shadow-blur: 10px * Metrics.ui-scale;
+    drop-shadow-offset-y: 2px * Metrics.ui-scale;
+    drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000a0 : #00000024;
 
     content-layout := HorizontalLayout {
         padding-left: Metrics.spacing-md;
@@ -35,7 +33,7 @@ export component SelectionBar inherits Rectangle {
                         width: 20px * Metrics.ui-scale;
                         height: 20px * Metrics.ui-scale;
                         border-radius: 10px * Metrics.ui-scale;
-                        background: Palette.accent-background;
+                        background: Palette.accent-foreground.with-alpha(0.22);
                         Icon {
                             source: TablerIcons.check;
                             width: 13px * Metrics.ui-scale;
@@ -51,7 +49,7 @@ export component SelectionBar inherits Rectangle {
                     text: @tr("{} selected", SelectionAdapter.selection-count);
                     font-size: Metrics.font-sm + 1px;
                     font-weight: 600;
-                    color: Palette.foreground;
+                    color: Palette.accent-foreground;
                     vertical-alignment: center;
                 }
             }
@@ -67,6 +65,7 @@ export component SelectionBar inherits Rectangle {
             alignment: center;
             IconButton {
                 icon: TablerIcons.checkbox;
+                tint: Palette.accent-foreground;
                 clicked => { root.select-all(); }
             }
         }
@@ -76,6 +75,7 @@ export component SelectionBar inherits Rectangle {
             alignment: center;
             IconButton {
                 icon: TablerIcons.trash;
+                tint: Palette.accent-foreground;
                 clicked => { root.trigger-action(); }
             }
         }
@@ -85,6 +85,7 @@ export component SelectionBar inherits Rectangle {
             alignment: center;
             IconButton {
                 icon: TablerIcons.x;
+                tint: Palette.accent-foreground;
                 clicked => { root.clear(); }
             }
         }

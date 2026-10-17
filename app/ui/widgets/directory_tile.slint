@@ -4,6 +4,7 @@
 import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
+import { LongPressRippleArea } from "long_press_ripple.slint";
 import { NoteIconContent, NoteIconView } from "note_icon.slint";
 
 // One tile of the Directory page's Grid view: a folder, or a note showing
@@ -32,94 +33,79 @@ export component DirectoryTile inherits Rectangle {
     preferred-width: 0px;
     height: root.tile-height;
     border-radius: Metrics.radius-md;
-    background: touch.pressed
-        ? Palette.foreground.with-alpha(0.12)
-        : (root.highlighted ? Colors.primary-container : Colors.surface-elevated);
-    animate background {
-        duration: 150ms;
-        easing: ease-out;
-    }
 
-    VerticalLayout {
-        alignment: center;
-        spacing: Metrics.spacing-xs;
+    ripple := LongPressRippleArea {
+        width: 100%;
+        height: 100%;
+        border-radius: root.border-radius;
+        base-background: root.highlighted ? Colors.primary-container : Colors.surface-elevated;
+        pressed-background: Palette.foreground.with-alpha(0.06);
+        long-press-enabled: root.long-press-enabled;
+        clicked => { root.clicked(); }
+        long-pressed => { root.long-pressed(); }
 
-        HorizontalLayout {
+        VerticalLayout {
             alignment: center;
+            spacing: Metrics.spacing-xs;
+            padding-left: Metrics.spacing-xs;
+            padding-right: Metrics.spacing-xs;
 
-            // Same box as a note's swatch, so labels line up across a row
-            // mixing folders and notes.
-            if root.is-folder: Rectangle {
-                width: root.swatch;
-                height: root.swatch;
+            HorizontalLayout {
+                alignment: center;
 
-                Icon {
-                    source: TablerIcons.folder;
-                    width: Metrics.icon-lg;
-                    height: Metrics.icon-lg;
-                    color: root.tint;
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
+                // Same box as a note's swatch, so labels line up across a row
+                // mixing folders and notes.
+                if root.is-folder: Rectangle {
+                    width: root.swatch;
+                    height: root.swatch;
+
+                    Icon {
+                        source: TablerIcons.folder;
+                        width: Metrics.icon-lg;
+                        height: Metrics.icon-lg;
+                        color: root.tint;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                if !root.is-folder: NoteIconContent {
+                    width: root.swatch;
+                    height: root.swatch;
+                    border-radius: Metrics.radius-md;
+                    icon: root.icon;
+                    fallback: TablerIcons.file;
+                    tint: root.tint;
+                    glyph-size: Metrics.icon-lg;
                 }
             }
 
-            if !root.is-folder: NoteIconContent {
-                width: root.swatch;
-                height: root.swatch;
-                border-radius: Metrics.radius-md;
-                icon: root.icon;
-                fallback: TablerIcons.file;
-                tint: root.tint;
-                glyph-size: Metrics.icon-lg;
+            HorizontalLayout {
+                alignment: center;
+
+                Text {
+                    text: root.label-text;
+                    font-size: Metrics.font-sm;
+                    font-weight: 600;
+                    color: root.tint;
+                    horizontal-alignment: center;
+                    overflow: elide;
+                }
             }
         }
 
-        HorizontalLayout {
-            alignment: center;
+        // Corner slot: sized to whatever the caller puts in it, pinned
+        // top-right. The outer `Rectangle` (not a layout) is what is
+        // positioned, sized from the inner layout's preferred size.
+        Rectangle {
+            y: Metrics.spacing-sm;
+            width: corner-layout.preferred-width;
+            height: corner-layout.preferred-height;
+            x: root.width - self.width - Metrics.spacing-sm;
 
-            Text {
-                text: root.label-text;
-                font-size: Metrics.font-sm;
-                font-weight: 600;
-                color: root.tint;
-                horizontal-alignment: center;
-                overflow: elide;
+            corner-layout := HorizontalLayout {
+                @children
             }
-        }
-    }
-
-    // Corner slot: sized to whatever the caller puts in it, pinned
-    // top-right. The outer `Rectangle` (not a layout) is what is
-    // positioned, sized from the inner layout's preferred size.
-    Rectangle {
-        y: Metrics.spacing-xs;
-        width: corner-layout.preferred-width;
-        height: corner-layout.preferred-height;
-        x: root.width - self.width - Metrics.spacing-xs;
-
-        corner-layout := HorizontalLayout {
-            @children
-        }
-    }
-
-    property <bool> long-press-fired: false;
-
-    touch := TouchArea {
-        clicked => {
-            if (root.long-press-fired) {
-                root.long-press-fired = false;
-            } else {
-                root.clicked();
-            }
-        }
-    }
-
-    Timer {
-        interval: 400ms;
-        running: touch.pressed && root.long-press-enabled && !root.long-press-fired;
-        triggered => {
-            root.long-press-fired = true;
-            root.long-pressed();
         }
     }
 }

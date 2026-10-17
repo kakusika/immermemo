@@ -3,7 +3,6 @@ import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
 import {
     IconButton,
-    BubbleButton,
     TopBar,
     AppScrollView,
     PillButton,
@@ -113,6 +112,63 @@ component NoteSheetGestureArea inherits SwipeGestureHandler {
     }
 }
 
+// Opaque circular header button for the note sheet: unlike `BubbleButton`
+// (which uses an 8% alpha fill that lets the banner and scrolling note body
+// bleed through), this uses an opaque elevated surface matching `NavPill` and
+// `ViewSwitcher` at the bottom of the sheet.
+component HeaderBubbleButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> enabled: true;
+    in property <color> tint: Palette.foreground;
+    in property <bool> spinning: false;
+    callback clicked();
+
+    property <angle> spin-angle: root.spinning ? mod(animation-tick(), 1s) / 1s * 360deg : 0deg;
+
+    width: Metrics.bubble-button-size;
+    height: 100%;
+    min-height: Metrics.touch;
+
+    bubble := Rectangle {
+        width: Metrics.bubble-button-size;
+        height: Metrics.bubble-button-size;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: self.width / 2;
+        background: touch.pressed && root.enabled
+            ? (Palette.color-scheme == ColorScheme.dark
+                ? Colors.surface-elevated.brighter(0.18)
+                : Colors.surface-elevated.darker(0.08))
+            : Colors.surface-elevated;
+        drop-shadow-blur: 6px * Metrics.ui-scale;
+        drop-shadow-offset-y: 2px * Metrics.ui-scale;
+        drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #00000080 : #00000024;
+        animate background {
+            duration: 120ms;
+            easing: ease-out;
+        }
+
+        Icon {
+            source: root.icon;
+            color: root.enabled ? root.tint : Colors.muted.with-alpha(0.35);
+            width: Metrics.icon-md;
+            height: Metrics.icon-md;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            transform-rotation: root.spin-angle;
+            animate color {
+                duration: 120ms;
+                easing: ease-out;
+            }
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
+
 // The note sheet's own real content, mirrored for whichever history
 // neighbor is being dragged toward (see `EditorScreen`'s `swipe-nav-dx`
 // carousel below) -- same title + `NoteBodyView` structure `edit-scope`'s
@@ -137,7 +193,7 @@ component HistoryPreviewPanel inherits Rectangle {
         padding-right: Metrics.gutter;
         padding-top: Metrics.spacing-lg;
         padding-bottom: Metrics.spacing-3xl;
-        spacing: Metrics.spacing-md;
+        spacing: Metrics.spacing-2xl;
 
         Text {
             text: root.title != "" ? root.title : @tr("Untitled");
@@ -460,7 +516,7 @@ export component EditorScreen inherits Rectangle {
                 bar-background: transparent;
 
                 // Down chevron button to collapse sheet into mini-player
-                BubbleButton {
+                HeaderBubbleButton {
                     icon: TablerIcons.chevron-down;
                     clicked => { root.collapse(); }
                 }
@@ -470,7 +526,7 @@ export component EditorScreen inherits Rectangle {
                 }
 
                 // Sync status button: check when synced, alert on error, spinner while syncing, cloud when idle
-                if root.remote-configured: BubbleButton {
+                if root.remote-configured: HeaderBubbleButton {
                     icon: root.syncing ? TablerIcons.refresh
                         : root.status-is-error ? TablerIcons.alert-triangle
                         : root.status != "" ? TablerIcons.check
@@ -484,7 +540,7 @@ export component EditorScreen inherits Rectangle {
                 }
 
                 // Version history button
-                if root.has-note: BubbleButton {
+                if root.has-note: HeaderBubbleButton {
                     icon: TablerIcons.history;
                     clicked => { root.open-history(); }
                 }
@@ -493,7 +549,7 @@ export component EditorScreen inherits Rectangle {
                 // that used to sit here moved to a bottom-right FAB
                 // (below, in body-surface), matching FilesScreen's own
                 // note-add FAB.
-                if root.has-note: BubbleButton {
+                if root.has-note: HeaderBubbleButton {
                     icon: TablerIcons.dots-vertical;
                     clicked => { root.note-menu-requested(); }
                 }
@@ -823,6 +879,28 @@ export component EditorScreen inherits Rectangle {
                                     border-top-left-radius: !root.edit-mode && root.banner.declared ? Metrics.radius-lg : 0px;
                                     border-top-right-radius: !root.edit-mode && root.banner.declared ? Metrics.radius-lg : 0px;
 
+                                    // Cast an upward shadow onto the banner so the sheet reads as
+                                    // a distinct layer above it. Slint's BoxShadow uses uniform
+                                    // `border-radius`, so a rounded top cap casts the shadow and
+                                    // the lower fill occludes the cap's bottom shadow inside the card.
+                                    if !root.edit-mode && root.banner.declared: Rectangle {
+                                        y: 0px;
+                                        width: 100%;
+                                        height: Metrics.radius-lg * 2;
+                                        border-radius: Metrics.radius-lg;
+                                        background: Colors.page-background;
+                                        drop-shadow-blur: 14px * Metrics.ui-scale;
+                                        drop-shadow-offset-y: -4px * Metrics.ui-scale;
+                                        drop-shadow-color: Palette.color-scheme == ColorScheme.dark ? #000000b0 : #00000038;
+                                    }
+
+                                    if !root.edit-mode && root.banner.declared: Rectangle {
+                                        y: Metrics.radius-lg;
+                                        width: 100%;
+                                        height: max(0px, parent.height - Metrics.radius-lg);
+                                        background: Colors.page-background;
+                                    }
+
                                     content-layout := VerticalLayout {
                                         width: 100%;
                                         alignment: start;
@@ -830,7 +908,7 @@ export component EditorScreen inherits Rectangle {
                                         padding-right: Metrics.gutter;
                                         padding-top: Metrics.spacing-lg + (root.banner.declared && !root.edit-mode ? 0px : root.top-extra);
                                         padding-bottom: Metrics.spacing-3xl + (root.edit-mode ? 48px : 0px);
-                                        spacing: Metrics.spacing-md;
+                                        spacing: Metrics.spacing-2xl;
 
                                         // In-body note title (Notion / Apple Notes style)
                                         Text {
@@ -841,87 +919,91 @@ export component EditorScreen inherits Rectangle {
                                             wrap: word-wrap;
                                         }
 
-                                        // View mode display: hides `@element(...)` marker
-                                        // syntax behind a `NoteBodyView` (see
-                                        // `src/render/mod.rs`), with a double-tap
-                                        // detector over the whole area same as before.
-                                        view-box := Rectangle {
-                                            visible: !root.edit-mode;
-                                            width: 100%;
-                                            height: !root.edit-mode ? max(160px, max(view-layout.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
+                                        VerticalLayout {
+                                            spacing: 0px;
 
-                                            TouchArea {
+                                            // View mode display: hides `@element(...)` marker
+                                            // syntax behind a `NoteBodyView` (see
+                                            // `src/render/mod.rs`), with a double-tap
+                                            // detector over the whole area same as before.
+                                            view-box := Rectangle {
+                                                visible: !root.edit-mode;
                                                 width: 100%;
-                                                height: 100%;
-                                                property <duration> last-tap-time: 0ms;
-                                                property <length> last-tap-x: 0px;
-                                                property <length> last-tap-y: 0px;
+                                                height: !root.edit-mode ? max(160px, max(view-layout.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
 
-                                                clicked => {
-                                                    let now = animation-tick();
-                                                    let dt = now - self.last-tap-time;
-                                                    let dx = abs(self.pressed-x - self.last-tap-x);
-                                                    let dy = abs(self.pressed-y - self.last-tap-y);
-                                                    if (self.last-tap-time > 0ms && dt >= 0ms && dt < 600ms && dx < 80px * Metrics.ui-scale && dy < 80px * Metrics.ui-scale) {
+                                                TouchArea {
+                                                    width: 100%;
+                                                    height: 100%;
+                                                    property <duration> last-tap-time: 0ms;
+                                                    property <length> last-tap-x: 0px;
+                                                    property <length> last-tap-y: 0px;
+
+                                                    clicked => {
+                                                        let now = animation-tick();
+                                                        let dt = now - self.last-tap-time;
+                                                        let dx = abs(self.pressed-x - self.last-tap-x);
+                                                        let dy = abs(self.pressed-y - self.last-tap-y);
+                                                        if (self.last-tap-time > 0ms && dt >= 0ms && dt < 600ms && dx < 80px * Metrics.ui-scale && dy < 80px * Metrics.ui-scale) {
+                                                            root.focus-editor();
+                                                            self.last-tap-time = 0ms;
+                                                        } else {
+                                                            self.last-tap-time = now;
+                                                            self.last-tap-x = self.pressed-x;
+                                                            self.last-tap-y = self.pressed-y;
+                                                        }
+                                                    }
+                                                    double-clicked => {
                                                         root.focus-editor();
-                                                        self.last-tap-time = 0ms;
-                                                    } else {
-                                                        self.last-tap-time = now;
-                                                        self.last-tap-x = self.pressed-x;
-                                                        self.last-tap-y = self.pressed-y;
                                                     }
                                                 }
-                                                double-clicked => {
-                                                    root.focus-editor();
+
+                                                view-layout := VerticalLayout {
+                                                    width: 100%;
+                                                    alignment: start;
+                                                    spacing: Metrics.spacing-sm;
+
+                                                    if root.body == "" || root.note-body-items.length == 0: Text {
+                                                        width: 100%;
+                                                        text: @tr("Tap Edit or double-tap here to write.");
+                                                        font-size: root.font-size;
+                                                        color: Colors.muted;
+                                                        wrap: word-wrap;
+                                                    }
+
+                                                    NoteBodyView {
+                                                        width: 100%;
+                                                        items: root.note-body-items;
+                                                        text-font-size: root.font-size;
+                                                        link-clicked(target) => { root.link-clicked(target); }
+                                                        task-toggled(idx) => { root.task-toggled(idx); }
+                                                    }
                                                 }
                                             }
 
-                                            view-layout := VerticalLayout {
+                                            editor := TextInput {
+                                                visible: root.edit-mode;
+                                                enabled: root.has-note && root.edit-mode;
                                                 width: 100%;
-                                                alignment: start;
-                                                spacing: Metrics.spacing-sm;
-
-                                                if root.body == "" || root.note-body-items.length == 0: Text {
-                                                    width: 100%;
-                                                    text: @tr("Tap Edit or double-tap here to write.");
-                                                    font-size: root.font-size;
-                                                    color: Colors.muted;
-                                                    wrap: word-wrap;
-                                                }
-
-                                                NoteBodyView {
-                                                    width: 100%;
-                                                    items: root.note-body-items;
-                                                    text-font-size: root.font-size;
-                                                    link-clicked(target) => { root.link-clicked(target); }
-                                                    task-toggled(idx) => { root.task-toggled(idx); }
-                                                }
-                                            }
-                                        }
-
-                                        editor := TextInput {
-                                            visible: root.edit-mode;
-                                            enabled: root.has-note && root.edit-mode;
-                                            width: 100%;
-                                            font-size: root.font-size;
-                                            text <=> root.body;
-                                            color: Palette.foreground;
-                                            selection-background-color: Palette.accent-background.with-alpha(0.3);
-                                            selection-foreground-color: Palette.foreground;
-                                            single-line: false;
-                                            wrap: word-wrap;
-                                            height: root.edit-mode ? max(160px, max(self.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
-                                            edited => { root.edited(self.text); }
-                                            cursor-position-changed(cpos) => {
-                                                let cpos-screen-y = editor.y + cpos.y;
-                                                if (cpos-screen-y + editor-scroll.content-y < 0px) {
-                                                    editor-scroll.content-y = min(
-                                                        0px,
-                                                        editor-scroll.visible-height - cpos-screen-y - 32px,
-                                                        max(editor-scroll.visible-height - self.height, -cpos-screen-y),
-                                                    );
-                                                } else if (cpos-screen-y + editor-scroll.content-y > editor-scroll.visible-height - 32px) {
-                                                    editor-scroll.content-y = min(0px, max(editor-scroll.visible-height - self.height, editor-scroll.visible-height - cpos-screen-y - 32px));
+                                                font-size: root.font-size;
+                                                text <=> root.body;
+                                                color: Palette.foreground;
+                                                selection-background-color: Palette.accent-background.with-alpha(0.3);
+                                                selection-foreground-color: Palette.foreground;
+                                                single-line: false;
+                                                wrap: word-wrap;
+                                                height: root.edit-mode ? max(160px, max(self.preferred-height, editor-scroll.visible-height - 120px)) : 0px;
+                                                edited => { root.edited(self.text); }
+                                                cursor-position-changed(cpos) => {
+                                                    let cpos-screen-y = editor.y + cpos.y;
+                                                    if (cpos-screen-y + editor-scroll.content-y < 0px) {
+                                                        editor-scroll.content-y = min(
+                                                            0px,
+                                                            editor-scroll.visible-height - cpos-screen-y - 32px,
+                                                            max(editor-scroll.visible-height - self.height, -cpos-screen-y),
+                                                        );
+                                                    } else if (cpos-screen-y + editor-scroll.content-y > editor-scroll.visible-height - 32px) {
+                                                        editor-scroll.content-y = min(0px, max(editor-scroll.visible-height - self.height, editor-scroll.visible-height - cpos-screen-y - 32px));
+                                                    }
                                                 }
                                             }
                                         }

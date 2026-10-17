@@ -239,26 +239,35 @@ component DirectoryRow inherits Rectangle {
                 }
             }
 
-            // Trailing checkbox (selection mode)
+            // Trailing checkbox (selection mode) -- centered in the same
+            // 40px slot as the 3-dot overflow button so it has comfortable
+            // right margin instead of sitting flush against the row edge.
             if !root.is-folder && root.selection-mode: VerticalLayout {
                 alignment: center;
                 Rectangle {
-                    width: 24px * Metrics.ui-scale;
-                    height: 24px * Metrics.ui-scale;
-                    border-radius: 12px * Metrics.ui-scale;
-                    border-width: 2px * Metrics.ui-scale;
-                    border-color: root.is-selected ? Palette.accent-background : Colors.muted.with-alpha(0.6);
-                    background: root.is-selected ? Palette.accent-background : transparent;
-                    animate background { duration: 120ms; }
-                    animate border-color { duration: 120ms; }
+                    width: 40px * Metrics.ui-scale;
+                    height: 40px * Metrics.ui-scale;
 
-                    if root.is-selected: Icon {
-                        source: TablerIcons.check;
-                        width: 14px * Metrics.ui-scale;
-                        height: 14px * Metrics.ui-scale;
-                        color: Palette.accent-foreground;
+                    Rectangle {
+                        width: 24px * Metrics.ui-scale;
+                        height: 24px * Metrics.ui-scale;
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
+                        border-radius: 12px * Metrics.ui-scale;
+                        border-width: 2px * Metrics.ui-scale;
+                        border-color: root.is-selected ? Palette.accent-background : Colors.muted.with-alpha(0.6);
+                        background: root.is-selected ? Palette.accent-background : transparent;
+                        animate background { duration: 120ms; }
+                        animate border-color { duration: 120ms; }
+
+                        if root.is-selected: Icon {
+                            source: TablerIcons.check;
+                            width: 14px * Metrics.ui-scale;
+                            height: 14px * Metrics.ui-scale;
+                            color: Palette.accent-foreground;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
                     }
                 }
             }
@@ -519,7 +528,7 @@ export component FilesScreen inherits Rectangle {
             }
         }
 
-        // Grid view
+        // Grid view (2 columns)
         if root.page == 1 && root.directory-mode == 1 && root.folder-entries.length > 0: AppScrollView {
             vertical-stretch: 1;
 
@@ -533,8 +542,8 @@ export component FilesScreen inherits Rectangle {
                     spacing: Metrics.spacing-sm;
 
                     for entry[i] in root.folder-entries: DirectoryTile {
-                        row: i / 3;
-                        col: Math.mod(i, 3);
+                        row: i / 2;
+                        col: Math.mod(i, 2);
                         tile-height: 96px * Metrics.ui-scale;
                         is-folder: entry.is-folder;
                         icon: entry.icon;
@@ -588,6 +597,15 @@ export component FilesScreen inherits Rectangle {
                                 y: (parent.height - self.height) / 2;
                             }
                         }
+                    }
+
+                    if root.folder-entries.length == 1: Rectangle {
+                        row: 0;
+                        col: 1;
+                        horizontal-stretch: 1;
+                        min-width: 0px;
+                        preferred-width: 0px;
+                        background: transparent;
                     }
                 }
             }

@@ -44,11 +44,32 @@ export component NoteBodyView inherits VerticalLayout {
 
         if item.prefix != "": VerticalLayout {
             alignment: start;
-            Text {
-                text: item.prefix;
-                font-size: item-font-size;
-                font-weight: 600;
-                color: Palette.foreground.with-alpha(0.6);
+
+            // Match the prefix box height to one line of CJK/Latin body text
+            // so the bullet or number aligns with the first line's vertical
+            // center instead of drifting toward the top edge.
+            Rectangle {
+                width: prefix-text.preferred-width;
+                height: line-height-probe.preferred-height;
+
+                line-height-probe := Text {
+                    visible: false;
+                    width: 0px;
+                    height: 0px;
+                    text: "あAg";
+                    font-size: item-font-size;
+                    font-weight: item-font-weight;
+                }
+
+                prefix-text := Text {
+                    width: 100%;
+                    height: 100%;
+                    text: item.prefix;
+                    font-size: item.prefix == "•" ? item-font-size * 1.1 : item-font-size;
+                    font-weight: 600;
+                    color: Palette.foreground.with-alpha(0.6);
+                    vertical-alignment: center;
+                }
             }
         }
 
