@@ -16,6 +16,8 @@ flake-parts.lib.mkFlake { inherit inputs; } {
     { system, pkgs, ... }:
     let
       craneLib = inputs.crane.mkLib pkgs;
+      sisho = inputs.sisho.packages.${system};
+      sishoLib = inputs.sisho.legacyPackages.${system};
     in
     {
       _module.args.pkgs = import inputs.nixpkgs {
@@ -35,15 +37,17 @@ flake-parts.lib.mkFlake { inherit inputs; } {
         inherit inputs;
         fenix = inputs.fenix.packages.${pkgs.stdenv.hostPlatform.system};
 
-        tomet = inputs.tomet.packages.${pkgs.stdenv.hostPlatform.system}.tomet;
-        tomet-lsp = inputs.tomet.packages.${pkgs.stdenv.hostPlatform.system}.tomet-lsp;
-        tomet-shelf = inputs.tomet-shelf.packages.${pkgs.stdenv.hostPlatform.system}.tomet-shelf;
-        twrit = inputs.twrit.packages.${pkgs.stdenv.hostPlatform.system}.twrit;
+        # sisho, tomet and twrit, with the language server and the book generator.
+        tools = sishoLib.combine [
+          sisho.toolchain
+          sisho.tomet-lsp
+          sisho.tomet-shelf
+        ];
       };
 
       treefmt = import ./formatter.nix {
         inherit pkgs;
-        tomet = inputs.tomet.packages.${pkgs.stdenv.hostPlatform.system}.tomet;
+        tomet = sisho.tomet;
       };
     };
 }

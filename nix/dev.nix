@@ -3,10 +3,7 @@
   pkgs,
   mkShell,
   fenix,
-  tomet-shelf,
-  tomet,
-  tomet-lsp,
-  twrit,
+  tools,
   ...
 }:
 let
@@ -51,10 +48,7 @@ in
 mkShell {
   buildInputs = with pkgs; [
     #= Develop
-    tomet
-    tomet-lsp
-    tomet-shelf
-    twrit
+    tools
     slint-lsp
     slint-viewer
     slint-tr-extractor
