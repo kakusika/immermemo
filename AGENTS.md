@@ -95,12 +95,15 @@ Children without explicit/fixed heights stretch across the full row height.
 (`vertical-alignment: center`), but fixed-height children (such as `Icon`, badges,
 or buttons) are positioned at `y = 0` (top edge). To vertically center any
 fixed-height element inside a `HorizontalLayout`, wrap it in:
-``\`slint
+
+```slint
 VerticalLayout {
-alignment: center;
-Icon { ... }
+    alignment: center;
+    Icon { ... }
 }
-``\`
+```
+
+
 - 
   - Never hardcode hex colors for surfaces, backgrounds, or borders. Use the Slint
 `Palette` tokens and derive contrast dynamically (e.g.

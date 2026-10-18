@@ -1,0 +1,21 @@
+=@dir(tmtroot)
+
+-@dir(schema)      | Tometの設定ファイル
+-@dir(dev)         | 開発用メモ
+  -@dir(design)    | ユーザー体験をどうしたいか、なぜそうしたかの意図。実装の説明は `internals/` に書く。
+  -@dir(internals) | 現在の実装がどう構成されているか。ビルド、レンダラー、Androidとの分離など、トピックごとにまとめる。
+  -@dir(howto)     | 作業の手順書。エミュレータの操作、オフスクリーン描画、テストの回し方、翻訳の流れ。
+  -@dir(plans)     | 実装計画書。目的、制約、選択肢、決定、手順を書く。決まって実装が済んだら、残すべき内容をコードのdocコメントへ移して閉じる。上流(Slint、swash、femtovgなど)の対応を待っているものは、`status: "upstream"` にして、症状、確認済みの原因、回避策、解決の合図を書く。
+  -@dir(dropped)   | 現在の実装には残っていない、廃止または不採用にした決定を、理由とともに記録する。今の実装にあるものはここに書かない。
+-@dir(docs)        | 使用者に向けたドキュメント
+-@dir(generated)   | 自動生成されたドキュメントは全てここに集約する。
+-@dir(locales)     | 多言語対応。
+
+=@dir(scripts)
+
+=@dir(nix)
+
+-@dir(pkgs)           | Nix用のパッケージ
+-@file(default.nix)   | Nix
+-@file(dev.nix)       | Nix
+-@file(formatter.nix) | Nix
