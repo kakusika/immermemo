@@ -67,6 +67,7 @@ slint = { version = "1.18", default-features = false, features = [
 ] }
 slint-build = "1.18"
 ssh-key = { version = "0.6", features = ["ed25519", "crypto", "std"] }
+mimalloc = { version = "0.1", default-features = false }
 sys-locale = "0.3"
 unicode-segmentation = "1.12"
 ureq = { version = "3", default-features = false, features = [
@@ -85,6 +86,22 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+[profile.release.package.slint]
+opt-level = 3
+
+[profile.release.package.image]
+opt-level = 3
+
+[profile.release.package.tomet]
+opt-level = 3
+
+[profile.release.package.rusqlite]
+opt-level = 3
+
+[profile.desktop-release]
+inherits = "release"
+opt-level = 3
 
 [patch.crates-io]
 i-slint-backend-android-activity = { path = "patches/i-slint-backend-android-activity" }

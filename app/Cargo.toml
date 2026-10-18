@@ -40,6 +40,10 @@ sys-locale = { workspace = true }
 ureq = { workspace = true }
 webbrowser = { workspace = true }
 
+# Desktop (non-mobile): mimalloc for high-throughput UI / background sync.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+mimalloc = { workspace = true }
+
 # Linux Desktop: winit on Wayland + FemtoVG.
 [target.'cfg(target_os = "linux")'.dependencies]
 slint = { workspace = true, features = [

@@ -1,3 +1,7 @@
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 use std::sync::Arc;
 
 use immermemo_core::{PlainFileTokenStore, TokenStore, TokenStoreFactory};
