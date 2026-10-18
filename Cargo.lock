@@ -1359,7 +1359,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4279,7 +4279,7 @@ dependencies = [
 [[package]]
 name = "origiri-icons"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origiri-frameworks.git#dd7375896e1ee69bb3ecf07cffd10ebc943c400f"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#2fcedc82385ed15c45755e46a0a11eb609a4ecd4"
 dependencies = [
  "flate2",
 ]
@@ -4287,12 +4287,12 @@ dependencies = [
 [[package]]
 name = "origiri-mobile"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origiri-frameworks.git#dd7375896e1ee69bb3ecf07cffd10ebc943c400f"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#2fcedc82385ed15c45755e46a0a11eb609a4ecd4"
 
 [[package]]
 name = "origiri-richtext"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origiri-frameworks.git#dd7375896e1ee69bb3ecf07cffd10ebc943c400f"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#2fcedc82385ed15c45755e46a0a11eb609a4ecd4"
 dependencies = [
  "origiri-richtext-flow",
 ]
@@ -4300,17 +4300,17 @@ dependencies = [
 [[package]]
 name = "origiri-richtext-flow"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origiri-frameworks.git#dd7375896e1ee69bb3ecf07cffd10ebc943c400f"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#2fcedc82385ed15c45755e46a0a11eb609a4ecd4"
 
 [[package]]
 name = "origiri-selection"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origiri-frameworks.git#dd7375896e1ee69bb3ecf07cffd10ebc943c400f"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#2fcedc82385ed15c45755e46a0a11eb609a4ecd4"
 
 [[package]]
 name = "origiri-theme"
 version = "0.1.0"
-source = "git+https://github.com/kakusika/origiri-frameworks.git#dd7375896e1ee69bb3ecf07cffd10ebc943c400f"
+source = "git+https://github.com/kakusika/origiri-frameworks.git#2fcedc82385ed15c45755e46a0a11eb609a4ecd4"
 dependencies = [
  "mcu-material-color",
 ]
@@ -5304,7 +5304,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6043,7 +6043,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.5",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

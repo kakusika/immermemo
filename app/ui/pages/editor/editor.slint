@@ -23,14 +23,9 @@ export { NotePropertyEntry } from "properties.slint";
 component SheetSurface inherits Rectangle {
     in property <bool> is-header: false;
     in property <float> sheet-progress: 1.0;
-    // The header's darkening toward the top edge: the page's own color, darker,
-    // fading to nothing at the header's lower edge. The note's text and banner
-    // pass under the header, and this keeps the status bar's clock and the
-    // buttons legible over them.
-    property <color> shade: Colors.page-background.darker(1.0);
 
     background: root.is-header
-        ? @linear-gradient(180deg, root.shade.with-alpha(0.6) 0%, root.shade.with-alpha(0.0) 100%)
+        ? @linear-gradient(180deg, Colors.page-background 0%, Colors.page-background.with-alpha(0.0) 100%)
         : Colors.page-background;
     opacity: clamp(root.sheet-progress * 10.0, 0.0, 1.0);
     clip: true;

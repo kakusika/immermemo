@@ -35,6 +35,7 @@ pub fn is_system_in_dark_theme() -> bool {
     .unwrap_or(false)
 }
 
+#[allow(dead_code)]
 pub fn get_system_contrast() -> f64 {
     call(|env, activity| {
         env.call_method(activity, "getSystemContrast", "()F", &[])?

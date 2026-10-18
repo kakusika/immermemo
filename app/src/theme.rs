@@ -20,8 +20,8 @@ pub fn resolve_app_theme(
     contrast_choice: i32,
     is_dark: bool,
 ) -> ResolvedTheme {
-    let (seed_rgb, contrast_val) = if color_source == 0 {
-        // System wallpaper & contrast
+    let seed_rgb = if color_source == 0 {
+        // System wallpaper seed color
         #[cfg(target_os = "android")]
         let seed = crate::platform::android::system_ui::get_wallpaper_seed_color()
             .map(|argb| {
@@ -33,24 +33,18 @@ pub fn resolve_app_theme(
             })
             .unwrap_or_else(|| RgbColor::new(0x67, 0x50, 0xa4));
 
-        #[cfg(target_os = "android")]
-        let contrast = crate::platform::android::system_ui::get_system_contrast();
-
         #[cfg(not(target_os = "android"))]
         let seed = RgbColor::new(0x67, 0x50, 0xa4);
-        #[cfg(not(target_os = "android"))]
-        let contrast = 0.0;
 
-        (seed, contrast)
+        seed
     } else {
-        let seed =
-            RgbColor::from_hex(color_seed).unwrap_or_else(|| RgbColor::new(0x67, 0x50, 0xa4));
-        let contrast = match contrast_choice {
-            1 => 0.5,
-            2 => 1.0,
-            _ => 0.0,
-        };
-        (seed, contrast)
+        RgbColor::from_hex(color_seed).unwrap_or_else(|| RgbColor::new(0x67, 0x50, 0xa4))
+    };
+
+    let contrast_val = match contrast_choice {
+        1 => 0.5,
+        2 => 1.0,
+        _ => 0.0,
     };
 
     let variant = match palette_style {
