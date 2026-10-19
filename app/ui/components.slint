@@ -53,6 +53,24 @@ export component SheetDragArea inherits SwipeGestureHandler {
     }
 }
 
+// A full-screen sheet's visual card surface: handles the open/close slide,
+// corner rounding, and opacity fade linked to `sheet-progress` and `sheet-y-offset`.
+// Sits behind the sheet's gesture areas so the sheet background moves with the
+// drag, revealing the underlying screen through the scrim as it closes.
+export component SheetSurface inherits Rectangle {
+    in property <float> sheet-progress: 1.0;
+    in property <length> sheet-y-offset: 0px;
+
+    y: root.sheet-y-offset;
+    width: 100%;
+    height: 100%;
+    background: Colors.page-background;
+    opacity: clamp(root.sheet-progress * 10.0, 0.0, 1.0);
+    border-top-left-radius: Metrics.radius-lg * (1.0 - root.sheet-progress);
+    border-top-right-radius: Metrics.radius-lg * (1.0 - root.sheet-progress);
+    clip: true;
+}
+
 component NavItem inherits Rectangle {
     in property <image> icon;
     in property <string> label;

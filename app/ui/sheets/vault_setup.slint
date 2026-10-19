@@ -9,7 +9,7 @@ import {
     Card,
     Divider,
 } from "@origiri-mobile/widgets.slint";
-import { SheetDragArea } from "../components.slint";
+import { SheetDragArea, SheetSurface } from "../components.slint";
 import { AddVaultAdapter } from "../adapters/add_vault.slint";
 import { SettingsAdapter } from "../adapters/settings.slint";
 import { AccountAvatar } from "../widgets/account_avatar.slint";
@@ -45,7 +45,10 @@ export component VaultSetupSheet inherits Rectangle {
 
     property <bool> adding: AddVaultAdapter.mode == 0;
 
-    background: Colors.page-background;
+    SheetSurface {
+        sheet-progress: root.sheet-progress;
+        sheet-y-offset: root.sheet-y-offset;
+    }
 
     header-gesture := SheetDragArea {
         x: 0px;

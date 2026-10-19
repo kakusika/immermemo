@@ -160,21 +160,20 @@ export component TransferPage inherits SettingsPage {
                 color: Colors.muted;
             }
 
-            HorizontalLayout {
-                alignment: center;
-                Rectangle {
-                    width: 220px;
-                    height: 220px;
-                    border-radius: Metrics.radius-md;
-                    background: white;
-                    clip: true;
+            Rectangle {
+                width: 100%;
+                height: self.width;
+                border-radius: Metrics.radius-md;
+                background: white;
+                clip: true;
 
-                    Image {
-                        width: 200px;
-                        height: 200px;
-                        source: SettingsAdapter.qr-image;
-                        image-fit: contain;
-                    }
+                Image {
+                    width: parent.width - 24px;
+                    height: parent.height - 24px;
+                    x: 12px;
+                    y: 12px;
+                    source: SettingsAdapter.qr-image;
+                    image-fit: contain;
                 }
             }
 

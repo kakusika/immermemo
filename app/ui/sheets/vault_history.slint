@@ -6,7 +6,7 @@ import {
     TopBar,
     AppScrollView,
 } from "@origiri-mobile/widgets.slint";
-import { SheetDragArea } from "../components.slint";
+import { SheetDragArea, SheetSurface } from "../components.slint";
 
 export component VaultHistorySheet inherits Rectangle {
     in property <bool> open: false;
@@ -32,7 +32,10 @@ export component VaultHistorySheet inherits Rectangle {
 
     callback close();
 
-    background: Colors.page-background;
+    SheetSurface {
+        sheet-progress: root.sheet-progress;
+        sheet-y-offset: root.sheet-y-offset;
+    }
 
     header-gesture := SheetDragArea {
         x: 0px;

@@ -7,7 +7,7 @@ import {
     ActionRow,
     ActionSheet,
 } from "@origiri-mobile/widgets.slint";
-import { SheetDragArea, LongPressRippleArea } from "../components.slint";
+import { SheetDragArea, LongPressRippleArea, SheetSurface } from "../components.slint";
 import { SettingsAdapter } from "../adapters/settings.slint";
 import { AccountAvatar } from "../widgets/account_avatar.slint";
 
@@ -41,7 +41,10 @@ export component VaultSheet inherits Rectangle {
 
     property <int> menu-index: -1;
 
-    background: Colors.page-background;
+    SheetSurface {
+        sheet-progress: root.sheet-progress;
+        sheet-y-offset: root.sheet-y-offset;
+    }
 
     header-gesture := SheetDragArea {
         x: 0px;
@@ -70,6 +73,11 @@ export component VaultSheet inherits Rectangle {
                 font-weight: 600;
                 vertical-alignment: center;
             }
+
+            IconButton {
+                icon: TablerIcons.plus;
+                clicked => { root.add(); }
+            }
         }
     }
 
@@ -95,7 +103,7 @@ export component VaultSheet inherits Rectangle {
             }
 
             for item in SettingsAdapter.vaults: LongPressRippleArea {
-                height: item.subtitle != "" ? 56px : Metrics.touch;
+                height: item.subtitle != "" ? 68px : 58px;
                 long-press-duration: 350ms;
                 clicked => {
                     root.select(item.original-index);
@@ -108,7 +116,7 @@ export component VaultSheet inherits Rectangle {
                 HorizontalLayout {
                     padding-left: Metrics.gutter;
                     padding-right: Metrics.gutter;
-                    spacing: 12px;
+                    spacing: 14px;
 
                     VerticalLayout {
                         alignment: center;
@@ -116,14 +124,14 @@ export component VaultSheet inherits Rectangle {
                             avatar: item.account-avatar;
                             has-avatar: item.account-has-avatar;
                             provider: item.account-provider;
-                            avatar-size: 26px;
+                            avatar-size: 30px;
                         }
                         // No account: a cloud when it syncs to a typed remote,
                         // a crossed-out one when it does not sync at all.
                         if !item.has-account: Icon {
                             source: item.syncs ? TablerIcons.cloud : TablerIcons.cloud-off;
-                            width: 22px;
-                            height: 22px;
+                            width: 24px;
+                            height: 24px;
                             color: item.is-current ? Palette.accent-background : Colors.muted;
                         }
                     }
@@ -131,18 +139,18 @@ export component VaultSheet inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         horizontal-stretch: 1;
-                        spacing: 2px;
+                        spacing: 3px;
                         Text {
                             text: item.name;
                             color: item.is-current ? Palette.accent-background : Palette.foreground;
-                            font-size: 16px;
+                            font-size: 17px;
                             font-weight: 500;
                         }
 
                         if item.subtitle != "": Text {
                             text: item.subtitle;
                             color: Colors.muted;
-                            font-size: 12px;
+                            font-size: 13px;
                         }
                     }
 
@@ -153,12 +161,6 @@ export component VaultSheet inherits Rectangle {
                         vertical-alignment: center;
                     }
                 }
-            }
-
-            ActionRow {
-                text: @tr("+ Add vault");
-                tint: Palette.accent-background;
-                clicked => { root.add(); }
             }
 
             Rectangle {

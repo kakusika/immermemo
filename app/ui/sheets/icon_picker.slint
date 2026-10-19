@@ -7,7 +7,7 @@ import {
     TopBar,
     AppScrollView,
 } from "@origiri-mobile/widgets.slint";
-import { SheetDragArea } from "../components.slint";
+import { SheetDragArea, SheetSurface } from "../components.slint";
 
 // One candidate in the picker's (already filtered, already capped) result
 // list -- `image` is resolved in Rust (`immermemo::render::icon_image`,
@@ -49,7 +49,10 @@ export component IconPickerSheet inherits Rectangle {
     callback select(string);
     callback close();
 
-    background: Colors.page-background;
+    SheetSurface {
+        sheet-progress: root.sheet-progress;
+        sheet-y-offset: root.sheet-y-offset;
+    }
 
     header-gesture := SheetDragArea {
         x: 0px;

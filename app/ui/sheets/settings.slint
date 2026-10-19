@@ -2,7 +2,7 @@ import { Palette } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { TablerIcons } from "@origiri-icons/icons.slint";
 import { IconButton, TopBar } from "@origiri-mobile/widgets.slint";
-import { SheetDragArea } from "../components.slint";
+import { SheetDragArea, SheetSurface } from "../components.slint";
 import { AboutPage } from "settings/about.slint";
 import { AccountsPage } from "settings/accounts.slint";
 import { AdvancedPage } from "settings/advanced.slint";
@@ -63,7 +63,10 @@ export component SettingsSheet inherits Rectangle {
     property <length> scroll-content-y: 0px;
     property <bool> scroll-at-top: root.scroll-content-y >= -1px;
 
-    background: Colors.page-background;
+    SheetSurface {
+        sheet-progress: root.sheet-progress;
+        sheet-y-offset: root.sheet-y-offset;
+    }
 
     header-gesture := SheetDragArea {
         x: 0px;
