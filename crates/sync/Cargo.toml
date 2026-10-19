@@ -1,18 +1,18 @@
 [package]
-name = "immermemo-sync"
+name              = "immermemo-sync"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
 immermemo-identity = { workspace = true }
-immermemo-vault = { workspace = true }
+immermemo-vault    = { workspace = true }
 
 #= Tomet
 tomet = { workspace = true, features = ["parser", "printer", "merge"] }
 
 #= Crates.io
-anyhow = { workspace = true }
-git2 = { workspace = true }
+anyhow  = { workspace = true }
+git2    = { workspace = true }
 openssl = { workspace = true }
 # Only for the `test-support` fixtures.
 tempfile = { version = "3", optional = true }

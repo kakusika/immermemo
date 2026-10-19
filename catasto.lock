@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "files": {
+    ".editorconfig": {
+      "sha256": "9f9dfef3bb43136f1f2bedbc5590feb3ba13a4576ca28d7793c6f50cf7a48283",
+      "source": {
+        "git": "https://github.com/kakusika/commonfiles.git",
+        "rev": "main",
+        "path": "origiri-mobile/.editorconfig"
+      },
+      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+    },
+    ".envrc": {
+      "sha256": "3c8bdb9d52dd4e7440a504e0f43bb3a1929c06f8f4f2d4d7ef41baab974e39e2",
+      "source": {
+        "git": "https://github.com/kakusika/commonfiles.git",
+        "rev": "main",
+        "path": "origiri-mobile/.envrc"
+      },
+      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+    },
+    ".gitattributes": {
+      "sha256": "2c4d2530e6c2f455de09b135a57ea1ec71790ccffaa4eadcdd4643ee466d76c3",
+      "source": {
+        "git": "https://github.com/kakusika/commonfiles.git",
+        "rev": "main",
+        "path": "origiri-mobile/.gitattributes"
+      },
+      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+    },
+    ".github/FUNDING.yml": {
+      "sha256": "abfc03406bd88edca69485a19b90df9717960f93779fd26d681b4761a435a44b",
+      "source": {
+        "git": "https://github.com/kakusika/commonfiles.git",
+        "rev": "main",
+        "path": "origiri-mobile/.github/FUNDING.yml"
+      },
+      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+    },
+    ".github/workflows/pages.yml": {
+      "sha256": "9bdb09c4b67311dc28ed01f7398d9988a90d4df79497e8112b949c2c31e20528",
+      "source": {
+        "git": "https://github.com/kakusika/commonfiles.git",
+        "rev": "main",
+        "path": "origiri-mobile/.github/workflows/pages.yml"
+      },
+      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+    },
+    ".gitignore": {
+      "sha256": "e825712799a06556dcbc7bab22c1ce2f42fb9d21b40ac779f288c90b25d94141",
+      "source": {
+        "git": "https://github.com/kakusika/commonfiles.git",
+        "rev": "main",
+        "path": "origiri-mobile/.gitignore"
+      },
+      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+    },
+    "flake.nix": {
+      "sha256": "47def10a873289c5cba137fcc64959b09c17c67ea0c8aa54bdae1d32c50553d7",
+      "source": {
+        "git": "https://github.com/kakusika/commonfiles.git",
+        "rev": "main",
+        "path": "origiri-mobile/flake.nix"
+      },
+      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+    },
+    "nix/base.nix": {
+      "sha256": "370d6d3db459ca243ce6916496fb057b3fc8bb23dc96b2f219127827275d0426",
+      "source": {
+        "git": "https://github.com/kakusika/commonfiles.git",
+        "rev": "main",
+        "path": "origiri-mobile/nix/base.nix"
+      },
+      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+    },
+    "nix/dev.nix": {
+      "sha256": "5aa1ee08e6e8fc580a8a6bb31d3e73a6389a25842a07df5c0539220d9c2009e1",
+      "source": {
+        "git": "https://github.com/kakusika/commonfiles.git",
+        "rev": "main",
+        "path": "origiri-mobile/nix/dev.nix"
+      },
+      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+    },
+    "nix/formatter.nix": {
+      "sha256": "8550dfc35f0ba0c7facb7f871f85318f0d412246b2bee1e8243860504deeef80",
+      "source": {
+        "git": "https://github.com/kakusika/commonfiles.git",
+        "rev": "main",
+        "path": "origiri-mobile/nix/formatter.nix"
+      },
+      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+    },
+    "tmtroot/schema/vocabularies/catasto@1.0.0.vocabulary.tmt": {
+      "sha256": "18e4947e1b4515da1a88a088534271ba0a18dcff5fe7a08b196ef5a7d55b9d9e",
+      "source": {
+        "git": "https://github.com/tomet-lang/fs-catasto.git",
+        "rev": "main",
+        "path": "tmtroot/schema/vocabularies/catasto@1.0.0.vocabulary.tmt"
+      },
+      "commit": "7fdeadeef075efe9720fb90e0971e1329d9d893b"
+    },
+    "tmtroot/schema/vocabularies/rust@1.0.0.vocabulary.tmt": {
+      "sha256": "41b022ca9a034d7894d041039fc85fb793a4e5149da52ccc3191e88056430209",
+      "source": {
+        "git": "https://github.com/tomet-lang/vocabularies.git",
+        "rev": "main",
+        "path": "vocabularies/rust/rust@1.0.0.vocabulary.tmt"
+      },
+      "commit": "7c8a43e240bfb5680d24e9711c4a42f09df4e75f"
+    },
+    "tmtroot/schema/vocabularies/writ@1.0.0.vocabulary.tmt": {
+      "sha256": "2662a7f93d70d90f0e6de79a333036a01e89875b6ceeb11f5a7207e263ef4677",
+      "source": {
+        "git": "https://github.com/tomet-lang/vocabularies.git",
+        "rev": "main",
+        "path": "vocabularies/writ/writ@1.0.0.vocabulary.tmt"
+      },
+      "commit": "7c8a43e240bfb5680d24e9711c4a42f09df4e75f"
+    }
+  }
+}

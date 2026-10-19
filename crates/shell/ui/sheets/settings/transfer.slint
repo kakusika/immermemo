@@ -3,7 +3,12 @@ import { SettingsAdapter } from "../../adapters/settings.slint";
 import { Palette, LineEdit, Button } from "std-widgets.slint";
 import { Metrics, Colors } from "@origiri-mobile/tokens.slint";
 import { Icon, TablerIcons } from "@origiri-icons/icons.slint";
-import { ActionRow, SegmentedControl, Card, Divider } from "@origiri-mobile/widgets.slint";
+import {
+    ActionRow,
+    SegmentedControl,
+    Card,
+    Divider,
+} from "@origiri-mobile/widgets.slint";
 import { SettingsPage } from "page.slint";
 
 // A toggle row for selecting which transfer items to include in export.
@@ -53,7 +58,7 @@ component TransferToggleRow inherits Rectangle {
                 text: root.subtitle;
                 font-size: Metrics.font-sm;
                 text-color: root.is-warning ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
-                            }
+            }
         }
 
         VerticalLayout {
@@ -203,7 +208,7 @@ export component TransferPage inherits SettingsPage {
                 text: @tr("Paste an immermemo:// transfer link or payload below:");
                 font-size: Metrics.font-sm;
                 text-color: Colors.muted;
-                            }
+            }
 
             LineEdit {
                 height: Metrics.touch;
@@ -232,7 +237,7 @@ export component TransferPage inherits SettingsPage {
                 text: SettingsAdapter.import-status-message;
                 font-size: 13px;
                 text-color: SettingsAdapter.import-status-is-error ? (Palette.color-scheme == ColorScheme.dark ? #ffaa55 : #cc5500) : Colors.muted;
-                            }
+            }
         }
 
         if SettingsAdapter.import-preview-ready: Card {

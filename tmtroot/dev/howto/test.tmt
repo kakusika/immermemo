@@ -14,7 +14,7 @@
 ===[ 1. 日常的なユニットテスト（Doctestスキップ） ]
 
 ```bash
-cargo test --workspace --lib --bins
+`` cargo test --workspace --lib --bins
 ```
 - `--lib --bins` を指定することで、0件のDoc-tests（rustdoc起動・リンク）をスキップします。
 - すでにビルド済みの状態であれば、**約5.8秒から約0.9秒（約6倍高速）** に短縮されます。
@@ -22,7 +22,7 @@ cargo test --workspace --lib --bins
 ===[ 2. バックエンド・クレート修正時（GUIコンパイルの回避） ]
 
 ```bash
-cargo test --workspace --exclude immermemo --lib
+`` cargo test --workspace --exclude immermemo --lib
 ```
 - `crates/` 配下（`vault`, `sync`, `render-tomet`, `provider` 等）のロジックを開発している間は、GUIクレートである `immermemo` (`app`) を除外します。
 - 17MBのSlintコードやGUIスタックの再ビルド・再リンクを完全に回避し、CPU時間を大幅に節約できます。
@@ -30,9 +30,9 @@ cargo test --workspace --exclude immermemo --lib
 ===[ 3. 特定クレートに絞ったテスト ]
 
 ```bash
-cargo test -p immermemo-vault --lib
-cargo test -p immermemo-sync --lib
-cargo test -p immermemo-render-tomet --lib
+`` cargo test -p immermemo-vault --lib
+`` cargo test -p immermemo-sync --lib
+`` cargo test -p immermemo-render-tomet --lib
 ```
 - 作業中のクレートのみを指定して実行することで、最小限のオーバーヘッドでフィードバックループを回せます。
 

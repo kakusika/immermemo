@@ -164,7 +164,11 @@ class MainActivity : NativeActivity() {
     }
 
     @Suppress("DEPRECATION")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?,
+    ) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_PICK_FOLDER && resultCode == RESULT_OK) {
             val uri = data?.data?.toString() ?: return

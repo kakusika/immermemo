@@ -1,5 +1,5 @@
 [package]
-name = "immermemo-render-tomet"
+name              = "immermemo-render-tomet"
 version.workspace = true
 edition.workspace = true
 

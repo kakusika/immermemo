@@ -13,31 +13,16 @@ let
       "clippy"
       "rustc"
       "rust-src"
+      "rustfmt"
+      "rust-analyzer"
     ])
     fenix.targets.aarch64-linux-android.stable.rust-std
-    # For the emulator only: a real phone is always arm64-v8a, but an x86_64
-    # system image runs at native speed under KVM instead of translating
-    # ARM -- close enough for anything that isn't CPU-architecture-specific
-    # (JNI class/method-signature bugs included), not a stand-in for a real
-    # device.
     fenix.targets.x86_64-linux-android.stable.rust-std
   ];
   androidSdk = pkgs.androidenv.composeAndroidPackages {
-    # Must match the `-P`/`--platform` given to `cargo ndk` in the `apk`
-    # justfile recipe: that value also picks which `android.jar` Slint's
-    # own build-time Java helper compiles against (not just the native API
-    # level), and anything below compileSdk/targetSdk (34) is missing
-    # symbols (`WindowInsets.Type`, `Insets`, ...) the helper references
-    # even inside `Build.VERSION.SDK_INT` guards -- javac still needs them
-    # in the compile-time classpath.
     platformVersions = [ "34" ];
     buildToolsVersions = [ "34.0.0" ];
     includeNDK = true;
-    # abiVersions only selects which system images get fetched (real-device
-    # cross-compiling goes through the NDK and the Rust targets above,
-    # neither of which reads this list) -- arm64-v8a would just be a second,
-    # unused ~1.6 GB system-image download alongside the one the emulator
-    # actually runs.
     abiVersions = [ "x86_64" ];
     includeEmulator = true;
     includeSystemImages = true;
@@ -46,36 +31,42 @@ let
   androidHome = "${androidSdk.androidsdk}/libexec/android-sdk";
 in
 mkShell {
+  hardeningDisable = [ "fortify" ];
   buildInputs = with pkgs; [
     #= Develop
     tools
+    just
+    #== Slint
     slint-lsp
     slint-viewer
     slint-tr-extractor
     just
     #== Build
     pkg-config
+    cmake
     llvmPackages.libclang
     python3
-    perl # vendored-openssl (git2) builds OpenSSL from source
-    mold
     #== Rust
     rustToolchain
     cargo-edit
     cargo-outdated
     cargo-nextest
+    wasm-bindgen-cli
+
     #== Android
     androidSdk.androidsdk
     jdk17
-    wasm-bindgen-cli
     gradle
     cargo-ndk
 
+    #= Runtime
     #== Crypto / Network
     openssl
-    #== Wayland
+    #== Wayland & Desktop
     wayland
     libxkbcommon
+    libinput
+    pipewire
     fontconfig
     freetype
     stdenv.cc.cc.lib # Skia's prebuilt binary links against libstdc++
@@ -88,9 +79,14 @@ mkShell {
   ];
 
   ANDROID_HOME = androidHome;
-  # ANDROID_SDK_ROOT = androidHome;
   ANDROID_NDK_ROOT = "${androidHome}/ndk-bundle";
   JAVA_HOME = pkgs.jdk17.home;
+
+  LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+  BINDGEN_EXTRA_CLANG_ARGS =
+    "-isystem ${pkgs.stdenv.cc.cc}/include/c++/${pkgs.stdenv.cc.cc.version} "
+    + "-isystem ${pkgs.stdenv.cc.cc}/include/c++/${pkgs.stdenv.cc.cc.version}/${pkgs.stdenv.hostPlatform.config} "
+    + "-isystem ${pkgs.stdenv.cc.libc.dev}/include";
 
   PKG_CONFIG_PATH = lib.makeSearchPathOutput "dev" "lib/pkgconfig" [
     pkgs.openssl
@@ -114,15 +110,12 @@ mkShell {
     ]
     + ":/run/opengl-driver/lib";
 
-  # Sideloaded release APKs are signed with the local debug key: enough to
-  # install on one's own phone, not for distribution.
   shellHook = ''
     export CARGO_APK_RELEASE_KEYSTORE="$HOME/.android/debug.keystore"
     export CARGO_APK_RELEASE_KEYSTORE_PASSWORD=android
-
     export ANDROID_AVD_HOME="$HOME/.android/avd"
     export ANDROID_BUILD_TOOLS_VERSION="34.0.0"
 
-    echo "🧪 Rust Android Tomet"
+    echo "📱 Rust + Slint + Android dev shell"
   '';
 }

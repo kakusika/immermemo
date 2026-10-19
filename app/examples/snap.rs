@@ -475,9 +475,17 @@ fn main() {
         std::thread::sleep(std::time::Duration::from_millis(300));
     };
     scroll(-30.0);
-    render(&window, size, &format!("{prefix}-editor-banner-scrolled-30.ppm"));
+    render(
+        &window,
+        size,
+        &format!("{prefix}-editor-banner-scrolled-30.ppm"),
+    );
     scroll(-90.0);
-    render(&window, size, &format!("{prefix}-editor-banner-scrolled-120.ppm"));
+    render(
+        &window,
+        size,
+        &format!("{prefix}-editor-banner-scrolled-120.ppm"),
+    );
     scroll(1000.0);
     app.set_current_banner(NoteBannerView {
         declared: true,
@@ -917,7 +925,11 @@ fn main() {
         delta_y: -130.0,
     });
     std::thread::sleep(std::time::Duration::from_millis(300));
-    render(&window, size, &format!("{prefix}-editor-banner-dark-scrolled.ppm"));
+    render(
+        &window,
+        size,
+        &format!("{prefix}-editor-banner-dark-scrolled.ppm"),
+    );
     app.set_current_banner(NoteBannerView::default());
     app.set_note_sheet_open(false);
     app.set_active_tab(0);

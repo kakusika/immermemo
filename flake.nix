@@ -1,5 +1,5 @@
 {
-  description = "Immermemo - Local-first note taking with Tomet and Slint";
+  description = "Origiri workspace - Rust, Slint, and Tomet";
 
   nixConfig = {
     extra-substituters = [ "https://tomet.cachix.org" ];
@@ -14,15 +14,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    #= Rust
+    #--- Rust ---
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     crane.url = "github:ipetkov/crane";
 
-    #= Tool
-    # sisho brings tomet, twrit and tomet-shelf.
+    #--- Tool ---
     sisho.url = "github:tomet-lang/sisho";
   };
 

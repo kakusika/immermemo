@@ -1,5 +1,5 @@
 [package]
-name = "immermemo-media"
+name              = "immermemo-media"
 version.workspace = true
 edition.workspace = true
 
@@ -10,10 +10,10 @@ edition.workspace = true
 tomet = { workspace = true, features = ["links"] }
 
 #= Crates.io
-anyhow = { workspace = true }
-image = { workspace = true }
+anyhow     = { workspace = true }
+image      = { workspace = true }
 serde_json = { workspace = true }
-sha2 = { workspace = true }
+sha2       = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"

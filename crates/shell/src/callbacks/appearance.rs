@@ -188,7 +188,8 @@ pub fn bind_appearance_callbacks(
             {
                 let item = order.remove(from_idx as usize);
                 order.insert(to_idx as usize, item);
-                settings.set_home_actions_order(std::rc::Rc::new(slint::VecModel::from(order)).into());
+                settings
+                    .set_home_actions_order(std::rc::Rc::new(slint::VecModel::from(order)).into());
                 save_home_actions(&session, &settings);
             }
         }

@@ -108,10 +108,7 @@ mod tests {
         assert_eq!(items.len(), 1);
         match &items[0] {
             RenderItem::Text(span, _) => {
-                assert_eq!(
-                    &src[span.start..span.end],
-                    "Visible body text."
-                );
+                assert_eq!(&src[span.start..span.end], "Visible body text.");
             }
             _ => panic!("expected a Text item"),
         }
@@ -320,9 +317,7 @@ mod tests {
         classify(src)
             .into_iter()
             .map(|item| match item {
-                RenderItem::Text(span, style) => {
-                    (src[span.start..span.end].to_owned(), style)
-                }
+                RenderItem::Text(span, style) => (src[span.start..span.end].to_owned(), style),
                 other => panic!("expected only Text items, got {other:?}"),
             })
             .collect()

@@ -11,7 +11,11 @@ import { NoteBodyItemView, NoteBodyView } from "../../render/note_body.slint";
 import { ViewSwitcher, NavPill } from "../../components.slint";
 import { PropertiesView, NotePropertyEntry } from "properties.slint";
 import { EditorToolbar } from "toolbar.slint";
-import { NoteBanner, NoteBannerMetrics, NoteBannerView } from "../../widgets/note_banner.slint";
+import {
+    NoteBanner,
+    NoteBannerMetrics,
+    NoteBannerView,
+} from "../../widgets/note_banner.slint";
 
 export { NotePropertyEntry } from "properties.slint";
 
@@ -132,8 +136,8 @@ component HeaderBubbleButton inherits Rectangle {
         border-radius: self.width / 2;
         background: touch.pressed && root.enabled
             ? (Palette.color-scheme == ColorScheme.dark
-                ? Colors.surface-elevated.brighter(0.18)
-                : Colors.surface-elevated.darker(0.08))
+            ? Colors.surface-elevated.brighter(0.18)
+            : Colors.surface-elevated.darker(0.08))
             : Colors.surface-elevated;
         drop-shadow-blur: 6px * Metrics.ui-scale;
         drop-shadow-offset-y: 2px * Metrics.ui-scale;

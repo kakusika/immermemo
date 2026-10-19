@@ -1,9 +1,9 @@
-@kind(plan)
-@meta{
-  id: plan-note-scroll-delay
-  category: list("slint", "ui")
-  status: "upstream"
-}
+::kind(plan)
+::id(plan-note-scroll-delay)
+::meta(
+  category: ("slint", "ui")
+  status:   "upstream"
+)
 
 =[ ノートの最上部でスクロールの開始が遅れる (SwipeGestureHandlerの押下の保留) ]
 

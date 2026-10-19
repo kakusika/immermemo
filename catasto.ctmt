@@ -1,0 +1,25 @@
+::use(catasto, version: "1.0.0")
+::upstream(
+  origiri-mobile: catasto.git("https://github.com/kakusika/commonfiles.git", rev: "main", root: "origiri-mobile")
+  vocabularies:   catasto.git("https://github.com/tomet-lang/vocabularies.git", rev: "main", root: "vocabularies")
+  fs_catasto:     catasto.git("https://github.com/tomet-lang/fs-catasto.git", rev: "main", root: "tmtroot/schema/vocabularies")
+)
+
+// --- Vocabularies ---
+"tmtroot/schema/vocabularies/catasto@1.0.0.vocabulary.tmt": catasto.upstream(fs_catasto, path: "catasto@1.0.0.vocabulary.tmt")
+"tmtroot/schema/vocabularies/rust@1.0.0.vocabulary.tmt":    catasto.upstream(vocabularies, path: "rust/rust@1.0.0.vocabulary.tmt")
+"tmtroot/schema/vocabularies/writ@1.0.0.vocabulary.tmt":    catasto.upstream(vocabularies, path: "writ/writ@1.0.0.vocabulary.tmt")
+
+// --- Environment ---
+".editorconfig":  catasto.upstream(origiri-mobile, path: ".editorconfig")
+".envrc":         catasto.upstream(origiri-mobile, path: ".envrc")
+".gitattributes": catasto.upstream(origiri-mobile, path: ".gitattributes")
+".gitignore":     catasto.upstream(origiri-mobile, path: ".gitignore")
+
+// --- Vender Config ---
+".github/FUNDING.yml":          catasto.upstream(origiri-mobile, path: ".github/FUNDING.yml")
+".github/workflows/pages.yml":  catasto.upstream(origiri-mobile, path: ".github/workflows/pages.yml")
+"flake.nix":                    catasto.upstream(origiri-mobile, path: "flake.nix")
+"nix/base.nix":                 catasto.upstream(origiri-mobile, path: "nix/base.nix")
+"nix/dev.nix":                  catasto.upstream(origiri-mobile, path: "nix/dev.nix")
+"nix/formatter.nix":            catasto.upstream(origiri-mobile, path: "nix/formatter.nix")

@@ -1,15 +1,13 @@
-@config(
-  export: {
-    type: commonmark,
-    path: "README.md"
-  }
+::id(doc-readme)
+::export(
+  type: commonmark
+  path: "README.md"
 )
-@meta{
-  id: doc-readme,
+::meta(
   lang: en
-}
+)
 
-${macro.generated_by(self.path)}
+$macro.generated_by(self::path)
 
 =[ Immermemo ]
 
@@ -32,27 +30,28 @@ Immermemo's answer to both: the git repository lives in the app's private storag
 ==[ Repository Layout ]
 
 ```
-immermemo/
-├── crates/
-│   ├── sync/    # git2-backed vault sync
-│   ├── merge/   # AST-level three-way merge
-│   ├── index/   # SQLite-backed note index for listing and search
-│   └── vault/   # vault/note/credential domain logic, UI-agnostic
-├── vocab/
-│   └── mobile.vocabulary.tmt   # @mobile.conflict vocabulary
-└── app/         # The app: desktop + Android, Slint UI
+`` immermemo/
+`` ├── crates/
+`` │   ├── sync/    # git2-backed vault sync
+`` │   ├── merge/   # AST-level three-way merge
+`` │   ├── index/   # SQLite-backed note index for listing and search
+`` │   └── vault/   # vault/note/credential domain logic, UI-agnostic
+`` ├── vocab/
+`` │   └── mobile.vocabulary.tmt   # @mobile.conflict vocabulary
+`` └── app/         # The app: desktop + Android, Slint UI
 ```
 
 ==[ Development ]
 
 ```sh
-nix develop         # enters the dev shell (or use direnv)
-just avd-create     # First time only: create AVD (Pixel 6, API34, x86_64)
-just emulator       # Launch emulator
-just run            # Build -> install -> launch on device
+`` nix develop         # enters the dev shell (or use direnv)
+`` just avd-create     # First time only: create AVD (Pixel 6, API34, x86_64)
+`` just emulator       # Launch emulator
+`` just run            # Build -> install -> launch on device
 ```
 
 ===[ Useful Recipes ]
+
 -(`just logs) Tail logcat output from running app
 -(`just screenshot [path]) Capture device screen
 -(`just stop) Force-stop the app

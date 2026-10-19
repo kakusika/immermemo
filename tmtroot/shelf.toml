@@ -1,8 +1,8 @@
 [book]
 title = "Immermemo docs"
-lang = "en"
-dest = "dist"
+lang  = "en"
+dest  = "dist"
 
 [build]
-base = "/immermemo"
+base  = "/immermemo"
 kinds = ["*", "!config", "!index"]

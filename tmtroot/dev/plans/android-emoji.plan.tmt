@@ -1,9 +1,9 @@
-@kind(plan)
-@meta{
-  id: plan-android-emoji
-  category: list("android")
-  status: "discussion"
-}
+::kind(plan)
+::id(plan-android-emoji)
+::meta(
+  category: ("android")
+  status:   "discussion"
+)
 
 =[ Androidの実機で絵文字を表示する ]
 

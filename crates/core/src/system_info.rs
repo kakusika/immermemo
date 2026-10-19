@@ -202,6 +202,9 @@ mod tests {
     #[test]
     fn emoji_font_is_included_when_provided() {
         let rows = rows(Some("NotoColorEmoji.ttf"));
-        assert!(rows.iter().any(|r| r.label == "Emoji font" && r.value == "NotoColorEmoji.ttf"));
+        assert!(
+            rows.iter()
+                .any(|r| r.label == "Emoji font" && r.value == "NotoColorEmoji.ttf")
+        );
     }
 }

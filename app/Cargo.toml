@@ -1,5 +1,5 @@
 [package]
-name = "immermemo"
+name              = "immermemo"
 version.workspace = true
 edition.workspace = true
 
@@ -13,13 +13,13 @@ name = "immermemo"
 path = "src/main.rs"
 
 [dependencies]
-immermemo-core = { workspace = true }
-immermemo-platform = { workspace = true }
-immermemo-shell = { workspace = true }
+immermemo-core        = { workspace = true }
+immermemo-platform    = { workspace = true }
+immermemo-shell       = { workspace = true }
 immermemo-shell-state = { workspace = true }
 
 #= Crates.io
-anyhow = { workspace = true }
+anyhow      = { workspace = true }
 directories = { workspace = true }
 
 # Desktop (non-mobile): mimalloc for high-throughput UI / background sync.
@@ -38,7 +38,7 @@ slint = { workspace = true, features = [
 slint = { workspace = true, features = ["backend-winit", "renderer-femtovg"] }
 
 [features]
-default = ["renderer-femtovg"]
+default          = ["renderer-femtovg"]
 renderer-femtovg = ["i-slint-backend-android-activity/renderer-femtovg"]
 
 [target.'cfg(target_os = "android")'.dependencies]

@@ -60,7 +60,10 @@ mod tests {
         let pixels = generate_qr_pixels("immermemo://import#test", 240).unwrap();
         assert!(pixels.width > 0);
         assert_eq!(pixels.width, pixels.height);
-        assert_eq!(pixels.rgba.len(), (pixels.width * pixels.height * 4) as usize);
+        assert_eq!(
+            pixels.rgba.len(),
+            (pixels.width * pixels.height * 4) as usize
+        );
         // Verify background is white and at least some pixels are black
         assert!(pixels.rgba.iter().any(|&b| b == 0));
         assert!(pixels.rgba.iter().any(|&b| b == 255));

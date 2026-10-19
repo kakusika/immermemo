@@ -130,7 +130,9 @@ impl ShellSession {
             return Ok(None);
         };
         let body = std::fs::read_to_string(&path)?;
-        let Some(new_body) = immermemo_core::set_note_icon(&body, icon_name, IconPickerState::DEFAULT_PKG) else {
+        let Some(new_body) =
+            immermemo_core::set_note_icon(&body, icon_name, IconPickerState::DEFAULT_PKG)
+        else {
             anyhow::bail!("Could not update note icon");
         };
         std::fs::write(&path, &new_body)?;

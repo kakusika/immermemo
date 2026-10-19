@@ -88,7 +88,7 @@ as the code they sit beside.
 
 ## UI & Slint conventions
 
-- 
+- **Vertical centering in `HorizontalLayout`**:
   - Slint's `HorizontalLayout` has no cross-axis alignment (`align-items: center`).
 Children without explicit/fixed heights stretch across the full row height.
 `Text` elements vertically center their text glyphs within their stretched box
@@ -104,7 +104,7 @@ VerticalLayout {
 ```
 
 
-- 
+- **Theme colors**:
   - Never hardcode hex colors for surfaces, backgrounds, or borders. Use the Slint
 `Palette` tokens and derive contrast dynamically (e.g.
 `Palette.color-scheme == ColorScheme.dark ? Palette.background.darker(...) : ...`),

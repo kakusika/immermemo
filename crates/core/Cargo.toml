@@ -1,15 +1,15 @@
 [package]
-name = "immermemo-core"
+name              = "immermemo-core"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-immermemo-identity = { workspace = true }
-immermemo-index = { workspace = true }
-immermemo-sync = { workspace = true }
-immermemo-vault = { workspace = true }
 immermemo-credentials = { workspace = true }
-immermemo-provider = { workspace = true }
+immermemo-identity    = { workspace = true }
+immermemo-index       = { workspace = true }
+immermemo-provider    = { workspace = true }
+immermemo-sync        = { workspace = true }
+immermemo-vault       = { workspace = true }
 #= Tomet
 tomet = { workspace = true, features = [
   "edit",
@@ -20,12 +20,12 @@ tomet = { workspace = true, features = [
 ] }
 
 #= Crates.io
-anyhow = { workspace = true }
+anyhow      = { workspace = true }
 directories = { workspace = true }
-git2 = { workspace = true }
-qrcode = { workspace = true }
+git2        = { workspace = true }
+qrcode      = { workspace = true }
 
 [dev-dependencies]
-immermemo-sync = { workspace = true, features = ["test-support"] }
 immermemo-render-tomet = { workspace = true }
-tempfile = "3"
+immermemo-sync         = { workspace = true, features = ["test-support"] }
+tempfile               = "3"

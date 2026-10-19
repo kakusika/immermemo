@@ -271,7 +271,10 @@ mod tests {
         assert!(config.is_enabled(ActionId::NewNote));
         assert!(config.is_enabled(ActionId::Sync));
         assert!(!config.is_enabled(ActionId::Search));
-        assert_eq!(config.enabled_actions(), vec![ActionId::NewNote, ActionId::Sync]);
+        assert_eq!(
+            config.enabled_actions(),
+            vec![ActionId::NewNote, ActionId::Sync]
+        );
 
         let chunks = config.chunked_enabled_actions(3);
         assert_eq!(chunks.len(), 1);

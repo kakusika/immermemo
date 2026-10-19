@@ -4,8 +4,8 @@ use slint::{Model, VecModel};
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use immermemo_shell_state::action::{ActionId, DEFAULT_HOME_ACTIONS, get_action_meta};
 use crate::{HomeQuickActionRow, SettingsAdapter};
+use immermemo_shell_state::action::{ActionId, DEFAULT_HOME_ACTIONS, get_action_meta};
 
 /// Applies a comma-separated action configuration string to the `SettingsAdapter`.
 ///

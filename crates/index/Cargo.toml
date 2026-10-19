@@ -1,17 +1,17 @@
 [package]
-name = "immermemo-index"
+name              = "immermemo-index"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-immermemo-vault = { workspace = true }
 immermemo-render-tomet = { workspace = true }
+immermemo-vault        = { workspace = true }
 
 #= Tomet
 tomet = { workspace = true, features = ["merge"] }
 
 #= Crates.io
-anyhow = { workspace = true }
+anyhow   = { workspace = true }
 rusqlite = { workspace = true }
 
 [dev-dependencies]

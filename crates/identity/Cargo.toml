@@ -1,5 +1,5 @@
 [package]
-name = "immermemo-identity"
+name              = "immermemo-identity"
 version.workspace = true
 edition.workspace = true
 

@@ -1,9 +1,9 @@
-@kind(plan)
-@meta{
-  id: plan-colrv1-emoji
-  category: list("slint", "android")
-  status: "upstream"
-}
+::kind(plan)
+::id(plan-colrv1-emoji)
+::meta(
+  category: ("slint", "android")
+  status:   "upstream"
+)
 
 =[ COLRv1の絵文字フォントが描画できない (swash / femtovg / Slint) ]
 

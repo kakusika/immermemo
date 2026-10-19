@@ -6,12 +6,18 @@
 
 #= Project-specific
 
-# Android (app/android/): `build/` below already covers Gradle's own
-# output dirs. These three don't fit any shared rule.
+# Android: `build/` below already covers Gradle's own output dirs.
+.gradle/
+local.properties
+apps/android/android/.gradle/
+apps/android/android/local.properties
+apps/android/android/app/src/main/jniLibs/
 app/android/.gradle/
 app/android/local.properties
 app/android/app/src/main/jniLibs/
-
+*.keystore
+*.apk
+*.aab
 
 # -----------------------------------------------------------------------
 # Shared ignore rules
@@ -28,19 +34,7 @@ target/
 #= Develop
 .direnv/
 .claude/
-.agents/workspaces/
-.idea/
-.zed/
-.vscode/
-*.swp
-*~
 
-#= Environment
-.env
-.env.*
-!.env.example
-
-#= OS
+#= System
 .DS_Store
-Desktop.ini
 Thumbs.db

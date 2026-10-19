@@ -1,5 +1,5 @@
-@kind(blueprint)
-@blueprint(plan){
+::kind(blueprint)
+::blueprint(plan){
   version: "1.0",
   description: "plan"
 }

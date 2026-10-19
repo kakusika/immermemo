@@ -1,23 +1,49 @@
-{ pkgs, tomet, ... }:
+{
+  pkgs,
+  tomet,
+  ...
+}:
 {
   projectRootFile = "flake.nix";
   programs = {
-    #= Nix
+    #--- Nix ---
     nixfmt.enable = true;
     statix.enable = true;
     deadnix.enable = true;
-    #= Shell
+    #--- Shell ---
     shfmt.enable = true;
     shellcheck.enable = true;
-
-    #= Main
-    rustfmt.enable = true; # Rust
-    taplo.enable = true; # Toml
+    #--- Rust ---
+    rustfmt.enable = true;
+    taplo = {
+      enable = true;
+      settings = {
+        formatting = {
+          align_entries = true;
+          align_comments = true;
+          reorder_keys = false;
+        };
+        rule = [
+          {
+            keys = [
+              "dependencies"
+              "dev-dependencies"
+              "build-dependencies"
+              "workspace.dependencies"
+            ];
+            formatting = {
+              reorder_keys = true;
+            };
+          }
+        ];
+      };
+    };
     ktlint.enable = true;
   };
+
   settings = {
-    # https://github.com/numtide/treefmt-nix/issues/171
     global.excludes = [
+      "*.lock"
       "patches/**"
     ];
 
@@ -30,6 +56,7 @@
         ];
         includes = [ "*.tmt" ];
       };
+
       slint = {
         command = "${pkgs.slint-lsp}/bin/slint-lsp";
         options = [
@@ -38,14 +65,6 @@
         ];
         includes = [ "*.slint" ];
       };
-    };
-
-    shfmt = {
-      includes = [ "*.sh" ];
-    };
-
-    rustfmt = {
-      includes = [ "*.rs" ];
     };
   };
 }
