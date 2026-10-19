@@ -1,0 +1,19 @@
+[package]
+name = "immermemo-platform"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+immermemo-core = { workspace = true }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+slint = { version = "1.18", default-features = false, features = [
+  "std",
+  "compat-1-2",
+  "unstable-fontique-011",
+] }
+
+[dev-dependencies]
+tempfile = "3"

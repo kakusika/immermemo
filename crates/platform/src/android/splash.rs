@@ -13,13 +13,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 static NOTIFIED: AtomicBool = AtomicBool::new(false);
 
-/// Registers a rendering notifier on `app`'s window that calls
+/// Registers a rendering notifier on `window` that calls
 /// `MainActivity.markFirstFrameRendered()` over JNI the first time
 /// Slint's renderer reaches [`slint::RenderingState::AfterRendering`],
 /// releasing the splash held open by `MainActivity`.
-pub fn notify_on_first_frame(app: &crate::App) {
-    use slint::ComponentHandle;
-    let _ = app.window().set_rendering_notifier(|state, _| {
+pub fn notify_on_first_frame(window: &slint::Window) {
+    let _ = window.set_rendering_notifier(|state, _| {
         if !matches!(state, slint::RenderingState::AfterRendering) {
             return;
         }

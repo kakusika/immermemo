@@ -9,7 +9,7 @@
 use immermemo_core::CertificateVerifier;
 use immermemo_core::tls::ChainVerifier;
 
-const ROOT_BUNDLE: &[u8] = include_bytes!("../../assets/cacert.pem");
+const ROOT_BUNDLE: &[u8] = include_bytes!("../../../app/assets/cacert.pem");
 
 pub fn verifier() -> anyhow::Result<Box<dyn CertificateVerifier>> {
     Ok(Box::new(ChainVerifier::new(ROOT_BUNDLE)?))

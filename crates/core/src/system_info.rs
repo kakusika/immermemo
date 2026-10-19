@@ -8,7 +8,7 @@
 //! - **Architecture**: what the app was compiled for.
 //! - **Renderer**: the one this build draws with.
 //! - **Emoji font**: which font the device offered for emoji and which was used
-//!   (Android only; see `platform/android/fonts.rs`).
+//!   (Android only, optionally provided by the platform layer).
 //!
 //! The same rows, under the build's label, make the text the card's copy button
 //! puts on the clipboard, so a report is pasted rather than retyped.
@@ -20,8 +20,8 @@ pub struct Row {
     pub value: String,
 }
 
-/// The rows for this device.
-pub fn rows() -> Vec<Row> {
+/// The rows for this device, optionally including a platform-detected emoji font report.
+pub fn rows(emoji_font: Option<&str>) -> Vec<Row> {
     let mut rows = vec![Row {
         label: "OS",
         value: os(),
@@ -40,15 +40,11 @@ pub fn rows() -> Vec<Row> {
         label: "Renderer",
         value: "FemtoVG".to_owned(),
     });
-    #[cfg(target_os = "android")]
-    {
-        let emoji = crate::platform::android::fonts::report();
-        if !emoji.is_empty() {
-            rows.push(Row {
-                label: "Emoji font",
-                value: emoji,
-            });
-        }
+    if let Some(emoji) = emoji_font.filter(|s| !s.is_empty()) {
+        rows.push(Row {
+            label: "Emoji font",
+            value: emoji.to_owned(),
+        });
     }
     rows
 }
@@ -197,9 +193,15 @@ mod tests {
 
     #[test]
     fn every_device_lists_its_os_and_architecture_and_renderer() {
-        let labels: Vec<_> = rows().iter().map(|row| row.label).collect();
+        let labels: Vec<_> = rows(None).iter().map(|row| row.label).collect();
         for needed in ["OS", "Architecture", "Renderer"] {
             assert!(labels.contains(&needed), "{labels:?}");
         }
+    }
+
+    #[test]
+    fn emoji_font_is_included_when_provided() {
+        let rows = rows(Some("NotoColorEmoji.ttf"));
+        assert!(rows.iter().any(|r| r.label == "Emoji font" && r.value == "NotoColorEmoji.ttf"));
     }
 }

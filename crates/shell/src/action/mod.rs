@@ -1,12 +1,9 @@
-//! Global Action System.
-//!
-//! Provides first-class, dispatchable actions unifying page navigation,
-//! modal sheets, and instant operations (such as New Note and Sync).
+//! Global Action System (Slint Shell Adapter).
 
 pub mod config;
 pub mod dispatch;
-pub mod id;
-pub mod registry;
+
+pub use immermemo_shell_state::action::*;
 
 pub use config::{
     apply_bottom_bar_config, apply_home_actions_config, is_action_enabled, is_home_action_enabled,
@@ -14,5 +11,3 @@ pub use config::{
     set_home_action_enabled, update_home_enabled_actions,
 };
 pub use dispatch::dispatch_action;
-pub use id::{ActionId, ActionKind};
-pub use registry::{ActionMeta, get_action_meta};

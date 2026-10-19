@@ -1,19 +1,12 @@
-//! Android entry point, platform keystore, the startup-splash handoff,
-//! shared-storage access, system UI (status bar) visibility, and the font
-//! fallbacks Slint cannot derive from the system on its own.
-
-pub mod activity;
-pub mod fonts;
-pub mod keystore;
-pub mod splash;
-pub mod storage_access;
-pub mod system_ui;
+//! Android platform entry point and JNI callbacks.
 
 use std::sync::Arc;
 
 use immermemo_core::{AppData, TokenStore};
-
-use crate::{TokenStoreFactory, run};
+use immermemo_platform::android::keystore::AndroidKeystoreTokenStore;
+use immermemo_platform::android::{activity, fonts, read_launch_import_uri};
+use immermemo_platform::widget;
+use immermemo_shell::{StartVault, TokenStoreFactory, handle_incoming_import_uri, run};
 
 /// Android starts the app here (the activity loads this library), not at
 /// `main`. Everything -- notes, the private gitdir, the encrypted token --
@@ -24,7 +17,7 @@ pub fn android_main(app: slint::android::AndroidApp) {
     let base = app
         .internal_data_path()
         .expect("the app has private storage");
-    let start = crate::StartVault {
+    let start = StartVault {
         first_run: base.join("notes"),
         open: None,
     };
@@ -37,16 +30,16 @@ pub fn android_main(app: slint::android::AndroidApp) {
         // Safety: `vm_ptr` is `app.vm_as_ptr()`, valid for the process's
         // lifetime; this closure doesn't outlive it.
         let store = unsafe {
-            keystore::AndroidKeystoreTokenStore::new(vm_addr as *mut std::ffi::c_void, path)
+            AndroidKeystoreTokenStore::new(vm_addr as *mut std::ffi::c_void, path)
         }?;
         Ok(Arc::new(store) as Arc<dyn TokenStore>)
     });
     slint::android::init(app).expect("initialize the Android backend");
     fonts::repair_fallbacks();
     unsafe { activity::init(vm_ptr, activity_ptr) };
-    crate::platform::widget::init_android_widget_bridge(&base);
+    widget::init_android_widget_bridge(&base);
     let (initial_note_path, initial_import_uri) = (
-        crate::platform::widget::read_launch_note_path(),
+        widget::read_launch_note_path(),
         read_launch_import_uri(),
     );
     run(
@@ -59,17 +52,6 @@ pub fn android_main(app: slint::android::AndroidApp) {
     .expect("run the app");
 }
 
-/// Reads the deep-link import URI (`immermemo://...`) off `MainActivity`'s intent, if present.
-pub fn read_launch_import_uri() -> Option<String> {
-    activity::call(|env, activity| {
-        let value = env
-            .call_method(activity, "consumeImportUri", "()Ljava/lang/String;", &[])?
-            .l()?;
-        activity::optional_string(env, value)
-    })
-    .flatten()
-}
-
 /// Called from `MainActivity.onNewIntent` when the user opens a deep-link while the app is running.
 #[unsafe(no_mangle)]
 pub extern "C" fn Java_dev_immermemo_app_MainActivity_notifyDeepLink(
@@ -80,7 +62,23 @@ pub extern "C" fn Java_dev_immermemo_app_MainActivity_notifyDeepLink(
     if let Ok(uri_jstr) = env.get_string(&uri) {
         let uri_str: String = uri_jstr.into();
         let _ = slint::invoke_from_event_loop(move || {
-            crate::handle_incoming_import_uri(&uri_str);
+            handle_incoming_import_uri(&uri_str);
+        });
+    }
+}
+
+/// Called from `MainActivity.onActivityResult` with the tree URI the folder
+/// picker returned.
+#[unsafe(no_mangle)]
+pub extern "C" fn Java_dev_immermemo_app_MainActivity_notifyFolderPicked(
+    mut env: jni::JNIEnv,
+    _activity: jni::objects::JObject,
+    uri: jni::objects::JString,
+) {
+    if let Ok(uri) = env.get_string(&uri) {
+        let uri: String = uri.into();
+        let _ = slint::invoke_from_event_loop(move || {
+            immermemo_shell::callbacks::vault_setup::folder_picked(&uri);
         });
     }
 }

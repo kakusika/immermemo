@@ -13,32 +13,14 @@ name = "immermemo"
 path = "src/main.rs"
 
 [dependencies]
-immermemo-buildinfo = { workspace = true }
 immermemo-core = { workspace = true }
-immermemo-credentials = { workspace = true }
-immermemo-media = { workspace = true }
-immermemo-provider = { workspace = true }
-immermemo-render-tomet = { workspace = true }
-tomet = { workspace = true }
-
-#= Origiri
-origiri-icons = { workspace = true }
-origiri-mobile = { workspace = true }
-origiri-richtext = { workspace = true }
-origiri-richtext-flow = { workspace = true }
-origiri-selection = { workspace = true }
-origiri-theme = { workspace = true }
+immermemo-platform = { workspace = true }
+immermemo-shell = { workspace = true }
+immermemo-shell-state = { workspace = true }
 
 #= Crates.io
 anyhow = { workspace = true }
-base64 = { workspace = true }
-clru = { workspace = true }
 directories = { workspace = true }
-image = { workspace = true }
-qrcode = { workspace = true }
-sys-locale = { workspace = true }
-ureq = { workspace = true }
-webbrowser = { workspace = true }
 
 # Desktop (non-mobile): mimalloc for high-throughput UI / background sync.
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
@@ -71,23 +53,8 @@ slint = { version = "1.18", default-features = false, features = [
 ] }
 i-slint-backend-android-activity = { version = "=1.18.1", default-features = false }
 
-[build-dependencies]
-slint-build = { workspace = true }
-
 [dev-dependencies]
-#= Tomet
-# Only used to build `.tmt` fixtures in `#[cfg(test)]`.
-tomet = { workspace = true, features = ["merge", "parser", "printer"] }
+origiri-icons = { workspace = true }
 
-#= Crates.io
-sha2 = { workspace = true }
-tempfile = "3"
-
-# Only for `examples/snap.rs` (Linux development only -- it renders the window
-# headlessly at a chosen size; the software renderer needs this to find
-# system (Japanese) fonts). Target-gated: an *unconditional*
-# `[dev-dependencies]` entry here would still pull in `backend-winit-wayland`
-# (or the full FemtoVG renderer) into mobile (`--lib`/`staticlib`) builds too,
-# even though neither Android nor iOS ever uses it.
 [target.'cfg(target_os = "linux")'.dev-dependencies]
 slint = { workspace = true, features = ["software-renderer-systemfonts"] }

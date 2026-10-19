@@ -1,8 +1,6 @@
 //! Shared-storage access over JNI: whether the app may use it, asking for
-//! that, and the system's folder picker. See `crate::platform::storage` for
+//! that, and the system's folder picker. See `crate::storage` for
 //! what it is for and for the URI-to-path conversion.
-
-use jni::objects::{JObject, JString};
 
 use super::activity;
 
@@ -24,26 +22,10 @@ pub fn request_all_files_access() {
 }
 
 /// Opens the system's folder picker. The answer arrives later, through
-/// [`Java_dev_immermemo_app_MainActivity_notifyFolderPicked`].
+/// `MainActivity.onActivityResult` -> `Java_dev_immermemo_app_MainActivity_notifyFolderPicked`.
 pub fn pick_folder() {
     activity::call_logged("open the folder picker", |env, activity| {
         env.call_method(activity, "pickFolder", "()V", &[])?;
         Ok(())
     });
-}
-
-/// Called from `MainActivity.onActivityResult` with the tree URI the folder
-/// picker returned.
-#[unsafe(no_mangle)]
-pub extern "C" fn Java_dev_immermemo_app_MainActivity_notifyFolderPicked(
-    mut env: jni::JNIEnv,
-    _activity: JObject,
-    uri: JString,
-) {
-    if let Ok(uri) = env.get_string(&uri) {
-        let uri: String = uri.into();
-        let _ = slint::invoke_from_event_loop(move || {
-            crate::callbacks::vault_setup::folder_picked(&uri);
-        });
-    }
 }

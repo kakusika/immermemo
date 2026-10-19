@@ -22,22 +22,8 @@ fn main() {
     };
     let style = std::env::var("SLINT_STYLE").unwrap_or_else(|_| default_style.to_string());
 
-    // `origiri-mobile` (from `origiri-frameworks`, migrated out of this
-    // repo's own `crates/origiri-mobile`) reports its own `ui/` directory
-    // through this `links`-propagated env var (see its `build.rs`); this is
-    // what `@origiri-mobile/...` resolves against below. `editor.slint`/
-    // `rendered_block.slint` used to come from a separate `crates/
-    // editor-slint` the same way, but that crate had no other consumer and
-    // no Rust code of its own, so its `ui/` moved into this crate's own
-    // `ui/pages/editor/` and `ui/render/` directly.
     let origiri_mobile_ui_dir = std::env::var("DEP_ORIGIRI_MOBILE_UI_DIR").unwrap();
-    // `origiri-mobile`'s own `.slint` now unconditionally imports
-    // `@origiri-icons` (the icon set it shares with `origiri-frameworks`'s
-    // desktop `origiri` crate), so this app needs it wired too whenever it
-    // needs `origiri-mobile`.
     let origiri_icons_ui_dir = std::env::var("DEP_ORIGIRI_ICONS_UI_DIR").unwrap();
-    // `origiri-richtext` (from `origiri-frameworks`) reports its own `ui/`
-    // the same way; this is what `@richtext/...` resolves against below.
     let richtext_ui_dir = std::env::var("DEP_ORIGIRI_RICHTEXT_UI_DIR").unwrap();
     let mut library_paths = std::collections::HashMap::new();
     library_paths.insert(

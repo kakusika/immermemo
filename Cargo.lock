@@ -2718,34 +2718,16 @@ name = "immermemo"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.23.1",
- "clru",
  "directories",
  "i-slint-backend-android-activity",
- "image",
- "immermemo-buildinfo",
  "immermemo-core",
- "immermemo-credentials",
- "immermemo-media",
- "immermemo-provider",
- "immermemo-render-tomet",
+ "immermemo-platform",
+ "immermemo-shell",
+ "immermemo-shell-state",
  "jni 0.21.1",
  "mimalloc",
  "origiri-icons",
- "origiri-mobile",
- "origiri-richtext",
- "origiri-richtext-flow",
- "origiri-selection",
- "origiri-theme",
- "qrcode",
- "sha2",
  "slint",
- "slint-build",
- "sys-locale",
- "tempfile",
- "tomet",
- "ureq",
- "webbrowser",
 ]
 
 [[package]]
@@ -2766,6 +2748,7 @@ dependencies = [
  "immermemo-render-tomet",
  "immermemo-sync",
  "immermemo-vault",
+ "qrcode",
  "tempfile",
  "tomet",
 ]
@@ -2815,6 +2798,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "immermemo-platform"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "immermemo-core",
+ "jni 0.21.1",
+ "slint",
+ "tempfile",
+]
+
+[[package]]
 name = "immermemo-provider"
 version = "0.1.0"
 dependencies = [
@@ -2831,6 +2825,50 @@ version = "0.1.0"
 dependencies = [
  "tomet",
  "unicode-segmentation",
+]
+
+[[package]]
+name = "immermemo-shell"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.23.1",
+ "clru",
+ "directories",
+ "image",
+ "immermemo-buildinfo",
+ "immermemo-core",
+ "immermemo-credentials",
+ "immermemo-media",
+ "immermemo-platform",
+ "immermemo-provider",
+ "immermemo-render-tomet",
+ "immermemo-shell-state",
+ "origiri-icons",
+ "origiri-mobile",
+ "origiri-richtext",
+ "origiri-richtext-flow",
+ "origiri-selection",
+ "origiri-theme",
+ "sha2",
+ "slint",
+ "slint-build",
+ "sys-locale",
+ "tempfile",
+ "tomet",
+ "ureq",
+ "webbrowser",
+]
+
+[[package]]
+name = "immermemo-shell-state"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "immermemo-core",
+ "origiri-icons",
+ "origiri-selection",
+ "tempfile",
 ]
 
 [[package]]

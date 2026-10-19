@@ -12,6 +12,9 @@ members = [
   "crates/provider",
   "crates/sync",
   "crates/render-tomet",
+  "crates/platform",
+  "crates/shell-state",
+  "crates/shell",
   "crates/vault",
 ]
 
@@ -29,7 +32,10 @@ immermemo-credentials = { path = "crates/credentials" }
 immermemo-identity = { path = "crates/identity" }
 immermemo-index = { path = "crates/index" }
 immermemo-media = { path = "crates/media" }
+immermemo-platform = { path = "crates/platform" }
 immermemo-provider = { path = "crates/provider" }
+immermemo-shell = { path = "crates/shell" }
+immermemo-shell-state = { path = "crates/shell-state" }
 immermemo-sync = { path = "crates/sync" }
 immermemo-render-tomet = { path = "crates/render-tomet" }
 immermemo-vault = { path = "crates/vault" }

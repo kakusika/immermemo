@@ -1,0 +1,13 @@
+[package]
+name = "immermemo-shell-state"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+immermemo-core = { workspace = true }
+origiri-icons = { workspace = true }
+origiri-selection = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

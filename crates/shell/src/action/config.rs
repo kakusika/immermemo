@@ -4,8 +4,7 @@ use slint::{Model, VecModel};
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use super::id::ActionId;
-use super::registry::get_action_meta;
+use immermemo_shell_state::action::{ActionId, DEFAULT_HOME_ACTIONS, get_action_meta};
 use crate::{HomeQuickActionRow, SettingsAdapter};
 
 /// Applies a comma-separated action configuration string to the `SettingsAdapter`.
@@ -129,21 +128,6 @@ pub fn set_action_enabled(settings: &SettingsAdapter, action: ActionId, enabled:
         ActionId::Settings => settings.set_nav_show_settings(enabled),
     }
 }
-
-/// Default order of quick actions on the home page (excluding Home itself).
-pub const DEFAULT_HOME_ACTIONS: [ActionId; 11] = [
-    ActionId::NewNote,
-    ActionId::Search,
-    ActionId::Daily,
-    ActionId::Directory,
-    ActionId::Starred,
-    ActionId::Recent,
-    ActionId::Graph,
-    ActionId::Library,
-    ActionId::Sync,
-    ActionId::SwitchVault,
-    ActionId::Settings,
-];
 
 /// Checks whether an action is enabled for the Home page quick actions.
 pub fn is_home_action_enabled(settings: &SettingsAdapter, action: ActionId) -> bool {

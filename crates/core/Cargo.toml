@@ -23,6 +23,7 @@ tomet = { workspace = true, features = [
 anyhow = { workspace = true }
 directories = { workspace = true }
 git2 = { workspace = true }
+qrcode = { workspace = true }
 
 [dev-dependencies]
 immermemo-sync = { workspace = true, features = ["test-support"] }

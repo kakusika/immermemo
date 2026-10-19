@@ -47,7 +47,7 @@ pub fn export_recent_notes(_index: &NoteIndex) {
                 eprintln!("immermemo: failed to write widget snapshot: {e}");
                 return;
             }
-            crate::platform::android::activity::call_logged("notify widget", |env, activity| {
+            crate::android::activity::call_logged("notify widget", |env, activity| {
                 // `android_main` runs on a plain native pthread, not one the
                 // framework attached with the app's classloader as context, so
                 // `JNIEnv::find_class` resolves against the bootstrap
@@ -92,7 +92,7 @@ pub fn export_recent_notes(_index: &NoteIndex) {
 /// behavior either way, so nothing here is worth surfacing as an error.
 #[cfg(target_os = "android")]
 pub fn read_launch_note_path() -> Option<std::path::PathBuf> {
-    crate::platform::android::activity::call(|env, activity| {
+    crate::android::activity::call(|env, activity| {
         let intent = env
             .call_method(activity, "getIntent", "()Landroid/content/Intent;", &[])?
             .l()?;
@@ -105,7 +105,7 @@ pub fn read_launch_note_path() -> Option<std::path::PathBuf> {
                 &[jni::objects::JValue::Object(&key)],
             )?
             .l()?;
-        crate::platform::android::activity::optional_string(env, value)
+        crate::android::activity::optional_string(env, value)
     })
     .flatten()
     .map(std::path::PathBuf::from)

@@ -34,7 +34,7 @@ pub fn perform_haptic_with_type(_haptic_type: HapticType) {
             HapticType::Light => 4,
             HapticType::Heavy => 0,
         };
-        crate::platform::android::activity::call_logged(
+        crate::android::activity::call_logged(
             "trigger Android haptic feedback",
             |env, activity| {
                 let window = env

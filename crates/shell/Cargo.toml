@@ -1,0 +1,48 @@
+[package]
+name = "immermemo-shell"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+immermemo-buildinfo = { workspace = true }
+immermemo-core = { workspace = true }
+immermemo-credentials = { workspace = true }
+immermemo-media = { workspace = true }
+immermemo-platform = { workspace = true }
+immermemo-provider = { workspace = true }
+immermemo-render-tomet = { workspace = true }
+immermemo-shell-state = { workspace = true }
+tomet = { workspace = true }
+
+#= Origiri
+origiri-icons = { workspace = true }
+origiri-mobile = { workspace = true }
+origiri-richtext = { workspace = true }
+origiri-richtext-flow = { workspace = true }
+origiri-selection = { workspace = true }
+origiri-theme = { workspace = true }
+
+#= Crates.io
+anyhow = { workspace = true }
+base64 = { workspace = true }
+clru = { workspace = true }
+directories = { workspace = true }
+image = { workspace = true }
+slint = { workspace = true, features = ["renderer-femtovg"] }
+sys-locale = { workspace = true }
+ureq = { workspace = true }
+webbrowser = { workspace = true }
+
+[build-dependencies]
+slint-build = { workspace = true }
+origiri-icons = { workspace = true }
+origiri-mobile = { workspace = true }
+origiri-richtext = { workspace = true }
+
+[dev-dependencies]
+tomet = { workspace = true, features = ["merge", "parser", "printer"] }
+sha2 = { workspace = true }
+tempfile = "3"
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+slint = { workspace = true, features = ["backend-winit-wayland", "software-renderer-systemfonts"] }

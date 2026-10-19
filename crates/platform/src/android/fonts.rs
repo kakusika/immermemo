@@ -34,7 +34,7 @@ use std::sync::{Arc, OnceLock};
 
 use slint::fontique_011::fontique::{Blob, FontInfoOverride, GenericFamily};
 
-use crate::platform::emoji_font::{EmojiFormat, classify, declared_emoji_files};
+use crate::emoji_font::{EmojiFormat, classify, declared_emoji_files};
 
 /// Where Android keeps system fonts: the base image, then the partitions a
 /// vendor adds to.

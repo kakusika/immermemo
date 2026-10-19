@@ -77,7 +77,7 @@ pub fn run(
 
     let app = App::new()?;
     #[cfg(target_os = "android")]
-    crate::platform::android::splash::notify_on_first_frame(&app);
+    crate::platform::android::splash::notify_on_first_frame(app.window());
     select_system_translation();
     let appearance = theme::Appearance::load(&core.app_data);
     show_saved_settings(&app, &core, &appearance);
