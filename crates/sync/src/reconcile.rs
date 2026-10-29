@@ -129,17 +129,19 @@ fn merge_bytes(path: &str, base: Option<Vec<u8>>, local: Vec<u8>, remote: Vec<u8
         return local;
     }
 
-    let parse = |bytes: &[u8]| -> tomet::ast::Document {
-        std::str::from_utf8(bytes)
-            .ok()
-            .and_then(|s| tomet::parser::parse_document(s).ok())
-            .unwrap_or_default()
+    let base_str = base
+        .as_deref()
+        .and_then(|b| std::str::from_utf8(b).ok())
+        .unwrap_or("");
+    let Ok(local_str) = std::str::from_utf8(&local) else {
+        return local;
     };
-    let base_doc = base.as_deref().map(parse).unwrap_or_default();
-    let local_doc = parse(&local);
-    let remote_doc = parse(&remote);
-    let result = tomet::merge::merge(&base_doc, &local_doc, &remote_doc);
-    tomet::printer::document_to_tm(&result.document).into_bytes()
+    let Ok(remote_str) = std::str::from_utf8(&remote) else {
+        return local;
+    };
+    tomet::merge::merge(base_str, local_str, remote_str)
+        .text
+        .into_bytes()
 }
 
 fn union_of_paths(trees: &[&Tree<'_>]) -> BTreeSet<String> {

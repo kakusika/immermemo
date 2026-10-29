@@ -109,7 +109,7 @@ mod tests {
         match &items[0] {
             RenderItem::Text(span, _) => {
                 assert_eq!(
-                    &src[span.start.offset..span.end.offset],
+                    &src[span.start..span.end],
                     "Visible body text."
                 );
             }
@@ -243,12 +243,12 @@ mod tests {
         let RenderItem::Text(first, _) = &items[0] else {
             unreachable!()
         };
-        assert_eq!(&src[first.start.offset..first.end.offset], "Before ");
+        assert_eq!(&src[first.start..first.end], "Before ");
 
         let RenderItem::Text(last, _) = items.last().unwrap() else {
             unreachable!()
         };
-        assert_eq!(&src[last.start.offset..last.end.offset], " after.");
+        assert_eq!(&src[last.start..last.end], " after.");
 
         let RenderItem::Element(el) = &items[1] else {
             unreachable!()
@@ -287,8 +287,8 @@ mod tests {
         assert_eq!(items.len(), 1);
         match &items[0] {
             RenderItem::Text(span, _) => {
-                assert_eq!(span.start.offset, 0);
-                assert_eq!(span.end.offset, src.len());
+                assert_eq!(span.start, 0);
+                assert_eq!(span.end, src.len());
             }
             _ => panic!("expected a Text fallback item"),
         }
@@ -321,7 +321,7 @@ mod tests {
             .into_iter()
             .map(|item| match item {
                 RenderItem::Text(span, style) => {
-                    (src[span.start.offset..span.end.offset].to_owned(), style)
+                    (src[span.start..span.end].to_owned(), style)
                 }
                 other => panic!("expected only Text items, got {other:?}"),
             })
@@ -388,7 +388,7 @@ mod tests {
         let RenderItem::Text(inside, inside_style) = &items[1] else {
             unreachable!()
         };
-        assert_eq!(&src[inside.start.offset..inside.end.offset], "before ");
+        assert_eq!(&src[inside.start..inside.end], "before ");
         assert!(inside_style.bold);
     }
 
@@ -408,7 +408,7 @@ mod tests {
                 assert_eq!(identity.namespace, None);
                 assert_eq!(identity.name, "ruby");
                 let content = content.expect("expected a content span");
-                assert_eq!(&src[content.start.offset..content.end.offset], "漢字");
+                assert_eq!(&src[content.start..content.end], "漢字");
                 assert_eq!(
                     args,
                     &ElementArgs::Named(vec![("rt".to_owned(), "かんじ".to_owned())])
@@ -457,7 +457,7 @@ mod tests {
                 } = el.as_ref();
                 assert_eq!(identity.name, "ruby");
                 let content = content.expect("expected a content span");
-                assert_eq!(&src[content.start.offset..content.end.offset], "漢字");
+                assert_eq!(&src[content.start..content.end], "漢字");
             }
             other => panic!("expected an Element item, got {other:?}"),
         }
@@ -483,7 +483,7 @@ mod tests {
                     &ElementArgs::Positional("https://example.com".to_owned())
                 );
                 let content = content.expect("expected a content span");
-                assert_eq!(&src[content.start.offset..content.end.offset], "see here");
+                assert_eq!(&src[content.start..content.end], "see here");
             }
             other => panic!("expected an Element item, got {other:?}"),
         }

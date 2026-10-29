@@ -578,7 +578,7 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
         RenderItem::Text(span, style) => ClassifiedBlock {
             shape: BlockShape::PlainText,
             tone: Tone::Neutral,
-            text: body[span.start.offset..span.end.offset].into(),
+            text: body[span.start..span.end].into(),
             target: String::new(),
             style,
             reading: String::new(),
@@ -596,7 +596,7 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                 block_args,
                 ..
             } = *element;
-            let content_text = content.map(|span| &body[span.start.offset..span.end.offset]);
+            let content_text = content.map(|span| &body[span.start..span.end]);
             let input = LookInput {
                 args: &args,
                 content: content_text,
@@ -638,7 +638,7 @@ pub(super) fn to_classified_block(body: &str, item: RenderItem) -> ClassifiedBlo
                     None => ClassifiedBlock {
                         shape: BlockShape::PlainText,
                         tone: Tone::Neutral,
-                        text: body[span.start.offset..span.end.offset].into(),
+                        text: body[span.start..span.end].into(),
                         target: String::new(),
                         style: TextStyle::default(),
                         reading: String::new(),
@@ -761,11 +761,12 @@ mod tests {
     // that case, not just a hand-written `@conflict(...)` fixture.
     #[test]
     fn an_inline_merge_conflict_is_recognized_through_the_real_pipeline() {
-        let base = tomet::parser::parse_document("The quick fox jumps.\n").unwrap();
-        let local = tomet::parser::parse_document("The slow fox jumps.\n").unwrap();
-        let remote = tomet::parser::parse_document("The lazy fox jumps.\n").unwrap();
-        let merged = tomet::merge::merge(&base, &local, &remote).document;
-        let text = tomet::printer::document_to_tm(&merged);
+        let text = tomet::merge::merge(
+            "The quick fox jumps.\n",
+            "The slow fox jumps.\n",
+            "The lazy fox jumps.\n",
+        )
+        .text;
 
         let blocks = classify_body(&text);
         assert_eq!(
@@ -779,28 +780,24 @@ mod tests {
         let conflict = blocks.into_iter().nth(1).unwrap();
         assert_eq!(
             conflict.side_a.iter().map(|b| &b.text).collect::<Vec<_>>(),
-            vec!["slow"]
+            vec!["slow "]
         );
         assert_eq!(
             conflict.side_b.iter().map(|b| &b.text).collect::<Vec<_>>(),
-            vec!["lazy"]
+            vec!["lazy "]
         );
     }
 
     #[test]
     fn a_structural_merge_conflict_is_recognized_through_the_real_pipeline() {
-        let base = tomet::parser::parse_document("Original.\n").unwrap();
-        let local = tomet::parser::parse_document("@meta{ x: 1 }\n").unwrap();
-        let remote = tomet::parser::parse_document("Theirs.\n").unwrap();
-        let merged = tomet::merge::merge(&base, &local, &remote).document;
-        let text = tomet::printer::document_to_tm(&merged);
+        let text = tomet::merge::merge("Original.\n", "@meta{ x: 1 }\n", "Theirs.\n").text;
 
         let blocks = classify_body(&text);
         assert_eq!(blocks.len(), 1);
         assert_eq!(blocks[0].shape, BlockShape::Conflict);
         assert_eq!(blocks[0].side_a.len(), 1);
         assert_eq!(blocks[0].side_b.len(), 1);
-        assert_eq!(blocks[0].side_b[0].text, "Theirs.");
+        assert_eq!(blocks[0].side_b[0].text, "Theirs. ");
     }
 
     #[test]

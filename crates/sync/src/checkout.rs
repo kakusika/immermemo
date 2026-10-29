@@ -123,9 +123,7 @@ impl Vault {
             .iter()
             .filter(|rel| {
                 std::fs::read_to_string(self.working_tree.join(rel))
-                    .ok()
-                    .and_then(|src| tomet::parser::parse_document(&src).ok())
-                    .is_some_and(|doc| tomet::merge::has_conflicts(&doc))
+                    .is_ok_and(|src| tomet::merge::has_conflicts(&src))
             })
             .cloned()
             .collect()

@@ -1,6 +1,6 @@
 //! Note metadata and directives extraction (`@meta`, `@kind`, `@config`, `@use`).
 
-use tomet::ast::{Block, Document, Element, ElementValue, Entry, Inline, Sigil, Value};
+use tomet::ast::{Block, Document, Element, ElementValue, Entry, Inline, Value};
 
 use crate::inline::inline_content;
 use crate::types::{ElementArgs, ElementIdentity, RenderItem};
@@ -13,9 +13,7 @@ pub(crate) fn meta_pairs(src: &str) -> Vec<(String, Value)> {
     };
     let meta = doc.blocks.iter().find_map(|block| match block {
         Block::Element(el) => {
-            let Sigil::Named(name) = &el.sigil else {
-                return None;
-            };
+            let name = el.sigil.name()?;
             (name.namespace.is_none() && name.name == "meta").then_some(el)
         }
         _ => None,
@@ -51,9 +49,7 @@ pub fn meta_element(src: &str, key: &str) -> Option<(ElementIdentity, ElementArg
 
 /// A named element's identity and string args; `None` for an anonymous one.
 pub(crate) fn element_identity_and_args(el: &Element) -> Option<(ElementIdentity, ElementArgs)> {
-    let Sigil::Named(name) = &el.sigil else {
-        return None;
-    };
+    let name = el.sigil.name()?;
     Some((
         ElementIdentity {
             namespace: name.namespace.clone(),
@@ -84,7 +80,7 @@ pub fn is_metadata_render_item(item: &RenderItem) -> bool {
 
 /// Helper for AST elements before full RenderItem conversion.
 pub(crate) fn is_metadata_element_ast(el: &Element) -> bool {
-    let Sigil::Named(name) = &el.sigil else {
+    let Some(name) = el.sigil.name() else {
         return false;
     };
     let is_ns = matches!(name.namespace.as_deref(), None | Some("std") | Some("doc"));
@@ -98,6 +94,7 @@ pub(crate) fn format_meta_value(value: &Value) -> String {
         Value::Bool(b) => b.to_string(),
         Value::Int(i) => i.to_string(),
         Value::Float(f) => f.to_string(),
+        Value::Number(s) => s.clone(),
         Value::String(s) => s.clone(),
         Value::Call(name, args) => {
             if args.is_empty() {
@@ -160,7 +157,7 @@ pub fn extract_note_kind(src: &str) -> Option<String> {
     let doc: Document = tomet::parser::parse_document(src).ok()?;
     for block in &doc.blocks {
         if let Block::Element(el) = block {
-            let Sigil::Named(name) = &el.sigil else {
+            let Some(name) = el.sigil.name() else {
                 continue;
             };
             if name.name == "kind"
@@ -188,7 +185,7 @@ pub fn extract_note_kind(src: &str) -> Option<String> {
                     let mut s = String::new();
                     for inline in content {
                         let span = inline.span();
-                        s.push_str(&src[span.start.offset..span.end.offset]);
+                        s.push_str(&src[span.start..span.end]);
                     }
                     if !s.trim().is_empty() {
                         return Some(s.trim().to_string());
@@ -210,7 +207,7 @@ pub fn extract_note_metadata(src: &str) -> Vec<(String, String)> {
     let mut entries = Vec::new();
     for block in &doc.blocks {
         if let Block::Element(el) = block {
-            let Sigil::Named(name) = &el.sigil else {
+            let Some(name) = el.sigil.name() else {
                 continue;
             };
             if !matches!(name.namespace.as_deref(), None | Some("std") | Some("doc")) {

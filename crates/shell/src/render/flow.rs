@@ -193,7 +193,7 @@ fn to_flow_paragraph(body: &str, items: Vec<RenderItem>) -> FlowParagraph {
     for item in items {
         match item {
             RenderItem::Text(span, style) => content.push(Inline::Text {
-                content: body[span.start.offset..span.end.offset].to_string(),
+                content: body[span.start..span.end].to_string(),
                 style: to_richtext_style(style).to_style_id(),
             }),
             item @ RenderItem::Element(_) => {

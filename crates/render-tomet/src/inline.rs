@@ -206,6 +206,7 @@ pub(crate) fn summarize_value(value: &Value) -> String {
         Value::Bool(b) => b.to_string(),
         Value::Int(i) => i.to_string(),
         Value::Float(f) => f.to_string(),
+        Value::Number(s) => s.clone(),
         Value::String(s) => s.clone(),
         Value::Seq(items) => format!("[{} item(s)]", items.len()),
         Value::Map(entries) => entries

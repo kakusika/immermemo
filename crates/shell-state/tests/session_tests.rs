@@ -85,6 +85,6 @@ fn test_shell_session_icon_picker_flow() {
     assert_eq!(updated, Some(note_path.clone()));
 
     let new_content = std::fs::read_to_string(&note_path).unwrap();
-    assert!(new_content.contains("@meta{icon: @doc.icon(star, pkg: tabler)}"));
+    assert!(new_content.contains("::meta{icon: @doc.icon(star, pkg: tabler)}"));
     assert!(session.directory_view.is_dirty);
 }

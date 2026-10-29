@@ -1,6 +1,6 @@
 //! Fundamental types and data structures for document element classification.
 
-use tomet::ast::{Position, Span};
+use tomet::ast::Span;
 
 /// An element's identity: the `(namespace, name)` pair from its
 /// [`tomet::ast::Sigil::Named`] name. `namespace` is `None` for one of
@@ -102,18 +102,5 @@ pub struct ParseFailed;
 
 /// A [`Span`] covering all of `src`, for [`crate::block::classify`]'s parse-failure fallback.
 pub(crate) fn whole_source_span(src: &str) -> Span {
-    let mut line = 1;
-    let mut column = 1;
-    for ch in src.chars() {
-        if ch == '\n' {
-            line += 1;
-            column = 1;
-        } else {
-            column += 1;
-        }
-    }
-    Span::new(
-        Position::new(1, 1, 0),
-        Position::new(line, column, src.len()),
-    )
+    Span::new(0, src.len())
 }

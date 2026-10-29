@@ -449,7 +449,7 @@ fn handle_task_toggled(app: &App, session: &SessionRef, item_idx: usize) {
         return;
     };
 
-    if let Some(new_body) = toggle_task_in_text(body.as_str(), span.start.offset) {
+    if let Some(new_body) = toggle_task_in_text(body.as_str(), span.start) {
         app.set_body(new_body.clone().into());
         handle_edit(app, session, &new_body);
     }

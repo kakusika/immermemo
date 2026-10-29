@@ -88,11 +88,7 @@ fn set_up_session_with_one_conflicted_note(
     let vault_dir = tmp.path().join("vault");
     std::fs::create_dir_all(&vault_dir).unwrap();
     let note_path = vault_dir.join("test.tmt");
-    let base_doc = tomet::parser::parse_document("Original.\n").unwrap();
-    let local_doc = tomet::parser::parse_document("Mine.\n").unwrap();
-    let remote_doc = tomet::parser::parse_document("Theirs.\n").unwrap();
-    let merged_doc = tomet::merge::merge(&base_doc, &local_doc, &remote_doc).document;
-    let conflicted_text = tomet::printer::document_to_tm(&merged_doc);
+    let conflicted_text = tomet::merge::merge("Original.\n", "Mine.\n", "Theirs.\n").text;
     std::fs::write(&note_path, &conflicted_text).unwrap();
 
     let app_data = AppData::new(tmp.path().join("data"));
@@ -478,15 +474,12 @@ fn conflict_sheet_steps_through_and_resolves_every_conflict(
     vault_dir: &Path,
 ) -> PathBuf {
     let multi_note_path = vault_dir.join("multi_conflict.tmt");
-    let base_doc =
-        tomet::parser::parse_document("Alpha base.\n\nMiddle untouched.\n\nBeta base.\n").unwrap();
-    let local_doc =
-        tomet::parser::parse_document("Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n").unwrap();
-    let remote_doc =
-        tomet::parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n")
-            .unwrap();
-    let merged_doc = tomet::merge::merge(&base_doc, &local_doc, &remote_doc).document;
-    let conflicted_text = tomet::printer::document_to_tm(&merged_doc);
+    let conflicted_text = tomet::merge::merge(
+        "Alpha base.\n\nMiddle untouched.\n\nBeta base.\n",
+        "Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n",
+        "Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n",
+    )
+    .text;
     std::fs::write(&multi_note_path, &conflicted_text).unwrap();
 
     let new_idx = session.borrow().notes.len();
@@ -508,21 +501,21 @@ fn conflict_sheet_steps_through_and_resolves_every_conflict(
     assert!(app.get_note_sheet_open());
     assert!(app.get_conflict_sheet_open());
     assert_eq!(app.get_active_conflict_total(), 2);
-    assert_eq!(app.get_active_conflict_a(), "min");
+    assert_eq!(app.get_active_conflict_a(), "mine");
     assert_eq!(app.get_active_conflict_b(), "theirs");
 
     // Initial state sync
     sync_conflict_sheet_state(app, session);
     assert_eq!(app.get_active_conflict_total(), 2);
     assert_eq!(app.get_active_conflict_index(), 0);
-    assert_eq!(app.get_active_conflict_a(), "min");
+    assert_eq!(app.get_active_conflict_a(), "mine");
     assert_eq!(app.get_active_conflict_b(), "theirs");
 
     // Navigate to next conflict
     app.set_active_conflict_index(1);
     sync_conflict_sheet_state(app, session);
     assert_eq!(app.get_active_conflict_index(), 1);
-    assert_eq!(app.get_active_conflict_a(), "min");
+    assert_eq!(app.get_active_conflict_a(), "mine");
     assert_eq!(app.get_active_conflict_b(), "theirs");
 
     // Resolve conflict at index 1 with Keep Both (choice 2)
@@ -540,9 +533,9 @@ fn conflict_sheet_steps_through_and_resolves_every_conflict(
 
     let disk_text = std::fs::read_to_string(&multi_note_path).unwrap();
     assert!(!disk_text.contains(tomet::merge::CONFLICT_MARKER));
-    assert!(disk_text.contains("Alpha min."));
+    assert!(disk_text.contains("Alpha mine."));
     assert!(disk_text.contains("Middle untouched."));
-    assert!(disk_text.contains("Beta mintheirs."));
+    assert!(disk_text.contains("Beta mine theirs."));
 
     multi_note_path
 }
@@ -558,15 +551,12 @@ fn editor_quick_resolve_buttons_walk_conflicts_one_at_a_time(
     vault_dir: &Path,
 ) {
     let note_path = vault_dir.join("editor_quick_resolve.tmt");
-    let base_doc =
-        tomet::parser::parse_document("Alpha base.\n\nMiddle untouched.\n\nBeta base.\n").unwrap();
-    let local_doc =
-        tomet::parser::parse_document("Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n").unwrap();
-    let remote_doc =
-        tomet::parser::parse_document("Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n")
-            .unwrap();
-    let merged_doc = tomet::merge::merge(&base_doc, &local_doc, &remote_doc).document;
-    let conflicted_text = tomet::printer::document_to_tm(&merged_doc);
+    let conflicted_text = tomet::merge::merge(
+        "Alpha base.\n\nMiddle untouched.\n\nBeta base.\n",
+        "Alpha mine.\n\nMiddle untouched.\n\nBeta mine.\n",
+        "Alpha theirs.\n\nMiddle untouched.\n\nBeta theirs.\n",
+    )
+    .text;
     std::fs::write(&note_path, &conflicted_text).unwrap();
 
     let new_idx = session.borrow().notes.len();
@@ -587,7 +577,7 @@ fn editor_quick_resolve_buttons_walk_conflicts_one_at_a_time(
     assert!(app.get_current_has_conflict());
     let disk_text = std::fs::read_to_string(&note_path).unwrap();
     assert!(disk_text.contains(tomet::merge::CONFLICT_MARKER));
-    assert!(disk_text.contains("Alpha min."));
+    assert!(disk_text.contains("Alpha mine."));
 
     // `resolve_conflict_step` re-clamps `active-conflict-index` to the
     // first remaining conflict, so pressing the same button again walks
@@ -596,8 +586,8 @@ fn editor_quick_resolve_buttons_walk_conflicts_one_at_a_time(
     assert!(!app.get_current_has_conflict());
     let disk_text = std::fs::read_to_string(&note_path).unwrap();
     assert!(!disk_text.contains(tomet::merge::CONFLICT_MARKER));
-    assert!(disk_text.contains("Alpha min."));
-    assert!(disk_text.contains("Beta min."));
+    assert!(disk_text.contains("Alpha mine."));
+    assert!(disk_text.contains("Beta mine."));
 }
 
 fn sync_error_is_tracked_copied_and_dismissed(app: &App, session: &SessionRef) {
