@@ -34,26 +34,26 @@ mod tests {
         let result = set_note_icon("Just a note.\n", "star", "tabler").unwrap();
         assert_eq!(
             result,
-            "::meta{icon: @doc.icon(star, pkg: tabler)}\n\nJust a note.\n"
+            "::meta(icon: @doc.icon(star, pkg: tabler))\n\nJust a note.\n"
         );
     }
 
     #[test]
     fn adds_icon_to_an_existing_meta_block_that_has_other_keys() {
-        let result = set_note_icon("@meta{ x: 1 }\n\nBody.\n", "star", "tabler").unwrap();
+        let result = set_note_icon("::meta(x: 1)\n\nBody.\n", "star", "tabler").unwrap();
         assert_eq!(
             result,
-            "@meta{ x: 1, icon: @doc.icon(star, pkg: tabler) }\n\nBody.\n"
+            "::meta(x: 1, icon: @doc.icon(star, pkg: tabler))\n\nBody.\n"
         );
     }
 
     #[test]
     fn replaces_an_existing_icon_rather_than_duplicating_it() {
-        let src = "@meta{ icon: @doc.icon(\"flag\") }\n\nBody.\n";
+        let src = "::meta(icon: @doc.icon(\"flag\"))\n\nBody.\n";
         let result = set_note_icon(src, "star", "tabler").unwrap();
         assert_eq!(
             result,
-            "@meta{ icon: @doc.icon(star, pkg: tabler) }\n\nBody.\n"
+            "::meta(icon: @doc.icon(star, pkg: tabler))\n\nBody.\n"
         );
     }
 
@@ -78,10 +78,10 @@ mod tests {
 
     #[test]
     fn preserves_existing_comments_and_blank_lines_outside_meta() {
-        let src = "// Leading comment\n@meta{ x: 1 }\n\n\nBody paragraph with *markup*.\n\n// Trailing comment\n";
+        let src = "// Leading comment\n::meta(x: 1)\n\n\nBody paragraph with *markup*.\n\n// Trailing comment\n";
         let result = set_note_icon(src, "star", "tabler").unwrap();
         assert!(result.starts_with(
-            "// Leading comment\n@meta{ x: 1, icon: @doc.icon(star, pkg: tabler) }\n\n\n"
+            "// Leading comment\n::meta(x: 1, icon: @doc.icon(star, pkg: tabler))\n\n\n"
         ));
         assert!(result.contains("Body paragraph with *markup*.\n\n// Trailing comment\n"));
     }

@@ -6,11 +6,9 @@ edition.workspace = true
 [dependencies]
 immermemo-render-tomet = { workspace = true }
 immermemo-vault        = { workspace = true }
-
-#= Tomet
+# --- Tomet ---
 tomet = { workspace = true, features = ["merge"] }
-
-#= Crates.io
+# --- Crates.io ---
 anyhow   = { workspace = true }
 rusqlite = { workspace = true }
 

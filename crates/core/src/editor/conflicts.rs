@@ -39,7 +39,10 @@ pub fn resolve_active_conflict(
         ConflictResolution::B => "remote",
         _ => "custom",
     };
-    let resolved_text = tomet::merge::resolve_all(&current_text, resolution);
+    let resolved_text = match tomet::merge::resolve_all(&current_text, resolution) {
+        Ok(t) => t,
+        Err(e) => return Some(Err(format!("Conflict resolution failed: {e}"))),
+    };
 
     if let Err(e) = std::fs::write(&path, &resolved_text) {
         return Some(Err(format!("Save failed: {e}")));
@@ -93,7 +96,10 @@ pub fn resolve_conflict_step(
         _ => "kept both",
     };
 
-    let resolved_text = tomet::merge::resolve_single(&current_text, target_idx, resolution);
+    let resolved_text = match tomet::merge::resolve_single(&current_text, target_idx, resolution) {
+        Ok(t) => t,
+        Err(e) => return Some(Err(format!("Conflict resolution failed: {e}"))),
+    };
 
     if let Err(e) = std::fs::write(&path, &resolved_text) {
         return Some(Err(format!("Save failed: {e}")));
@@ -164,7 +170,9 @@ pub fn conflict_sheet_state(
     let Ok(current_text) = std::fs::read_to_string(&path) else {
         return ConflictSheetState::NoActiveNote;
     };
-    let items = tomet::merge::find_conflicts(&current_text);
+    let Ok(items) = tomet::merge::find_conflicts(&current_text) else {
+        return ConflictSheetState::NoActiveNote;
+    };
     if items.is_empty() {
         return ConflictSheetState::NoConflicts;
     }
@@ -369,21 +377,21 @@ mod tests {
     #[test]
     fn resolve_single_preserves_comments_and_surrounding_layout() {
         let src = "// Top comment\n\n\nFirst paragraph.\n\n@conflict(\n  a: [ Mine. ]\n  b: [ Theirs. ]\n)\n\n\n// Bottom comment\n";
-        let resolved_text = tomet::merge::resolve_single(src, 0, ConflictResolution::A);
+        let resolved_text = tomet::merge::resolve_single(src, 0, ConflictResolution::A).unwrap();
 
         assert!(resolved_text.starts_with("// Top comment\n\n\nFirst paragraph.\n\n"));
         assert!(resolved_text.contains("Mine."));
         assert!(!resolved_text.contains("Theirs."));
         assert!(resolved_text.ends_with("\n\n\n// Bottom comment\n"));
 
-        let remaining = tomet::merge::find_conflicts(&resolved_text);
+        let remaining = tomet::merge::find_conflicts(&resolved_text).unwrap();
         assert!(remaining.is_empty());
     }
 
     #[test]
     fn resolve_all_preserves_comments_and_surrounding_layout() {
         let src = "// Top comment\n\n\nParagraph 1.\n\n@conflict(\n  a: [ A1. ]\n  b: [ B1. ]\n)\n\nMiddle text.\n\n@conflict(\n  a: [ A2. ]\n  b: [ B2. ]\n)\n\n\n// Bottom comment\n";
-        let resolved_text = tomet::merge::resolve_all(src, ConflictResolution::B);
+        let resolved_text = tomet::merge::resolve_all(src, ConflictResolution::B).unwrap();
 
         assert!(resolved_text.starts_with("// Top comment\n\n\nParagraph 1.\n\n"));
         assert!(resolved_text.contains("B1."));
@@ -392,7 +400,7 @@ mod tests {
         assert!(!resolved_text.contains("A2."));
         assert!(resolved_text.ends_with("\n\n\n// Bottom comment\n"));
 
-        let remaining = tomet::merge::find_conflicts(&resolved_text);
+        let remaining = tomet::merge::find_conflicts(&resolved_text).unwrap();
         assert!(remaining.is_empty());
     }
 }

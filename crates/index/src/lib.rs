@@ -537,7 +537,7 @@ mod tests {
         let note = vault.path().join("starred.tmt");
         std::fs::write(
             &note,
-            "@meta{ icon: @doc.icon(\"star\") }\n\nStarred note.\n",
+            "::meta(icon: @doc.icon(\"star\"))\n\nStarred note.\n",
         )
         .unwrap();
         index.reconcile_filesystem(vault.path()).unwrap();
@@ -565,12 +565,12 @@ mod tests {
         let mut index = NoteIndex::open_in_memory().unwrap();
         std::fs::write(
             vault.path().join("cake.tmt"),
-            "@meta{ icon: \"🎂\" }\n\nCake.\n",
+            "::meta(icon: \"🎂\")\n\nCake.\n",
         )
         .unwrap();
         std::fs::write(
             vault.path().join("cover.tmt"),
-            "@meta{ icon: @embed(\"images/cover.png\") }\n\nCover.\n",
+            "::meta(icon: @embed(\"images/cover.png\"))\n\nCover.\n",
         )
         .unwrap();
         index.reconcile_filesystem(vault.path()).unwrap();
@@ -592,12 +592,12 @@ mod tests {
         let rel = Path::new("n.tmt");
         std::fs::write(
             vault.path().join(rel),
-            "@meta{ icon: @doc.icon(\"star\") }\n\nx\n",
+            "::meta(icon: @doc.icon(\"star\"))\n\nx\n",
         )
         .unwrap();
         index.reconcile_filesystem(vault.path()).unwrap();
 
-        let rewritten = "@meta{ icon: \"🎂\" }\n\nx\n";
+        let rewritten = "::meta(icon: \"🎂\")\n\nx\n";
         std::fs::write(vault.path().join(rel), rewritten).unwrap();
         index.record_write(vault.path(), rel, rewritten).unwrap();
 
@@ -624,7 +624,7 @@ mod tests {
         std::fs::create_dir_all(&vault).unwrap();
         std::fs::write(
             vault.join("a.tmt"),
-            "@meta{ icon: @doc.icon(\"star\") }\n\nx\n",
+            "::meta(icon: @doc.icon(\"star\"))\n\nx\n",
         )
         .unwrap();
         let db = dir.path().join("index.db");

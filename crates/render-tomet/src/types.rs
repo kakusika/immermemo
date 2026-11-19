@@ -1,6 +1,6 @@
 //! Fundamental types and data structures for document element classification.
 
-use tomet::ast::Span;
+use tomet_span::Span;
 
 /// An element's identity: the `(namespace, name)` pair from its
 /// [`tomet::ast::Sigil::Named`] name. `namespace` is `None` for one of

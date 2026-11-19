@@ -4,7 +4,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-tomet = { workspace = true, features = ["parser"] }
-
-#= Crates.io
+tomet        = { workspace = true, features = ["parser"] }
+tomet-scalar = { workspace = true }
+tomet-span   = { workspace = true }
+# --- Crates.io ---
 unicode-segmentation = { workspace = true }

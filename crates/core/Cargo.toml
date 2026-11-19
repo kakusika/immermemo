@@ -10,7 +10,7 @@ immermemo-index       = { workspace = true }
 immermemo-provider    = { workspace = true }
 immermemo-sync        = { workspace = true }
 immermemo-vault       = { workspace = true }
-#= Tomet
+# --- Tomet ---
 tomet = { workspace = true, features = [
   "edit",
   "merge",
@@ -18,8 +18,7 @@ tomet = { workspace = true, features = [
   "printer",
   "stats",
 ] }
-
-#= Crates.io
+# --- Crates.io ---
 anyhow      = { workspace = true }
 directories = { workspace = true }
 git2        = { workspace = true }

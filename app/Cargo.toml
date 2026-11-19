@@ -17,8 +17,7 @@ immermemo-core        = { workspace = true }
 immermemo-platform    = { workspace = true }
 immermemo-shell       = { workspace = true }
 immermemo-shell-state = { workspace = true }
-
-#= Crates.io
+# --- Crates.io ---
 anyhow      = { workspace = true }
 directories = { workspace = true }
 

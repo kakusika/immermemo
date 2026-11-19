@@ -188,7 +188,7 @@ fn a_note_s_meta_icon_reaches_its_directory_entry(
     let iconed = vault_dir.join("starred.tmt");
     std::fs::write(
         &iconed,
-        "@meta{ icon: @doc.icon(\"star\") }\n\nStarred note.\n",
+        "::meta(icon: @doc.icon(\"star\"))\n\nStarred note.\n",
     )
     .unwrap();
     session.borrow_mut().search_query = String::new();
@@ -209,7 +209,7 @@ fn a_note_s_meta_icon_reaches_its_directory_entry(
     assert_eq!(unstarred.icon.kind, NoteIconKind::Empty);
 
     let cake = vault_dir.join("cake.tmt");
-    std::fs::write(&cake, "@meta{ icon: \"🐾🩵🔥\" }\n\nCake.\n").unwrap();
+    std::fs::write(&cake, "::meta(icon: \"🐾🩵🔥\")\n\nCake.\n").unwrap();
     refresh_list(app, session);
     let entries = app.get_directory_folder_entries();
     let cake = (0..entries.row_count())
@@ -240,12 +240,12 @@ fn a_note_s_image_icon_appears_once_its_thumbnail_is_ready(
     .unwrap();
     std::fs::write(
         vault_dir.join("covered.tmt"),
-        "@meta{ icon: \"images/cover.png\" }\n\nHas a cover.\n",
+        "::meta(icon: \"images/cover.png\")\n\nHas a cover.\n",
     )
     .unwrap();
     std::fs::write(
         vault_dir.join("lost.tmt"),
-        "@meta{ icon: \"images/missing.png\" }\n\nCover is gone.\n",
+        "::meta(icon: \"images/missing.png\")\n\nCover is gone.\n",
     )
     .unwrap();
     session.borrow_mut().search_query = String::new();
@@ -284,7 +284,7 @@ fn a_note_s_image_icon_appears_once_its_thumbnail_is_ready(
     update_current_header(
         app,
         session,
-        "@meta{ icon: \"images/cover.png\" }\n\nHas a cover.\n",
+        "::meta(icon: \"images/cover.png\")\n\nHas a cover.\n",
     );
     assert_eq!(app.get_current_icon().kind, NoteIconKind::Picture);
     assert_eq!(app.get_current_icon().picture.size().width, 256);
@@ -310,7 +310,7 @@ fn a_note_s_banner_and_body_image_appear_once_loaded(
         crate::thumbs::tests::png(600, 300),
     )
     .unwrap();
-    let text = "@meta{ banner: \"images/hero.png\", banner-y: 25 }\n\n\
+    let text = "::meta(banner: \"images/hero.png\", banner-y: 25)\n\n\
                 Intro.\n\n\
                 @embed[A cat](path: \"images/cat.png\")\n\n\
                 Outro, with @embed[inline](path: \"images/cat.png\") in a line.\n";

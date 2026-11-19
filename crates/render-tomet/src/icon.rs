@@ -9,6 +9,7 @@
 //!   (resolving it to bytes is not this crate's job).
 
 use tomet::ast::Value;
+use tomet_scalar::Scalar;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::meta::{element_identity_and_args, meta_value};
@@ -32,7 +33,7 @@ pub enum NoteIcon {
 /// Reads `src`'s `@meta{ icon: ... }`, if it holds a recognizable icon.
 pub fn extract_note_icon(src: &str) -> Option<NoteIcon> {
     match meta_value(src, "icon")? {
-        Value::String(s) => icon_from_string(&s),
+        Value::Scalar(Scalar::Text(s)) => icon_from_string(&s),
         Value::Element(el) => {
             let (identity, args) = element_identity_and_args(&el)?;
             match (identity.namespace.as_deref(), identity.name.as_str()) {
@@ -138,7 +139,7 @@ mod tests {
     use super::*;
 
     fn icon_of(meta_entry: &str) -> Option<NoteIcon> {
-        extract_note_icon(&format!("@meta{{ {meta_entry} }}\n\nBody.\n"))
+        extract_note_icon(&format!("::meta({meta_entry})\n\nBody.\n"))
     }
 
     fn glyph(name: &str, pkg: &str) -> Option<NoteIcon> {

@@ -1,33 +1,48 @@
 //! Note metadata and directives extraction (`@meta`, `@kind`, `@config`, `@use`).
 
-use tomet::ast::{Block, Document, Element, ElementValue, Entry, Inline, Value};
+use tomet::ast::{Block, Element, ElementView, File, Inline, Tuple, Value};
+use tomet_scalar::Scalar;
 
 use crate::inline::inline_content;
 use crate::types::{ElementArgs, ElementIdentity, RenderItem};
 
-/// Every `key: value` entry of `src`'s top-level `@meta{ ... }` group, in
-/// source order. Empty if there is no such group.
+/// Every `key: value` entry of `src`'s top-level `::meta(...)` or `@meta{ ... }`
+/// group, in source order. Empty if there is no such group.
 pub(crate) fn meta_pairs(src: &str) -> Vec<(String, Value)> {
-    let Ok(doc) = tomet::parser::parse_document(src) else {
+    let Ok(doc) = tomet::parse_file(src) else {
         return Vec::new();
     };
-    let meta = doc.blocks.iter().find_map(|block| match block {
-        Block::Element(el) => {
-            let name = el.sigil.name()?;
-            (name.namespace.is_none() && name.name == "meta").then_some(el)
+    if let Some(decl) = doc
+        .header
+        .iter()
+        .find(|d| d.name.namespace.is_none() && d.name.name == "meta")
+    {
+        if let Some(args) = &decl.data.args {
+            return args
+                .entries()
+                .filter_map(|e| e.name().map(|k| (k.to_owned(), e.value().clone())))
+                .collect();
         }
+        if let Some(group) = &decl.data.value {
+            return group.pairs().map(|(k, v)| (k.clone(), v.clone())).collect();
+        }
+    }
+    let meta = doc.body.iter().find_map(|block| match block {
+        Block::Element(el) => (el.name.namespace.is_none() && el.name.name == "meta").then_some(el),
         _ => None,
     });
-    let Some(ElementValue::Group(entries)) = meta.and_then(|el| el.value.as_ref()) else {
-        return Vec::new();
-    };
-    entries
-        .iter()
-        .filter_map(|entry| match entry {
-            Entry::Pair(key, value) => Some((key.clone(), value.clone())),
-            _ => None,
-        })
-        .collect()
+    if let Some(el) = meta {
+        if let Some(group) = &el.data.value {
+            return group.pairs().map(|(k, v)| (k.clone(), v.clone())).collect();
+        }
+        if let Some(args) = &el.data.args {
+            return args
+                .entries()
+                .filter_map(|e| e.name().map(|k| (k.to_owned(), e.value().clone())))
+                .collect();
+        }
+    }
+    Vec::new()
 }
 
 /// `src`'s top-level `@meta{ ... }` group's `key` entry value, whatever its
@@ -47,15 +62,14 @@ pub fn meta_element(src: &str, key: &str) -> Option<(ElementIdentity, ElementArg
     element_identity_and_args(&el)
 }
 
-/// A named element's identity and string args; `None` for an anonymous one.
+/// A named element's identity and string args.
 pub(crate) fn element_identity_and_args(el: &Element) -> Option<(ElementIdentity, ElementArgs)> {
-    let name = el.sigil.name()?;
     Some((
         ElementIdentity {
-            namespace: name.namespace.clone(),
-            name: name.name.clone(),
+            namespace: el.name.namespace.clone(),
+            name: el.name.name.clone(),
         },
-        crate::inline::element_args(el.args.as_ref()),
+        crate::inline::element_args(el.data.args.as_ref()),
     ))
 }
 
@@ -79,52 +93,50 @@ pub fn is_metadata_render_item(item: &RenderItem) -> bool {
 }
 
 /// Helper for AST elements before full RenderItem conversion.
-pub(crate) fn is_metadata_element_ast(el: &Element) -> bool {
-    let Some(name) = el.sigil.name() else {
-        return false;
-    };
-    let is_ns = matches!(name.namespace.as_deref(), None | Some("std") | Some("doc"));
-    is_ns && matches!(name.name.as_str(), "meta" | "kind" | "config" | "use")
+pub(crate) fn is_metadata_element_ast(el: ElementView<'_>) -> bool {
+    let is_ns = matches!(
+        el.name.namespace.as_deref(),
+        None | Some("std") | Some("doc")
+    );
+    is_ns && matches!(el.name.name.as_str(), "meta" | "kind" | "config" | "use")
+}
+
+fn format_tuple(tuple: &Tuple) -> String {
+    tuple
+        .entries()
+        .map(|entry| match entry.name() {
+            Some(k) => format!("{k}: {}", format_meta_value(entry.value())),
+            None => format_meta_value(entry.value()),
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Formats an AST [`Value`] into a human-readable display string for metadata view.
 pub(crate) fn format_meta_value(value: &Value) -> String {
     match value {
-        Value::Null => "null".to_string(),
-        Value::Bool(b) => b.to_string(),
-        Value::Int(i) => i.to_string(),
-        Value::Float(f) => f.to_string(),
-        Value::Number(s) => s.clone(),
-        Value::String(s) => s.clone(),
+        Value::Scalar(Scalar::None) => "none".to_string(),
+        Value::Scalar(Scalar::Auto) => "auto".to_string(),
+        Value::Scalar(Scalar::Bool(b)) => b.to_string(),
+        Value::Scalar(Scalar::Int(i)) => i.to_string(),
+        Value::Scalar(Scalar::Float(f)) => f.to_string(),
+        Value::Scalar(Scalar::Number(s) | Scalar::Text(s)) => s.clone(),
         Value::Call(name, args) => {
             if args.is_empty() {
                 name.clone()
             } else {
-                let formatted_args: Vec<_> = args.iter().map(format_meta_value).collect();
-                format!("{name}({})", formatted_args.join(", "))
+                format!("{name}({})", format_tuple(args))
             }
         }
-        Value::Seq(items) => {
-            let formatted: Vec<_> = items.iter().map(format_meta_value).collect();
-            formatted.join(", ")
-        }
-        Value::Map(entries) => {
-            let formatted: Vec<_> = entries
-                .iter()
-                .map(|(k, v)| format!("{k}: {}", format_meta_value(v)))
-                .collect();
-            formatted.join(", ")
-        }
+        Value::Tuple(tuple) => format_tuple(tuple),
+        Value::Interp(_) => "interp".to_string(),
+        Value::Hole(_) => "hole".to_string(),
+        Value::TypeSeat(_) => "type".to_string(),
         Value::Element(el) => {
-            let name = el
-                .sigil
-                .name()
-                .map(|n| n.to_string())
-                .unwrap_or_else(|| "element".to_string());
-            if let Some(args) = &el.args {
-                format!("@{name}({})", format_meta_value(args))
+            if let Some(args) = &el.data.args {
+                format!("@{}({})", el.name, format_tuple(args))
             } else {
-                format!("@{name}")
+                format!("@{}", el.name)
             }
         }
         Value::Blocks(blocks) => {
@@ -151,37 +163,63 @@ pub(crate) fn format_meta_value(value: &Value) -> String {
     }
 }
 
-/// Extracts the note's kind from `@kind(...)`, `@doc.kind(...)`, or `@std.kind(...)`
+fn kind_from_args(args: &Tuple) -> Option<String> {
+    if args.len() == 1 {
+        if let Some(entry) = args.entries().next() {
+            if entry.name().is_none() {
+                match entry.value() {
+                    Value::Scalar(Scalar::Text(s)) => return Some(s.clone()),
+                    Value::Call(ident, _) => return Some(ident.clone()),
+                    _ => {}
+                }
+            }
+        }
+    }
+    for entry in args.entries() {
+        let k = entry.name().unwrap_or("");
+        if k.is_empty() || k == "type" || k == "name" || k == "kind" {
+            match entry.value() {
+                Value::Scalar(Scalar::Text(s)) => return Some(s.clone()),
+                Value::Call(ident, _) => return Some(ident.clone()),
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
+/// Extracts the note's kind from `::kind(...)`, `@kind(...)`, `@doc.kind(...)`, or `@std.kind(...)`
 /// if present at document level.
 pub fn extract_note_kind(src: &str) -> Option<String> {
-    let doc: Document = tomet::parser::parse_document(src).ok()?;
-    for block in &doc.blocks {
+    let doc: File = tomet::parse_file(src).ok()?;
+    for decl in &doc.header {
+        if decl.name.name == "kind"
+            && matches!(
+                decl.name.namespace.as_deref(),
+                None | Some("std") | Some("doc")
+            )
+        {
+            if let Some(args) = &decl.data.args {
+                if let Some(k) = kind_from_args(args) {
+                    return Some(k);
+                }
+            }
+        }
+    }
+    for block in &doc.body {
         if let Block::Element(el) = block {
-            let Some(name) = el.sigil.name() else {
-                continue;
-            };
-            if name.name == "kind"
-                && matches!(name.namespace.as_deref(), None | Some("std") | Some("doc"))
+            if el.name.name == "kind"
+                && matches!(
+                    el.name.namespace.as_deref(),
+                    None | Some("std") | Some("doc")
+                )
             {
-                if let Some(args) = &el.args {
-                    match args {
-                        Value::String(s) => return Some(s.clone()),
-                        Value::Call(ident, _) => return Some(ident.clone()),
-                        Value::Map(entries) => {
-                            for (k, v) in entries {
-                                if k.is_empty() || k == "type" || k == "name" || k == "kind" {
-                                    match v {
-                                        Value::String(s) => return Some(s.clone()),
-                                        Value::Call(ident, _) => return Some(ident.clone()),
-                                        _ => {}
-                                    }
-                                }
-                            }
-                        }
-                        _ => {}
+                if let Some(args) = &el.data.args {
+                    if let Some(k) = kind_from_args(args) {
+                        return Some(k);
                     }
                 }
-                if let Some(content) = inline_content(el) {
+                if let Some(content) = inline_content(el.as_view()) {
                     let mut s = String::new();
                     for inline in content {
                         let span = inline.span();
@@ -197,50 +235,77 @@ pub fn extract_note_kind(src: &str) -> Option<String> {
     None
 }
 
-/// Extracts metadata key-value pairs from top-level `@meta{ ... }` and `@config(...)`
-/// blocks in `src`. Returns `(key, formatted_value)` pairs.
+/// Extracts metadata key-value pairs from top-level `::meta(...)` / `@meta{ ... }` and
+/// `::config(...)` / `@config(...)` blocks in `src`. Returns `(key, formatted_value)` pairs.
 pub fn extract_note_metadata(src: &str) -> Vec<(String, String)> {
-    let doc: Document = match tomet::parser::parse_document(src) {
+    let doc: File = match tomet::parse_file(src) {
         Ok(doc) => doc,
         Err(_) => return Vec::new(),
     };
     let mut entries = Vec::new();
-    for block in &doc.blocks {
+    for decl in &doc.header {
+        if !matches!(
+            decl.name.namespace.as_deref(),
+            None | Some("std") | Some("doc")
+        ) {
+            continue;
+        }
+        let prefix = match decl.name.name.as_str() {
+            "meta" => None,
+            "config" => Some("config."),
+            _ => continue,
+        };
+        if let Some(args) = &decl.data.args {
+            for entry in args.entries() {
+                if let Some(k) = entry.name() {
+                    let key = match prefix {
+                        Some(p) => format!("{p}{k}"),
+                        None => k.to_owned(),
+                    };
+                    entries.push((key, format_meta_value(entry.value())));
+                }
+            }
+        }
+        if let Some(group) = &decl.data.value {
+            for (k, v) in group.pairs() {
+                let key = match prefix {
+                    Some(p) => format!("{p}{k}"),
+                    None => k.clone(),
+                };
+                entries.push((key, format_meta_value(v)));
+            }
+        }
+    }
+    for block in &doc.body {
         if let Block::Element(el) = block {
-            let Some(name) = el.sigil.name() else {
-                continue;
-            };
-            if !matches!(name.namespace.as_deref(), None | Some("std") | Some("doc")) {
+            if !matches!(
+                el.name.namespace.as_deref(),
+                None | Some("std") | Some("doc")
+            ) {
                 continue;
             }
-            if name.name == "meta" {
-                if let Some(ElementValue::Group(group_entries)) = &el.value {
-                    for entry in group_entries {
-                        if let Entry::Pair(k, v) = entry {
-                            entries.push((k.clone(), format_meta_value(v)));
-                        }
-                    }
+            let prefix = match el.name.name.as_str() {
+                "meta" => None,
+                "config" => Some("config."),
+                _ => continue,
+            };
+            if let Some(group) = &el.data.value {
+                for (k, v) in group.pairs() {
+                    let key = match prefix {
+                        Some(p) => format!("{p}{k}"),
+                        None => k.clone(),
+                    };
+                    entries.push((key, format_meta_value(v)));
                 }
-                if let Some(Value::Map(map_entries)) = &el.args {
-                    for (k, v) in map_entries {
-                        if !k.is_empty() {
-                            entries.push((k.clone(), format_meta_value(v)));
-                        }
-                    }
-                }
-            } else if name.name == "config" {
-                if let Some(Value::Map(map_entries)) = &el.args {
-                    for (k, v) in map_entries {
-                        if !k.is_empty() {
-                            entries.push((format!("config.{}", k), format_meta_value(v)));
-                        }
-                    }
-                }
-                if let Some(ElementValue::Group(group_entries)) = &el.value {
-                    for entry in group_entries {
-                        if let Entry::Pair(k, v) = entry {
-                            entries.push((format!("config.{}", k), format_meta_value(v)));
-                        }
+            }
+            if let Some(args) = &el.data.args {
+                for entry in args.entries() {
+                    if let Some(k) = entry.name() {
+                        let key = match prefix {
+                            Some(p) => format!("{p}{k}"),
+                            None => k.to_owned(),
+                        };
+                        entries.push((key, format_meta_value(entry.value())));
                     }
                 }
             }

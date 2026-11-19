@@ -1,13 +1,15 @@
 //! Inline elements classification, styling wrapper aggregation, and text span splitting.
 
-use tomet::ast::{Block, Element, ElementValue, Entry, Inline, Sigil, Span, Value};
+use tomet::ast::{Block, ElementView, Group, Inline, Tuple, Value};
+use tomet_scalar::Scalar;
+use tomet_span::Span;
 
 use crate::block::{classify_blocks_flat, is_atomic_bare};
 use crate::types::{ElementArgs, ElementIdentity, ElementItem, RenderItem, TextStyle};
 
 /// `el`'s own `[content]` as a flat run of `Inline`s.
-pub(crate) fn inline_content(el: &Element) -> Option<&[Inline]> {
-    match el.content.as_deref()? {
+pub(crate) fn inline_content<'a>(el: ElementView<'a>) -> Option<&'a [Inline]> {
+    match el.content? {
         [Block::Paragraph(p)] => Some(&p.content),
         _ => None,
     }
@@ -36,21 +38,20 @@ pub(crate) fn walk_inline_seq(
 ) {
     for inline in content {
         if let Inline::Element(el) = inline {
-            if let Some(wrapper) = style_wrapper(el) {
-                if let Some(nested) = inline_content(el) {
+            let view = el.as_view();
+            if let Some(wrapper) = style_wrapper(view) {
+                if let Some(nested) = inline_content(view) {
                     walk_inline_seq(nested, style.union(wrapper), items, run);
                 }
                 continue;
             }
-            if is_atomic_bare(el) {
+            if is_atomic_bare(view) {
                 flush_run(items, run);
-                items.push(
-                    element_item(el)
-                        .expect("is_atomic_bare already confirmed el.sigil is Sigil::Named"),
-                );
+                items.push(element_item(view));
                 continue;
             }
-            if let Some(item) = element_item(el).filter(is_namespaced) {
+            let item = element_item(view);
+            if is_namespaced(&item) {
                 flush_run(items, run);
                 items.push(item);
                 continue;
@@ -87,14 +88,11 @@ pub(crate) fn flush_run(items: &mut Vec<RenderItem>, run: &mut Option<(Span, Tex
 
 /// `el`'s [`TextStyle`] flag if it's a bare (non-`@use`'d) `em`/`strong`/
 /// `mark`/`strikeout` wrapper, else `None`.
-pub(crate) fn style_wrapper(el: &Element) -> Option<TextStyle> {
-    let Sigil::Named(name) = &el.sigil else {
-        return None;
-    };
-    if name.namespace.is_some() {
+pub(crate) fn style_wrapper(el: ElementView<'_>) -> Option<TextStyle> {
+    if el.name.namespace.is_some() {
         return None;
     }
-    match name.name.as_str() {
+    match el.name.name.as_str() {
         "em" => Some(TextStyle {
             italic: true,
             ..TextStyle::default()
@@ -116,37 +114,33 @@ pub(crate) fn style_wrapper(el: &Element) -> Option<TextStyle> {
 }
 
 /// `el`'s [`RenderItem::Element`], for any named element.
-pub(crate) fn element_item(el: &Element) -> Option<RenderItem> {
-    let Sigil::Named(name) = &el.sigil else {
-        return None;
-    };
-    Some(RenderItem::Element(Box::new(ElementItem {
+pub(crate) fn element_item(el: ElementView<'_>) -> RenderItem {
+    RenderItem::Element(Box::new(ElementItem {
         identity: ElementIdentity {
-            namespace: name.namespace.clone(),
-            name: name.name.clone(),
+            namespace: el.name.namespace.clone(),
+            name: el.name.name.clone(),
         },
         span: el.span,
         content: el
             .content
-            .as_ref()
             .and_then(|blocks| blocks.iter().map(Block::span).reduce(|a, b| a.union(&b))),
-        args_summary: summarize_args(el.args.as_ref()),
-        data_summary: summarize_data(el.value.as_ref()),
-        args: element_args(el.args.as_ref()),
-        block_args: block_args(el.args.as_ref()),
-    })))
+        args_summary: summarize_args(el.args()),
+        data_summary: summarize_data(el.value()),
+        args: element_args(el.args()),
+        block_args: block_args(el.args()),
+    }))
 }
 
 /// [`ElementItem::block_args`] -- recursively classified.
-pub(crate) fn block_args(args: Option<&Value>) -> Vec<(String, Vec<RenderItem>)> {
-    let Some(Value::Map(entries)) = args else {
+pub(crate) fn block_args(args: Option<&Tuple>) -> Vec<(String, Vec<RenderItem>)> {
+    let Some(tuple) = args else {
         return Vec::new();
     };
-    entries
-        .iter()
-        .filter_map(|(key, value)| match value {
-            Value::Blocks(blocks) if !key.is_empty() => {
-                Some((key.clone(), classify_blocks_flat(blocks)))
+    tuple
+        .entries()
+        .filter_map(|entry| match (entry.name(), entry.value()) {
+            (Some(key), Value::Blocks(blocks)) if !key.is_empty() => {
+                Some((key.to_owned(), classify_blocks_flat(blocks)))
             }
             _ => None,
         })
@@ -154,20 +148,30 @@ pub(crate) fn block_args(args: Option<&Value>) -> Vec<(String, Vec<RenderItem>)>
 }
 
 /// `el`'s [`RenderItem::Element::args`] -- every string-valued entry of `(args)`.
-pub(crate) fn element_args(args: Option<&Value>) -> ElementArgs {
-    match args {
-        Some(Value::String(s)) => ElementArgs::Positional(s.clone()),
-        Some(Value::Map(entries)) => ElementArgs::Named(
-            entries
-                .iter()
-                .filter_map(|(key, value)| match value {
-                    Value::String(s) => Some((key.clone(), s.clone())),
-                    _ => None,
-                })
-                .collect(),
-        ),
-        _ => ElementArgs::None,
+pub(crate) fn element_args(args: Option<&Tuple>) -> ElementArgs {
+    let Some(tuple) = args else {
+        return ElementArgs::None;
+    };
+    if tuple.len() == 1 {
+        if let Some(entry) = tuple.entries().next() {
+            if entry.name().is_none() {
+                if let Value::Scalar(Scalar::Text(s)) = entry.value() {
+                    return ElementArgs::Positional(s.clone());
+                }
+            }
+        }
     }
+    ElementArgs::Named(
+        tuple
+            .entries()
+            .filter_map(|entry| match entry.value() {
+                Value::Scalar(Scalar::Text(s)) => {
+                    Some((entry.name().unwrap_or("").to_owned(), s.clone()))
+                }
+                _ => None,
+            })
+            .collect(),
+    )
 }
 
 /// Whether `item` is a [`RenderItem::Element`] that came in through `@use` (has a namespace).
@@ -177,45 +181,60 @@ pub(crate) fn is_namespaced(item: &RenderItem) -> bool {
 
 /// A short description of an element's `(args)`, for a caller that falls
 /// back to a generic card.
-pub(crate) fn summarize_args(args: Option<&Value>) -> String {
+pub(crate) fn summarize_args(args: Option<&Tuple>) -> String {
     match args {
         None => String::new(),
-        Some(value) => summarize_value(value),
+        Some(tuple) => summarize_tuple(tuple),
     }
 }
 
 /// A short description of an element's `{value}` group: its pair keys, joined.
-pub(crate) fn summarize_data(value: Option<&ElementValue>) -> String {
+pub(crate) fn summarize_data(value: Option<&Group>) -> String {
     match value {
         None => String::new(),
-        Some(ElementValue::Group(entries)) => entries
-            .iter()
-            .filter_map(|entry| match entry {
-                Entry::Pair(key, _) => Some(key.clone()),
-                Entry::Element(_) => None,
-            })
+        Some(group) => group
+            .pairs()
+            .map(|(key, _)| key.clone())
             .collect::<Vec<_>>()
             .join(", "),
-        Some(ElementValue::Interp(_)) => "interp".to_string(),
+    }
+}
+
+pub(crate) fn summarize_tuple(tuple: &Tuple) -> String {
+    if tuple.len() == 1 {
+        if let Some(entry) = tuple.entries().next() {
+            if entry.name().is_none() {
+                return summarize_value(entry.value());
+            }
+        }
+    }
+    tuple
+        .entries()
+        .filter_map(|entry| entry.name().map(str::to_owned))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+pub(crate) fn summarize_scalar(scalar: &Scalar) -> String {
+    match scalar {
+        Scalar::None => "none".to_string(),
+        Scalar::Auto => "auto".to_string(),
+        Scalar::Bool(b) => b.to_string(),
+        Scalar::Int(i) => i.to_string(),
+        Scalar::Float(f) => f.to_string(),
+        Scalar::Number(s) | Scalar::Text(s) => s.clone(),
     }
 }
 
 pub(crate) fn summarize_value(value: &Value) -> String {
     match value {
-        Value::Null => "null".to_string(),
-        Value::Bool(b) => b.to_string(),
-        Value::Int(i) => i.to_string(),
-        Value::Float(f) => f.to_string(),
-        Value::Number(s) => s.clone(),
-        Value::String(s) => s.clone(),
-        Value::Seq(items) => format!("[{} item(s)]", items.len()),
-        Value::Map(entries) => entries
-            .iter()
-            .map(|(key, _)| key.clone())
-            .collect::<Vec<_>>()
-            .join(", "),
+        Value::Scalar(s) => summarize_scalar(s),
+        Value::Tuple(tuple) => summarize_tuple(tuple),
         Value::Call(name, args) => format!("{name}({} arg(s))", args.len()),
-        Value::Element(el) => el.sigil.name().map(|n| n.to_string()).unwrap_or_default(),
+        Value::Interp(_) => "interp".to_string(),
+        Value::Hole(_) => "hole".to_string(),
+        Value::TypeSeat(_) => "type".to_string(),
+        Value::Element(el) => el.name.to_string(),
         Value::Blocks(blocks) => format!("[{} block(s)]", blocks.len()),
     }
 }

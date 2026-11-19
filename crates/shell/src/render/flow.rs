@@ -66,7 +66,7 @@ pub struct NoteBodyItem {
     pub depth: usize,
     pub prefix: String,
     pub heading_level: usize,
-    pub source_span: Option<tomet::ast::Span>,
+    pub source_span: Option<tomet_span::Span>,
     pub content: NoteBodyContent,
 }
 
@@ -134,7 +134,7 @@ pub fn note_body_items(body: &str) -> Vec<NoteBodyItem> {
                     RenderItem::Text(s, _) => s.end,
                     RenderItem::Element(el) => el.span.end,
                 };
-                Some(tomet::ast::Span::new(start, end))
+                Some(tomet_span::Span::new(start, end))
             } else {
                 None
             };
@@ -516,9 +516,9 @@ mod tests {
 
     #[test]
     fn note_body_items_omits_metadata_elements() {
-        let src = "@kind(note)\n\
-                   @config(export: { type: commonmark })\n\
-                   @meta{ id: 123, author: Alice }\n\n\
+        let src = "::kind(note)\n\
+                   ::config(export: (type: commonmark))\n\
+                   ::meta(id: 123, author: Alice)\n\n\
                    Body paragraph.\n";
         let items = note_body_items(src);
         assert_eq!(items.len(), 1);

@@ -8,6 +8,7 @@
 //! bottom, 50 the default).
 
 use tomet::ast::Value;
+use tomet_scalar::Scalar;
 
 use crate::icon::media_target;
 use crate::meta::{element_identity_and_args, meta_pairs};
@@ -33,7 +34,7 @@ pub fn extract_note_banner(src: &str) -> Option<NoteBanner> {
     };
 
     let reference = match value("banner")? {
-        Value::String(reference) => reference.trim().to_owned(),
+        Value::Scalar(Scalar::Text(reference)) => reference.trim().to_owned(),
         Value::Element(el) => {
             let (identity, args) = element_identity_and_args(el)?;
             match (identity.namespace.as_deref(), identity.name.as_str()) {
@@ -50,8 +51,9 @@ pub fn extract_note_banner(src: &str) -> Option<NoteBanner> {
     let focus_y = value("banner-y")
         .or_else(|| value("banner_y"))
         .and_then(|y| match y {
-            Value::Int(n) => Some(*n as f32),
-            Value::Float(n) => Some(*n as f32),
+            Value::Scalar(Scalar::Int(n)) => Some(*n as f32),
+            Value::Scalar(Scalar::Float(n)) => Some(*n as f32),
+            Value::Scalar(Scalar::Number(s)) => s.parse::<f32>().ok(),
             _ => None,
         })
         .map(|y| y.clamp(0.0, 100.0));
@@ -64,7 +66,7 @@ mod tests {
     use super::*;
 
     fn banner_of(meta: &str) -> Option<NoteBanner> {
-        extract_note_banner(&format!("@meta{{ {meta} }}\n\nBody.\n"))
+        extract_note_banner(&format!("::meta({meta})\n\nBody.\n"))
     }
 
     fn banner(reference: &str, focus_y: Option<f32>) -> Option<NoteBanner> {

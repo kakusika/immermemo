@@ -12,17 +12,17 @@ immermemo-platform     = { workspace = true }
 immermemo-provider     = { workspace = true }
 immermemo-render-tomet = { workspace = true }
 immermemo-shell-state  = { workspace = true }
-tomet                  = { workspace = true }
-
-#= Origiri
+# --- Tomet ---
+tomet      = { workspace = true }
+tomet-span = { workspace = true }
+# --- Origiri ---
 origiri-icons         = { workspace = true }
 origiri-mobile        = { workspace = true }
 origiri-richtext      = { workspace = true }
 origiri-richtext-flow = { workspace = true }
 origiri-selection     = { workspace = true }
 origiri-theme         = { workspace = true }
-
-#= Crates.io
+# --- Crates.io ---
 anyhow      = { workspace = true }
 base64      = { workspace = true }
 clru        = { workspace = true }

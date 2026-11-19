@@ -790,7 +790,7 @@ mod tests {
 
     #[test]
     fn a_structural_merge_conflict_is_recognized_through_the_real_pipeline() {
-        let text = tomet::merge::merge("Original.\n", "@meta{ x: 1 }\n", "Theirs.\n").text;
+        let text = tomet::merge::merge("Original.\n", "@card(x: 1)\n", "Theirs.\n").text;
 
         let blocks = classify_body(&text);
         assert_eq!(blocks.len(), 1);

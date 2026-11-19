@@ -14,7 +14,7 @@ pub fn note_stats(body: &str) -> NoteStats {
         body.lines().count() as i32
     };
 
-    let (char_count, word_count) = match tomet::parser::parse_document(body) {
+    let (char_count, word_count) = match tomet::parse_file(body) {
         Ok(doc) => {
             let stats = tomet::stats::measure(&doc);
             (stats.characters as i32, stats.words as i32)

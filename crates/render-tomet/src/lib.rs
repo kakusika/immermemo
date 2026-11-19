@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn meta_element_reads_an_element_valued_key() {
-        let src = "@meta{ icon: @doc.icon(\"star\", pkg: \"tabler\") }\n\nBody.\n";
+        let src = "::meta(icon: @doc.icon(\"star\", pkg: \"tabler\"))\n\nBody.\n";
         let (identity, args) = meta_element(src, "icon").expect("icon is a meta entry");
         assert_eq!(identity.namespace.as_deref(), Some("doc"));
         assert_eq!(identity.name, "icon");
@@ -55,23 +55,23 @@ mod tests {
 
     #[test]
     fn meta_element_is_none_for_a_missing_key_a_non_element_value_or_no_meta_at_all() {
-        assert!(meta_element("@meta{ title: \"x\" }\n", "icon").is_none());
-        assert!(meta_element("@meta{}\n", "icon").is_none());
+        assert!(meta_element("::meta(title: \"x\")\n", "icon").is_none());
+        assert!(meta_element("::meta()\n", "icon").is_none());
         assert!(meta_element("Just a paragraph.\n", "icon").is_none());
     }
 
     #[test]
     fn extract_note_kind_reads_various_syntax_shapes() {
         assert_eq!(
-            extract_note_kind("@kind(note)\n\nBody text.\n"),
+            extract_note_kind("::kind(note)\n\nBody text.\n"),
             Some("note".to_string())
         );
         assert_eq!(
-            extract_note_kind("@kind(\"meeting\")\n\nBody text.\n"),
+            extract_note_kind("::kind(\"meeting\")\n\nBody text.\n"),
             Some("meeting".to_string())
         );
         assert_eq!(
-            extract_note_kind("@kind(type: \"journal\")\n\nBody text.\n"),
+            extract_note_kind("::kind(type: \"journal\")\n\nBody text.\n"),
             Some("journal".to_string())
         );
         assert_eq!(
@@ -83,8 +83,8 @@ mod tests {
 
     #[test]
     fn extract_note_metadata_reads_meta_and_config_entries() {
-        let src = "@config(export: { type: commonmark })\n\
-                   @meta{\n  id: doc-123,\n  lang: en,\n  tags: [rust, notes]\n}\n\n\
+        let src = "::config(export: (type: commonmark))\n\
+                   ::meta(\n  id: doc-123\n  lang: en\n  tags: (rust, notes)\n)\n\n\
                    Body content.\n";
         let meta = extract_note_metadata(src);
         assert_eq!(
@@ -100,9 +100,9 @@ mod tests {
 
     #[test]
     fn metadata_elements_are_filtered_from_render_items() {
-        let src = "@kind(note)\n\
-                   @meta{ id: 123 }\n\
-                   @use(doc)\n\n\
+        let src = "::kind(note)\n\
+                   ::meta(id: 123)\n\
+                   ::use(doc)\n\n\
                    Visible body text.\n";
         let items = classify(src);
         assert_eq!(items.len(), 1);

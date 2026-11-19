@@ -45,7 +45,9 @@ origiri-richtext-flow = { git = "https://github.com/kakusika/origiri-frameworks.
 origiri-selection     = { git = "https://github.com/kakusika/origiri-frameworks.git" }
 origiri-theme         = { git = "https://github.com/kakusika/origiri-frameworks.git" }
 # --- Tomet ---
-tomet = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet        = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-scalar = { git = "https://github.com/tomet-lang/tomet.git" }
+tomet-span   = { git = "https://github.com/tomet-lang/tomet.git" }
 # --- Slint ---
 # Target-specific backends and renderers are selected in `app/Cargo.toml`.
 slint = { version = "1.19", default-features = false, features = [
@@ -112,4 +114,4 @@ opt-level = 3
 
 [patch.crates-io]
 i-slint-backend-android-activity = { path = "patches/i-slint-backend-android-activity" }
-i-slint-core = { path = "patches/i-slint-core" }
+i-slint-core                     = { path = "patches/i-slint-core" }
