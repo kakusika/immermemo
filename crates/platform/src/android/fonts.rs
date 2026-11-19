@@ -32,7 +32,7 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 
-use slint::fontique_011::fontique::{Blob, FontInfoOverride, GenericFamily};
+use slint::fontique_012::fontique::{Blob, FontInfoOverride, GenericFamily};
 
 use crate::emoji_font::{EmojiFormat, classify, declared_emoji_files};
 
@@ -152,7 +152,7 @@ fn search_emoji_fonts() -> Search {
 /// Applies the repairs. Call once the Slint backend is initialised; they apply
 /// to the whole process.
 pub fn repair_fallbacks() {
-    let mut collection = slint::fontique_011::shared_collection();
+    let mut collection = slint::fontique_012::shared_collection();
 
     let search = search_emoji_fonts();
     let chosen = search.found.iter().find(|font| font.format.drawable());
@@ -208,7 +208,7 @@ pub fn repair_fallbacks() {
 /// The file can be ~9 MB and fontique keeps it in memory for the process's
 /// life; that is the price of drawing emoji at all on these devices.
 fn register_emoji_font(
-    collection: &mut slint::fontique_011::fontique::Collection,
+    collection: &mut slint::fontique_012::fontique::Collection,
     font: &Found,
 ) -> std::io::Result<()> {
     let bytes = std::fs::read(&font.path)?;

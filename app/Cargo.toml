@@ -45,13 +45,13 @@ renderer-femtovg = ["i-slint-backend-android-activity/renderer-femtovg"]
 # For the Android Keystore token store: plain JNI calls into java.security /
 # javax.crypto, no Gradle-managed dependency needed.
 jni = "0.21"
-slint = { version = "1.18", default-features = false, features = [
+slint = { version = "1.19", default-features = false, features = [
   "backend-android-activity-06",
   "compat-1-2",
   # `platform/android/fonts.rs` repairs the fallbacks through fontique.
-  "unstable-fontique-011",
+  "unstable-fontique-012",
 ] }
-i-slint-backend-android-activity = { version = "=1.18.1", default-features = false }
+i-slint-backend-android-activity = { version = "=1.19.0", default-features = false }
 
 [dev-dependencies]
 origiri-icons = { workspace = true }

@@ -1,6 +1,6 @@
 fn main() {
     // `@richtext/flow_view.slint` uses `ComponentContainer`/`component-factory`
-    // to embed a real widget per inline element. Slint 1.18 keeps both out
+    // to embed a real widget per inline element. Slint keeps both out
     // of its normal compiler path (`i-slint-compiler`'s
     // `TypeRegister::builtin()` explicitly removes them; only
     // `builtin_experimental()` -- "Do not use in production code!", its own
@@ -11,7 +11,7 @@ fn main() {
     // SAFETY: single-threaded build script, set before any other code reads
     // the environment.
     unsafe {
-        std::env::set_var("SLINT_ENABLE_EXPERIMENTAL_FEATURES", "1");
+        std::env::set_var("SLINT_ENABLE_EXPERIMENTAL_FEATURES", "component-container");
     }
 
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();

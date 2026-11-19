@@ -11,8 +11,8 @@ pub fn bind_about_callbacks(app: &App) {
     #[cfg(target_os = "android")]
     let emoji_report = Some(crate::platform::android::fonts::report()).filter(|s| !s.is_empty());
     #[cfg(not(target_os = "android"))]
-    let emoji_report = None;
-    let rows = system_info::rows(emoji_report);
+    let emoji_report: Option<String> = None;
+    let rows = system_info::rows(emoji_report.as_deref());
     settings.set_app_version(env!("CARGO_PKG_VERSION").into());
     settings.set_build_id(immermemo_buildinfo::label().into());
     settings.set_system_info(ModelRc::new(VecModel::from(
