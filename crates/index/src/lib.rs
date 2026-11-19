@@ -33,6 +33,13 @@ pub struct IndexedNote {
     pub has_conflict: bool,
 }
 
+/// A recently modified note with its modification timestamp (seconds since UNIX epoch).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecentNote {
+    pub note: IndexedNote,
+    pub mtime_secs: i64,
+}
+
 /// SQLite-backed index for a vault.
 pub struct NoteIndex {
     pub(crate) conn: Connection,
@@ -185,13 +192,27 @@ impl NoteIndex {
 
     /// Returns up to `limit` most recently modified notes, newest first.
     pub fn list_recent(&self, limit: usize) -> anyhow::Result<Vec<IndexedNote>> {
+        Ok(self
+            .list_recent_with_mtime(limit)?
+            .into_iter()
+            .map(|r| r.note)
+            .collect())
+    }
+
+    /// Returns up to `limit` most recently modified notes with their `mtime_secs`, newest first.
+    pub fn list_recent_with_mtime(&self, limit: usize) -> anyhow::Result<Vec<RecentNote>> {
         let mut stmt = self.conn.prepare(
-            "SELECT path, title, has_conflict FROM notes
+            "SELECT path, title, has_conflict, mtime_secs FROM notes
              ORDER BY mtime_secs DESC, mtime_nanos DESC
              LIMIT ?1",
         )?;
         let notes = stmt
-            .query_map(params![limit as i64], indexed_note_from_row)?
+            .query_map(params![limit as i64], |row| {
+                Ok(RecentNote {
+                    note: indexed_note_from_row(row)?,
+                    mtime_secs: row.get(3)?,
+                })
+            })?
             .collect::<Result<_, _>>()?;
         Ok(notes)
     }

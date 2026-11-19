@@ -37,5 +37,6 @@ pub fn get_action_meta(id: ActionId) -> ActionMeta {
         ActionId::Starred => ActionMeta::new(id, "Starred", false),
         ActionId::Recent => ActionMeta::new(id, "Recent", false),
         ActionId::Graph => ActionMeta::new(id, "Graph View", false),
+        ActionId::History => ActionMeta::new(id, "History", false),
     }
 }

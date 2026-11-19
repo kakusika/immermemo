@@ -11,6 +11,7 @@ import {
     FilesScreen,
     DirectoryEntry,
     BreadcrumbSegment,
+    NoteListEntry,
 } from "pages/files.slint";
 import { SearchScreen } from "pages/search.slint";
 import { VaultSheet } from "sheets/vault.slint";
@@ -193,6 +194,9 @@ export component App inherits Window {
             root.open-vault-sheet();
         } else if (id == 11) {
             root.open-settings-sheet();
+        } else if (id == 12) {
+            root.active-tab = 2;
+            root.files-page = 8;
         }
         root.action-executed(id);
     }
@@ -201,6 +205,8 @@ export component App inherits Window {
     in property <[string]> snippets: [];
     in property <[bool]> conflicted;
     in property <int> current: -1;
+    in property <int> current-note-index: -1;
+    in property <bool> current-note-starred: false;
     in-out property <string> search-query: "";
     in property <string> current-title;
     // The open note's own `@meta{ icon: ... }`, drawn on the mini card.
@@ -291,6 +297,8 @@ export component App inherits Window {
     out property <length> measure-probe-block-width: measure-probe-block-item.preferred-width;
     in property <bool> remote-configured;
     in-out property <int> note-menu-index: -1;
+    in property <string> note-menu-title: "";
+    in property <bool> note-menu-starred: false;
     in-out property <bool> more-menu-open: false;
     in-out property <bool> vault-menu-open: false;
     // Library Directory's List/Grid views -- see `files.slint`'s
@@ -298,8 +306,11 @@ export component App inherits Window {
     // `app/src/directory.rs`'s module doc.
     in property <[DirectoryEntry]> directory-folder-entries: [];
     in property <[BreadcrumbSegment]> directory-breadcrumb: [];
+    in property <[NoteListEntry]> starred-entries: [];
+    in property <[NoteListEntry]> recent-entries: [];
+    in property <[NoteListEntry]> history-entries: [];
     callback navigate-directory-folder(string);
-    callback ensure-directory-views();
+    callback ensure-library-views();
     in-out property <bool> rename-open: false;
     in-out property <string> rename-draft;
     // Sets a note's own `@meta{ icon: @doc.icon(...) }` -- see
@@ -359,13 +370,13 @@ export component App inherits Window {
         }
     }
     changed active-tab => {
-        if (root.active-tab == 2 && root.files-page == 1) {
-            root.ensure-directory-views();
+        if (root.active-tab == 2) {
+            root.ensure-library-views();
         }
     }
     changed files-page => {
-        if (root.active-tab == 2 && root.files-page == 1) {
-            root.ensure-directory-views();
+        if (root.active-tab == 2) {
+            root.ensure-library-views();
         }
     }
 
@@ -377,6 +388,11 @@ export component App inherits Window {
     changed width => { root.narrow = root.width < 600px; }
 
     callback select(int);
+    callback select-search-result(int);
+    callback open-note-menu(int);
+    callback toggle-current-star();
+    callback toggle-note-star(int);
+    callback clear-history();
     callback edited(string);
     callback reflow-note-body(length);
     callback undo();
@@ -667,8 +683,8 @@ export component App inherits Window {
                 snippets: root.snippets;
                 conflicted: root.conflicted;
                 query-changed(q) => { root.search-query-changed(q); }
-                select(i) => {
-                    root.select(i);
+                select-search-result(i) => {
+                    root.select-search-result(i);
                     root.open-note-sheet();
                 }
             }
@@ -680,7 +696,7 @@ export component App inherits Window {
                 width: parent.width;
                 height: parent.height;
                 visible: root.active-tab == 2;
-                current: root.current;
+                current: root.current-note-index;
                 status: root.status;
                 syncing: root.syncing;
                 inset-top: root.inset-top;
@@ -689,6 +705,9 @@ export component App inherits Window {
                 remote-configured: root.remote-configured;
                 folder-entries: root.directory-folder-entries;
                 breadcrumb: root.directory-breadcrumb;
+                starred-entries: root.starred-entries;
+                recent-entries: root.recent-entries;
+                history-entries: root.history-entries;
                 select(i) => {
                     root.select(i);
                     root.open-note-sheet();
@@ -702,8 +721,9 @@ export component App inherits Window {
                 open-settings => {
                     root.open-settings-sheet();
                 }
-                note-menu-requested(i) => { root.note-menu-index = i; }
+                note-menu-requested(i) => { root.open-note-menu(i); }
                 navigate-folder(key) => { root.navigate-directory-folder(key); }
+                clear-history => { root.clear-history(); }
                 trigger-haptic => { root.trigger-haptic(); }
                 trigger-heavy-haptic => { root.trigger-heavy-haptic(); }
             }
@@ -750,6 +770,8 @@ export component App inherits Window {
                 has-conflict: root.current-has-conflict;
                 note-path: root.current-note-path;
                 note-kind: root.note-kind;
+                is-starred: root.current-note-starred;
+                toggle-star => { root.toggle-current-star(); }
                 note-metadata: root.note-metadata;
                 char-count: root.char-count;
                 word-count: root.word-count;
@@ -808,7 +830,7 @@ export component App inherits Window {
                 // Reuses the same ActionSheet (Rename/Delete) FilesScreen's
                 // long-press already opens -- the editor just means "the
                 // current note" instead of taking an index.
-                note-menu-requested => { root.note-menu-index = root.current; }
+                note-menu-requested => { root.open-note-menu(root.current-note-index); }
                 header-swipe-enabled: root.note-sheet-open && root.keyboard == 0px;
                 sheet-drag-moved(dy) => {
                     // dy is the total distance since this gesture's own
@@ -933,6 +955,7 @@ export component App inherits Window {
             has-starred: SettingsAdapter.nav-show-starred;
             has-recent: SettingsAdapter.nav-show-recent;
             has-graph: SettingsAdapter.nav-show-graph;
+            has-history: SettingsAdapter.nav-show-history;
             has-new-note: SettingsAdapter.nav-show-new-note;
             has-sync: SettingsAdapter.nav-show-sync;
             has-switch-vault: SettingsAdapter.nav-show-switch-vault;
@@ -1094,14 +1117,33 @@ export component App inherits Window {
                     root.trigger-action(7);
                 }
             }
+
+            if bottom-nav-bar.overflow-history: IconActionRow {
+                icon: TablerIcons.history;
+                text: @tr("History");
+                tint: root.active-tab == 2 && files-screen.page == 8 ? Palette.accent-background : Palette.foreground;
+                clicked => {
+                    root.more-menu-open = false;
+                    root.trigger-action(12);
+                }
+            }
         }
 
         ActionSheet {
             open: root.note-menu-index >= 0;
             narrow: root.narrow;
-            title: root.note-menu-index >= 0 ? root.notes[root.note-menu-index] : "";
+            title: root.note-menu-title;
             inset-bottom: root.safe-area-insets.bottom + root.extra-inset-bottom;
             cancel => { root.note-menu-index = -1; }
+
+            ActionRow {
+                text: root.note-menu-starred ? @tr("Remove from Starred") : @tr("Add to Starred");
+                clicked => {
+                    let idx = root.note-menu-index;
+                    root.note-menu-index = -1;
+                    root.toggle-note-star(idx);
+                }
+            }
 
             ActionRow {
                 text: @tr("Rename");

@@ -2997,3 +2997,63 @@ msgstr "ビルド"
 msgctxt "AboutPage"
 msgid "System"
 msgstr "システム"
+
+msgctxt "App"
+msgid "History"
+msgstr "履歴"
+
+msgctxt "App"
+msgid "Remove from Starred"
+msgstr "スターを外す"
+
+msgctxt "App"
+msgid "Add to Starred"
+msgstr "スターを付ける"
+
+msgctxt "BottomNavBar"
+msgid "History"
+msgstr "履歴"
+
+msgctxt "FilesScreen"
+msgid "History"
+msgstr "履歴"
+
+msgctxt "FilesScreen"
+msgid "Clear"
+msgstr "クリア"
+
+msgctxt "FilesScreen"
+msgid "No starred notes yet"
+msgstr "スター付きのノートはありません"
+
+msgctxt "FilesScreen"
+msgid "Star a note from the editor or note menu to pin it here."
+msgstr "エディタまたはノートメニューからスターを付けるとここに固定されます。"
+
+msgctxt "FilesScreen"
+msgid "No recent notes"
+msgstr "最近のノートはありません"
+
+msgctxt "FilesScreen"
+msgid "Notes you create or edit will appear here."
+msgstr "作成または編集したノートがここに表示されます。"
+
+msgctxt "FilesScreen"
+msgid "No history yet"
+msgstr "履歴はまだありません"
+
+msgctxt "FilesScreen"
+msgid "Notes you open will appear here in chronological order."
+msgstr "開いたノートが新しい順にここに表示されます。"
+
+msgctxt "HomeQuickActionTile"
+msgid "History"
+msgstr "履歴"
+
+msgctxt "BottomNavConfigItem"
+msgid "History"
+msgstr "履歴"
+
+msgctxt "HomeActionConfigItem"
+msgid "History"
+msgstr "履歴"

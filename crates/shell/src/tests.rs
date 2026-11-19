@@ -47,6 +47,8 @@ fn ui_helpers_and_conflict_resolution() {
     deep_link_import_preview_opens_settings_sheet(&app);
     bottom_bar_config_applies_to_settings(&app);
     home_actions_config_applies_to_settings(&app);
+    library_views_build_starred_recent_and_history_entries(&app, &session, &vault_dir);
+    canonical_note_index_vs_search_result_index(&app, &session, &vault_dir);
 
     // `render::seam_tests` needs the same shared `app` for the same
     // one-event-loop-per-process reason -- see that module's doc.
@@ -827,4 +829,112 @@ fn home_actions_config_applies_to_settings(app: &App) {
 
     // Restore
     action::apply_home_actions_config(&settings, "new_note");
+}
+
+fn library_views_build_starred_recent_and_history_entries(
+    app: &App,
+    session: &SessionRef,
+    vault_dir: &Path,
+) {
+    let work_dir = vault_dir.join("work");
+    std::fs::create_dir_all(&work_dir).unwrap();
+    let star_note = work_dir.join("pinned_note.tmt");
+    std::fs::write(&star_note, "= Pinned\n\nBody\n").unwrap();
+    refresh_list(app, session);
+
+    let star_idx = session
+        .borrow()
+        .notes
+        .iter()
+        .position(|p| *p == star_note)
+        .expect("pinned_note.tmt should be in notes");
+
+    // Open the note -> records history and syncs current_note_index/starred
+    crate::session::open_note(app, session, star_idx);
+    assert_eq!(app.get_current_note_index(), star_idx as i32);
+    assert!(!app.get_current_note_starred());
+
+    // Star via current-note toggle
+    crate::session::toggle_current_star(app, session);
+    assert!(app.get_current_note_starred());
+
+    // Navigate via ActionId::History -> active-tab = 2, files-page = 8
+    app.invoke_trigger_action(action::ActionId::History.to_i32());
+    assert_eq!(app.get_active_tab(), 2);
+    assert_eq!(app.get_files_page(), 8);
+
+    // Ensure library views populates Starred, Recent, and History
+    crate::session::ensure_library_views(app, session);
+
+    let starred: Vec<NoteListEntry> = app.get_starred_entries().iter().collect();
+    assert_eq!(starred.len(), 1);
+    assert_eq!(starred[0].title, "pinned_note");
+    assert_eq!(starred[0].subtitle, "work");
+    assert!(starred[0].is_starred);
+    assert_eq!(starred[0].note_index, star_idx as i32);
+
+    let recent: Vec<NoteListEntry> = app.get_recent_entries().iter().collect();
+    assert!(!recent.is_empty());
+    assert!(recent.iter().any(|e| e.note_index == star_idx as i32));
+
+    let history: Vec<NoteListEntry> = app.get_history_entries().iter().collect();
+    assert_eq!(history.first().map(|e| e.note_index), Some(star_idx as i32));
+    assert!(history[0].subtitle.contains("work"));
+
+    // Clear history empties the list
+    crate::session::clear_history(app, session);
+    assert_eq!(app.get_history_entries().iter().count(), 0);
+
+    // Unstar via note-index toggle
+    crate::session::toggle_note_star(app, session, star_idx);
+    assert!(!app.get_current_note_starred());
+    assert_eq!(app.get_starred_entries().iter().count(), 0);
+}
+
+fn canonical_note_index_vs_search_result_index(
+    app: &App,
+    session: &SessionRef,
+    vault_dir: &Path,
+) {
+    let z_note = vault_dir.join("zzz_unique_search_target.tmt");
+    std::fs::write(&z_note, "= Unique\n\nsearchable_needle\n").unwrap();
+    refresh_list(app, session);
+
+    let z_idx = session
+        .borrow()
+        .notes
+        .iter()
+        .position(|p| *p == z_note)
+        .expect("zzz_unique_search_target.tmt should be in notes");
+    assert!(z_idx > 0, "expected z_idx > 0 so ui_index != note_index");
+
+    crate::callbacks::bind_note_callbacks(app, session);
+
+    // Filter search results to only z_note (ui_index == 0, note_index == z_idx)
+    session.borrow_mut().search_query = "searchable_needle".to_string();
+    update_filtered_list(app, session);
+    assert_eq!(session.borrow().filtered_results.len(), 1);
+    assert_eq!(session.borrow().filtered_results[0].note_index, z_idx);
+
+    // Canonical `select(0)` opens notes[0], NOT filtered_results[0]
+    app.invoke_select(0);
+    assert_eq!(session.borrow().editor.current, Some(0));
+
+    // `select_search_result(0)` maps through filtered_results and opens notes[z_idx]
+    app.invoke_select_search_result(0);
+    assert_eq!(session.borrow().editor.current, Some(z_idx));
+
+    // `open_note_menu(0)` and `rename_requested(0)` use canonical index 0 even while search is active
+    app.invoke_open_note_menu(0);
+    assert_eq!(app.get_note_menu_index(), 0);
+    app.set_note_menu_index(-1);
+
+    app.invoke_rename_requested(0);
+    assert_eq!(session.borrow().rename_target, Some(0));
+    app.set_rename_open(false);
+    session.borrow_mut().rename_target = None;
+
+    // Clean up search query
+    session.borrow_mut().search_query.clear();
+    update_filtered_list(app, session);
 }

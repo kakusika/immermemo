@@ -9,7 +9,7 @@ use anyhow::Context;
 use crate::editor::EditorState;
 use immermemo_credentials::{TokenStore, TokenStoreFactory};
 use immermemo_index::NoteIndex;
-use immermemo_vault::appdata::{Account, AppData};
+use immermemo_vault::appdata::{Account, AppData, HistoryEntry};
 use immermemo_vault::notes;
 
 use crate::navigation::BackForwardStack;
@@ -335,6 +335,14 @@ impl Session {
             new_path.strip_prefix(&self.vault_dir),
         ) {
             let _ = self.index.record_rename(old_rel, new_rel);
+            let old_rel_str = old_rel.display().to_string();
+            let new_rel_str = new_rel.display().to_string();
+            let _ =
+                self.app_data
+                    .rename_starred_path(&self.vault_dir, &old_rel_str, &new_rel_str);
+            let _ =
+                self.app_data
+                    .rename_history_path(&self.vault_dir, &old_rel_str, &new_rel_str);
         }
         let _ = self.refresh_list_data();
         let _ = self.update_filtered_list_data();
@@ -351,10 +359,38 @@ impl Session {
         notes::delete(&path)?;
         if let Ok(rel) = path.strip_prefix(&self.vault_dir) {
             let _ = self.index.record_delete(rel);
+            let rel_str = rel.display().to_string();
+            let _ = self.app_data.remove_starred_path(&self.vault_dir, &rel_str);
+            let _ = self.app_data.remove_history_path(&self.vault_dir, &rel_str);
         }
         let _ = self.refresh_list_data();
         let _ = self.update_filtered_list_data();
         Ok(path)
+    }
+
+    /// Returns whether the note at `rel_path` is starred in the active vault.
+    pub fn is_starred(&self, rel_path: &str) -> bool {
+        self.app_data.is_starred(&self.vault_dir, rel_path)
+    }
+
+    /// Toggles the starred state of `rel_path` in the active vault.
+    pub fn toggle_star(&self, rel_path: &str) -> anyhow::Result<bool> {
+        self.app_data.toggle_starred(&self.vault_dir, rel_path)
+    }
+
+    /// Returns the ordered list of starred vault-relative note paths in the active vault.
+    pub fn starred_paths(&self) -> Vec<String> {
+        self.app_data.load_starred(&self.vault_dir)
+    }
+
+    /// Returns the opened-note history for the active vault, most-recent-first.
+    pub fn history_entries(&self) -> Vec<HistoryEntry> {
+        self.app_data.load_history(&self.vault_dir)
+    }
+
+    /// Clears the opened-note history for the active vault.
+    pub fn clear_history(&self) -> anyhow::Result<()> {
+        self.app_data.clear_history(&self.vault_dir)
     }
 
     /// Resolves one conflict step at `step_idx` choosing `side` (0: base, 1: local, 2: remote).
@@ -1475,5 +1511,65 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(app_data.known_vaults().len(), 1, "it was forgotten again");
         assert!(session.known_vaults.len() <= 2);
+    }
+
+    #[test]
+    fn open_rename_delete_update_starred_and_history() {
+        let tmp = TempDir::new().unwrap();
+        let stores = Stores::default();
+        let (mut session, _, _) = session_with_stores(&tmp, &stores);
+
+        let a_path = session.create_named_note("alpha", "= Alpha\n").unwrap();
+        let b_path = session.create_named_note("beta", "= Beta\n").unwrap();
+        let a_idx = session.notes.iter().position(|p| p == &a_path).unwrap();
+        let b_idx = session.notes.iter().position(|p| p == &b_path).unwrap();
+
+        assert!(session.open_note(a_idx).unwrap().is_ok());
+        assert!(session.open_note(b_idx).unwrap().is_ok());
+        assert_eq!(
+            session
+                .history_entries()
+                .iter()
+                .map(|e| e.path.as_str())
+                .collect::<Vec<_>>(),
+            vec!["beta.tmt", "alpha.tmt"]
+        );
+
+        assert!(session.toggle_star("alpha.tmt").unwrap());
+        assert!(session.is_starred("alpha.tmt"));
+
+        let a_idx = session.notes.iter().position(|p| p == &a_path).unwrap();
+        let renamed_path = session.rename_note(a_idx, "gamma").unwrap();
+        assert!(!session.is_starred("alpha.tmt"));
+        assert!(session.is_starred("gamma.tmt"));
+        assert_eq!(session.starred_paths(), vec!["gamma.tmt"]);
+        assert_eq!(
+            session
+                .history_entries()
+                .iter()
+                .map(|e| e.path.as_str())
+                .collect::<Vec<_>>(),
+            vec!["beta.tmt", "gamma.tmt"]
+        );
+
+        let renamed_idx = session
+            .notes
+            .iter()
+            .position(|p| p == &renamed_path)
+            .unwrap();
+        session.delete_note(renamed_idx).unwrap();
+        assert!(!session.is_starred("gamma.tmt"));
+        assert!(session.starred_paths().is_empty());
+        assert_eq!(
+            session
+                .history_entries()
+                .iter()
+                .map(|e| e.path.as_str())
+                .collect::<Vec<_>>(),
+            vec!["beta.tmt"]
+        );
+
+        session.clear_history().unwrap();
+        assert!(session.history_entries().is_empty());
     }
 }

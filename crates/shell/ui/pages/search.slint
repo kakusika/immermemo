@@ -13,7 +13,7 @@ export component SearchScreen inherits Rectangle {
     in property <[bool]> conflicted: [];
 
     callback query-changed(string);
-    callback select(int);
+    callback select-search-result(int);
 
     background: Colors.page-background;
 
@@ -226,7 +226,7 @@ export component SearchScreen inherits Rectangle {
 
                         touch := TouchArea {
                             clicked => {
-                                root.select(i);
+                                root.select-search-result(i);
                             }
                         }
                     }

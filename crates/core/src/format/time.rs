@@ -17,6 +17,17 @@ pub fn days_to_ymd(days: i64) -> (i64, i64, i64) {
     (y, m, d as i64)
 }
 
+/// Formats an epoch timestamp in seconds as `"YYYY-MM-DD HH:MM"` (UTC).
+pub fn format_ymd_hm(epoch_secs: i64) -> String {
+    let secs_per_day = 86400;
+    let days = epoch_secs.div_euclid(secs_per_day);
+    let time_of_day = epoch_secs.rem_euclid(secs_per_day);
+    let hours = time_of_day / 3600;
+    let minutes = (time_of_day % 3600) / 60;
+    let (year, month, day) = days_to_ymd(days);
+    format!("{year:04}-{month:02}-{day:02} {hours:02}:{minutes:02}")
+}
+
 /// Formats an epoch timestamp in seconds to a human-readable string with relative duration,
 /// e.g. `"2026-10-15 14:30 (5m ago)"`.
 pub fn format_timestamp(epoch_secs: i64) -> String {
@@ -35,14 +46,7 @@ pub fn format_timestamp(epoch_secs: i64) -> String {
         format!("{}d ago", diff / 86400)
     };
 
-    let secs_per_day = 86400;
-    let days = epoch_secs.div_euclid(secs_per_day);
-    let time_of_day = epoch_secs.rem_euclid(secs_per_day);
-    let hours = time_of_day / 3600;
-    let minutes = (time_of_day % 3600) / 60;
-    let (year, month, day) = days_to_ymd(days);
-
-    format!("{year:04}-{month:02}-{day:02} {hours:02}:{minutes:02} ({rel})")
+    format!("{} ({rel})", format_ymd_hm(epoch_secs))
 }
 
 /// Formats an epoch timestamp in seconds to a compact month/day hour:minute string,

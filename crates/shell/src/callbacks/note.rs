@@ -14,16 +14,66 @@ use crate::{App, render};
 pub fn bind_note_callbacks(app: &App, session: &SessionRef) {
     app.on_select({
         let (weak, session) = (app.as_weak(), session.clone());
+        move |note_index| {
+            let app = weak.unwrap();
+            if let Ok(index) = usize::try_from(note_index)
+                && index < session.borrow().notes.len()
+            {
+                open_note(&app, &session, index);
+            }
+        }
+    });
+
+    app.on_select_search_result({
+        let (weak, session) = (app.as_weak(), session.clone());
         move |ui_index| {
             let app = weak.unwrap();
-            let note_index = session
-                .borrow()
-                .filtered_results
-                .get(ui_index as usize)
-                .map(|r| r.note_index);
+            let note_index = usize::try_from(ui_index).ok().and_then(|idx| {
+                session
+                    .borrow()
+                    .filtered_results
+                    .get(idx)
+                    .map(|r| r.note_index)
+            });
             if let Some(index) = note_index {
                 open_note(&app, &session, index);
             }
+        }
+    });
+
+    app.on_open_note_menu({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |note_index| {
+            let app = weak.unwrap();
+            if let Ok(index) = usize::try_from(note_index) {
+                session::open_note_menu(&app, &session, index);
+            }
+        }
+    });
+
+    app.on_toggle_current_star({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            session::toggle_current_star(&app, &session);
+        }
+    });
+
+    app.on_toggle_note_star({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |note_index| {
+            let app = weak.unwrap();
+            if let Ok(index) = usize::try_from(note_index) {
+                session::toggle_note_star(&app, &session, index);
+            }
+        }
+    });
+
+    app.on_clear_history({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move || {
+            let app = weak.unwrap();
+            session::clear_history(&app, &session);
         }
     });
 
@@ -60,11 +110,11 @@ pub fn bind_note_callbacks(app: &App, session: &SessionRef) {
         }
     });
 
-    app.on_ensure_directory_views({
+    app.on_ensure_library_views({
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
             let app = weak.unwrap();
-            session::ensure_directory_views(&app, &session);
+            session::ensure_library_views(&app, &session);
         }
     });
 
@@ -160,17 +210,16 @@ pub fn bind_note_callbacks(app: &App, session: &SessionRef) {
 
     app.on_rename_requested({
         let (weak, session) = (app.as_weak(), session.clone());
-        move |ui_index| {
+        move |note_index| {
             let app = weak.unwrap();
+            let Ok(index) = usize::try_from(note_index) else {
+                return;
+            };
             let mut s = session.borrow_mut();
-            let Some(res) = s.filtered_results.get(ui_index as usize) else {
+            let Some(path) = s.notes.get(index).cloned() else {
                 return;
             };
-            let note_index = res.note_index;
-            let Some(path) = s.notes.get(note_index).cloned() else {
-                return;
-            };
-            s.rename_target = Some(note_index);
+            s.rename_target = Some(index);
             drop(s);
             let stem = path
                 .file_stem()
@@ -209,15 +258,13 @@ pub fn bind_note_callbacks(app: &App, session: &SessionRef) {
 
     app.on_icon_requested({
         let (weak, session) = (app.as_weak(), session.clone());
-        move |ui_index| {
+        move |note_index| {
             let app = weak.unwrap();
-            let s = session.borrow();
-            let Some(res) = s.filtered_results.get(ui_index as usize) else {
-                return;
-            };
-            let note_index = res.note_index;
-            drop(s);
-            open_icon_picker(&app, &session, note_index);
+            if let Ok(index) = usize::try_from(note_index)
+                && index < session.borrow().notes.len()
+            {
+                open_icon_picker(&app, &session, index);
+            }
         }
     });
     app.on_icon_picker_query_changed({
@@ -237,14 +284,11 @@ pub fn bind_note_callbacks(app: &App, session: &SessionRef) {
 
     app.on_delete_requested({
         let (weak, session) = (app.as_weak(), session.clone());
-        move |ui_index| {
+        move |note_index| {
             let app = weak.unwrap();
-            let note_index = session
-                .borrow()
-                .filtered_results
-                .get(ui_index as usize)
-                .map(|r| r.note_index);
-            if let Some(index) = note_index {
+            if let Ok(index) = usize::try_from(note_index)
+                && index < session.borrow().notes.len()
+            {
                 session.borrow_mut().delete_target = Some(index);
                 app.set_delete_confirm_open(true);
             }
@@ -333,7 +377,7 @@ fn handle_edit(app: &App, session: &SessionRef, text: &str) {
     let base = session::media_base(app, session);
     app.set_note_body_items(render::note_body_items(text, app, max_width, &base));
     session::update_note_stats(app, session, text);
-    {
+    let saved = {
         let mut s = session.borrow_mut();
         let outcome = s.apply_edit(text);
         show_history_state(app, &s);
@@ -344,6 +388,7 @@ fn handle_edit(app: &App, session: &SessionRef, text: &str) {
             app.set_conflicted(ModelRc::new(VecModel::from(flags.filtered)));
             app.set_conflict_count(flags.count as i32);
         }
+        let saved = outcome.saved.is_some();
         if let Some(rel) = outcome.saved {
             s.history_preview_cache.remove(&rel.display().to_string());
             if app.get_status_is_error() && app.get_status().starts_with("Save failed") {
@@ -353,6 +398,10 @@ fn handle_edit(app: &App, session: &SessionRef, text: &str) {
         if let Some(e) = outcome.write_error {
             set_error(app, format!("Save failed: {e}"));
         }
+        saved
+    };
+    if saved {
+        session::mark_library_views_dirty(app, session);
     }
     session::schedule_auto_sync(app, std::time::Duration::from_secs(5));
 }

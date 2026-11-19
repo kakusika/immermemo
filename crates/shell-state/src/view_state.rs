@@ -38,6 +38,7 @@ pub enum FilesPage {
     Starred = 3,
     Recent = 4,
     Graph = 5,
+    History = 8,
 }
 
 impl FilesPage {
@@ -49,6 +50,7 @@ impl FilesPage {
             3 => Some(Self::Starred),
             4 => Some(Self::Recent),
             5 => Some(Self::Graph),
+            8 => Some(Self::History),
             _ => None,
         }
     }
@@ -179,6 +181,8 @@ mod tests {
         assert_eq!(FilesPage::from_i32(1), Some(FilesPage::Directory));
         assert_eq!(FilesPage::from_i32(5), Some(FilesPage::Graph));
         assert_eq!(FilesPage::from_i32(6), None);
+        assert_eq!(FilesPage::from_i32(8), Some(FilesPage::History));
+        assert_eq!(FilesPage::History.to_i32(), 8);
     }
 
     #[test]

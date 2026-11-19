@@ -2,4 +2,4 @@
 
 pub mod time;
 
-pub use time::{days_to_ymd, format_time_only, format_timestamp};
+pub use time::{days_to_ymd, format_time_only, format_timestamp, format_ymd_hm};

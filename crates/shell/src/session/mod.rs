@@ -3,6 +3,7 @@
 pub mod conflict;
 pub mod history;
 pub mod icon_picker;
+pub mod library;
 pub mod navigation;
 pub mod sync_ui;
 pub mod util;
@@ -11,6 +12,7 @@ pub mod vault;
 pub use conflict::*;
 pub use history::*;
 pub use icon_picker::*;
+pub use library::*;
 pub use navigation::*;
 pub use sync_ui::*;
 pub use util::*;
@@ -38,6 +40,8 @@ pub struct Session {
     pub history_preview_cache: HashMap<String, (f32, ModelRc<NoteBodyItemView>)>,
     /// Whether directory folder entries need rebuilding when the Directory page is viewed.
     pub directory_views_dirty: bool,
+    /// Whether Starred/Recent/History entries need rebuilding when a Library view is opened.
+    pub library_views_dirty: bool,
     /// Multi-selection state for notes across the app.
     pub selection: origiri_selection::Selection,
 }
@@ -61,6 +65,7 @@ impl Session {
             core,
             history_preview_cache: HashMap::new(),
             directory_views_dirty: true,
+            library_views_dirty: true,
             selection: origiri_selection::Selection::default(),
         }
     }
@@ -118,6 +123,23 @@ pub fn update_filtered_list(app: &App, session: &Rc<RefCell<Session>>) {
     if app.get_active_tab() == 2 && app.get_files_page() == 1 {
         refresh_directory_views(app, session);
     }
+    mark_library_views_dirty(app, session);
+}
+
+/// Resolves the `NoteIconView` for a note at `abs_path` using the index and thumbnail cache.
+pub(crate) fn resolve_note_icon(
+    s: &Session,
+    abs_path: &std::path::Path,
+    lfs: Option<&immermemo_media::LfsRemote>,
+) -> NoteIconView {
+    let Ok(rel_path) = abs_path.strip_prefix(&s.vault_dir) else {
+        return NoteIconView::default();
+    };
+    let Ok(Some(icon)) = s.index.icon_for(rel_path) else {
+        return NoteIconView::default();
+    };
+    let base = crate::thumbs::MediaBase::new(&s.vault_dir, rel_path).with_lfs(lfs.cloned());
+    crate::note_icon::resolve_view(Some(&icon), &base)
 }
 
 /// Ensures Directory page contents are refreshed if they have been marked dirty.
@@ -148,14 +170,11 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
         if !entry.is_folder
             && let Ok(idx) = usize::try_from(entry.note_index)
             && let Some(abs_path) = s.notes.get(idx)
-            && let Ok(rel_path) = abs_path.strip_prefix(&s.vault_dir)
-            && let Ok(Some(icon)) = s.index.icon_for(rel_path)
         {
-            let base = crate::thumbs::MediaBase::new(&s.vault_dir, rel_path).with_lfs(lfs.clone());
-            icon_by_path.insert(
-                abs_path.clone(),
-                crate::note_icon::resolve_view(Some(&icon), &base),
-            );
+            let resolved = resolve_note_icon(&s, abs_path, lfs.as_ref());
+            if resolved != NoteIconView::default() {
+                icon_by_path.insert(abs_path.clone(), resolved);
+            }
         }
     }
 
@@ -318,6 +337,8 @@ pub fn update_current_header(app: &App, session: &SessionRef, text: &str) {
 }
 
 pub fn clear_note_stats(app: &App) {
+    app.set_current_note_index(-1);
+    app.set_current_note_starred(false);
     app.set_current_note_path(SharedString::new());
     app.set_char_count(0);
     app.set_word_count(0);

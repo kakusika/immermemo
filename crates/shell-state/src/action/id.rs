@@ -16,11 +16,12 @@ pub enum ActionId {
     Sync = 9,
     SwitchVault = 10,
     Settings = 11,
+    History = 12,
 }
 
 impl ActionId {
     /// All defined actions in canonical default order.
-    pub const ALL: [ActionId; 12] = [
+    pub const ALL: [ActionId; 13] = [
         ActionId::Home,
         ActionId::Search,
         ActionId::NewNote,
@@ -33,6 +34,7 @@ impl ActionId {
         ActionId::Starred,
         ActionId::Recent,
         ActionId::Graph,
+        ActionId::History,
     ];
 
     /// Returns the persistent string key for this action.
@@ -46,6 +48,7 @@ impl ActionId {
             ActionId::Starred => "starred",
             ActionId::Recent => "recent",
             ActionId::Graph => "graph",
+            ActionId::History => "history",
             ActionId::NewNote => "new_note",
             ActionId::Sync => "sync",
             ActionId::SwitchVault => "switch_vault",
@@ -64,6 +67,7 @@ impl ActionId {
             "starred" => Some(ActionId::Starred),
             "recent" => Some(ActionId::Recent),
             "graph" => Some(ActionId::Graph),
+            "history" => Some(ActionId::History),
             "new_note" => Some(ActionId::NewNote),
             "sync" => Some(ActionId::Sync),
             "switch_vault" => Some(ActionId::SwitchVault),
@@ -87,6 +91,7 @@ impl ActionId {
             9 => Some(ActionId::Sync),
             10 => Some(ActionId::SwitchVault),
             11 => Some(ActionId::Settings),
+            12 => Some(ActionId::History),
             _ => None,
         }
     }
@@ -106,7 +111,8 @@ impl ActionId {
             | ActionId::Daily
             | ActionId::Starred
             | ActionId::Recent
-            | ActionId::Graph => ActionKind::Navigation,
+            | ActionId::Graph
+            | ActionId::History => ActionKind::Navigation,
             ActionId::SwitchVault | ActionId::Settings => ActionKind::Sheet,
             ActionId::NewNote | ActionId::Sync => ActionKind::Execute,
         }
@@ -130,7 +136,7 @@ mod tests {
 
     #[test]
     fn test_action_id_roundtrips() {
-        assert_eq!(ActionId::ALL.len(), 12);
+        assert_eq!(ActionId::ALL.len(), 13);
         for action in ActionId::ALL {
             let key = action.as_str();
             assert_eq!(ActionId::from_key(key), Some(action));
@@ -144,6 +150,7 @@ mod tests {
         assert_eq!(ActionId::Home.kind(), ActionKind::Navigation);
         assert_eq!(ActionId::Search.kind(), ActionKind::Navigation);
         assert_eq!(ActionId::Library.kind(), ActionKind::Navigation);
+        assert_eq!(ActionId::History.kind(), ActionKind::Navigation);
         assert_eq!(ActionId::NewNote.kind(), ActionKind::Execute);
         assert_eq!(ActionId::Sync.kind(), ActionKind::Execute);
         assert_eq!(ActionId::SwitchVault.kind(), ActionKind::Sheet);

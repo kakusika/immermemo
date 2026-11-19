@@ -112,7 +112,7 @@ impl BottomBarConfig {
 }
 
 /// Default order of quick actions on the home page (excluding Home itself).
-pub const DEFAULT_HOME_ACTIONS: [ActionId; 11] = [
+pub const DEFAULT_HOME_ACTIONS: [ActionId; 12] = [
     ActionId::NewNote,
     ActionId::Search,
     ActionId::Daily,
@@ -120,6 +120,7 @@ pub const DEFAULT_HOME_ACTIONS: [ActionId; 11] = [
     ActionId::Starred,
     ActionId::Recent,
     ActionId::Graph,
+    ActionId::History,
     ActionId::Library,
     ActionId::Sync,
     ActionId::SwitchVault,

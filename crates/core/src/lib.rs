@@ -20,7 +20,7 @@ pub mod sync;
 pub mod system_info;
 pub mod vault_setup;
 
-pub use format::{format_time_only, format_timestamp};
+pub use format::{format_time_only, format_timestamp, format_ymd_hm};
 pub use qr::{QrPixels, generate_qr_pixels};
 pub use system_info::{
     Row as SystemInfoRow, report as format_system_report, rows as system_info_rows,

@@ -16,6 +16,15 @@ import { DirectoryTile } from "../widgets/directory_tile.slint";
 import { SelectionAdapter } from "../adapters/selection.slint";
 import { DailyCalendarView } from "../widgets/daily_calendar.slint";
 
+export struct NoteListEntry {
+    title: string,
+    subtitle: string,
+    icon: NoteIconView,
+    has-conflict: bool,
+    is-starred: bool,
+    note-index: int,
+}
+
 // One row of the Directory page's List view, or one tile of its Grid
 // view -- both are the direct contents of whichever folder is currently
 // browsed (see `app/src/directory.rs`'s `build_folder_entries`).
@@ -104,14 +113,16 @@ component DirectoryBreadcrumb inherits HorizontalLayout {
 
 // Android native Material 3 list item for folder and note entries:
 // - Left: rounded container with icon (squircle background), or checkmark when selected
-// - Center: title text with conflict indicator if applicable
-// - Right: 3-dot overflow menu icon (dots-vertical) or selection checkbox
-component DirectoryRow inherits Rectangle {
+// - Center: title text (and optional subtitle)
+// - Right: optional starred badge, conflict dot, 3-dot overflow menu or selection checkbox
+export component NoteListRow inherits Rectangle {
     in property <bool> is-folder: false;
     in property <NoteIconView> icon;
     in property <string> display-text: "";
+    in property <string> subtitle: "";
     in property <bool> highlighted: false;
     in property <bool> has-conflict: false;
+    in property <bool> is-starred: false;
     in property <bool> show-menu: true;
     in property <bool> long-press-enabled: true;
     in property <bool> is-selected: false;
@@ -120,7 +131,7 @@ component DirectoryRow inherits Rectangle {
     callback menu-clicked();
     callback long-pressed();
 
-    height: 56px * Metrics.ui-scale;
+    height: root.subtitle != "" ? 62px * Metrics.ui-scale : 56px * Metrics.ui-scale;
 
     highlight-rect := LongPressRippleArea {
         x: Metrics.spacing-xs;
@@ -186,10 +197,11 @@ component DirectoryRow inherits Rectangle {
                 }
             }
 
-            // Title
+            // Title and optional subtitle
             VerticalLayout {
                 horizontal-stretch: 1;
                 alignment: center;
+                spacing: 2px * Metrics.ui-scale;
 
                 Text {
                     text: root.display-text;
@@ -198,6 +210,25 @@ component DirectoryRow inherits Rectangle {
                     color: (root.is-selected || root.highlighted) ? Palette.accent-background : Palette.foreground;
                     vertical-alignment: center;
                     overflow: elide;
+                }
+
+                if root.subtitle != "": Text {
+                    text: root.subtitle;
+                    font-size: Metrics.font-sm;
+                    color: Colors.muted;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+
+            // Starred indicator
+            if root.is-starred: VerticalLayout {
+                alignment: center;
+                Icon {
+                    source: TablerIcons.star;
+                    width: Metrics.icon-sm;
+                    height: Metrics.icon-sm;
+                    color: Palette.accent-background;
                 }
             }
 
@@ -276,6 +307,84 @@ component DirectoryRow inherits Rectangle {
 }
 
 
+component NoteListView inherits Rectangle {
+    in property <[NoteListEntry]> entries: [];
+    in property <image> empty-icon;
+    in property <string> empty-title;
+    in property <string> empty-subtitle;
+    in property <int> current: -1;
+    in property <bool> highlight-current: false;
+    in property <length> inset-bottom: 0px;
+    callback select(int);
+    callback note-menu-requested(int);
+    callback trigger-heavy-haptic();
+
+    if root.entries.length == 0: Rectangle {
+        width: 100%;
+        height: 100%;
+        VerticalLayout {
+            alignment: center;
+            spacing: Metrics.spacing-md;
+            padding-left: Metrics.gutter * 2;
+            padding-right: Metrics.gutter * 2;
+
+            HorizontalLayout {
+                alignment: center;
+                Icon {
+                    source: root.empty-icon;
+                    color: Colors.muted.with-alpha(0.5);
+                    width: Metrics.icon-xl;
+                    height: Metrics.icon-xl;
+                }
+            }
+
+            Text {
+                text: root.empty-title;
+                font-size: Metrics.font-body;
+                font-weight: 600;
+                color: Colors.muted;
+                horizontal-alignment: center;
+            }
+
+            if root.empty-subtitle != "": Text {
+                text: root.empty-subtitle;
+                font-size: Metrics.font-sub;
+                color: Colors.muted;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+    }
+
+    if root.entries.length > 0: AppScrollView {
+        width: 100%;
+        height: 100%;
+
+        VerticalLayout {
+            padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
+
+            for entry in root.entries: NoteListRow {
+                is-folder: false;
+                icon: entry.icon;
+                display-text: entry.title;
+                subtitle: entry.subtitle;
+                highlighted: root.highlight-current && entry.note-index == root.current;
+                has-conflict: entry.has-conflict;
+                is-starred: entry.is-starred;
+                show-menu: true;
+                long-press-enabled: false;
+                clicked => {
+                    root.select(entry.note-index);
+                }
+                menu-clicked => {
+                    root.trigger-heavy-haptic();
+                    root.note-menu-requested(entry.note-index);
+                }
+            }
+        }
+    }
+}
+
 export component FilesScreen inherits Rectangle {
     in property <int> current: -1;
     in property <string> status;
@@ -298,6 +407,9 @@ export component FilesScreen inherits Rectangle {
     in-out property <bool> calendar-show-month-picker: false;
     in property <[DirectoryEntry]> folder-entries: [];
     in property <[BreadcrumbSegment]> breadcrumb: [];
+    in property <[NoteListEntry]> starred-entries: [];
+    in property <[NoteListEntry]> recent-entries: [];
+    in property <[NoteListEntry]> history-entries: [];
 
     callback select(int);
     callback new-note();
@@ -305,6 +417,7 @@ export component FilesScreen inherits Rectangle {
     callback open-settings();
     callback note-menu-requested(int);
     callback navigate-folder(string);
+    callback clear-history();
     callback trigger-haptic();
     callback trigger-heavy-haptic();
 
@@ -329,12 +442,43 @@ export component FilesScreen inherits Rectangle {
                     : root.page == 5 ? @tr("Graph View")
                     : root.page == 6 ? @tr("All Notes")
                     : root.page == 7 ? @tr("Tasks")
+                    : root.page == 8 ? @tr("History")
                     : @tr("Library");
                 font-size: Metrics.font-title;
                 font-weight: 700;
                 color: Palette.foreground;
                 vertical-alignment: center;
                 overflow: elide;
+            }
+
+            if root.page == 8 && root.history-entries.length > 0: VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    height: 30px * Metrics.ui-scale;
+                    border-radius: 15px * Metrics.ui-scale;
+                    background: clear-hist-touch.pressed
+                        ? Palette.foreground.with-alpha(0.14)
+                        : Palette.foreground.with-alpha(0.08);
+                    animate background { duration: 100ms; }
+
+                    HorizontalLayout {
+                        padding-left: Metrics.spacing-md;
+                        padding-right: Metrics.spacing-md;
+                        alignment: center;
+
+                        Text {
+                            text: @tr("Clear");
+                            font-size: Metrics.font-sm;
+                            font-weight: 600;
+                            color: Colors.muted;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    clear-hist-touch := TouchArea {
+                        clicked => { root.clear-history(); }
+                    }
+                }
             }
 
             BubbleButton {
@@ -424,11 +568,11 @@ export component FilesScreen inherits Rectangle {
                         clicked => { root.page = 7; }
                     }
 
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        min-width: 0px;
-                        preferred-width: 0px;
-                        background: transparent;
+                    IconTile {
+                        tile-height: 88px * Metrics.ui-scale;
+                        icon: TablerIcons.history;
+                        label-text: @tr("History");
+                        clicked => { root.page = 8; }
                     }
                 }
             }
@@ -491,7 +635,7 @@ export component FilesScreen inherits Rectangle {
             VerticalLayout {
                 padding-bottom: root.inset-bottom + Metrics.bottom-bar-height + Metrics.spacing-lg;
 
-                for entry[i] in root.folder-entries: DirectoryRow {
+                for entry[i] in root.folder-entries: NoteListRow {
                     is-folder: entry.is-folder;
                     icon: entry.icon;
                     display-text: entry.display;
@@ -689,8 +833,53 @@ export component FilesScreen inherits Rectangle {
             }
         }
 
-        // Other sections placeholder (Starred, Recent, Graph, All Notes, Tasks)
-        if root.page >= 3: Rectangle {
+        // Starred notes list
+        if root.page == 3: NoteListView {
+            vertical-stretch: 1;
+            entries: root.starred-entries;
+            empty-icon: TablerIcons.star;
+            empty-title: @tr("No starred notes yet");
+            empty-subtitle: @tr("Star a note from the editor or note menu to pin it here.");
+            current: root.current;
+            highlight-current: root.highlight-current;
+            inset-bottom: root.inset-bottom;
+            select(idx) => { root.select(idx); }
+            note-menu-requested(idx) => { root.note-menu-requested(idx); }
+            trigger-heavy-haptic => { root.trigger-heavy-haptic(); }
+        }
+
+        // Recent notes list
+        if root.page == 4: NoteListView {
+            vertical-stretch: 1;
+            entries: root.recent-entries;
+            empty-icon: TablerIcons.clock;
+            empty-title: @tr("No recent notes");
+            empty-subtitle: @tr("Notes you create or edit will appear here.");
+            current: root.current;
+            highlight-current: root.highlight-current;
+            inset-bottom: root.inset-bottom;
+            select(idx) => { root.select(idx); }
+            note-menu-requested(idx) => { root.note-menu-requested(idx); }
+            trigger-heavy-haptic => { root.trigger-heavy-haptic(); }
+        }
+
+        // Opened-note history list
+        if root.page == 8: NoteListView {
+            vertical-stretch: 1;
+            entries: root.history-entries;
+            empty-icon: TablerIcons.history;
+            empty-title: @tr("No history yet");
+            empty-subtitle: @tr("Notes you open will appear here in chronological order.");
+            current: root.current;
+            highlight-current: root.highlight-current;
+            inset-bottom: root.inset-bottom;
+            select(idx) => { root.select(idx); }
+            note-menu-requested(idx) => { root.note-menu-requested(idx); }
+            trigger-heavy-haptic => { root.trigger-heavy-haptic(); }
+        }
+
+        // Other sections placeholder (Graph, All Notes, Tasks)
+        if root.page == 5 || root.page == 6 || root.page == 7: Rectangle {
             vertical-stretch: 1;
             VerticalLayout {
                 alignment: center;

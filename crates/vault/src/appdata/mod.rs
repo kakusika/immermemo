@@ -20,12 +20,14 @@
 
 mod account;
 mod identity;
+mod library;
 mod paths;
 mod registry;
 mod settings;
 mod ssh;
 
 pub use account::Account;
+pub use library::{HistoryEntry, MAX_HISTORY_ENTRIES};
 
 use std::path::{Path, PathBuf};
 
@@ -66,6 +68,24 @@ fn write(path: &Path, content: &str) -> anyhow::Result<()> {
         std::fs::create_dir_all(parent)?;
     }
     std::fs::write(path, content)?;
+    Ok(())
+}
+
+fn read_json_vec<T: serde::de::DeserializeOwned>(path: &Path) -> Vec<T> {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+fn write_json_atomic<T: serde::Serialize + ?Sized>(path: &Path, value: &T) -> anyhow::Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let json = serde_json::to_string_pretty(value)?;
+    let tmp = path.with_extension("tmp");
+    std::fs::write(&tmp, json)?;
+    std::fs::rename(&tmp, path)?;
     Ok(())
 }
 

@@ -42,6 +42,7 @@ pub fn open_note(
                 .strip_prefix(vault_dir)
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|_| path.display().to_string());
+            let _ = app_data.record_history(vault_dir, &note_rel_path);
             Some(Ok(OpenedNote {
                 ui_current,
                 title: notes::display_name(vault_dir, &path),

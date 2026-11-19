@@ -7,6 +7,7 @@ use slint::SharedString;
 
 use super::conflict::sync_conflict_sheet_state;
 use super::history::{history_preview, show_history_state};
+use super::library::{mark_library_views_dirty, sync_current_note_starred};
 use super::util::{set_error, set_status};
 use super::{clear_note_stats, update_note_stats, update_rendered_body};
 use crate::App;
@@ -47,6 +48,8 @@ fn open_note_inner(app: &App, session: &SessionRef, index: usize) -> Option<Stri
                 app.set_active_conflict_a(SharedString::new());
                 app.set_active_conflict_b(SharedString::new());
             }
+            sync_current_note_starred(app, session);
+            mark_library_views_dirty(app, session);
             Some(opened.note_rel_path)
         }
     }

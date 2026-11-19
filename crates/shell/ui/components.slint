@@ -298,11 +298,12 @@ export component BottomNavBar inherits Rectangle {
     in property <bool> has-starred: false;
     in property <bool> has-recent: false;
     in property <bool> has-graph: false;
+    in property <bool> has-history: false;
     in property <bool> has-new-note: true;
     in property <bool> has-sync: true;
     in property <bool> has-switch-vault: true;
     in property <bool> has-settings: true;
-    in property <[int]> nav-order: [0, 1, 8, 2, 9, 10, 11, 3, 4, 5, 6, 7];
+    in property <[int]> nav-order: [0, 1, 8, 2, 9, 10, 11, 3, 4, 5, 6, 7, 12];
     in-out property <int> files-page: 0;
     callback action-triggered(int);
     callback open-more();
@@ -320,6 +321,7 @@ export component BottomNavBar inherits Rectangle {
         if (id == 9) { return root.has-sync; }
         if (id == 10) { return root.has-switch-vault; }
         if (id == 11) { return root.has-settings; }
+        if (id == 12) { return root.has-history; }
         return false;
     }
 
@@ -335,7 +337,8 @@ export component BottomNavBar inherits Rectangle {
     property <int> cum-9: root.cum-8 + (root.check-enabled(root.nav-order[9]) ? 1 : 0);
     property <int> cum-10: root.cum-9 + (root.check-enabled(root.nav-order[10]) ? 1 : 0);
     property <int> cum-11: root.cum-10 + (root.check-enabled(root.nav-order[11]) ? 1 : 0);
-    property <int> total-items: root.cum-11;
+    property <int> cum-12: root.cum-11 + (root.check-enabled(root.nav-order[12]) ? 1 : 0);
+    property <int> total-items: root.cum-12;
     property <bool> has-overflow: root.total-items >= 5;
 
     pure function cum-at(pos: int) -> int {
@@ -350,7 +353,8 @@ export component BottomNavBar inherits Rectangle {
         if (pos == 8) { return root.cum-8; }
         if (pos == 9) { return root.cum-9; }
         if (pos == 10) { return root.cum-10; }
-        return root.cum-11;
+        if (pos == 11) { return root.cum-11; }
+        return root.cum-12;
     }
 
     pure function item-overflows(id: int) -> bool {
@@ -366,6 +370,7 @@ export component BottomNavBar inherits Rectangle {
         if (root.nav-order[9] == id) { return root.cum-9 > 4; }
         if (root.nav-order[10] == id) { return root.cum-10 > 4; }
         if (root.nav-order[11] == id) { return root.cum-11 > 4; }
+        if (root.nav-order[12] == id) { return root.cum-12 > 4; }
         return false;
     }
 
@@ -382,6 +387,7 @@ export component BottomNavBar inherits Rectangle {
     out property <bool> overflow-sync: root.has-overflow && root.has-sync && root.item-overflows(9);
     out property <bool> overflow-switch-vault: root.has-overflow && root.has-switch-vault && root.item-overflows(10);
     out property <bool> overflow-settings: root.has-overflow && root.has-settings && root.item-overflows(11);
+    out property <bool> overflow-history: root.has-overflow && root.has-history && root.item-overflows(12);
 
     property <bool> more-active: (
         (root.overflow-home && root.active-tab == 0) ||
@@ -391,7 +397,8 @@ export component BottomNavBar inherits Rectangle {
         (root.overflow-daily && root.active-tab == 2 && root.files-page == 2) ||
         (root.overflow-starred && root.active-tab == 2 && root.files-page == 3) ||
         (root.overflow-recent && root.active-tab == 2 && root.files-page == 4) ||
-        (root.overflow-graph && root.active-tab == 2 && root.files-page == 5));
+        (root.overflow-graph && root.active-tab == 2 && root.files-page == 5) ||
+        (root.overflow-history && root.active-tab == 2 && root.files-page == 8));
     property <int> more-badge-count: (root.overflow-library) ? root.conflict-count : 0;
 
     property <length> extra-inset-bottom: max(0px, root.inset-bottom - 6px * Metrics.ui-scale);
@@ -518,6 +525,15 @@ export component BottomNavBar inherits Rectangle {
                 active: false;
                 clicked => {
                     root.action-triggered(11);
+                }
+            }
+
+            if id == 12 && root.has-history && (!root.has-overflow || root.cum-at(pos) <= 4): NavItem {
+                icon: TablerIcons.history;
+                label: @tr("History");
+                active: root.active-tab == 2 && root.files-page == 8;
+                clicked => {
+                    root.action-triggered(12);
                 }
             }
         }

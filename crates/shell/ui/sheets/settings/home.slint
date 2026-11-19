@@ -153,6 +153,16 @@ component HomeActionConfigItem inherits Rectangle {
             is-dragging: root.is-dragging;
             toggled(c) => { SettingsAdapter.home-actions-changed(); }
         }
+
+        if root.item-id == 12: NavToggleRow {
+            icon: TablerIcons.history;
+            title: @tr("History");
+            checked <=> SettingsAdapter.home-show-history;
+            show-eye: true;
+            show-settings: false;
+            is-dragging: root.is-dragging;
+            toggled(c) => { SettingsAdapter.home-actions-changed(); }
+        }
     }
 
     // Drag handle touch area placed strictly over the left grip handle

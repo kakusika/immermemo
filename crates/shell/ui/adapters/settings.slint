@@ -83,14 +83,15 @@ export global SettingsAdapter {
     in-out property <bool> nav-show-starred: false;
     in-out property <bool> nav-show-recent: false;
     in-out property <bool> nav-show-graph: false;
+    in-out property <bool> nav-show-history: false;
     in-out property <bool> nav-show-new-note: true;
     in-out property <bool> nav-show-sync: true;
     in-out property <bool> nav-show-switch-vault: true;
     in-out property <bool> nav-show-settings: true;
     // Order of items by ID:
     // 0: home, 1: search, 2: library, 3: directory, 4: daily, 5: starred, 6: recent, 7: graph,
-    // 8: new_note, 9: sync, 10: switch_vault, 11: settings
-    in-out property <[int]> nav-order: [0, 1, 8, 2, 9, 10, 11, 3, 4, 5, 6, 7];
+    // 8: new_note, 9: sync, 10: switch_vault, 11: settings, 12: history
+    in-out property <[int]> nav-order: [0, 1, 8, 2, 9, 10, 11, 3, 4, 5, 6, 7, 12];
     callback move-nav-item(int, int);
 
     // Home quick actions
@@ -102,12 +103,13 @@ export global SettingsAdapter {
     in-out property <bool> home-show-starred: false;
     in-out property <bool> home-show-recent: false;
     in-out property <bool> home-show-graph: false;
+    in-out property <bool> home-show-history: false;
     in-out property <bool> home-show-sync: false;
     in-out property <bool> home-show-switch-vault: false;
     in-out property <bool> home-show-settings: false;
     // Order of home quick actions by ID:
-    // 8: new_note, 1: search, 4: daily, 3: directory, 5: starred, 6: recent, 7: graph, 2: library, 9: sync, 10: switch_vault, 11: settings
-    in-out property <[int]> home-actions-order: [8, 1, 4, 3, 5, 6, 7, 2, 9, 10, 11];
+    // 8: new_note, 1: search, 4: daily, 3: directory, 5: starred, 6: recent, 7: graph, 12: history, 2: library, 9: sync, 10: switch_vault, 11: settings
+    in-out property <[int]> home-actions-order: [8, 1, 4, 3, 5, 6, 7, 12, 2, 9, 10, 11];
     in property <[int]> home-enabled-actions: [8];
     in property <[HomeQuickActionRow]> home-quick-action-rows: [{ items: [8], empty-slots: 2 }];
     callback move-home-action-item(int, int);

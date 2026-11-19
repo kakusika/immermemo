@@ -238,6 +238,8 @@ export component EditorScreen inherits Rectangle {
     // 3-dot overflow menu (note-menu-requested) for the same actions.
     in property <string> note-path: "";
     in property <string> note-kind: "";
+    in property <bool> is-starred: false;
+    callback toggle-star();
     in property <[NotePropertyEntry]> note-metadata: [];
     in property <int> char-count: 0;
     in property <int> word-count: 0;
@@ -536,6 +538,13 @@ export component EditorScreen inherits Rectangle {
                         : Colors.muted;
                     spinning: root.syncing;
                     clicked => { root.manual-sync(); }
+                }
+
+                // Star toggle button
+                if root.has-note: HeaderBubbleButton {
+                    icon: TablerIcons.star;
+                    tint: root.is-starred ? Palette.accent-background : Palette.foreground;
+                    clicked => { root.toggle-star(); }
                 }
 
                 // Version history button
