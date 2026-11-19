@@ -111,3 +111,4 @@ opt-level = 3
 
 [patch.crates-io]
 i-slint-backend-android-activity = { path = "patches/i-slint-backend-android-activity" }
+i-slint-core = { path = "patches/i-slint-core" }

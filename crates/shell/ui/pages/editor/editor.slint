@@ -561,9 +561,10 @@ export component EditorScreen inherits Rectangle {
         y: 0px;
         width: 100%;
         height: root.height - root.inset-bottom;
-        // A note with nothing to scroll (or no note at all) has no scroll
-        // position to gate on.
-        enabled: root.header-swipe-enabled && (!root.has-note || root.scroll-at-top) && (!root.edit-mode || !root.editor-has-focus);
+        // Horizontal history swipe works at any scroll position; downward
+        // sheet-dismiss only activates when the scroll view is at the top.
+        enabled: root.header-swipe-enabled && (!root.edit-mode || !root.editor-has-focus);
+        handle-swipe-down: !root.has-note || root.scroll-at-top;
         handle-swipe-right: root.nav-swipe-enabled && root.can-navigate-back;
         handle-swipe-left: root.nav-swipe-enabled && root.can-navigate-forward;
         sheet-drag-moved(dy) => { root.sheet-drag-moved(dy); }
