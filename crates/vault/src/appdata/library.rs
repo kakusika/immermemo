@@ -268,7 +268,10 @@ mod tests {
 
         let history = data.load_history(vault.path());
         assert_eq!(history.len(), MAX_HISTORY_ENTRIES);
-        assert_eq!(history[0].path, format!("note-{}.tmt", MAX_HISTORY_ENTRIES + 14));
+        assert_eq!(
+            history[0].path,
+            format!("note-{}.tmt", MAX_HISTORY_ENTRIES + 14)
+        );
         assert_eq!(history[MAX_HISTORY_ENTRIES - 1].path, "note-15.tmt");
     }
 

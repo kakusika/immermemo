@@ -13,7 +13,11 @@ fn rel_path_index_map(s: &Session) -> HashMap<PathBuf, usize> {
     s.notes
         .iter()
         .enumerate()
-        .filter_map(|(idx, abs)| abs.strip_prefix(&s.vault_dir).ok().map(|rel| (rel.to_path_buf(), idx)))
+        .filter_map(|(idx, abs)| {
+            abs.strip_prefix(&s.vault_dir)
+                .ok()
+                .map(|rel| (rel.to_path_buf(), idx))
+        })
         .collect()
 }
 
@@ -84,7 +88,13 @@ pub fn build_starred_entries(s: &Session) -> Vec<NoteListEntry> {
         .filter_map(|rel_str| {
             let rel_path = Path::new(rel_str);
             let &note_index = index_map.get(rel_path)?;
-            build_note_list_entry(s, note_index, folder_subtitle(rel_path), &starred_set, lfs.as_ref())
+            build_note_list_entry(
+                s,
+                note_index,
+                folder_subtitle(rel_path),
+                &starred_set,
+                lfs.as_ref(),
+            )
         })
         .collect()
 }

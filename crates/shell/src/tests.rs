@@ -891,11 +891,7 @@ fn library_views_build_starred_recent_and_history_entries(
     assert_eq!(app.get_starred_entries().iter().count(), 0);
 }
 
-fn canonical_note_index_vs_search_result_index(
-    app: &App,
-    session: &SessionRef,
-    vault_dir: &Path,
-) {
+fn canonical_note_index_vs_search_result_index(app: &App, session: &SessionRef, vault_dir: &Path) {
     let z_note = vault_dir.join("zzz_unique_search_target.tmt");
     std::fs::write(&z_note, "= Unique\n\nsearchable_needle\n").unwrap();
     refresh_list(app, session);

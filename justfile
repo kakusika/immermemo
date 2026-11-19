@@ -63,9 +63,9 @@ android_rustflags := "-C force-unwind-tables=no -C link-arg=-Wl,--icf=all -C lin
 # --lib is load-bearing: without it, cargo-ndk also tries to cross-compile
 # the crate's desktop `[[bin]]` target, which doesn't link for Android.
 [private]
-_build-apk abis out:
+_build-apk abis out cargo_flags="":
     cd app && rm -rf {{jniLibs}}
-    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk {{abis}} -P 34 -o {{jniLibs}} build --release --lib -p immermemo
+    cd app && RUSTFLAGS="{{android_rustflags}}" CFLAGS="{{android_cflags}}" CXXFLAGS="{{android_cflags}}" cargo ndk {{abis}} -P 34 -o {{jniLibs}} build --release --lib -p immermemo {{cargo_flags}}
     cd app/android && gradle assembleRelease
     @mkdir -p {{dist}}
     cp {{apk_raw}} {{out}}
@@ -78,20 +78,22 @@ _build-apk abis out:
 # `packaging.jniLibs.useLegacyPackaging = false`, see android/app/build.gradle.kts),
 # so there's no second install-time-extracted copy on top of the APK's own
 # size -- but bundling both ABIs' full-size libs in one file still makes
-# this the biggest of the three on-device footprints (~51 MB). Only useful
+# this the biggest of the three on-device footprints. Only useful
 # for sideloading onto a device whose ABI you don't know ahead of time;
 # `install`/`run` use `apk-auto` instead, which picks a single ABI.
 apk: (_build-apk "-t arm64-v8a -t x86_64" apk_universal)
 
-# Build a slim release APK for real devices (aarch64, ~19 MB with FemtoVG GPU renderer)
+# Build a release APK for real devices (aarch64, Skia GPU renderer)
 apk-arm: (_build-apk "-t arm64-v8a" apk_arm)
 
-# Build a slim release APK for the emulator (x86_64, FemtoVG GPU renderer)
+# Build a release APK for the emulator (x86_64, Skia GPU renderer)
 apk-x86: (_build-apk "-t x86_64" apk_x86)
 
-# Backward-compatible aliases
-apk-arm-femtovg: apk-arm
-apk-x86-femtovg: apk-x86
+# Build a slim release APK for real devices using the FemtoVG GPU renderer
+apk-arm-femtovg: (_build-apk "-t arm64-v8a" apk_arm "--no-default-features --features renderer-femtovg")
+
+# Build a slim release APK for the emulator using the FemtoVG GPU renderer
+apk-x86-femtovg: (_build-apk "-t x86_64" apk_x86 "--no-default-features --features renderer-femtovg")
 
 # Build for whatever single device/emulator adb currently sees, picking
 # its ABI automatically instead of bundling both (what `install`/`run`

@@ -32,12 +32,13 @@ slint = { workspace = true, features = [
   "renderer-femtovg",
 ] }
 
-# iOS: winit + FemtoVG.
+# iOS: winit + Skia.
 [target.'cfg(target_os = "ios")'.dependencies]
-slint = { workspace = true, features = ["backend-winit", "renderer-femtovg"] }
+slint = { workspace = true, features = ["backend-winit", "renderer-skia"] }
 
 [features]
-default          = ["renderer-femtovg"]
+default          = ["renderer-skia"]
+renderer-skia    = ["i-slint-backend-android-activity/renderer-skia"]
 renderer-femtovg = ["i-slint-backend-android-activity/renderer-femtovg"]
 
 [target.'cfg(target_os = "android")'.dependencies]

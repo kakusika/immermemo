@@ -337,12 +337,12 @@ impl Session {
             let _ = self.index.record_rename(old_rel, new_rel);
             let old_rel_str = old_rel.display().to_string();
             let new_rel_str = new_rel.display().to_string();
-            let _ =
-                self.app_data
-                    .rename_starred_path(&self.vault_dir, &old_rel_str, &new_rel_str);
-            let _ =
-                self.app_data
-                    .rename_history_path(&self.vault_dir, &old_rel_str, &new_rel_str);
+            let _ = self
+                .app_data
+                .rename_starred_path(&self.vault_dir, &old_rel_str, &new_rel_str);
+            let _ = self
+                .app_data
+                .rename_history_path(&self.vault_dir, &old_rel_str, &new_rel_str);
         }
         let _ = self.refresh_list_data();
         let _ = self.update_filtered_list_data();

@@ -121,7 +121,7 @@ export global SettingsAdapter {
     // from the build just made.
     in property <string> build-id;
     // The facts about this device a bug report needs (OS, device, architecture,
-    // renderer, and on Android which emoji font was used), one row each.
+    // renderer), one row each.
     in property <[SystemInfoRow]> system-info;
     // The copy buttons turn into a "copied" mark once pressed.
     in-out property <bool> build-copied: false;

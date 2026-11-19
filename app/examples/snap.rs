@@ -646,11 +646,7 @@ fn main() {
         row("OS", "Android 14 (API 34)"),
         row("Device", "Google Pixel 8"),
         row("Architecture", "aarch64"),
-        row("Renderer", "FemtoVG"),
-        row(
-            "Emoji font",
-            "none the renderer can draw (NotoColorEmoji.ttf (COLRv1)); the system lists NotoColorEmojiLegacy.ttf, NotoColorEmoji.ttf, NotoColorEmojiFlags.ttf; searched /system/fonts (208 files), /product/fonts (29 files)",
-        ),
+        row("Renderer", "Skia"),
     ])));
     let snap_settings = |name: &str| {
         std::thread::sleep(std::time::Duration::from_millis(300));
