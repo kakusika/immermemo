@@ -1,5 +1,11 @@
 // Global adapter managing multi-selection state, counts, and bulk actions.
 
+export enum SelectionCheckState {
+    none,
+    partial,
+    all,
+}
+
 export global SelectionAdapter {
     in property <int> selection-count: 0;
     in property <bool> selection-mode: false;
@@ -7,6 +13,8 @@ export global SelectionAdapter {
 
     callback toggle(string);
     callback select-only(string);
+    callback toggle-folder(string);
+    callback select-only-folder(string);
     callback select-all-in-view();
     callback clear();
     callback delete-selected();

@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use slint::{ModelRc, VecModel};
 
 use super::{Session, SessionRef, lfs_remote, resolve_note_icon, set_error};
-use crate::{App, NoteListEntry};
+use crate::{App, NoteListEntry, SelectionCheckState};
 
 /// Builds a `HashMap` from vault-relative path to canonical `note_index` in `s.notes`.
 fn rel_path_index_map(s: &Session) -> HashMap<PathBuf, usize> {
@@ -63,6 +63,12 @@ fn build_note_list_entry(
     let has_conflict = s.conflicted.get(note_index).copied().unwrap_or(false);
     let is_starred = starred_set.contains(rel_str.as_ref());
     let icon = resolve_note_icon(s, abs_path, lfs);
+    let path_str = abs_path.to_string_lossy().to_string();
+    let selection_state = if s.selection.is_selected(&path_str) {
+        SelectionCheckState::All
+    } else {
+        SelectionCheckState::None
+    };
     Some(NoteListEntry {
         title: title.into(),
         subtitle: subtitle.into(),
@@ -70,6 +76,8 @@ fn build_note_list_entry(
         has_conflict,
         is_starred,
         note_index: note_index as i32,
+        path: path_str.into(),
+        selection_state,
     })
 }
 

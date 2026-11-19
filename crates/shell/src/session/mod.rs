@@ -30,6 +30,7 @@ use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::{
     App, BreadcrumbSegment, DirectoryEntry, NoteBodyItemView, NoteIconView, NotePropertyEntry,
+    SelectionCheckState,
 };
 
 /// What the window is currently editing. Lives on the UI thread only.
@@ -180,7 +181,7 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
 
     let folder_entries: Vec<DirectoryEntry> = folder_entries_raw
         .into_iter()
-        .map(|e| to_entry_view(e, &s.notes, &icon_by_path, &s.selection))
+        .map(|e| to_entry_view(e, &s.directory_source, &s.notes, &icon_by_path, &s.selection))
         .collect();
     let breadcrumb: Vec<BreadcrumbSegment> = directory::build_breadcrumb(&s.current_folder)
         .into_iter()
@@ -194,8 +195,73 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
     app.set_directory_breadcrumb(ModelRc::new(VecModel::from(breadcrumb)));
 }
 
+/// Collects the full path strings of all notes in `directory_source` that live
+/// under `folder_key` (including nested subfolders). When `folder_key` is empty,
+/// returns all notes in `directory_source`.
+pub(crate) fn descendant_note_paths(
+    directory_source: &[(String, i32, bool)],
+    notes: &[PathBuf],
+    folder_key: &str,
+) -> Vec<String> {
+    let prefix = if folder_key.is_empty() {
+        String::new()
+    } else {
+        format!("{folder_key}/")
+    };
+    directory_source
+        .iter()
+        .filter(|(title, _, _)| title.starts_with(&prefix))
+        .filter_map(|(_, note_index, _)| {
+            usize::try_from(*note_index)
+                .ok()
+                .and_then(|idx| notes.get(idx))
+                .map(|p| p.to_string_lossy().to_string())
+        })
+        .collect()
+}
+
+/// Derives the 3-state selection status for a folder from all of its descendant notes.
+pub(crate) fn derive_folder_selection_state(
+    directory_source: &[(String, i32, bool)],
+    notes: &[PathBuf],
+    folder_key: &str,
+    selection: &origiri_selection::Selection,
+) -> SelectionCheckState {
+    let prefix = if folder_key.is_empty() {
+        String::new()
+    } else {
+        format!("{folder_key}/")
+    };
+    let mut total = 0usize;
+    let mut selected = 0usize;
+    for (title, note_index, _) in directory_source {
+        if !title.starts_with(&prefix) {
+            continue;
+        }
+        let Some(path) = usize::try_from(*note_index)
+            .ok()
+            .and_then(|idx| notes.get(idx))
+        else {
+            continue;
+        };
+        total += 1;
+        let path_str = path.to_string_lossy();
+        if selection.is_selected(path_str.as_ref()) {
+            selected += 1;
+        }
+    }
+    if total == 0 || selected == 0 {
+        SelectionCheckState::None
+    } else if selected == total {
+        SelectionCheckState::All
+    } else {
+        SelectionCheckState::Partial
+    }
+}
+
 fn to_entry_view(
     e: directory::DirectoryEntry,
+    directory_source: &[(String, i32, bool)],
     notes: &[PathBuf],
     icon_by_path: &std::collections::HashMap<PathBuf, NoteIconView>,
     selection: &origiri_selection::Selection,
@@ -211,7 +277,13 @@ fn to_entry_view(
         }
         None => (NoteIconView::default(), String::new()),
     };
-    let is_selected = !e.is_folder && !path_str.is_empty() && selection.is_selected(&path_str);
+    let selection_state = if e.is_folder {
+        derive_folder_selection_state(directory_source, notes, &e.key, selection)
+    } else if !path_str.is_empty() && selection.is_selected(&path_str) {
+        SelectionCheckState::All
+    } else {
+        SelectionCheckState::None
+    };
     DirectoryEntry {
         is_folder: e.is_folder,
         key: e.key.into(),
@@ -220,12 +292,12 @@ fn to_entry_view(
         has_conflict: e.has_conflict,
         icon,
         path: path_str.into(),
-        is_selected,
+        selection_state,
     }
 }
 
 /// Syncs the current `origiri_selection::Selection` count, mode, and paths to the `SelectionAdapter`
-/// global in Slint and refreshes directory views.
+/// global in Slint and refreshes directory and library views.
 pub fn sync_selection_to_ui(app: &App, session: &Rc<RefCell<Session>>) {
     let sel = session.borrow();
     let count = sel.selection.len() as i32;
@@ -244,6 +316,7 @@ pub fn sync_selection_to_ui(app: &App, session: &Rc<RefCell<Session>>) {
     adapter.set_selected_paths(ModelRc::new(VecModel::from(paths)));
 
     refresh_directory_views(app, session);
+    mark_library_views_dirty(app, session);
 }
 
 pub fn navigate_directory_folder(app: &App, session: &Rc<RefCell<Session>>, key: &str) {
@@ -382,5 +455,84 @@ mod lfs_auth_tests {
     #[test]
     fn with_no_saved_token_there_are_no_credentials() {
         assert_eq!(auth_for("https://github.com/owner/notes.git", None), None);
+    }
+}
+
+#[cfg(test)]
+mod folder_selection_tests {
+    use super::*;
+
+    fn sample_source() -> (Vec<(String, i32, bool)>, Vec<PathBuf>) {
+        let notes = vec![
+            PathBuf::from("/vault/work/a.tmt"),
+            PathBuf::from("/vault/work/sub/b.tmt"),
+            PathBuf::from("/vault/work2/c.tmt"),
+        ];
+        let source = vec![
+            ("work/a".to_string(), 0, false),
+            ("work/sub/b".to_string(), 1, false),
+            ("work2/c".to_string(), 2, false),
+        ];
+        (source, notes)
+    }
+
+    #[test]
+    fn derives_none_partial_and_all_across_nested_subfolders() {
+        let (source, notes) = sample_source();
+        let mut sel = origiri_selection::Selection::default();
+
+        assert_eq!(
+            derive_folder_selection_state(&source, &notes, "work", &sel),
+            SelectionCheckState::None
+        );
+        assert_eq!(
+            derive_folder_selection_state(&source, &notes, "empty", &sel),
+            SelectionCheckState::None
+        );
+
+        // Selecting a note in work2 must not affect "work"
+        sel.toggle("/vault/work2/c.tmt");
+        assert_eq!(
+            derive_folder_selection_state(&source, &notes, "work", &sel),
+            SelectionCheckState::None
+        );
+
+        // Selecting nested note makes "work/sub" All and "work" Partial
+        sel.toggle("/vault/work/sub/b.tmt");
+        assert_eq!(
+            derive_folder_selection_state(&source, &notes, "work/sub", &sel),
+            SelectionCheckState::All
+        );
+        assert_eq!(
+            derive_folder_selection_state(&source, &notes, "work", &sel),
+            SelectionCheckState::Partial
+        );
+
+        // Selecting remaining note in "work" makes "work" All
+        sel.toggle("/vault/work/a.tmt");
+        assert_eq!(
+            derive_folder_selection_state(&source, &notes, "work", &sel),
+            SelectionCheckState::All
+        );
+    }
+
+    #[test]
+    fn descendant_note_paths_respects_folder_prefix_boundary() {
+        let (source, notes) = sample_source();
+        assert_eq!(
+            descendant_note_paths(&source, &notes, "work"),
+            vec![
+                "/vault/work/a.tmt".to_string(),
+                "/vault/work/sub/b.tmt".to_string(),
+            ]
+        );
+        assert_eq!(
+            descendant_note_paths(&source, &notes, ""),
+            vec![
+                "/vault/work/a.tmt".to_string(),
+                "/vault/work/sub/b.tmt".to_string(),
+                "/vault/work2/c.tmt".to_string(),
+            ]
+        );
     }
 }

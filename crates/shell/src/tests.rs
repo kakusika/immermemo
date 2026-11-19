@@ -49,6 +49,7 @@ fn ui_helpers_and_conflict_resolution() {
     home_actions_config_applies_to_settings(&app);
     library_views_build_starred_recent_and_history_entries(&app, &session, &vault_dir);
     canonical_note_index_vs_search_result_index(&app, &session, &vault_dir);
+    folder_selection_and_note_list_entry_sync(&app, &session, &vault_dir);
 
     // `render::seam_tests` needs the same shared `app` for the same
     // one-event-loop-per-process reason -- see that module's doc.
@@ -933,4 +934,103 @@ fn canonical_note_index_vs_search_result_index(app: &App, session: &SessionRef, 
     // Clean up search query
     session.borrow_mut().search_query.clear();
     update_filtered_list(app, session);
+}
+
+fn folder_selection_and_note_list_entry_sync(app: &App, session: &SessionRef, vault_dir: &Path) {
+    let proj_dir = vault_dir.join("proj");
+    let proj_sub_dir = proj_dir.join("sub");
+    let other_dir = vault_dir.join("other");
+    std::fs::create_dir_all(&proj_sub_dir).unwrap();
+    std::fs::create_dir_all(&other_dir).unwrap();
+
+    let note_a = proj_dir.join("a.tmt");
+    let note_b = proj_sub_dir.join("b.tmt");
+    let note_c = other_dir.join("c.tmt");
+    std::fs::write(&note_a, "= A\n").unwrap();
+    std::fs::write(&note_b, "= B\n").unwrap();
+    std::fs::write(&note_c, "= C\n").unwrap();
+
+    refresh_list(app, session);
+    crate::callbacks::selection::bind_selection_callbacks(app, session);
+    let adapter = app.global::<SelectionAdapter>();
+
+    let path_a = note_a.to_string_lossy().to_string();
+    let path_b = note_b.to_string_lossy().to_string();
+    let path_c = note_c.to_string_lossy().to_string();
+
+    // Navigate to root in Directory page
+    app.set_active_tab(2);
+    app.set_files_page(1);
+    crate::session::navigate_directory_folder(app, session, "");
+
+    let find_dir_entry = |key: &str| -> DirectoryEntry {
+        app.get_directory_folder_entries()
+            .iter()
+            .find(|e| e.is_folder && e.key == key)
+            .expect("folder entry should exist")
+    };
+
+    // Initially None
+    assert_eq!(find_dir_entry("proj").selection_state, SelectionCheckState::None);
+
+    // toggle_folder: None -> All
+    adapter.invoke_toggle_folder("proj".into());
+    assert!(session.borrow().selection.is_selected(&path_a));
+    assert!(session.borrow().selection.is_selected(&path_b));
+    assert!(!session.borrow().selection.is_selected(&path_c));
+    assert_eq!(find_dir_entry("proj").selection_state, SelectionCheckState::All);
+
+    // Deselect one descendant -> Partial
+    adapter.invoke_toggle(path_a.clone().into());
+    assert_eq!(
+        find_dir_entry("proj").selection_state,
+        SelectionCheckState::Partial
+    );
+
+    // toggle_folder: Partial -> All
+    adapter.invoke_toggle_folder("proj".into());
+    assert!(session.borrow().selection.is_selected(&path_a));
+    assert!(session.borrow().selection.is_selected(&path_b));
+    assert_eq!(find_dir_entry("proj").selection_state, SelectionCheckState::All);
+
+    // toggle_folder: All -> None
+    adapter.invoke_toggle_folder("proj".into());
+    assert!(!session.borrow().selection.is_selected(&path_a));
+    assert!(!session.borrow().selection.is_selected(&path_b));
+    assert_eq!(find_dir_entry("proj").selection_state, SelectionCheckState::None);
+
+    // select_only_folder clears unrelated selection and selects all under folder
+    adapter.invoke_select_only(path_c.clone().into());
+    assert!(session.borrow().selection.is_selected(&path_c));
+    adapter.invoke_select_only_folder("proj".into());
+    assert!(!session.borrow().selection.is_selected(&path_c));
+    assert!(session.borrow().selection.is_selected(&path_a));
+    assert!(session.borrow().selection.is_selected(&path_b));
+
+    // NoteListEntry selection_state syncs when Starred/Recent/History views are active
+    let idx_a = session
+        .borrow()
+        .notes
+        .iter()
+        .position(|p| *p == note_a)
+        .unwrap();
+    crate::session::toggle_note_star(app, session, idx_a);
+    app.set_files_page(3); // Starred
+    crate::session::ensure_library_views(app, session);
+
+    let starred: Vec<NoteListEntry> = app.get_starred_entries().iter().collect();
+    let starred_a = starred.iter().find(|e| e.path == path_a.as_str()).unwrap();
+    assert_eq!(starred_a.selection_state, SelectionCheckState::All);
+
+    // Clearing selection while Starred is visible updates NoteListEntry immediately
+    adapter.invoke_clear();
+    let starred_after: Vec<NoteListEntry> = app.get_starred_entries().iter().collect();
+    let starred_a_after = starred_after
+        .iter()
+        .find(|e| e.path == path_a.as_str())
+        .unwrap();
+    assert_eq!(starred_a_after.selection_state, SelectionCheckState::None);
+
+    // Clean up star
+    crate::session::toggle_note_star(app, session, idx_a);
 }

@@ -13,7 +13,8 @@ use slint::{ComponentHandle, ModelRc, PhysicalSize, VecModel};
 use immermemo::render::to_note_body_item_view;
 use immermemo::{
     AccountData, AddVaultAdapter, App, BreadcrumbSegment, DirectoryEntry, MediaBase,
-    NoteBannerView, NoteIconKind, NoteIconView, PickerIconEntry, RepoRow, SettingsAdapter,
+    NoteBannerView, NoteIconKind, NoteIconView, PickerIconEntry, RepoRow, SelectionCheckState,
+    SettingsAdapter,
 };
 
 struct Headless {
@@ -165,7 +166,7 @@ fn main() {
                 has_conflict: false,
                 icon: NoteIconView::default(),
                 path: "".into(),
-                is_selected: false,
+                selection_state: SelectionCheckState::None,
             },
             DirectoryEntry {
                 is_folder: true,
@@ -175,7 +176,7 @@ fn main() {
                 has_conflict: false,
                 icon: NoteIconView::default(),
                 path: "".into(),
-                is_selected: false,
+                selection_state: SelectionCheckState::None,
             },
             DirectoryEntry {
                 is_folder: false,
@@ -185,7 +186,7 @@ fn main() {
                 has_conflict: false,
                 icon: text_icon("🛒"),
                 path: "".into(),
-                is_selected: false,
+                selection_state: SelectionCheckState::None,
             },
             DirectoryEntry {
                 is_folder: false,
@@ -195,7 +196,7 @@ fn main() {
                 has_conflict: false,
                 icon: NoteIconView::default(),
                 path: "".into(),
-                is_selected: false,
+                selection_state: SelectionCheckState::None,
             },
             DirectoryEntry {
                 is_folder: false,
@@ -205,7 +206,7 @@ fn main() {
                 has_conflict: false,
                 icon: text_icon("あい"),
                 path: "".into(),
-                is_selected: false,
+                selection_state: SelectionCheckState::None,
             },
             DirectoryEntry {
                 is_folder: false,
@@ -215,7 +216,7 @@ fn main() {
                 has_conflict: false,
                 icon: text_icon("ABC"),
                 path: "".into(),
-                is_selected: false,
+                selection_state: SelectionCheckState::None,
             },
             DirectoryEntry {
                 is_folder: false,
@@ -225,7 +226,7 @@ fn main() {
                 has_conflict: false,
                 icon: text_icon("ABCD"),
                 path: "".into(),
-                is_selected: false,
+                selection_state: SelectionCheckState::None,
             },
             DirectoryEntry {
                 is_folder: false,
@@ -235,7 +236,7 @@ fn main() {
                 has_conflict: false,
                 icon: picture_icon(),
                 path: "".into(),
-                is_selected: false,
+                selection_state: SelectionCheckState::None,
             },
         ]))
     };
@@ -266,7 +267,7 @@ fn main() {
         has_conflict: true,
         icon: NoteIconView::default(),
         path: "".into(),
-        is_selected: false,
+        selection_state: SelectionCheckState::None,
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(
@@ -297,7 +298,7 @@ fn main() {
         has_conflict: true,
         icon: NoteIconView::default(),
         path: "".into(),
-        is_selected: false,
+        selection_state: SelectionCheckState::None,
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(
@@ -340,7 +341,7 @@ fn main() {
         has_conflict: true,
         icon: NoteIconView::default(),
         path: "".into(),
-        is_selected: false,
+        selection_state: SelectionCheckState::None,
     }])));
     std::thread::sleep(std::time::Duration::from_millis(300));
     render(

@@ -13,7 +13,7 @@ import {
 import { LongPressRippleArea } from "../widgets/long_press_ripple.slint";
 import { NoteIconContent, NoteIconView } from "../widgets/note_icon.slint";
 import { DirectoryTile } from "../widgets/directory_tile.slint";
-import { SelectionAdapter } from "../adapters/selection.slint";
+import { SelectionAdapter, SelectionCheckState } from "../adapters/selection.slint";
 import { DailyCalendarView } from "../widgets/daily_calendar.slint";
 
 export struct NoteListEntry {
@@ -23,6 +23,8 @@ export struct NoteListEntry {
     has-conflict: bool,
     is-starred: bool,
     note-index: int,
+    path: string,
+    selection-state: SelectionCheckState,
 }
 
 // One row of the Directory page's List view, or one tile of its Grid
@@ -42,7 +44,7 @@ export struct DirectoryEntry {
     // either below.
     icon: NoteIconView,
     path: string,
-    is-selected: bool,
+    selection-state: SelectionCheckState,
 }
 
 // One tappable segment of the breadcrumb trail above the browsed folder's
@@ -111,8 +113,57 @@ component DirectoryBreadcrumb inherits HorizontalLayout {
     }
 }
 
+// 3-state circular selection checkbox (none, partial, all) with a configurable
+// hit-target footprint, circle diameter, border width, and glyph size.
+component SelectionCheckCircle inherits Rectangle {
+    in property <SelectionCheckState> selection-state: SelectionCheckState.none;
+    in property <length> circle-size: 24px * Metrics.ui-scale;
+    in property <length> ring-width: 2px * Metrics.ui-scale;
+    in property <length> icon-size: 14px * Metrics.ui-scale;
+    callback clicked();
+
+    Rectangle {
+        width: root.circle-size;
+        height: root.circle-size;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: self.width / 2;
+        border-width: root.ring-width;
+        border-color: root.selection-state != SelectionCheckState.none
+            ? Palette.accent-background
+            : Colors.muted.with-alpha(0.6);
+        background: root.selection-state != SelectionCheckState.none
+            ? Palette.accent-background
+            : transparent;
+        animate background { duration: 120ms; }
+        animate border-color { duration: 120ms; }
+
+        if root.selection-state == SelectionCheckState.partial: Icon {
+            source: TablerIcons.minus;
+            width: root.icon-size;
+            height: root.icon-size;
+            color: Palette.accent-foreground;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+        }
+
+        if root.selection-state == SelectionCheckState.all: Icon {
+            source: TablerIcons.check;
+            width: root.icon-size;
+            height: root.icon-size;
+            color: Palette.accent-foreground;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
 // Android native Material 3 list item for folder and note entries:
-// - Left: rounded container with icon (squircle background), or checkmark when selected
+// - Left: rounded container with icon (squircle background)
 // - Center: title text (and optional subtitle)
 // - Right: optional starred badge, conflict dot, 3-dot overflow menu or selection checkbox
 export component NoteListRow inherits Rectangle {
@@ -125,10 +176,11 @@ export component NoteListRow inherits Rectangle {
     in property <bool> is-starred: false;
     in property <bool> show-menu: true;
     in property <bool> long-press-enabled: true;
-    in property <bool> is-selected: false;
+    in property <SelectionCheckState> selection-state: SelectionCheckState.none;
     in property <bool> selection-mode: false;
     callback clicked();
     callback menu-clicked();
+    callback checkbox-clicked();
     callback long-pressed();
 
     height: root.subtitle != "" ? 62px * Metrics.ui-scale : 56px * Metrics.ui-scale;
@@ -139,9 +191,9 @@ export component NoteListRow inherits Rectangle {
         width: parent.width - 2 * Metrics.spacing-xs;
         height: parent.height - 4px * Metrics.ui-scale;
         border-radius: 12px * Metrics.ui-scale;
-        base-background: root.is-selected
+        base-background: (root.selection-state == SelectionCheckState.all || root.highlighted)
             ? Palette.accent-background.with-alpha(0.18)
-            : (root.highlighted ? Palette.accent-background.with-alpha(0.18) : transparent);
+            : transparent;
         long-press-enabled: root.long-press-enabled;
         clicked => { root.clicked(); }
         long-pressed => { root.long-pressed(); }
@@ -151,7 +203,7 @@ export component NoteListRow inherits Rectangle {
             padding-right: Metrics.spacing-xs;
             spacing: Metrics.spacing-md;
 
-            // Leading rounded background container with icon OR checkmark
+            // Leading rounded background container with icon
             VerticalLayout {
                 alignment: center;
                 Rectangle {
@@ -160,11 +212,9 @@ export component NoteListRow inherits Rectangle {
                     border-radius: 10px * Metrics.ui-scale;
                     background: root.is-folder
                         ? Palette.accent-background.with-alpha(0.14)
-                        : (root.is-selected
-                        ? Palette.accent-background
                         : (root.highlighted
                         ? Palette.accent-background.with-alpha(0.24)
-                        : Palette.foreground.with-alpha(0.06)));
+                        : Palette.foreground.with-alpha(0.06));
                     animate background { duration: 150ms; }
 
                     if root.is-folder: Icon {
@@ -176,7 +226,7 @@ export component NoteListRow inherits Rectangle {
                         y: (parent.height - self.height) / 2;
                     }
 
-                    if !root.is-selected && !root.is-folder: NoteIconContent {
+                    if !root.is-folder: NoteIconContent {
                         width: parent.width;
                         height: parent.height;
                         border-radius: parent.border-radius;
@@ -184,15 +234,6 @@ export component NoteListRow inherits Rectangle {
                         fallback: TablerIcons.file-text;
                         tint: root.highlighted ? Palette.accent-background : Palette.foreground;
                         glyph-size: 20px * Metrics.ui-scale;
-                    }
-
-                    if root.is-selected && !root.is-folder: Icon {
-                        source: TablerIcons.check;
-                        width: 22px * Metrics.ui-scale;
-                        height: 22px * Metrics.ui-scale;
-                        color: Palette.accent-foreground;
-                        x: (parent.width - self.width) / 2;
-                        y: (parent.height - self.height) / 2;
                     }
                 }
             }
@@ -206,8 +247,8 @@ export component NoteListRow inherits Rectangle {
                 Text {
                     text: root.display-text;
                     font-size: Metrics.font-body;
-                    font-weight: root.is-folder ? 600 : (root.is-selected ? 600 : (root.highlighted ? 600 : 400));
-                    color: (root.is-selected || root.highlighted) ? Palette.accent-background : Palette.foreground;
+                    font-weight: root.is-folder ? 600 : (root.selection-state == SelectionCheckState.all ? 600 : (root.highlighted ? 600 : 400));
+                    color: (root.selection-state == SelectionCheckState.all || root.highlighted) ? Palette.accent-background : Palette.foreground;
                     vertical-alignment: center;
                     overflow: elide;
                 }
@@ -273,32 +314,14 @@ export component NoteListRow inherits Rectangle {
             // Trailing checkbox (selection mode) -- centered in the same
             // 40px slot as the 3-dot overflow button so it has comfortable
             // right margin instead of sitting flush against the row edge.
-            if !root.is-folder && root.selection-mode: VerticalLayout {
+            if root.selection-mode: VerticalLayout {
                 alignment: center;
-                Rectangle {
+                SelectionCheckCircle {
                     width: 40px * Metrics.ui-scale;
                     height: 40px * Metrics.ui-scale;
-
-                    Rectangle {
-                        width: 24px * Metrics.ui-scale;
-                        height: 24px * Metrics.ui-scale;
-                        x: (parent.width - self.width) / 2;
-                        y: (parent.height - self.height) / 2;
-                        border-radius: 12px * Metrics.ui-scale;
-                        border-width: 2px * Metrics.ui-scale;
-                        border-color: root.is-selected ? Palette.accent-background : Colors.muted.with-alpha(0.6);
-                        background: root.is-selected ? Palette.accent-background : transparent;
-                        animate background { duration: 120ms; }
-                        animate border-color { duration: 120ms; }
-
-                        if root.is-selected: Icon {
-                            source: TablerIcons.check;
-                            width: 14px * Metrics.ui-scale;
-                            height: 14px * Metrics.ui-scale;
-                            color: Palette.accent-foreground;
-                            x: (parent.width - self.width) / 2;
-                            y: (parent.height - self.height) / 2;
-                        }
+                    selection-state: root.selection-state;
+                    clicked => {
+                        root.checkbox-clicked();
                     }
                 }
             }
@@ -371,14 +394,27 @@ component NoteListView inherits Rectangle {
                 highlighted: root.highlight-current && entry.note-index == root.current;
                 has-conflict: entry.has-conflict;
                 is-starred: entry.is-starred;
-                show-menu: true;
-                long-press-enabled: false;
+                show-menu: !SelectionAdapter.selection-mode;
+                long-press-enabled: true;
+                selection-mode: SelectionAdapter.selection-mode;
+                selection-state: entry.selection-state;
                 clicked => {
                     root.select(entry.note-index);
+                }
+                checkbox-clicked => {
+                    SelectionAdapter.toggle(entry.path);
                 }
                 menu-clicked => {
                     root.trigger-heavy-haptic();
                     root.note-menu-requested(entry.note-index);
+                }
+                long-pressed => {
+                    root.trigger-heavy-haptic();
+                    if (!SelectionAdapter.selection-mode) {
+                        SelectionAdapter.select-only(entry.path);
+                    } else {
+                        SelectionAdapter.toggle(entry.path);
+                    }
                 }
             }
         }
@@ -642,16 +678,21 @@ export component FilesScreen inherits Rectangle {
                     highlighted: !entry.is-folder && root.highlight-current && entry.note-index == root.current;
                     has-conflict: !entry.is-folder && entry.has-conflict;
                     show-menu: !entry.is-folder && !SelectionAdapter.selection-mode;
-                    long-press-enabled: !entry.is-folder;
-                    is-selected: entry.is-selected;
+                    long-press-enabled: true;
+                    selection-state: entry.selection-state;
                     selection-mode: SelectionAdapter.selection-mode;
                     clicked => {
                         if (entry.is-folder) {
                             root.navigate-folder(entry.key);
-                        } else if (SelectionAdapter.selection-mode) {
-                            SelectionAdapter.toggle(entry.path);
                         } else {
                             root.select(entry.note-index);
+                        }
+                    }
+                    checkbox-clicked => {
+                        if (entry.is-folder) {
+                            SelectionAdapter.toggle-folder(entry.key);
+                        } else {
+                            SelectionAdapter.toggle(entry.path);
                         }
                     }
                     menu-clicked => {
@@ -660,7 +701,13 @@ export component FilesScreen inherits Rectangle {
                     }
                     long-pressed => {
                         root.trigger-heavy-haptic();
-                        if (!entry.is-folder) {
+                        if (entry.is-folder) {
+                            if (!SelectionAdapter.selection-mode) {
+                                SelectionAdapter.select-only-folder(entry.key);
+                            } else {
+                                SelectionAdapter.toggle-folder(entry.key);
+                            }
+                        } else {
                             if (!SelectionAdapter.selection-mode) {
                                 SelectionAdapter.select-only(entry.path);
                             } else {
@@ -692,21 +739,25 @@ export component FilesScreen inherits Rectangle {
                         is-folder: entry.is-folder;
                         icon: entry.icon;
                         label-text: entry.display;
-                        highlighted: (!entry.is-folder && entry.is-selected)
+                        highlighted: entry.selection-state == SelectionCheckState.all
                             || (!entry.is-folder && root.highlight-current && entry.note-index == root.current);
-                        long-press-enabled: !entry.is-folder;
+                        long-press-enabled: true;
                         clicked => {
                             if (entry.is-folder) {
                                 root.navigate-folder(entry.key);
-                            } else if (SelectionAdapter.selection-mode) {
-                                SelectionAdapter.toggle(entry.path);
                             } else {
                                 root.select(entry.note-index);
                             }
                         }
                         long-pressed => {
                             root.trigger-heavy-haptic();
-                            if (!entry.is-folder) {
+                            if (entry.is-folder) {
+                                if (!SelectionAdapter.selection-mode) {
+                                    SelectionAdapter.select-only-folder(entry.key);
+                                } else {
+                                    SelectionAdapter.toggle-folder(entry.key);
+                                }
+                            } else {
                                 if (!SelectionAdapter.selection-mode) {
                                     SelectionAdapter.select-only(entry.path);
                                 } else {
@@ -715,30 +766,32 @@ export component FilesScreen inherits Rectangle {
                             }
                         }
 
-                        if entry.has-conflict: Rectangle {
-                            width: Metrics.spacing-sm;
-                            height: Metrics.spacing-sm;
-                            border-radius: Metrics.spacing-sm / 2;
-                            background: Colors.warning;
+                        if entry.has-conflict: VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                width: Metrics.spacing-sm;
+                                height: Metrics.spacing-sm;
+                                border-radius: Metrics.spacing-sm / 2;
+                                background: Colors.warning;
+                            }
                         }
 
-                        if !entry.is-folder && SelectionAdapter.selection-mode: Rectangle {
-                            width: 20px * Metrics.ui-scale;
-                            height: 20px * Metrics.ui-scale;
-                            border-radius: 10px * Metrics.ui-scale;
-                            border-width: 1.5px * Metrics.ui-scale;
-                            border-color: entry.is-selected ? Palette.accent-background : Colors.muted.with-alpha(0.6);
-                            background: entry.is-selected ? Palette.accent-background : transparent;
-                            animate background { duration: 120ms; }
-                            animate border-color { duration: 120ms; }
-
-                            if entry.is-selected: Icon {
-                                source: TablerIcons.check;
-                                width: 12px * Metrics.ui-scale;
-                                height: 12px * Metrics.ui-scale;
-                                color: Palette.accent-foreground;
-                                x: (parent.width - self.width) / 2;
-                                y: (parent.height - self.height) / 2;
+                        if SelectionAdapter.selection-mode: VerticalLayout {
+                            alignment: center;
+                            SelectionCheckCircle {
+                                width: 28px * Metrics.ui-scale;
+                                height: 28px * Metrics.ui-scale;
+                                circle-size: 20px * Metrics.ui-scale;
+                                ring-width: 1.5px * Metrics.ui-scale;
+                                icon-size: 12px * Metrics.ui-scale;
+                                selection-state: entry.selection-state;
+                                clicked => {
+                                    if (entry.is-folder) {
+                                        SelectionAdapter.toggle-folder(entry.key);
+                                    } else {
+                                        SelectionAdapter.toggle(entry.path);
+                                    }
+                                }
                             }
                         }
                     }

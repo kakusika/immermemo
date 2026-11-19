@@ -6,10 +6,26 @@ use std::path::PathBuf;
 use slint::ComponentHandle;
 
 use crate::session::{
-    close_current_note_and_show_list_or_reopen, refresh_list, show_list_or_reopen,
-    sync_selection_to_ui,
+    build_history_entries, build_recent_entries, build_starred_entries,
+    close_current_note_and_show_list_or_reopen, descendant_note_paths, refresh_list,
+    show_list_or_reopen, sync_selection_to_ui,
 };
 use crate::{App, SelectionAdapter};
+
+/// If all `paths` are already selected, deselects them; otherwise selects all of them.
+fn toggle_paths_group(selection: &mut origiri_selection::Selection, paths: Vec<String>) {
+    if paths.is_empty() {
+        return;
+    }
+    let all_selected = paths.iter().all(|p| selection.is_selected(p));
+    if all_selected {
+        for p in &paths {
+            selection.toggle(p);
+        }
+    } else {
+        selection.select_all(paths);
+    }
+}
 
 /// Binds UI callbacks for [`SelectionAdapter`].
 pub fn bind_selection_callbacks(app: &App, session: &SessionRef) {
@@ -35,40 +51,62 @@ pub fn bind_selection_callbacks(app: &App, session: &SessionRef) {
         }
     });
 
+    // Toggle all descendant notes of a folder by folder key
+    adapter.on_toggle_folder({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |key| {
+            let Some(app) = weak.upgrade() else { return };
+            let mut s = session.borrow_mut();
+            let paths = descendant_note_paths(&s.directory_source, &s.notes, key.as_str());
+            toggle_paths_group(&mut s.selection, paths);
+            drop(s);
+            sync_selection_to_ui(&app, &session);
+        }
+    });
+
+    // Clear selection and select all descendant notes of a folder by folder key
+    adapter.on_select_only_folder({
+        let (weak, session) = (app.as_weak(), session.clone());
+        move |key| {
+            let Some(app) = weak.upgrade() else { return };
+            let mut s = session.borrow_mut();
+            let paths = descendant_note_paths(&s.directory_source, &s.notes, key.as_str());
+            s.selection.clear();
+            if !paths.is_empty() {
+                s.selection.select_all(paths);
+            }
+            drop(s);
+            sync_selection_to_ui(&app, &session);
+        }
+    });
+
     // Select all note items in the current view (or toggle off if already all selected)
     adapter.on_select_all_in_view({
         let (weak, session) = (app.as_weak(), session.clone());
         move || {
             let Some(app) = weak.upgrade() else { return };
+            let files_page = app.get_files_page();
             let mut s = session.borrow_mut();
-            let current_folder = s.current_folder.clone();
-            let source: Vec<immermemo_core::directory::TitledNote> = s
-                .directory_source
-                .iter()
-                .map(|(title, idx, conflict)| (title.as_str(), *idx, *conflict))
-                .collect();
-            let entries = immermemo_core::directory::build_folder_entries(&source, &current_folder);
-
-            let view_paths: Vec<String> = entries
-                .into_iter()
-                .filter(|e| !e.is_folder)
-                .filter_map(|e| {
-                    usize::try_from(e.note_index)
-                        .ok()
-                        .and_then(|idx| s.notes.get(idx))
-                        .map(|p| p.to_string_lossy().to_string())
-                })
-                .collect();
-
-            let all_selected =
-                !view_paths.is_empty() && view_paths.iter().all(|p| s.selection.is_selected(p));
-            if all_selected {
-                for p in &view_paths {
-                    s.selection.toggle(p);
+            let view_paths: Vec<String> = match files_page {
+                3 => build_starred_entries(&s)
+                    .into_iter()
+                    .map(|e| e.path.to_string())
+                    .collect(),
+                4 => build_recent_entries(&s)
+                    .into_iter()
+                    .map(|e| e.path.to_string())
+                    .collect(),
+                8 => build_history_entries(&s)
+                    .into_iter()
+                    .map(|e| e.path.to_string())
+                    .collect(),
+                _ => {
+                    let current_folder = s.current_folder.clone();
+                    descendant_note_paths(&s.directory_source, &s.notes, &current_folder)
                 }
-            } else {
-                s.selection.select_all(view_paths);
-            }
+            };
+
+            toggle_paths_group(&mut s.selection, view_paths);
             drop(s);
             sync_selection_to_ui(&app, &session);
         }
