@@ -8,7 +8,7 @@
         "rev": "main",
         "path": "origiri-mobile/.editorconfig"
       },
-      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+      "commit": "2e0029fabccf91c608acb031cc098f120ff6392a"
     },
     ".envrc": {
       "sha256": "3c8bdb9d52dd4e7440a504e0f43bb3a1929c06f8f4f2d4d7ef41baab974e39e2",
@@ -17,7 +17,7 @@
         "rev": "main",
         "path": "origiri-mobile/.envrc"
       },
-      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+      "commit": "2e0029fabccf91c608acb031cc098f120ff6392a"
     },
     ".gitattributes": {
       "sha256": "2c4d2530e6c2f455de09b135a57ea1ec71790ccffaa4eadcdd4643ee466d76c3",
@@ -26,7 +26,7 @@
         "rev": "main",
         "path": "origiri-mobile/.gitattributes"
       },
-      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+      "commit": "2e0029fabccf91c608acb031cc098f120ff6392a"
     },
     ".github/FUNDING.yml": {
       "sha256": "abfc03406bd88edca69485a19b90df9717960f93779fd26d681b4761a435a44b",
@@ -35,7 +35,7 @@
         "rev": "main",
         "path": "origiri-mobile/.github/FUNDING.yml"
       },
-      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+      "commit": "2e0029fabccf91c608acb031cc098f120ff6392a"
     },
     ".github/workflows/pages.yml": {
       "sha256": "9bdb09c4b67311dc28ed01f7398d9988a90d4df79497e8112b949c2c31e20528",
@@ -44,7 +44,7 @@
         "rev": "main",
         "path": "origiri-mobile/.github/workflows/pages.yml"
       },
-      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+      "commit": "2e0029fabccf91c608acb031cc098f120ff6392a"
     },
     ".gitignore": {
       "sha256": "e825712799a06556dcbc7bab22c1ce2f42fb9d21b40ac779f288c90b25d94141",
@@ -53,7 +53,7 @@
         "rev": "main",
         "path": "origiri-mobile/.gitignore"
       },
-      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+      "commit": "2e0029fabccf91c608acb031cc098f120ff6392a"
     },
     "flake.nix": {
       "sha256": "47def10a873289c5cba137fcc64959b09c17c67ea0c8aa54bdae1d32c50553d7",
@@ -62,7 +62,7 @@
         "rev": "main",
         "path": "origiri-mobile/flake.nix"
       },
-      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+      "commit": "2e0029fabccf91c608acb031cc098f120ff6392a"
     },
     "nix/base.nix": {
       "sha256": "370d6d3db459ca243ce6916496fb057b3fc8bb23dc96b2f219127827275d0426",
@@ -71,7 +71,7 @@
         "rev": "main",
         "path": "origiri-mobile/nix/base.nix"
       },
-      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+      "commit": "2e0029fabccf91c608acb031cc098f120ff6392a"
     },
     "nix/dev.nix": {
       "sha256": "5aa1ee08e6e8fc580a8a6bb31d3e73a6389a25842a07df5c0539220d9c2009e1",
@@ -80,7 +80,7 @@
         "rev": "main",
         "path": "origiri-mobile/nix/dev.nix"
       },
-      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+      "commit": "2e0029fabccf91c608acb031cc098f120ff6392a"
     },
     "nix/formatter.nix": {
       "sha256": "8550dfc35f0ba0c7facb7f871f85318f0d412246b2bee1e8243860504deeef80",
@@ -89,16 +89,16 @@
         "rev": "main",
         "path": "origiri-mobile/nix/formatter.nix"
       },
-      "commit": "bc194e3c5ebdcf257293a48307622528db925a2e"
+      "commit": "2e0029fabccf91c608acb031cc098f120ff6392a"
     },
     "tmtroot/schema/vocabularies/catasto@1.0.0.vocabulary.tmt": {
-      "sha256": "18e4947e1b4515da1a88a088534271ba0a18dcff5fe7a08b196ef5a7d55b9d9e",
+      "sha256": "3259c87a389a1bf6ab279c195ef330f6600bdb551c0a768f38a338b7d9787be5",
       "source": {
         "git": "https://github.com/tomet-lang/fs-catasto.git",
         "rev": "main",
         "path": "tmtroot/schema/vocabularies/catasto@1.0.0.vocabulary.tmt"
       },
-      "commit": "7fdeadeef075efe9720fb90e0971e1329d9d893b"
+      "commit": "1aeeb6d0cc2938efb06c7bc47ab09263c7d73035"
     },
     "tmtroot/schema/vocabularies/rust@1.0.0.vocabulary.tmt": {
       "sha256": "41b022ca9a034d7894d041039fc85fb793a4e5149da52ccc3191e88056430209",

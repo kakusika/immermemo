@@ -971,14 +971,20 @@ fn folder_selection_and_note_list_entry_sync(app: &App, session: &SessionRef, va
     };
 
     // Initially None
-    assert_eq!(find_dir_entry("proj").selection_state, SelectionCheckState::None);
+    assert_eq!(
+        find_dir_entry("proj").selection_state,
+        SelectionCheckState::None
+    );
 
     // toggle_folder: None -> All
     adapter.invoke_toggle_folder("proj".into());
     assert!(session.borrow().selection.is_selected(&path_a));
     assert!(session.borrow().selection.is_selected(&path_b));
     assert!(!session.borrow().selection.is_selected(&path_c));
-    assert_eq!(find_dir_entry("proj").selection_state, SelectionCheckState::All);
+    assert_eq!(
+        find_dir_entry("proj").selection_state,
+        SelectionCheckState::All
+    );
 
     // Deselect one descendant -> Partial
     adapter.invoke_toggle(path_a.clone().into());
@@ -991,13 +997,19 @@ fn folder_selection_and_note_list_entry_sync(app: &App, session: &SessionRef, va
     adapter.invoke_toggle_folder("proj".into());
     assert!(session.borrow().selection.is_selected(&path_a));
     assert!(session.borrow().selection.is_selected(&path_b));
-    assert_eq!(find_dir_entry("proj").selection_state, SelectionCheckState::All);
+    assert_eq!(
+        find_dir_entry("proj").selection_state,
+        SelectionCheckState::All
+    );
 
     // toggle_folder: All -> None
     adapter.invoke_toggle_folder("proj".into());
     assert!(!session.borrow().selection.is_selected(&path_a));
     assert!(!session.borrow().selection.is_selected(&path_b));
-    assert_eq!(find_dir_entry("proj").selection_state, SelectionCheckState::None);
+    assert_eq!(
+        find_dir_entry("proj").selection_state,
+        SelectionCheckState::None
+    );
 
     // select_only_folder clears unrelated selection and selects all under folder
     adapter.invoke_select_only(path_c.clone().into());

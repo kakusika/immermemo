@@ -1,4 +1,4 @@
-::use(catasto, version: "1.0.0")
+::kind(catasto, version: "1.0.0")
 ::upstream(
   origiri-mobile: catasto.git("https://github.com/kakusika/commonfiles.git", rev: "main", root: "origiri-mobile")
   vocabularies:   catasto.git("https://github.com/tomet-lang/vocabularies.git", rev: "main", root: "vocabularies")

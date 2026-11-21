@@ -181,7 +181,15 @@ pub fn refresh_directory_views(app: &App, session: &Rc<RefCell<Session>>) {
 
     let folder_entries: Vec<DirectoryEntry> = folder_entries_raw
         .into_iter()
-        .map(|e| to_entry_view(e, &s.directory_source, &s.notes, &icon_by_path, &s.selection))
+        .map(|e| {
+            to_entry_view(
+                e,
+                &s.directory_source,
+                &s.notes,
+                &icon_by_path,
+                &s.selection,
+            )
+        })
         .collect();
     let breadcrumb: Vec<BreadcrumbSegment> = directory::build_breadcrumb(&s.current_folder)
         .into_iter()
